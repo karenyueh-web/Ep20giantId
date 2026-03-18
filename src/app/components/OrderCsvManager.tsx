@@ -584,7 +584,7 @@ function CsvPreviewRow({ row, type }: { row: CsvParsedRow; type: 'approve' | 're
 }
 
 // ===== Export/Import buttons for toolbar =====
-export type ExportType = 'excel' | 'csv' | 'batchReplySchedule' | 'batchReplySplit' | 'batchCorrection';
+export type ExportType = 'excel' | 'csv' | 'batchReplySchedule' | 'batchReplySplit' | 'batchCorrectionAdjust' | 'batchCorrectionSplit';
 
 interface ExportOption {
   type: ExportType;
@@ -594,11 +594,12 @@ interface ExportOption {
 }
 
 const EXPORT_OPTIONS: ExportOption[] = [
-  { type: 'excel',              label: '匯出 Excel',                 icon: <Table size={15} className="text-[#118d57]" />,  description: '依列表顯示欄位匯出 .xlsx 格式' },
-  { type: 'csv',                label: '匯出 CSV',                  icon: <FileText size={15} className="text-[#005eb8]" />,  description: '依列表顯示欄位匯出 .csv 格式' },
-  { type: 'batchReplySchedule', label: '下載批次回覆 (拆 Schedule Line)', icon: <FileSpreadsheet size={15} className="text-[#8e33ff]" />, description: 'NP/V 訂單，每筆排程一列' },
-  { type: 'batchReplySplit',    label: '下載批次回覆 (拆單)',        icon: <FileSpreadsheet size={15} className="text-[#ff5630]" />, description: 'NP/V 訂單，每筆訂單一列' },
-  { type: 'batchCorrection',    label: '下載批次建立',                icon: <FilePlus2 size={15} className="text-[#00a76f]" />, description: 'CK 訂單，填寫修正內容後上傳' },
+  { type: 'excel',                 label: '匯出 Excel',                      icon: <Table size={15} className="text-[#118d57]" />,        description: '依列表顯示欄位匯出 .xlsx 格式' },
+  { type: 'csv',                   label: '匯出 CSV',                       icon: <FileText size={15} className="text-[#005eb8]" />,      description: '依列表顯示欄位匯出 .csv 格式' },
+  { type: 'batchReplySchedule',    label: '下載批次回覆 (拆 Schedule Line)', icon: <FileSpreadsheet size={15} className="text-[#8e33ff]" />, description: 'NP/V 訂單，每筆排程一列' },
+  { type: 'batchReplySplit',       label: '下載批次回覆 (拆單)',             icon: <FileSpreadsheet size={15} className="text-[#ff5630]" />, description: 'NP/V 訂單，每筆訂單一列' },
+  { type: 'batchCorrectionAdjust', label: '下載批次建立（不拆單調整）',       icon: <FilePlus2 size={15} className="text-[#00a76f]" />,     description: 'CK 訂單，調整交期/料號，支援多期排程' },
+  { type: 'batchCorrectionSplit',  label: '下載批次建立（拆單）',            icon: <FilePlus2 size={15} className="text-[#8e33ff]" />,     description: 'CK 訂單，填寫拆單數與各序號交貨量/料號' },
 ];
 
 interface CsvToolbarButtonsProps {
@@ -609,13 +610,15 @@ interface CsvToolbarButtonsProps {
   hideBatchReply?: boolean;
   /** 僅隱藏「下載批次回覆 (拆單)」選項（換貨單不支援拆單）*/
   hideBatchReplySplit?: boolean;
-  /** 批次建立修正單上傳回調 */
-  onBatchCorrectionImport?: () => void;
+  /** 不拆單調整範本上傳回調 */
+  onBatchCorrectionAdjustImport?: () => void;
+  /** 拆單範本上傳回調 */
+  onBatchCorrectionSplitImport?: () => void;
   /** 隱藏批次建立修正單相關功能 */
   hideBatchCorrection?: boolean;
 }
 
-export function CsvToolbarButtons({ onExportSelect, onImport, importLabel = '批次上傳回覆', hideBatchReply = false, hideBatchReplySplit = false, onBatchCorrectionImport, hideBatchCorrection = false }: CsvToolbarButtonsProps) {
+export function CsvToolbarButtons({ onExportSelect, onImport, importLabel = '批次上傳回覆', hideBatchReply = false, hideBatchReplySplit = false, onBatchCorrectionAdjustImport, onBatchCorrectionSplitImport, hideBatchCorrection = false }: CsvToolbarButtonsProps) {
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -647,20 +650,25 @@ export function CsvToolbarButtons({ onExportSelect, onImport, importLabel = '批
 
       {/* Dropdown menu */}
       {showDropdown && (
-        <div className="absolute top-[calc(100%+4px)] right-0 w-[300px] bg-white rounded-[10px] shadow-[0px_0px_2px_0px_rgba(145,158,171,0.24),0px_20px_40px_-4px_rgba(145,158,171,0.24)] border border-[rgba(145,158,171,0.12)] py-[6px] z-[100]">
+        <div className="absolute top-[calc(100%+4px)] right-0 w-[320px] bg-white rounded-[10px] shadow-[0px_0px_2px_0px_rgba(145,158,171,0.24),0px_20px_40px_-4px_rgba(145,158,171,0.24)] border border-[rgba(145,158,171,0.12)] py-[6px] z-[100]">
           {(hideBatchReply
-              ? EXPORT_OPTIONS.filter(o => o.type === 'excel' || o.type === 'csv' || (o.type === 'batchCorrection' && !hideBatchCorrection))
+              ? EXPORT_OPTIONS.filter(o =>
+                  o.type === 'excel' || o.type === 'csv' ||
+                  (o.type === 'batchCorrectionAdjust' && !hideBatchCorrection) ||
+                  (o.type === 'batchCorrectionSplit' && !hideBatchCorrection)
+                )
               : hideBatchReplySplit
-                ? EXPORT_OPTIONS.filter(o => o.type !== 'batchReplySplit' && (o.type !== 'batchCorrection' || !hideBatchCorrection))
+                ? EXPORT_OPTIONS.filter(o =>
+                    o.type !== 'batchReplySplit' &&
+                    ((o.type !== 'batchCorrectionAdjust' && o.type !== 'batchCorrectionSplit') || !hideBatchCorrection)
+                  )
                 : hideBatchCorrection
-                  ? EXPORT_OPTIONS.filter(o => o.type !== 'batchCorrection')
+                  ? EXPORT_OPTIONS.filter(o => o.type !== 'batchCorrectionAdjust' && o.type !== 'batchCorrectionSplit')
                   : EXPORT_OPTIONS
-            ).map((option, idx) => (
+            ).map((option) => (
             <button
               key={option.type}
-              className={`w-full flex items-start gap-[10px] px-[14px] py-[10px] hover:bg-[rgba(145,158,171,0.06)] transition-colors text-left ${
-                idx < EXPORT_OPTIONS.length - 1 ? '' : ''
-              }`}
+              className="w-full flex items-start gap-[10px] px-[14px] py-[10px] hover:bg-[rgba(145,158,171,0.06)] transition-colors text-left"
               onClick={() => {
                 onExportSelect(option.type);
                 setShowDropdown(false);
@@ -694,16 +702,29 @@ export function CsvToolbarButtons({ onExportSelect, onImport, importLabel = '批
         </button>
       </>}
 
-      {/* 批次上傳建立修正單 */}
-      {!hideBatchCorrection && onBatchCorrectionImport && <>
+      {/* 批次上傳建立修正單（不拆單調整） */}
+      {!hideBatchCorrection && onBatchCorrectionAdjustImport && <>
         <div className="w-[1px] h-[20px] bg-[rgba(145,158,171,0.2)]" />
         <button
           className="flex items-center gap-[6px] h-full px-[12px] hover:bg-[rgba(145,158,171,0.08)] transition-colors"
-          onClick={onBatchCorrectionImport}
-          title="批次上傳建立修正單"
+          onClick={onBatchCorrectionAdjustImport}
+          title="批次上傳建立修正單（不拆單調整）"
         >
           <FilePlus2 size={16} className="text-[#00a76f]" />
-          <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#1c252e] whitespace-nowrap">批次建立修正單</p>
+          <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#1c252e] whitespace-nowrap">不拆單調整</p>
+        </button>
+      </>}
+
+      {/* 批次上傳建立修正單（拆單） */}
+      {!hideBatchCorrection && onBatchCorrectionSplitImport && <>
+        <div className="w-[1px] h-[20px] bg-[rgba(145,158,171,0.2)]" />
+        <button
+          className="flex items-center gap-[6px] h-full px-[12px] hover:bg-[rgba(145,158,171,0.08)] transition-colors"
+          onClick={onBatchCorrectionSplitImport}
+          title="批次上傳建立修正單（拆單）"
+        >
+          <FilePlus2 size={16} className="text-[#8e33ff]" />
+          <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#1c252e] whitespace-nowrap">拆單</p>
         </button>
       </>}
     </div>
@@ -1515,6 +1536,600 @@ export function exportBatchCorrectionTemplate(orders: OrderRow[], filename?: str
   // Use SheetJS writeFile — .csv extension auto-outputs CSV format (same mechanism as other working exports)
   buildXlsx('批次修正單', allRows, defaultName);
   return eligible.length;
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// 7b) 批次建立修正單（不拆單調整）— 獨立範本 + 解析 + Overlay
+// ───────────────────────────────────────────────────────────────────────────
+
+const BATCH_CORRECTION_ADJUST_HEADERS = [
+  '訂單號碼', '訂單序號', '廠商名稱', '廠商編號', '料號', '品名',
+  '預計交期', '訂貨量', '交貨量', '驗收量', '在途量',
+  '新料號',
+  '新廠商交期1', '新交貨量1',
+  '新廠商交期2', '新交貨量2',
+  '新廠商交期3', '新交貨量3',
+  '備註',
+];
+
+const BATCH_CORRECTION_SPLIT_HEADERS = [
+  '訂單號碼', '訂單序號', '廠商名稱', '廠商編號', '料號', '品名',
+  '預計交期', '訂貨量', '交貨量', '驗收量', '在途量',
+  '拆單數',
+  '新廠商交期1', '交貨量1', '料號1',
+  '新廠商交期2', '交貨量2', '料號2',
+  '新廠商交期3', '交貨量3', '料號3',
+  '備註',
+];
+
+export function exportBatchCorrectionAdjustTemplate(orders: OrderRow[], filename?: string) {
+  const eligible = orders.filter(o => o.status === 'CK');
+  const instructionRows: (string | number | null)[][] = [
+    ['', '', '', '', '', '', '', '', '', '', '',
+      '新料號：若填寫，覆蓋原料號（整張訂單）',
+      '新廠商交期1：第一期新交期（必填至少一期）', '新交貨量1：第一期新交貨量',
+      '新廠商交期2：第二期（可留空）', '新交貨量2：第二期新交貨量',
+      '新廠商交期3：第三期（可留空）', '新交貨量3：第三期新交貨量',
+      '備註'],
+    ['', '', '', '', '', '', '', '', '', '', '',
+      '空白＝不處理。新交貨量規則：各期合計 ≥ 驗收量+在途量；每期交貨量不可為 0。',
+      '', '', '', '', '', '', ''],
+  ];
+  const rows: (string | number | null)[][] = eligible.map(order => [
+    order.orderNo, order.orderSeq, order.vendorName, order.vendorCode,
+    order.materialNo, order.productName, order.expectedDelivery,
+    order.orderQty, (order as any).deliveryQty ?? order.orderQty,
+    order.acceptQty, order.inTransitQty,
+    '',  // 新料號
+    '', '', // 新廠商交期1, 新交貨量1
+    '', '', // 新廠商交期2, 新交貨量2
+    '', '', // 新廠商交期3, 新交貨量3
+    '',  // 備註
+  ]);
+  const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  buildXlsx('批次修正單(不拆單)', [BATCH_CORRECTION_ADJUST_HEADERS, ...instructionRows, ...rows],
+    filename || `批次建立修正單_不拆單調整_${datePart}.xlsx`);
+  return eligible.length;
+}
+
+export function exportBatchCorrectionSplitTemplate(orders: OrderRow[], filename?: string) {
+  const eligible = orders.filter(o => o.status === 'CK');
+  const instructionRows: (string | number | null)[][] = [
+    ['', '', '', '', '', '', '', '', '', '', '',
+      '拆單數：填 2 或以上（最多 3 欄，如需更多請自行新增欄位）',
+      '新廠商交期1：第1拆出序號交期', '交貨量1：第1拆出序號數量', '料號1：第1拆出序號料號（可留空）',
+      '新廠商交期2：第2拆出序號交期', '交貨量2：第2拆出序號數量', '料號2：第2拆出序號料號（可留空）',
+      '', '', '', '備註'],
+    ['', '', '', '', '', '', '', '', '', '', '',
+      '各拆出數量合計必須等於交貨量。拆出序號自動遞增計算，無需手動填寫。',
+      '', '', '', '', '', '', '', '', '', ''],
+  ];
+  const rows: (string | number | null)[][] = eligible.map(order => [
+    order.orderNo, order.orderSeq, order.vendorName, order.vendorCode,
+    order.materialNo, order.productName, order.expectedDelivery,
+    order.orderQty, (order as any).deliveryQty ?? order.orderQty,
+    order.acceptQty, order.inTransitQty,
+    '',  // 拆單數
+    '', '', '', // 新廠商交期1, 交貨量1, 料號1
+    '', '', '', // 新廠商交期2, 交貨量2, 料號2
+    '', '', '', // 新廠商交期3, 交貨量3, 料號3
+    '',  // 備註
+  ]);
+  const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  buildXlsx('批次修正單(拆單)', [BATCH_CORRECTION_SPLIT_HEADERS, ...instructionRows, ...rows],
+    filename || `批次建立修正單_拆單_${datePart}.xlsx`);
+  return eligible.length;
+}
+
+// ── 不拆單調整 Parse ─────────────────────────────────────────────────────────
+
+export interface CorrectionAdjustParsedRow {
+  rowIndex: number; orderNo: string; orderSeq: string;
+  vendorName: string; vendorCode: string; materialNo: string; productName: string;
+  expectedDelivery: string; orderQty: string; deliveryQty: string;
+  acceptQty: string; inTransitQty: string;
+  newMaterialNo: string;
+  schedules: { newVendorDate: string; newQty: string }[];
+  remark: string;
+  matchedOrder?: OrderRow; error?: string; skipReason?: string; isValid: boolean;
+}
+
+export interface CorrectionAdjustImportResult {
+  totalRows: number;
+  validRows: CorrectionAdjustParsedRow[];
+  skipRows: CorrectionAdjustParsedRow[];
+  errorRows: CorrectionAdjustParsedRow[];
+}
+
+function isAdjustInstructionRow(fields: string[]): boolean {
+  const colA = (fields[0] || '').trim();
+  if (colA !== '') return false;
+  const colL = (fields[11] || '').trim();
+  if (/新料號|空白|不處理/.test(colL)) return true;
+  if (!colA && !fields[1]?.trim() && !fields[2]?.trim() && colL.length > 5) return true;
+  return false;
+}
+
+export function parseBatchCorrectionAdjustCsv(content: string, allOrders: OrderRow[]): CorrectionAdjustImportResult {
+  const clean = content.replace(/^\uFEFF/, '');
+  const lines = clean.split(/\r?\n/).filter(l => l.trim() !== '');
+  const empty: CorrectionAdjustImportResult = { totalRows: 0, validRows: [], skipRows: [], errorRows: [] };
+  if (lines.length < 2) return empty;
+  // detect header
+  const headerFields = parseCsvLine(lines[0]);
+  if (!headerFields.includes('新廠商交期1') && !headerFields.includes('新料號')) return empty;
+  const dataLines = lines.slice(1);
+  const rows: CorrectionAdjustParsedRow[] = [];
+  for (let i = 0; i < dataLines.length; i++) {
+    const f = parseCsvLine(dataLines[i]);
+    if (isAdjustInstructionRow(f)) continue;
+    if (f.every(x => x.trim() === '')) continue;
+    const rowIndex = i + 2;
+    const orderNo = (f[0] || '').trim();
+    const orderSeq = (f[1] || '').trim();
+    if (!orderNo) continue;
+    const newMaterialNo = (f[11] || '').trim();
+    // parse up to 3 schedule pairs
+    const schedules: { newVendorDate: string; newQty: string }[] = [];
+    for (let p = 0; p < 3; p++) {
+      const dateRaw = normalizeDateStr((f[12 + p * 2] || '').trim());
+      const qtyRaw = (f[13 + p * 2] || '').trim();
+      if (dateRaw || qtyRaw) schedules.push({ newVendorDate: dateRaw, newQty: qtyRaw });
+    }
+    const remark = (f[18] || '').trim();
+    let error: string | undefined;
+    const matched = allOrders.find(o => o.orderNo === orderNo && o.orderSeq === orderSeq);
+    if (!matched) {
+      // if all editable fields empty → treat as skip
+      if (!newMaterialNo && schedules.length === 0) {
+        rows.push({ rowIndex, orderNo, orderSeq, vendorName: f[2]||'', vendorCode: f[3]||'', materialNo: f[4]||'', productName: f[5]||'', expectedDelivery: normalizeDateStr(f[6]||''), orderQty: f[7]||'', deliveryQty: f[8]||'', acceptQty: f[9]||'', inTransitQty: f[10]||'', newMaterialNo, schedules, remark, isValid: true });
+        continue;
+      }
+      error = `找不到對應訂單 (${orderNo} / ${orderSeq})`;
+    }
+    let skipReason: string | undefined;
+    if (matched && matched.status !== 'CK') {
+      skipReason = `狀態 ${matched.status} 不允許開立修正單（僅限 CK）`;
+    }
+    if (!skipReason && !error && schedules.length === 0 && !newMaterialNo) {
+      // blank row → skip
+      rows.push({ rowIndex, orderNo, orderSeq, vendorName: f[2]||'', vendorCode: f[3]||'', materialNo: f[4]||'', productName: f[5]||'', expectedDelivery: normalizeDateStr(f[6]||''), orderQty: f[7]||'', deliveryQty: f[8]||'', acceptQty: f[9]||'', inTransitQty: f[10]||'', newMaterialNo, schedules, remark, matchedOrder: matched, isValid: true });
+      continue;
+    }
+    if (!skipReason && !error && matched) {
+      const aQ = matched.acceptQty ?? 0, iQ = matched.inTransitQty ?? 0;
+      const minQ = aQ + iQ;
+      // validate schedules
+      for (const s of schedules) {
+        if (s.newVendorDate && !isValidDateStr(s.newVendorDate)) { error = `日期格式錯誤: "${s.newVendorDate}"`; break; }
+        if (s.newQty) {
+          const q = parseInt(s.newQty, 10);
+          if (isNaN(q) || q <= 0) { error = `新交貨量格式錯誤: "${s.newQty}"（需大於 0）`; break; }
+        }
+      }
+      if (!error && schedules.length > 0) {
+        const totalNewQty = schedules.reduce((s, r) => s + (parseInt(r.newQty, 10) || 0), 0);
+        const dQ = (matched as any).deliveryQty ?? matched.orderQty ?? 0;
+        if (totalNewQty > dQ) error = `新交貨量合計 ${totalNewQty} 超過交貨量 ${dQ}`;
+        else if (minQ > 0 && totalNewQty < minQ) error = `新交貨量合計 ${totalNewQty} 低於驗收量+在途量 ${minQ}`;
+      }
+    }
+    rows.push({
+      rowIndex, orderNo, orderSeq, vendorName: f[2]||'', vendorCode: f[3]||'', materialNo: f[4]||'', productName: f[5]||'', expectedDelivery: normalizeDateStr(f[6]||''), orderQty: f[7]||'', deliveryQty: f[8]||'', acceptQty: f[9]||'', inTransitQty: f[10]||'',
+      newMaterialNo, schedules, remark, matchedOrder: matched, error, skipReason, isValid: !error,
+    });
+  }
+  const hasAction = (r: CorrectionAdjustParsedRow) => r.schedules.length > 0 || !!r.newMaterialNo;
+  return {
+    totalRows: rows.length,
+    validRows: rows.filter(r => r.isValid && !r.skipReason && hasAction(r)),
+    skipRows: rows.filter(r => r.isValid && (r.skipReason || !hasAction(r))),
+    errorRows: rows.filter(r => !r.isValid),
+  };
+}
+
+// ── 拆單 Parse ───────────────────────────────────────────────────────────────
+
+export interface CorrectionSplitParsedRow {
+  rowIndex: number; orderNo: string; orderSeq: string;
+  vendorName: string; vendorCode: string; materialNo: string; productName: string;
+  expectedDelivery: string; orderQty: string; deliveryQty: string;
+  acceptQty: string; inTransitQty: string;
+  splitCount: string;
+  splits: { newVendorDate: string; qty: string; newMaterialNo: string }[];
+  remark: string;
+  matchedOrder?: OrderRow; error?: string; skipReason?: string; isValid: boolean;
+}
+
+export interface CorrectionSplitImportResult {
+  totalRows: number;
+  validRows: CorrectionSplitParsedRow[];
+  skipRows: CorrectionSplitParsedRow[];
+  errorRows: CorrectionSplitParsedRow[];
+}
+
+function isSplitInstructionRow(fields: string[]): boolean {
+  const colA = (fields[0] || '').trim();
+  if (colA !== '') return false;
+  const colL = (fields[11] || '').trim();
+  if (/拆單數|合計|序號/.test(colL)) return true;
+  if (!colA && !fields[1]?.trim() && !fields[2]?.trim() && colL.length > 5) return true;
+  return false;
+}
+
+export function parseBatchCorrectionSplitCsv(content: string, allOrders: OrderRow[]): CorrectionSplitImportResult {
+  const clean = content.replace(/^\uFEFF/, '');
+  const lines = clean.split(/\r?\n/).filter(l => l.trim() !== '');
+  const empty: CorrectionSplitImportResult = { totalRows: 0, validRows: [], skipRows: [], errorRows: [] };
+  if (lines.length < 2) return empty;
+  const headerFields = parseCsvLine(lines[0]);
+  if (!headerFields.includes('拆單數') && !headerFields.includes('交貨量1')) return empty;
+  const dataLines = lines.slice(1);
+  const rows: CorrectionSplitParsedRow[] = [];
+  for (let i = 0; i < dataLines.length; i++) {
+    const f = parseCsvLine(dataLines[i]);
+    if (isSplitInstructionRow(f)) continue;
+    if (f.every(x => x.trim() === '')) continue;
+    const rowIndex = i + 2;
+    const orderNo = (f[0] || '').trim();
+    const orderSeq = (f[1] || '').trim();
+    if (!orderNo) continue;
+    const splitCount = (f[11] || '').trim();
+    // parse up to 3 split groups: date(12+p*3), qty(13+p*3), material(14+p*3)
+    const splits: { newVendorDate: string; qty: string; newMaterialNo: string }[] = [];
+    for (let p = 0; p < 3; p++) {
+      const dateRaw = normalizeDateStr((f[12 + p * 3] || '').trim());
+      const qtyRaw = (f[13 + p * 3] || '').trim();
+      const matRaw = (f[14 + p * 3] || '').trim();
+      if (qtyRaw || dateRaw || matRaw) splits.push({ newVendorDate: dateRaw, qty: qtyRaw, newMaterialNo: matRaw });
+    }
+    const remark = (f[21] || '').trim();
+    // blank → skip
+    if (!splitCount && splits.length === 0) {
+      rows.push({ rowIndex, orderNo, orderSeq, vendorName: f[2]||'', vendorCode: f[3]||'', materialNo: f[4]||'', productName: f[5]||'', expectedDelivery: normalizeDateStr(f[6]||''), orderQty: f[7]||'', deliveryQty: f[8]||'', acceptQty: f[9]||'', inTransitQty: f[10]||'', splitCount, splits, remark, isValid: true });
+      continue;
+    }
+    let error: string | undefined;
+    const matched = allOrders.find(o => o.orderNo === orderNo && o.orderSeq === orderSeq);
+    if (!matched) error = `找不到對應訂單 (${orderNo} / ${orderSeq})`;
+    let skipReason: string | undefined;
+    if (matched && matched.status !== 'CK') {
+      skipReason = `狀態 ${matched.status} 不允許開立修正單（僅限 CK）`;
+    }
+    if (!skipReason && !error) {
+      if (splits.length < 2) error = '拆單至少需填寫 2 組交貨量';
+      else {
+        const totalSplitQty = splits.reduce((s, r) => s + (parseInt(r.qty, 10) || 0), 0);
+        const dQ = matched ? ((matched as any).deliveryQty ?? matched.orderQty ?? 0) : 0;
+        const aQ = matched?.acceptQty ?? 0, iQ = matched?.inTransitQty ?? 0;
+        if (matched && totalSplitQty !== dQ) error = `各拆出量合計 ${totalSplitQty} 必須等於交貨量 ${dQ}`;
+        else if (matched && aQ + iQ > 0) {
+          const firstQty = parseInt(splits[0].qty, 10) || 0;
+          if (firstQty < aQ + iQ) error = `第1拆出量 ${firstQty} 不可低於驗收量+在途量 ${aQ + iQ}`;
+        }
+        for (const s of splits) {
+          if (!error && s.newVendorDate && !isValidDateStr(s.newVendorDate)) { error = `日期格式錯誤: "${s.newVendorDate}"`; break; }
+        }
+      }
+    }
+    rows.push({
+      rowIndex, orderNo, orderSeq, vendorName: f[2]||'', vendorCode: f[3]||'', materialNo: f[4]||'', productName: f[5]||'', expectedDelivery: normalizeDateStr(f[6]||''), orderQty: f[7]||'', deliveryQty: f[8]||'', acceptQty: f[9]||'', inTransitQty: f[10]||'',
+      splitCount, splits, remark, matchedOrder: matched, error, skipReason, isValid: !error,
+    });
+  }
+  return {
+    totalRows: rows.length,
+    validRows: rows.filter(r => r.isValid && !r.skipReason && r.splits.length >= 2),
+    skipRows: rows.filter(r => r.isValid && (r.skipReason || r.splits.length < 2)),
+    errorRows: rows.filter(r => !r.isValid),
+  };
+}
+
+// ── 不拆單調整 Overlay ────────────────────────────────────────────────────────
+
+interface BatchCorrectionAdjustImportOverlayProps {
+  allOrders: OrderRow[];
+  onConfirm: (result: CorrectionAdjustImportResult) => void;
+  onClose: () => void;
+}
+
+export function BatchCorrectionAdjustImportOverlay({ allOrders, onConfirm, onClose }: BatchCorrectionAdjustImportOverlayProps) {
+  const [step, setStep] = useState<'upload' | 'preview'>('upload');
+  const [result, setResult] = useState<CorrectionAdjustImportResult | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [fileName, setFileName] = useState('');
+  const [parseError, setParseError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const processFile = useCallback((file: File) => {
+    setFileName(file.name); setParseError('');
+    const isXlsx = /\.(xlsx|xls)$/i.test(file.name);
+    const parse = (csvContent: string) => {
+      const r = parseBatchCorrectionAdjustCsv(csvContent, allOrders);
+      if (r.totalRows === 0) { setParseError('無法辨識檔案格式，請使用「下載批次建立（不拆單調整）」匯出的範本'); return; }
+      setResult(r); setStep('preview');
+    };
+    if (isXlsx) {
+      const reader = new FileReader();
+      reader.onload = (e) => { try { const wb = XLSX.read(new Uint8Array(e.target?.result as ArrayBuffer), { type: 'array', cellDates: true }); parse(XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]], { dateNF: 'yyyy/mm/dd' })); } catch { setParseError('無法讀取 Excel 檔案'); } };
+      reader.readAsArrayBuffer(file);
+    } else {
+      const reader = new FileReader();
+      reader.onload = (e) => parse(e.target?.result as string);
+      reader.readAsText(file, 'UTF-8');
+    }
+  }, [allOrders]);
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault(); setIsDragOver(false);
+    const f = e.dataTransfer.files[0];
+    if (f) processFile(f);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[200] bg-[rgba(145,158,171,0.4)] flex items-center justify-center p-[20px]" onClick={onClose}>
+      <div className="bg-white w-full rounded-[16px] shadow-[-40px_40px_80px_0px_rgba(145,158,171,0.24)] flex flex-col overflow-hidden"
+        style={{ maxWidth: step === 'upload' ? '560px' : '1100px', maxHeight: '85vh' }} onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-[24px] py-[16px] border-b border-[rgba(145,158,171,0.12)] shrink-0">
+          <div className="flex items-center gap-[10px]">
+            <FilePlus2 size={22} className="text-[#00a76f]" />
+            <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[18px] text-[#1c252e]">
+              {step === 'upload' ? '批次建立修正單（不拆單調整）' : '不拆單調整 — 匯入預覽'}
+            </p>
+          </div>
+          <div className="cursor-pointer hover:bg-[rgba(145,158,171,0.08)] rounded-full p-[4px]" onClick={onClose}><X size={20} className="text-[#637381]" /></div>
+        </div>
+
+        {/* Upload step */}
+        {step === 'upload' && (
+          <div className="flex flex-col gap-[20px] px-[24px] py-[24px]">
+            <div className="flex flex-col gap-[4px] bg-[#f4f6f8] rounded-[8px] px-[16px] py-[12px]">
+              <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#637381]">欄位說明（不拆單調整）：</p>
+              <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381]">• <span className="font-semibold text-[#1c252e]">新料號</span>：選填，覆蓋整張訂單的料號</p>
+              <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381]">• <span className="font-semibold text-[#1c252e]">新廠商交期1/新交貨量1～3</span>：至少填寫一期，最多三期</p>
+              <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381]">• 各期合計不可低於驗收量＋在途量，且不可超過交貨量</p>
+            </div>
+            {parseError && <div className="flex items-start gap-[8px] bg-[rgba(255,171,0,0.08)] rounded-[8px] px-[14px] py-[10px]"><AlertTriangle size={16} className="text-[#b76e00] shrink-0 mt-[2px]" /><p className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#b76e00]">{parseError}</p></div>}
+            <div
+              className={`flex flex-col items-center justify-center gap-[12px] border-2 border-dashed rounded-[12px] py-[40px] px-[20px] cursor-pointer transition-colors ${isDragOver ? 'border-[#00a76f] bg-[rgba(0,167,111,0.04)]' : 'border-[rgba(145,158,171,0.32)] hover:border-[#00a76f] hover:bg-[rgba(0,167,111,0.02)]'}`}
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={e => { e.preventDefault(); setIsDragOver(true); }}
+              onDragLeave={() => setIsDragOver(false)}
+              onDrop={handleDrop}
+            >
+              <Upload size={40} className="text-[#919eab]" />
+              <p className="font-['Public_Sans:Regular',sans-serif] text-[14px] text-[#637381] text-center">拖曳檔案至此處，或<span className="text-[#00a76f] font-semibold underline">點擊選擇檔案</span></p>
+              <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#919eab]">支援「下載批次建立（不拆單調整）」匯出的 .xlsx 或 .csv</p>
+              <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) processFile(f); }} />
+            </div>
+          </div>
+        )}
+
+        {/* Preview step */}
+        {step === 'preview' && result && (<>
+          <div className="flex flex-col gap-[16px] px-[24px] py-[20px] flex-1 min-h-0">
+            <div className="flex items-center gap-[10px] shrink-0">
+              <FileSpreadsheet size={16} className="text-[#637381]" />
+              <p className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#637381]">{fileName}</p>
+            </div>
+            <div className="flex gap-[8px] flex-wrap shrink-0">
+              <TotalSummaryBadge total={result.totalRows} validCount={result.validRows.length} errorCount={result.errorRows.length} />
+              <SummaryBadge label="可建立" count={result.validRows.length} bgColor="bg-[rgba(0,167,111,0.12)]" textColor="text-[#00a76f]" icon={<CheckCircle2 size={14} />} />
+              <SummaryBadge label="不處理" count={result.skipRows.length} bgColor="bg-[rgba(145,158,171,0.08)]" textColor="text-[#919eab]" />
+            </div>
+            <div className="flex-1 min-h-0 overflow-auto custom-scrollbar border border-[rgba(145,158,171,0.16)] rounded-[8px]">
+              <table className="w-full min-w-[900px]">
+                <thead className="sticky top-0 z-[1]"><tr className="bg-[#f4f6f8]">
+                  {['行','訂單號碼','序號','料號','新料號','第1期交期','第1期量','第2期交期','第2期量','第3期交期','第3期量','備註','驗證'].map(h => (
+                    <th key={h} className="px-[8px] py-[8px] text-left font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[11px] text-[#637381] whitespace-nowrap">{h}</th>
+                  ))}
+                </tr></thead>
+                <tbody>
+                  {result.errorRows.map(r => <BCAdjustRow key={`e${r.rowIndex}`} row={r} />)}
+                  {result.validRows.map(r => <BCAdjustRow key={`v${r.rowIndex}`} row={r} />)}
+                  {result.skipRows.map(r => <BCAdjustRow key={`s${r.rowIndex}`} row={r} />)}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div className="flex items-center justify-between px-[24px] py-[16px] border-t border-[rgba(145,158,171,0.12)] shrink-0">
+            <button className="h-[36px] px-[16px] rounded-[8px] border border-[rgba(145,158,171,0.32)] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-[#637381] hover:bg-[rgba(145,158,171,0.08)]" onClick={() => { setStep('upload'); setResult(null); setFileName(''); }}>重新選擇檔案</button>
+            <div className="flex gap-[12px]">
+              <button className="h-[36px] px-[16px] rounded-[8px] border border-[rgba(145,158,171,0.32)] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-[#637381] hover:bg-[rgba(145,158,171,0.08)]" onClick={onClose}>取消</button>
+              <button className="h-[36px] px-[20px] rounded-[8px] bg-[#00a76f] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-white hover:bg-[#007b55] disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => onConfirm(result)} disabled={result.validRows.length === 0}>確認建立修正單 ({result.validRows.length} 筆)</button>
+            </div>
+          </div>
+        </>)}
+      </div>
+    </div>
+  );
+}
+
+function BCAdjustRow({ row }: { row: CorrectionAdjustParsedRow }) {
+  const c = "px-[8px] py-[7px] font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#1c252e]";
+  const isSkip = !row.error && (!!row.skipReason || (row.schedules.length === 0 && !row.newMaterialNo));
+  const bg = !row.isValid ? 'bg-[rgba(255,171,0,0.04)]' : isSkip ? 'bg-[rgba(145,158,171,0.04)]' : 'bg-[rgba(0,167,111,0.02)]';
+  const s1 = row.schedules[0], s2 = row.schedules[1], s3 = row.schedules[2];
+  return (
+    <tr className={`border-t border-[rgba(145,158,171,0.08)] ${bg}`}>
+      <td className={`${c} text-[#919eab]`}>{row.rowIndex}</td>
+      <td className={c}>{row.orderNo}</td>
+      <td className={c}>{row.orderSeq}</td>
+      <td className={`${c} truncate max-w-[100px]`}>{row.materialNo}</td>
+      <td className={`${c} ${row.newMaterialNo ? 'text-[#00a76f] font-semibold' : 'text-[#919eab]'}`}>{row.newMaterialNo || '—'}</td>
+      <td className={`${c} ${s1?.newVendorDate ? 'text-[#005eb8] font-semibold' : 'text-[#919eab]'}`}>{s1?.newVendorDate || '—'}</td>
+      <td className={`${c} ${s1?.newQty ? 'text-[#005eb8] font-semibold' : 'text-[#919eab]'}`}>{s1?.newQty || '—'}</td>
+      <td className={`${c} ${s2?.newVendorDate ? 'text-[#005eb8] font-semibold' : 'text-[#919eab]'}`}>{s2?.newVendorDate || '—'}</td>
+      <td className={`${c} ${s2?.newQty ? 'text-[#005eb8] font-semibold' : 'text-[#919eab]'}`}>{s2?.newQty || '—'}</td>
+      <td className={`${c} ${s3?.newVendorDate ? 'text-[#005eb8] font-semibold' : 'text-[#919eab]'}`}>{s3?.newVendorDate || '—'}</td>
+      <td className={`${c} ${s3?.newQty ? 'text-[#005eb8] font-semibold' : 'text-[#919eab]'}`}>{s3?.newQty || '—'}</td>
+      <td className={`${c} truncate max-w-[100px] ${row.remark ? '' : 'text-[#919eab]'}`}>{row.remark || '—'}</td>
+      <td className="px-[8px] py-[7px]">
+        {!row.isValid ? <p className="text-[11px] text-[#b76e00] max-w-[140px]" title={row.error}>{row.error}</p>
+         : row.skipReason ? <p className="text-[11px] text-[#919eab] max-w-[140px]" title={row.skipReason}>{row.skipReason}</p>
+         : isSkip ? <span className="text-[#919eab] text-[12px]">—（不處理）</span>
+         : <CheckCircle2 size={14} className="text-[#22c55e]" />}
+      </td>
+    </tr>
+  );
+}
+
+// ── 拆單 Overlay ──────────────────────────────────────────────────────────────
+
+interface BatchCorrectionSplitImportOverlayProps {
+  allOrders: OrderRow[];
+  onConfirm: (result: CorrectionSplitImportResult) => void;
+  onClose: () => void;
+}
+
+export function BatchCorrectionSplitImportOverlay({ allOrders, onConfirm, onClose }: BatchCorrectionSplitImportOverlayProps) {
+  const [step, setStep] = useState<'upload' | 'preview'>('upload');
+  const [result, setResult] = useState<CorrectionSplitImportResult | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [fileName, setFileName] = useState('');
+  const [parseError, setParseError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const processFile = useCallback((file: File) => {
+    setFileName(file.name); setParseError('');
+    const isXlsx = /\.(xlsx|xls)$/i.test(file.name);
+    const parse = (csvContent: string) => {
+      const r = parseBatchCorrectionSplitCsv(csvContent, allOrders);
+      if (r.totalRows === 0) { setParseError('無法辨識檔案格式，請使用「下載批次建立（拆單）」匯出的範本'); return; }
+      setResult(r); setStep('preview');
+    };
+    if (isXlsx) {
+      const reader = new FileReader();
+      reader.onload = (e) => { try { const wb = XLSX.read(new Uint8Array(e.target?.result as ArrayBuffer), { type: 'array', cellDates: true }); parse(XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]], { dateNF: 'yyyy/mm/dd' })); } catch { setParseError('無法讀取 Excel 檔案'); } };
+      reader.readAsArrayBuffer(file);
+    } else {
+      const reader = new FileReader();
+      reader.onload = (e) => parse(e.target?.result as string);
+      reader.readAsText(file, 'UTF-8');
+    }
+  }, [allOrders]);
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault(); setIsDragOver(false);
+    const f = e.dataTransfer.files[0];
+    if (f) processFile(f);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[200] bg-[rgba(145,158,171,0.4)] flex items-center justify-center p-[20px]" onClick={onClose}>
+      <div className="bg-white w-full rounded-[16px] shadow-[-40px_40px_80px_0px_rgba(145,158,171,0.24)] flex flex-col overflow-hidden"
+        style={{ maxWidth: step === 'upload' ? '560px' : '1100px', maxHeight: '85vh' }} onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-[24px] py-[16px] border-b border-[rgba(145,158,171,0.12)] shrink-0">
+          <div className="flex items-center gap-[10px]">
+            <FilePlus2 size={22} className="text-[#8e33ff]" />
+            <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[18px] text-[#1c252e]">
+              {step === 'upload' ? '批次建立修正單（拆單）' : '拆單 — 匯入預覽'}
+            </p>
+          </div>
+          <div className="cursor-pointer hover:bg-[rgba(145,158,171,0.08)] rounded-full p-[4px]" onClick={onClose}><X size={20} className="text-[#637381]" /></div>
+        </div>
+
+        {/* Upload step */}
+        {step === 'upload' && (
+          <div className="flex flex-col gap-[20px] px-[24px] py-[24px]">
+            <div className="flex flex-col gap-[4px] bg-[#f4f6f8] rounded-[8px] px-[16px] py-[12px]">
+              <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#637381]">欄位說明（拆單）：</p>
+              <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381]">• <span className="font-semibold text-[#1c252e]">拆單數</span>：選填，2 以上（至少要填 2 組交貨量）</p>
+              <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381]">• <span className="font-semibold text-[#1c252e]">交貨量1～3</span>：各拆出序號的交貨量，合計必須等於原交貨量</p>
+              <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381]">• <span className="font-semibold text-[#1c252e]">料號1～3</span>：各拆出序號的新料號（選填）</p>
+              <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381]">• 拆出序號由系統自動計算，無需填寫</p>
+            </div>
+            {parseError && <div className="flex items-start gap-[8px] bg-[rgba(255,171,0,0.08)] rounded-[8px] px-[14px] py-[10px]"><AlertTriangle size={16} className="text-[#b76e00] shrink-0 mt-[2px]" /><p className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#b76e00]">{parseError}</p></div>}
+            <div
+              className={`flex flex-col items-center justify-center gap-[12px] border-2 border-dashed rounded-[12px] py-[40px] px-[20px] cursor-pointer transition-colors ${isDragOver ? 'border-[#8e33ff] bg-[rgba(142,51,255,0.04)]' : 'border-[rgba(145,158,171,0.32)] hover:border-[#8e33ff] hover:bg-[rgba(142,51,255,0.02)]'}`}
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={e => { e.preventDefault(); setIsDragOver(true); }}
+              onDragLeave={() => setIsDragOver(false)}
+              onDrop={handleDrop}
+            >
+              <Upload size={40} className="text-[#919eab]" />
+              <p className="font-['Public_Sans:Regular',sans-serif] text-[14px] text-[#637381] text-center">拖曳檔案至此處，或<span className="text-[#8e33ff] font-semibold underline">點擊選擇檔案</span></p>
+              <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#919eab]">支援「下載批次建立（拆單）」匯出的 .xlsx 或 .csv</p>
+              <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) processFile(f); }} />
+            </div>
+          </div>
+        )}
+
+        {/* Preview step */}
+        {step === 'preview' && result && (<>
+          <div className="flex flex-col gap-[16px] px-[24px] py-[20px] flex-1 min-h-0">
+            <div className="flex items-center gap-[10px] shrink-0">
+              <FileSpreadsheet size={16} className="text-[#637381]" />
+              <p className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#637381]">{fileName}</p>
+            </div>
+            <div className="flex gap-[8px] flex-wrap shrink-0">
+              <TotalSummaryBadge total={result.totalRows} validCount={result.validRows.length} errorCount={result.errorRows.length} />
+              <SummaryBadge label="可建立" count={result.validRows.length} bgColor="bg-[rgba(142,51,255,0.12)]" textColor="text-[#8e33ff]" icon={<CheckCircle2 size={14} />} />
+              <SummaryBadge label="不處理" count={result.skipRows.length} bgColor="bg-[rgba(145,158,171,0.08)]" textColor="text-[#919eab]" />
+            </div>
+            <div className="flex-1 min-h-0 overflow-auto custom-scrollbar border border-[rgba(145,158,171,0.16)] rounded-[8px]">
+              <table className="w-full min-w-[1000px]">
+                <thead className="sticky top-0 z-[1]"><tr className="bg-[#f4f6f8]">
+                  {['行','訂單號碼','序號','料號','拆單數','交期1','量1','料號1','交期2','量2','料號2','交期3','量3','料號3','備註','驗證'].map(h => (
+                    <th key={h} className="px-[8px] py-[8px] text-left font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[11px] text-[#637381] whitespace-nowrap">{h}</th>
+                  ))}
+                </tr></thead>
+                <tbody>
+                  {result.errorRows.map(r => <BCSplitRow key={`e${r.rowIndex}`} row={r} />)}
+                  {result.validRows.map(r => <BCSplitRow key={`v${r.rowIndex}`} row={r} />)}
+                  {result.skipRows.map(r => <BCSplitRow key={`s${r.rowIndex}`} row={r} />)}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div className="flex items-center justify-between px-[24px] py-[16px] border-t border-[rgba(145,158,171,0.12)] shrink-0">
+            <button className="h-[36px] px-[16px] rounded-[8px] border border-[rgba(145,158,171,0.32)] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-[#637381] hover:bg-[rgba(145,158,171,0.08)]" onClick={() => { setStep('upload'); setResult(null); setFileName(''); }}>重新選擇檔案</button>
+            <div className="flex gap-[12px]">
+              <button className="h-[36px] px-[16px] rounded-[8px] border border-[rgba(145,158,171,0.32)] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-[#637381] hover:bg-[rgba(145,158,171,0.08)]" onClick={onClose}>取消</button>
+              <button className="h-[36px] px-[20px] rounded-[8px] bg-[#8e33ff] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-white hover:bg-[#5b1fc0] disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => onConfirm(result)} disabled={result.validRows.length === 0}>確認建立拆單修正單 ({result.validRows.length} 筆)</button>
+            </div>
+          </div>
+        </>)}
+      </div>
+    </div>
+  );
+}
+
+function BCSplitRow({ row }: { row: CorrectionSplitParsedRow }) {
+  const c = "px-[8px] py-[7px] font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#1c252e]";
+  const isSkip = !row.error && (!!row.skipReason || row.splits.length < 2);
+  const bg = !row.isValid ? 'bg-[rgba(255,171,0,0.04)]' : isSkip ? 'bg-[rgba(145,158,171,0.04)]' : 'bg-[rgba(142,51,255,0.02)]';
+  const accent = 'text-[#8e33ff] font-semibold';
+  const s1 = row.splits[0], s2 = row.splits[1], s3 = row.splits[2];
+  return (
+    <tr className={`border-t border-[rgba(145,158,171,0.08)] ${bg}`}>
+      <td className={`${c} text-[#919eab]`}>{row.rowIndex}</td>
+      <td className={c}>{row.orderNo}</td>
+      <td className={c}>{row.orderSeq}</td>
+      <td className={`${c} truncate max-w-[100px]`}>{row.materialNo}</td>
+      <td className={`${c} ${row.splitCount ? accent : 'text-[#919eab]'}`}>{row.splitCount || '—'}</td>
+      <td className={`${c} ${s1?.newVendorDate ? accent : 'text-[#919eab]'}`}>{s1?.newVendorDate || '—'}</td>
+      <td className={`${c} ${s1?.qty ? accent : 'text-[#919eab]'}`}>{s1?.qty || '—'}</td>
+      <td className={`${c} ${s1?.newMaterialNo ? accent : 'text-[#919eab]'}`}>{s1?.newMaterialNo || '—'}</td>
+      <td className={`${c} ${s2?.newVendorDate ? accent : 'text-[#919eab]'}`}>{s2?.newVendorDate || '—'}</td>
+      <td className={`${c} ${s2?.qty ? accent : 'text-[#919eab]'}`}>{s2?.qty || '—'}</td>
+      <td className={`${c} ${s2?.newMaterialNo ? accent : 'text-[#919eab]'}`}>{s2?.newMaterialNo || '—'}</td>
+      <td className={`${c} ${s3?.newVendorDate ? accent : 'text-[#919eab]'}`}>{s3?.newVendorDate || '—'}</td>
+      <td className={`${c} ${s3?.qty ? accent : 'text-[#919eab]'}`}>{s3?.qty || '—'}</td>
+      <td className={`${c} ${s3?.newMaterialNo ? accent : 'text-[#919eab]'}`}>{s3?.newMaterialNo || '—'}</td>
+      <td className={`${c} truncate max-w-[80px] ${row.remark ? '' : 'text-[#919eab]'}`}>{row.remark || '—'}</td>
+      <td className="px-[8px] py-[7px]">
+        {!row.isValid ? <p className="text-[11px] text-[#b76e00] max-w-[140px]" title={row.error}>{row.error}</p>
+         : row.skipReason ? <p className="text-[11px] text-[#919eab] max-w-[140px]" title={row.skipReason}>{row.skipReason}</p>
+         : isSkip ? <span className="text-[#919eab] text-[12px]">—（不處理）</span>
+         : <CheckCircle2 size={14} className="text-[#22c55e]" />}
+      </td>
+    </tr>
+  );
 }
 
 export type CorrectionBatchCode = 'A' | 'B' | '';
