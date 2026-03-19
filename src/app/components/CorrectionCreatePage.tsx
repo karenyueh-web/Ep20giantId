@@ -378,20 +378,30 @@ export function CorrectionCreatePage({ userRole, onNavigateToList }: CorrectionC
   const handleBatchAdjustConfirm = (result: CorrectionAdjustImportResult) => {
     const now = nowDateStr();
     const op = operatorByRole(userRole as any);
+    let createdCount = 0;
     for (const row of result.validRows) {
       if (!row.matchedOrder) continue;
       const order = row.matchedOrder;
       const docNo = generateCorrectionDocNo();
       const correctionId = Date.now() + Math.floor(Math.random() * 10000) + row.rowIndex;
+      const totalQty = (order as any).deliveryQty ?? order.orderQty ?? 0;
+      const schedCount = row.schedules.length;
       const savedDeliveryRows = row.schedules.length > 0
-        ? row.schedules.map((s, i) => ({
-            expectedDelivery: order.expectedDelivery,
-            vendorOriginalDate: i === 0 ? (order.vendorDeliveryDate || order.expectedDelivery || '') : '',
-            newVendorDate: s.newVendorDate || order.vendorDeliveryDate || order.expectedDelivery || '',
-            originalQty: i === 0 ? ((order as any).deliveryQty ?? order.orderQty) : 0,
-            newQty: s.newQty || String((order as any).deliveryQty ?? order.orderQty),
-            deleted: false,
-          }))
+        ? row.schedules.map((s, i) => {
+            const base = Math.floor(totalQty / schedCount);
+            const rem = totalQty % schedCount;
+            const autoQty = i < rem ? base + 1 : base;
+            // 優先採用 CSV 填寫的 newQty；未填時才用均分的 autoQty（避免覆蓋用戶明確設定的值）
+            const newQty = s.newQty ? s.newQty : String(autoQty);
+            return {
+              expectedDelivery: order.expectedDelivery,
+              vendorOriginalDate: order.vendorDeliveryDate || order.expectedDelivery || '',
+              newVendorDate: s.newVendorDate || order.vendorDeliveryDate || order.expectedDelivery || '',
+              originalQty: i === 0 ? totalQty : 0,
+              newQty,
+              deleted: false,
+            };
+          })
         : [{
             expectedDelivery: order.expectedDelivery,
             vendorOriginalDate: order.vendorDeliveryDate || order.expectedDelivery || '',
@@ -405,7 +415,7 @@ export function CorrectionCreatePage({ userRole, onNavigateToList }: CorrectionC
         orderNo: order.orderNo, orderSeq: order.orderSeq,
         docSeqNo: (order.orderNo || '') + (order.orderSeq || ''),
         vendorCode: order.vendorCode, vendorName: order.vendorName,
-        purchaseOrg: (order as any).purchaseOrg || '', materialNo: row.newMaterialNo || order.materialNo,
+        purchaseOrg: (order as any).purchaseOrg || '', materialNo: order.materialNo,
         productName: order.productName, orderDate: order.orderDate || '',
         orderQty: order.orderQty, acceptQty: order.acceptQty, company: (order as any).company || '',
         createdAt: now, expectedDelivery: order.expectedDelivery,
@@ -413,13 +423,47 @@ export function CorrectionCreatePage({ userRole, onNavigateToList }: CorrectionC
         inTransitQty: order.inTransitQty, deliveryQty: (order as any).deliveryQty ?? order.orderQty,
         newMaterialNo: row.newMaterialNo || '', correctionNote: row.remark || '', savedDeliveryRows,
       };
+      // ── 先計算異動摘要（與手動送單 buildChangeSummary 一致），無變更則跳過不建單 ──
+      const changeParts: string[] = [];
+      // 料號變更
+      if (row.newMaterialNo && row.newMaterialNo !== (order.materialNo ?? '')) {
+        changeParts.push(`料號：${order.materialNo || '—'} → ${row.newMaterialNo}`);
+      }
+      // 修正備註
+      if (row.remark?.trim()) {
+        changeParts.push(`備註：${row.remark.trim()}`);
+      }
+      // 各期交貨排程變更
+      savedDeliveryRows.forEach((dr, idx) => {
+        const label = `第${idx + 1}期`;
+        const rowParts: string[] = [];
+        if (dr.newVendorDate && dr.newVendorDate !== dr.vendorOriginalDate) {
+          rowParts.push(`交期 ${dr.vendorOriginalDate || '—'} → ${dr.newVendorDate}`);
+        }
+        if (String(dr.newQty) !== String(dr.originalQty)) {
+          rowParts.push(`交貨量 ${dr.originalQty} → ${dr.newQty}`);
+        }
+        if (idx > 0 && dr.originalQty === 0) {
+          // 新增期次：標示「新增」
+          const newParts: string[] = [];
+          if (dr.newVendorDate) newParts.push(`交期 ${dr.newVendorDate}`);
+          if (dr.newQty) newParts.push(`交貨量 ${dr.newQty}`);
+          changeParts.push(`${label}（新增）：${newParts.join('、')}`);
+        } else if (rowParts.length > 0) {
+          changeParts.push(`${label}：${rowParts.join('、')}`);
+        }
+      });
+      // 無任何欄位變更 → 直接跳過，不建立修正單
+      if (changeParts.length === 0) continue;
+      const changeSummary = changeParts.join('；');
       addCorrectionOrder(corrRow);
       addCorrectionHistory(correctionId, {
         date: now, event: '修正單開立並提交（批次匯入-不拆單調整）', operator: op,
-        remark: `修正單號: ${docNo}，不拆單調整 → V${row.schedules.length > 0 ? `，${row.schedules.length}期交貨排程` : ''}${row.newMaterialNo ? `，新料號: ${row.newMaterialNo}` : ''}`,
+        remark: `修正單號: ${docNo}，不拆單調整 → V；${changeSummary}`,
       });
+      createdCount++;
     }
-    showToast(`批次建立修正單完成：${result.validRows.length} 張已提交廠商 (V)（不拆單調整）`);
+    showToast(`批次建立修正單完成：${createdCount} 張已提交廠商 (V)（不拆單調整）${createdCount < result.validRows.length ? `（${result.validRows.length - createdCount} 張無欄位變更已略過）` : ''}`);
     setShowBatchAdjustImport(false);
     setTimeout(() => onNavigateToList?.(), 2200);
   };

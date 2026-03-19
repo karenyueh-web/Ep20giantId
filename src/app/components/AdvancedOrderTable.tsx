@@ -1071,33 +1071,28 @@ export function AdvancedOrderTable({
         {/* ── 選取狀態列（捲動區外，不會橫向位移，對齊 Figma TableOrderHead 格式） ── */}
         {hasSelected && showCheckbox && (
           <div
-            className="shrink-0 flex items-center justify-between h-[48px] border-b border-[rgba(145,158,171,0.08)]"
+            className="shrink-0 flex items-center h-[48px] border-b border-[rgba(145,158,171,0.08)]"
             style={{ background: 'rgba(0,94,184,0.16)' }}
           >
-            {/* 左側：checkbox-on icon + selected 計數 */}
-            <div className="flex items-center shrink-0" style={{ width: 200, minWidth: 200 }}>
-              <div
+            {/* checkbox-on icon + selected 計數 + 操作按鈕 緊排 */}
+            <div
+              data-is-checkbox="true"
+              className="flex items-center justify-center shrink-0"
+              style={{ width: CHECKBOX_WIDTH, minWidth: CHECKBOX_WIDTH }}
+            >
+              <button
                 data-is-checkbox="true"
-                className="flex items-center justify-center shrink-0"
-                style={{ width: CHECKBOX_WIDTH, minWidth: CHECKBOX_WIDTH }}
+                onClick={() => onSelectAll()}
+                className="flex items-center justify-center w-[36px] h-[36px] rounded-full hover:bg-[rgba(0,85,156,0.12)] transition-colors"
               >
-                <button
-                  data-is-checkbox="true"
-                  onClick={() => onSelectAll()}
-                  className="flex items-center justify-center w-[36px] h-[36px] rounded-full hover:bg-[rgba(0,85,156,0.12)] transition-colors"
-                >
-                  <svg width="20" height="20" viewBox="0 0 16.6667 16.6667" fill="none">
-                    <path clipRule="evenodd" d={svgCheckboxOn.p2dde97c0} fill="#005EB8" fillRule="evenodd" />
-                  </svg>
-                </button>
-              </div>
-              <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-[#1c252e] leading-[24px] whitespace-nowrap">
-                {selectedOrderIds.size} selected
-              </span>
+                <svg width="20" height="20" viewBox="0 0 16.6667 16.6667" fill="none">
+                  <path clipRule="evenodd" d={svgCheckboxOn.p2dde97c0} fill="#005EB8" fillRule="evenodd" />
+                </svg>
+              </button>
             </div>
-
-            {/* 中間：彈性空白 */}
-            <div className="flex-1 min-w-0" />
+            <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-[#1c252e] leading-[24px] whitespace-nowrap mr-[4px]">
+              {selectedOrderIds.size} selected
+            </span>
 
             {/* 右側：自訂 batchActions 或預設「批次訂單確認」 */}
             {batchActions ?? (

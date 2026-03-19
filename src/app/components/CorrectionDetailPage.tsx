@@ -82,14 +82,6 @@ const nextRid = () => ++_rid;
 // ── Generate initial delivery rows from order ──────────────────────────────────
 function makeInitialRows(order: OrderRow): DeliveryRow[] {
   const total = order.deliveryQty ?? order.orderQty ?? 0;
-  if (total > 20) {
-    const q1 = Math.floor(total / 2);
-    const q2 = total - q1;
-    return [
-      { id: nextRid(), expectedDelivery: order.expectedDelivery ?? order.vendorDeliveryDate ?? '', vendorOriginalDate: order.vendorDeliveryDate ?? '', newVendorDate: order.vendorDeliveryDate ?? '', originalQty: q1, newQty: String(q1) },
-      { id: nextRid(), expectedDelivery: order.expectedDelivery ?? order.vendorDeliveryDate ?? '', vendorOriginalDate: order.agreedDate ?? order.vendorDeliveryDate ?? '', newVendorDate: order.agreedDate ?? order.vendorDeliveryDate ?? '', originalQty: q2, newQty: String(q2) },
-    ];
-  }
   return [
     { id: nextRid(), expectedDelivery: order.expectedDelivery ?? order.vendorDeliveryDate ?? '', vendorOriginalDate: order.vendorDeliveryDate ?? '', newVendorDate: order.vendorDeliveryDate ?? '', originalQty: total, newQty: String(total) },
   ];
@@ -436,7 +428,7 @@ export function CorrectionDetailPage({
         currentActive++;
         return { ...r, deleted: false };
       });
-      // 若仍不足，新增全新列
+      // 若仍不足，新增全新列（原廠商交期與第1期相同，顯示 order.vendorDeliveryDate）
       for (let i = newRows.filter(r => !r.deleted).length; i < n; i++) {
         newRows.push({
           id: nextRid(),
@@ -457,17 +449,36 @@ export function CorrectionDetailPage({
       });
       setFormMap(prev => ({ ...prev, [order.id]: { ...prev[order.id], deliveryRows: newRows } }));
     } else {
-      // 減少有效列：從後往前將最後 (activeCount - n) 筆有效列軟刪除
-      // 此行為等同按該列垃圾桶，保留列資料以紅線顯示
-      const toSoftDelete = activeCount - n;
-      let softDeleted = 0;
-      const newRows = [...allRows];
-      for (let i = newRows.length - 1; i >= 0 && softDeleted < toSoftDelete; i--) {
-        if (!newRows[i].deleted) {
-          newRows[i] = { ...newRows[i], deleted: true };
-          softDeleted++;
+      // 減少有效列：優先「直接移除」 originalQty === 0 的新增列；
+      // 不足時再對原有列（originalQty > 0）做軟刪除（紅線顯示）
+      const orderQty = order.orderQty ?? 0;
+      const toRemove = activeCount - n;
+      let removed = 0;
+      // Step 1: 從後往前移除新增列（originalQty === 0）
+      let newRows = [...allRows];
+      for (let i = newRows.length - 1; i >= 0 && removed < toRemove; i--) {
+        if (!newRows[i].deleted && newRows[i].originalQty === 0) {
+          newRows.splice(i, 1);
+          removed++;
         }
       }
+      // Step 2: 若仍不足，從後往前軟刪除原有列（originalQty > 0）
+      for (let i = newRows.length - 1; i >= 0 && removed < toRemove; i--) {
+        if (!newRows[i].deleted) {
+          newRows[i] = { ...newRows[i], deleted: true };
+          removed++;
+        }
+      }
+      // Step 3: 重新分配剩餘有效列的新交貨量
+      const base = Math.floor(orderQty / n);
+      const rem = orderQty % n;
+      let activeIdx = 0;
+      newRows = newRows.map(r => {
+        if (r.deleted) return r;
+        const qty = activeIdx < rem ? base + 1 : base;
+        activeIdx++;
+        return { ...r, newQty: String(qty) };
+      });
       setFormMap(prev => ({ ...prev, [order.id]: { ...prev[order.id], deliveryRows: newRows } }));
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -601,11 +612,34 @@ export function CorrectionDetailPage({
 
   // 軟刪除：按垃圾桶 → 標記 deleted，顯示紅線槓掉；再按復原圖示 → 取消刪除
   // 同步更新 periodInput，確保儲存後重新開啟時 useEffect 不會復原已刪除的列
+  // 例外：originalQty === 0 的「新增期次」，直接完全移除（不顯示紅線），因為建立階段只是在調整
+  // ＊刪除後同步重算剩餘有效列的 newQty（按 orderQty / 有效期數 均分），
+  //   避免垃圾桶逐一刪除時數量未更新的問題。
   const toggleDeleteRow = (id: number) => {
+    const totalQty = order.orderQty ?? 0;
     setForm(p => {
-      const newRows = p.deliveryRows.map(r => r.id === id ? { ...r, deleted: !r.deleted } : r);
-      const newActiveCount = newRows.filter(r => !r.deleted).length;
-      return { ...p, deliveryRows: newRows, periodInput: String(newActiveCount) };
+      const target = p.deliveryRows.find(r => r.id === id);
+      let rows: typeof p.deliveryRows;
+      if (target && target.originalQty === 0) {
+        // 新增的期次：直接移除，不做軟刪除
+        if (p.deliveryRows.length <= 1) { showToast('至少需保留一筆交貨排程'); return p; }
+        rows = p.deliveryRows.filter(r => r.id !== id);
+      } else {
+        // 原有期次：軟刪除（顯示紅線）
+        rows = p.deliveryRows.map(r => r.id === id ? { ...r, deleted: !r.deleted } : r);
+      }
+      // 重算剩餘有效列的 newQty
+      const activeCount = rows.filter(r => !r.deleted).length;
+      const base = activeCount > 0 ? Math.floor(totalQty / activeCount) : 0;
+      const rem = activeCount > 0 ? totalQty % activeCount : 0;
+      let activeIdx = 0;
+      const redistributed = rows.map(r => {
+        if (r.deleted) return r;
+        const qty = activeIdx < rem ? base + 1 : base;
+        activeIdx++;
+        return { ...r, newQty: String(qty) };
+      });
+      return { ...p, deliveryRows: redistributed, periodInput: String(activeCount) };
     });
   };
 
@@ -675,7 +709,11 @@ export function CorrectionDetailPage({
     form.deliveryRows.forEach((row, idx) => {
       const label = `第${idx + 1}期`;
       if (row.deleted) {
-        changes.push(`${label}：刪除`);
+        // 只有刪除「原有期次」（originalQty > 0）才記入備註；
+        // 刪除「新增期次」（originalQty === 0）不產生備註，因為那只是建立過程中的臨時增刪
+        if (row.originalQty > 0) {
+          changes.push(`${label}：刪除`);
+        }
         return;
       }
       const rowChanges: string[] = [];

@@ -13,7 +13,7 @@ interface LoginPageProps {
 
 function Image() {
   return (
-    <div className="relative rounded-tr-[80px] shrink-0 w-1/2 self-stretch hidden lg:block" data-name="image">
+    <div className="relative rounded-tr-[80px] shrink-0 w-2/5 self-stretch hidden lg:block" data-name="image">
       <div aria-hidden="true" className="absolute inset-0 pointer-events-none rounded-tr-[80px]">
         <div className="absolute inset-0 overflow-hidden rounded-tr-[80px]">
           {/* Full-bleed background image using CSS background for precise control */}

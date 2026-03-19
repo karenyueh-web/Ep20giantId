@@ -333,7 +333,7 @@ function SelectionToolbar({
       </div>
 
       {/* 計數文字 */}
-      <span className="flex-1 font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-[#1c252e] leading-[24px] whitespace-nowrap">
+      <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-[#1c252e] leading-[24px] whitespace-nowrap mr-[4px]">
         {selectedCount} selected
       </span>
 

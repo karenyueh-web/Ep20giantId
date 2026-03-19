@@ -487,7 +487,7 @@ export function AdvancedForecastTable({
             </div>
 
             {/* 計數文字（緊接 checkbox 欄後） */}
-            <span className="flex-1 font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-[#1c252e] leading-[24px] whitespace-nowrap">
+            <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-[#1c252e] leading-[24px] whitespace-nowrap mr-[4px]">
               {selectedIds.size} selected
             </span>
 
