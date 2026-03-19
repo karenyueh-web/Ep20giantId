@@ -5,7 +5,7 @@ import { TableToolbar } from './TableToolbar';
 import { ColumnSelector } from './ColumnSelector';
 import { FilterDialog, type FilterCondition } from './FilterDialog';
 import { SearchField } from './SearchField';
-import { CsvToolbarButtons, BatchCorrectionAdjustImportOverlay, BatchCorrectionSplitImportOverlay, exportOrdersExcel, exportOrdersCsv, exportBatchCorrectionAdjustTemplate, exportBatchCorrectionSplitTemplate, type CorrectionAdjustImportResult, type CorrectionSplitImportResult, type ExportType } from './OrderCsvManager';
+import { CsvToolbarButtons, BatchCorrectionCombinedImportOverlay, exportOrdersExcel, exportOrdersCsv, exportBatchCorrectionAdjustTemplate, exportBatchCorrectionSplitTemplate, type CorrectionAdjustImportResult, type CorrectionSplitImportResult, type ExportType } from './OrderCsvManager';
 import { useOrderStore } from './OrderStoreContext';
 import { nowDateStr, operatorByRole } from './OrderStoreContext';
 import type { CorrectionOrderRow } from './OrderStoreContext';
@@ -153,9 +153,8 @@ export function CorrectionCreatePage({ userRole, onNavigateToList }: CorrectionC
   const [filters, setFilters]                     = useState<FilterCondition[]>([]);
   const [appliedFilters, setAppliedFilters]       = useState<FilterCondition[]>([]);
 
-  // ── Batch correction import overlays ────────────────────────────────────────
-  const [showBatchAdjustImport, setShowBatchAdjustImport] = useState(false);
-  const [showBatchSplitImport, setShowBatchSplitImport] = useState(false);
+  // ── Batch correction import overlay (合併) ──────────────────────────────────
+  const [showBatchCorrectionImport, setShowBatchCorrectionImport] = useState(false);
 
 
   // ── Toast ──────────────────────────────────────────────────────────────────
@@ -464,7 +463,7 @@ export function CorrectionCreatePage({ userRole, onNavigateToList }: CorrectionC
       createdCount++;
     }
     showToast(`批次建立修正單完成：${createdCount} 張已提交廠商 (V)（不拆單調整）${createdCount < result.validRows.length ? `（${result.validRows.length - createdCount} 張無欄位變更已略過）` : ''}`);
-    setShowBatchAdjustImport(false);
+    setShowBatchCorrectionImport(false);
     setTimeout(() => onNavigateToList?.(), 2200);
   };
 
@@ -473,10 +472,15 @@ export function CorrectionCreatePage({ userRole, onNavigateToList }: CorrectionC
     const now = nowDateStr();
     const op = operatorByRole(userRole as any);
     const seqTracker: Record<string, number> = {};
-    const getNextSplitSeq = (orderNo: string): string => {
+    const getNextSplitSeq = (orderNo: string, knownSeq?: number): string => {
       if (!(orderNo in seqTracker)) {
-        const allSources = [...allCkOrders, ...orders];
-        const seqs = allSources.filter(o => o.orderNo === orderNo).map(o => parseInt(o.orderSeq, 10)).filter(n => !isNaN(n));
+        // 查 store 中所有訂單（不限 CK 狀態），找該 orderNo 下最大的序號
+        // 同時納入被拆單本身的序號（避免因過濾導致找不到）
+        const seqs = orders
+          .filter(o => o.orderNo === orderNo)
+          .map(o => parseInt(o.orderSeq, 10))
+          .filter(n => !isNaN(n));
+        if (knownSeq !== undefined && !isNaN(knownSeq)) seqs.push(knownSeq);
         seqTracker[orderNo] = seqs.length > 0 ? Math.max(...seqs) : 0;
       }
       seqTracker[orderNo] += 10;
@@ -489,12 +493,12 @@ export function CorrectionCreatePage({ userRole, onNavigateToList }: CorrectionC
       const correctionId = Date.now() + Math.floor(Math.random() * 10000) + row.rowIndex + 50000;
       const savedDeliveryRows = row.splits.map((s, i) => ({
         expectedDelivery: order.expectedDelivery,
-        vendorOriginalDate: i === 0 ? (order.vendorDeliveryDate || order.expectedDelivery || '') : '',
+        vendorOriginalDate: order.vendorDeliveryDate || order.expectedDelivery || '',
         newVendorDate: s.newVendorDate || order.vendorDeliveryDate || order.expectedDelivery || '',
         originalQty: i === 0 ? ((order as any).deliveryQty ?? order.orderQty) : 0,
         newQty: s.qty,
         deleted: false,
-        splitOrderSeq: i === 0 ? order.orderSeq : getNextSplitSeq(order.orderNo),
+        splitOrderSeq: i === 0 ? order.orderSeq : getNextSplitSeq(order.orderNo, parseInt(order.orderSeq, 10)),
         splitNewMaterialNo: s.newMaterialNo || '',
       }));
       const corrRow: CorrectionOrderRow = {
@@ -511,13 +515,21 @@ export function CorrectionCreatePage({ userRole, onNavigateToList }: CorrectionC
         newMaterialNo: '', correctionNote: row.remark || '', savedDeliveryRows,
       };
       addCorrectionOrder(corrRow);
+      // 歷程備註：列出每拆的序號、交期、交貨量（與手動送單一致）
+      const splitSummaryParts = savedDeliveryRows.map((dr, idx) => {
+        const parts: string[] = [];
+        if (dr.newVendorDate) parts.push(`交期 ${dr.newVendorDate}`);
+        if (dr.newQty) parts.push(`交貨量 ${dr.newQty}`);
+        if ((dr as any).splitNewMaterialNo) parts.push(`料號 ${(dr as any).splitNewMaterialNo}`);
+        return `第${idx + 1}拆(序號${(dr as any).splitOrderSeq || '—'})：${parts.join('、')}`;
+      });
       addCorrectionHistory(correctionId, {
         date: now, event: '修正單開立並提交（批次匯入-拆單）', operator: op,
-        remark: `修正單號: ${docNo}，拆單 → V，共 ${row.splits.length} 筆分拆序號`,
+        remark: `修正單號: ${docNo}，拆單 → V；${splitSummaryParts.join('；')}`,
       });
     }
     showToast(`批次建立拆單修正單完成：${result.validRows.length} 張已提交廠商 (V)`);
-    setShowBatchSplitImport(false);
+    setShowBatchCorrectionImport(false);
     setTimeout(() => onNavigateToList?.(), 2200);
   };
 
@@ -722,8 +734,8 @@ export function CorrectionCreatePage({ userRole, onNavigateToList }: CorrectionC
             onImport={() => {}}
             hideBatchReply={true}
             hideBatchCorrection={false}
-            onBatchCorrectionAdjustImport={() => setShowBatchAdjustImport(true)}
-            onBatchCorrectionSplitImport={() => setShowBatchSplitImport(true)}
+            onBatchCorrectionAdjustImport={() => setShowBatchCorrectionImport(true)}
+            onBatchCorrectionSplitImport={() => setShowBatchCorrectionImport(true)}
           />
         }
         columnsButton={
@@ -772,21 +784,13 @@ export function CorrectionCreatePage({ userRole, onNavigateToList }: CorrectionC
         />
       </div>
 
-      {/* ── 批次建立修正單匯入 Overlay（不拆單調整）──────────────────────── */}
-      {showBatchAdjustImport && (
-        <BatchCorrectionAdjustImportOverlay
+      {/* ── 批次建立修正單匯入 Overlay（合併版）──────────────────────────────── */}
+      {showBatchCorrectionImport && (
+        <BatchCorrectionCombinedImportOverlay
           allOrders={allCkOrders}
-          onConfirm={handleBatchAdjustConfirm}
-          onClose={() => setShowBatchAdjustImport(false)}
-        />
-      )}
-
-      {/* ── 批次建立修正單匯入 Overlay（拆單）──────────────────────────────── */}
-      {showBatchSplitImport && (
-        <BatchCorrectionSplitImportOverlay
-          allOrders={allCkOrders}
-          onConfirm={handleBatchSplitConfirm}
-          onClose={() => setShowBatchSplitImport(false)}
+          onConfirmAdjust={handleBatchAdjustConfirm}
+          onConfirmSplit={handleBatchSplitConfirm}
+          onClose={() => setShowBatchCorrectionImport(false)}
         />
       )}
 
