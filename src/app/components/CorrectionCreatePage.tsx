@@ -169,9 +169,13 @@ export function CorrectionCreatePage({ userRole, onNavigateToList }: CorrectionC
     localStorage.getItem('currentUserEmail') || 'default'
   );
 
-  // ── 已有修正單的訂單（DR/V/B/CP/SS 狀態）→ 從列表排除 ──────────────
+  // ── 已有進行中修正單（DR/V/B/CP，非 SS）→ 從建立列表排除 ──────────────
   const lockedDocSeqNos = useMemo(() => {
-    return new Set(correctionOrders.map(c => (c.orderNo || '') + (c.orderSeq || '')));
+    return new Set(
+      correctionOrders
+        .filter(c => c.correctionStatus !== 'SS')
+        .map(c => (c.orderNo || '') + (c.orderSeq || ''))
+    );
   }, [correctionOrders]);
 
   // ── 合併 Store CK + 額外 mock CK 訂單，排除已有修正單的項目 ──────────────
