@@ -73,6 +73,8 @@ interface CorrectionDetailPageProps {
   onApprove?: () => void;
   onDisagree?: (reason: string, adjustedRows?: { expectedDelivery: string; vendorOriginalDate: string; newVendorDate: string; originalQty: number; newQty: string; deleted?: boolean }[]) => void;
   onReturnToVendor?: (reason: string) => void;
+  /** B 狀態：關閉單據（轉 CL）*/
+  onCloseToCL?: () => void;
 }
 
 // ── ID counter ─────────────────────────────────────────────────────────────────
@@ -273,7 +275,7 @@ export function CorrectionDetailPage({
   correctionType, correctionStatusCode,
   initialDataByOrderId,
   maxSeqInSameOrderNo,
-  onApprove, onDisagree, onReturnToVendor,
+  onApprove, onDisagree, onReturnToVendor, onCloseToCL,
 }: CorrectionDetailPageProps) {
   const order = orders[currentIndex];
   const total = orders.length;
@@ -306,6 +308,7 @@ export function CorrectionDetailPage({
       B: '採購確認中(B)',
       CP: '單據已確認(CP)',
       SS: '修正通過(SS)',
+      CL: '單據結案(CL)',
     };
     return statusMap[effectiveStatusCode] ?? effectiveStatusCode;
   }, [effectiveStatusCode]);
@@ -318,6 +321,7 @@ export function CorrectionDetailPage({
       B:  { bg: 'rgba(142,51,255,0.16)',  border: '#5119b7', text: '#5119b7' },
       CP: { bg: 'rgba(0,184,217,0.16)',   border: '#006c9c', text: '#006c9c' },
       SS: { bg: 'rgba(34,197,94,0.16)',   border: '#118d57', text: '#118d57' },
+      CL: { bg: 'rgba(145,158,171,0.16)', border: '#637381', text: '#637381' },
     };
     return styleMap[effectiveStatusCode] ?? styleMap['DR'];
   }, [effectiveStatusCode]);
@@ -535,6 +539,22 @@ export function CorrectionDetailPage({
   const [showHistory, setShowHistory] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  // ► 單據在「提交採購(V→B)」或「退回廠商(B→V)」後開啟，自動展开歷程面板
+  // 開啟條件: viewMode 為 vendorReview 或 purchaserReview，且最新一筆歷程含有「不同意」或「退回」字樣
+  useEffect(() => {
+    if (viewMode !== 'vendorReview' && viewMode !== 'purchaserReview') return;
+    const latest = orderHistory[0]; // addCorrectionHistory 是從前插入，[0] 為最新
+    if (!latest) return;
+    const isReturnEvent =
+      latest.event.includes('退回廠商') ||   // B → V：採購退回廠商
+      latest.event.includes('不同意修正');  // V → B：廠商不同意
+    if (isReturnEvent) {
+      setShowHistory(true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ── 刪單模式（edit 模式下才可啟動）──
   const [isDeleteMode, setIsDeleteMode] = useState(false);
   const preDeleteRowsRef = useRef<DeliveryRow[]>([]);
@@ -932,7 +952,7 @@ export function CorrectionDetailPage({
             </div>
           </div>
 
-          {/* 歷程 + 刪單 */}
+          {/* 歷程 + 刪單 + 關閉 */}
           <div className="ml-auto flex items-center gap-[16px] relative">
             {/* 刪單按鈕：僅 edit 模式、未提交、非拆單時顯示 */}
             {viewMode === 'edit' && !isLocallySubmitted && !isSplitMode && (
@@ -948,6 +968,18 @@ export function CorrectionDetailPage({
                   <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" fill="currentColor"/>
                 </svg>
                 {isDeleteMode ? '取消刪單' : '刪單'}
+              </button>
+            )}
+            {/* 關閉按鈕：僅 purchaserReview (B) 模式顯示 */}
+            {viewMode === 'purchaserReview' && (
+              <button
+                onClick={e => { e.stopPropagation(); onCloseToCL?.(); }}
+                className="flex items-center gap-[6px] h-[36px] px-[14px] rounded-[8px] border bg-white border-[rgba(145,158,171,0.32)] text-[#ff5630] hover:bg-[rgba(255,86,48,0.06)] transition-colors font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px]"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" fill="currentColor"/>
+                </svg>
+                關閉
               </button>
             )}
             <button
@@ -1452,9 +1484,10 @@ export function CorrectionDetailPage({
                           {computedSeq}
                         </p>
                       </div>
-                      {/* 新料號（預帶原料號，紅字顯示若已變更） */}
+                      {/* 新料號（預帶原料號，有驗收量時鎖定；紅字顯示若已變更） */}
                       {(() => {
                         const matChanged = (row.splitNewMaterialNo ?? '') !== (order.materialNo ?? '');
+                        const matDisabled = isReadOnly || (order.acceptQty ?? 0) > 0;
                         return (
                           <div className="shrink-0 w-[200px]">
                             <div className="h-[34px] relative rounded-[8px]">
@@ -1463,8 +1496,9 @@ export function CorrectionDetailPage({
                                 <input
                                   type="text"
                                   value={row.splitNewMaterialNo ?? ''}
-                                  onChange={e => !isReadOnly && updateRow(row.id, 'splitNewMaterialNo', e.target.value)}
-                                  disabled={isReadOnly}
+                                  onChange={e => !matDisabled && updateRow(row.id, 'splitNewMaterialNo', e.target.value)}
+                                  disabled={matDisabled}
+                                  title={matDisabled && !isReadOnly ? '有驗收量，料號不可修改' : undefined}
                                   placeholder={order.materialNo ?? '新料號'}
                                   className={`w-full font-['Public_Sans:Regular',sans-serif] font-normal text-[13px] leading-[22px] bg-transparent outline-none placeholder:text-[#919eab] disabled:cursor-not-allowed ${matChanged ? 'text-[#ff5630]' : 'text-[#454f5b]'}`}
                                 />

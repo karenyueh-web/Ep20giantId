@@ -85,8 +85,8 @@ const translations: Record<string, Record<Language, string>> = {
     'English': 'Please enter the following application information',
   },
   'register.backToLogin': {
-    '繁中': '重新登入',
-    '簡中': '重新登录',
+    '繁中': '返回登入',
+    '簡中': '返回登录',
     'English': 'Back to Login',
   },
   'register.nameLabel': {

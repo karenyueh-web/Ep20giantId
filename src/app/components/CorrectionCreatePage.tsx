@@ -169,11 +169,11 @@ export function CorrectionCreatePage({ userRole, onNavigateToList }: CorrectionC
     localStorage.getItem('currentUserEmail') || 'default'
   );
 
-  // ── 已有進行中修正單（DR/V/B/CP，非 SS）→ 從建立列表排除 ──────────────
+  // ── 已有進行中修正單（DR/V/B/CP，非 SS/CL）→ 從建立列表排除 ──────────────
   const lockedDocSeqNos = useMemo(() => {
     return new Set(
       correctionOrders
-        .filter(c => c.correctionStatus !== 'SS')
+        .filter(c => c.correctionStatus !== 'SS' && c.correctionStatus !== 'CL')
         .map(c => (c.orderNo || '') + (c.orderSeq || ''))
     );
   }, [correctionOrders]);

@@ -37,6 +37,7 @@ interface OrderDetailProps {
     vendor: string;
     status: string;
     vendorDeliveryDate?: string;
+    expectedDelivery?: string;
     scheduleLines?: ScheduleLine[];
     productionScheduleDate?: string;
     orderQty?: number;
@@ -207,7 +208,7 @@ function AdjustOrderForm({ onCancel, onConfirm, orderSeq, defaultDate, hideRejec
             </div>
             <div className="relative" ref={triggerRef}>
               <div className={`border ${selectedReason === 'modify' ? 'border-[#005eb8]' : 'border-[rgba(145,158,171,0.16)]'} rounded-[8px] px-[12px] py-[6px] flex items-center gap-[12px] cursor-pointer`} onClick={() => { setSelectedReason('modify'); setShowDatePicker(prev => !prev); }}>
-                <p className="font-['Public_Sans:Regular',sans-serif] font-normal leading-[22px] text-[#919eab] text-[14px]">{modifyDate}</p>
+                <p className="font-['Public_Sans:Regular',sans-serif] font-normal leading-[22px] text-[14px]" style={{ color: modifyDate && defaultDate && modifyDate !== defaultDate ? '#ff5630' : '#919eab' }}>{modifyDate}</p>
                 <div className="relative size-[16px]">
                   <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
                     <path d={adjustSvgPaths.p2b32f00} fill="#1C252E" />
@@ -368,7 +369,7 @@ function AdjustOrderForm({ onCancel, onConfirm, orderSeq, defaultDate, hideRejec
                       setActiveDatePickerIndex(item.index);
                     }}
                   >
-                    <p className="font-['Public_Sans:Regular',sans-serif] font-normal leading-[22px] text-[#919eab] text-[14px]">{item.deliveryDate}</p>
+                    <p className="font-['Public_Sans:Regular',sans-serif] font-normal leading-[22px] text-[14px]" style={{ color: item.deliveryDate && defaultDate && item.deliveryDate !== defaultDate ? '#ff5630' : '#919eab' }}>{item.deliveryDate}</p>
                     <div className="relative size-[16px]">
                       <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
                         <path d={adjustSvgPaths.p2b32f00} fill="#1C252E" />
@@ -380,7 +381,8 @@ function AdjustOrderForm({ onCancel, onConfirm, orderSeq, defaultDate, hideRejec
                   <div className="border border-[#005eb8] rounded-[8px] px-[12px] py-[6px]">
                     <input
                       type="number"
-                      className="font-['Public_Sans:Regular',sans-serif] font-normal text-[#1c252e] text-[14px] w-full outline-none bg-transparent"
+                      className="font-['Public_Sans:Regular',sans-serif] font-normal text-[14px] w-full outline-none bg-transparent"
+                      style={{ color: item.quantity !== orderQuantity ? '#ff5630' : '#1c252e' }}
                       value={item.quantity}
                       onChange={(e) => updateSplitItemQuantity(item.index, parseInt(e.target.value) || 0)}
                     />
@@ -525,6 +527,27 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
   const [showOrderHistory, setShowOrderHistory] = useState(false);
   const [showSelectPerson, setShowSelectPerson] = useState(false); // 控制是否顯示選擇人員彈出框
   const [showChatOverlay, setShowChatOverlay] = useState(false); // 控制是否顯示聊天對話框
+
+  // ► 單據在提交採購(NP/V→B)或退回廠商(B→V)後開啟時，自動展開歷程面板
+  // V 狀態：最新歷程含「退回廠商」→ 採購退回，廠商需看原因
+  // B 狀態：最新歷程含「需修改交期」「拆單」「拆 Schedule Line」「不接單」→ 廠商有調整動作，採購需看
+  useEffect(() => {
+    const status = orderData?.status;
+    if (status !== 'V' && status !== 'B') return;
+    const latest = orderHistory?.[0]; // 前插陣列（newest first），[0] 為最新
+    if (!latest) return;
+    const isReturnEvent = status === 'V'
+      ? latest.event.includes('退回廠商')
+      : latest.event.includes('需修改交期') ||
+        latest.event.includes('拆單') ||
+        latest.event.includes('拆 Schedule Line') ||
+        latest.event.includes('不接單');
+    if (isReturnEvent) {
+      setShowOrderHistory(true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const [selectedChat, setSelectedChat] = useState<ChatConversation | null>(null); // 選中的聊天對話
   const [chatIconPosition, setChatIconPosition] = useState({ top: 0, right: 0 }); // 聊天icon位置
   const [showMore, setShowMore] = useState(false); // 控制 more 展開
@@ -585,8 +608,8 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
         uid: i + 1,
         index: l.index,
         expectedDelivery: l.expectedDelivery || orderExpDel,
-        vendorDeliveryDate: l.deliveryDate || orderData.vendorDeliveryDate || '',
-        // 優先讀取每行自己的生管日期，fallback 到訂單級別的 productionScheduleDate
+        // 廠商可交貨日期：若無資料，預設為預計交期（NP 尚未廠商調整時，兩個值相同）
+        vendorDeliveryDate: l.deliveryDate || orderData.vendorDeliveryDate || l.expectedDelivery || orderExpDel,
         productionScheduleDate: l.productionScheduleDate || orderData.productionScheduleDate || '',
         quantity: l.quantity,
         isOriginal: true,
@@ -595,7 +618,8 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
       initialLinesRef.current = lines;
     } else {
       lineUidRef.current = 1;
-      const vd = orderData?.vendorDeliveryDate || '';
+      // 廠商可交貨日期：若無資料，預設為預計交期（NP 尚未廠商調整時，兩個值相同）
+      const vd = orderData?.vendorDeliveryDate || orderExpDel;
       const lines = [{
         uid: 1, index: 1,
         expectedDelivery: orderExpDel,
@@ -609,7 +633,7 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
     }
     setScheduleError(null);
     setScheduleSaved(false);
-  }, [orderData?.orderNo, orderData?.orderSeq]);
+  }, [orderData?.orderNo, orderData?.orderSeq, orderData?.vendorDeliveryDate, orderData?.scheduleLines]);
 
   // 點擊外部關閉日期選擇器
   useEffect(() => {
@@ -1273,6 +1297,18 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
                 ) : (
                   /* ── 一般訂單 / 換貨單模式：簡易唯讀排程表 ── */
                   <div className="bg-white rounded-[8px] overflow-visible">
+                    {/* 拆單提示：若由 1 期拆為多期，顯示原本期數 */}
+                    {editableLines.length > 1 && (
+                      <div className="flex items-center gap-[6px] px-[20px] pt-[12px] pb-[4px]">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="shrink-0">
+                          <path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="#ff5630" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                        <p className="font-['Public_Sans:Regular',sans-serif] text-[13px] leading-[20px] text-[#ff5630]">
+                          {orderData?.adjustmentType === 'split-order' ? '拆單' : '拆 Schedule Line'}：原本 1 期 →
+                          調整為 {editableLines.length} 期
+                        </p>
+                      </div>
+                    )}
                     {/* 表頭 */}
                     <div className="flex gap-[16px] px-[20px] py-[10px] border-b border-[rgba(145,158,171,0.16)] items-center">
                       <div className="w-[60px] shrink-0">
@@ -1296,13 +1332,19 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
                       const lineDiff = calcDayDiff(line.vendorDeliveryDate || undefined, line.expectedDelivery);
                       const lineDiffDisplay = lineDiff === null ? '-' : lineDiff > 0 ? `+${lineDiff}` : `${lineDiff}`;
                       const lineDiffColor = lineDiff === null ? '#919eab' : lineDiff > 0 ? '#b71d18' : lineDiff < 0 ? '#118d57' : '#919eab';
+                      // 廠商可交貨日期與預計交期不同 → 日期紅字
+                      const vendorDateChanged = line.vendorDeliveryDate && line.expectedDelivery &&
+                        line.vendorDeliveryDate !== line.expectedDelivery;
+                      // 交貨量與原訂貨量不同（拆單時每筆量必然小於原訂貨量）→ 量紅字
+                      const origOrderQty = orderData?.orderQty ?? 0;
+                      const qtyChanged = origOrderQty > 0 && line.quantity !== origOrderQty;
                       return (
                         <div key={line.uid} className="flex gap-[16px] px-[20px] py-[10px] border-b border-[rgba(145,158,171,0.08)] last:border-b-0 items-center">
                           <div className="w-[60px] shrink-0">
                             <p className="font-['Public_Sans:Regular',sans-serif] text-[14px] leading-[22px] text-[#919eab]">{line.index}</p>
                           </div>
                           <div className="w-[140px] shrink-0">
-                            <p className="font-['Public_Sans:Regular',sans-serif] text-[14px] leading-[22px] text-[#919eab]">{line.expectedDelivery}</p>
+                            <p className="font-['Public_Sans:Regular',sans-serif] text-[14px] leading-[22px] text-[#919eab]">{line.expectedDelivery || '-'}</p>
                           </div>
                           <div className="w-[180px] shrink-0">
                             {isRejectedOrder ? (
@@ -1313,13 +1355,21 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
                                 {line.expectedDelivery || '-'}
                               </p>
                             ) : (
-                              <p className="font-['Public_Sans:Regular',sans-serif] text-[14px] leading-[22px] text-[#919eab]">
+                              <p
+                                className="font-['Public_Sans:Regular',sans-serif] text-[14px] leading-[22px]"
+                                style={{ color: vendorDateChanged ? '#ff5630' : '#919eab' }}
+                              >
                                 {line.vendorDeliveryDate || '-'}
                               </p>
                             )}
                           </div>
                           <div className="w-[120px] shrink-0">
-                            <p className="font-['Public_Sans:Regular',sans-serif] text-[14px] leading-[22px] text-[#919eab]">{line.quantity}</p>
+                            <p
+                              className="font-['Public_Sans:Regular',sans-serif] text-[14px] leading-[22px]"
+                              style={{ color: qtyChanged ? '#ff5630' : '#919eab' }}
+                            >
+                              {line.quantity}
+                            </p>
                           </div>
                           <div className="w-[140px] shrink-0">
                             <p className="font-['Public_Sans:Regular',sans-serif] text-[14px] leading-[22px]" style={{ color: lineDiffColor }}>{lineDiffDisplay}</p>
@@ -1453,13 +1503,9 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
                   <div className="flex gap-[12px] mt-[24px]">
                     <div className="bg-[#004680] flex-1 h-[36px] rounded-[8px] cursor-pointer hover:bg-[#003a6b] transition-colors flex items-center justify-center" onClick={() => {
                       if (onStatusChange) {
-                        const s = orderData?.status;
-                        if (s === 'NP' || s === 'V') {
-                          onStatusChange('B', `廠商確認交期OK (${s}→B)`);
-                        } else {
-                          // B status
-                          onStatusChange('CK', '採購確認訂單 (B→CK)');
-                        }
+                        const s = orderData?.status ?? 'NP';
+                        // 訂單確認：不論當前狀態，一律直接轉 CK（不論哪個角色執行）
+                        onStatusChange('CK', `訂單確認 (${s}→CK)`);
                       }
                     }}>
                       <p className="font-['Public_Sans:Bold','Noto_Sans_JP:Bold',sans-serif] font-bold leading-[24px] text-[14px] text-white">訂單確認</p>

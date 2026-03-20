@@ -12,7 +12,7 @@ export interface HistoryEntry {
   remark: string;
 }
 
-export type CorrectionStatus = 'DR' | 'V' | 'B' | 'CP' | 'SS';
+export type CorrectionStatus = 'DR' | 'V' | 'B' | 'CP' | 'SS' | 'CL';
 
 export interface CorrectionOrderRow {
   id: number;

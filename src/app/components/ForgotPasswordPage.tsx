@@ -2,8 +2,8 @@ import { useState } from 'react';
 import svgPathsFrame1 from "@/imports/svg-blfjb9is82";
 import svgPathsFrame2 from "@/imports/svg-zhfmxhjy4a";
 import svgPathsFrame3 from "@/imports/svg-0q8h3xf1oa";
-import imgImage from "figma:asset/6f8230115b97ee933b04f1cc5c36c2fd194238ac.png";
-import img02GiantGroupLogoWhite2 from "figma:asset/589083efc8d155f4aeebb5d7f1ec82f6c63c7b5b.png";
+import imgImage from "@/assets/login-bg.png";
+import img02GiantGroupLogoWhite2 from "@/assets/giant-logo-white.png";
 import { useLanguage } from './LanguageContext';
 
 interface ForgotPasswordPageProps {
@@ -25,17 +25,20 @@ type ForgotPasswordStep = 'enter-email' | 'email-sent' | 'reset-password';
 
 function ImageSection() {
   return (
-    <div className="h-[1024px] relative rounded-tr-[80px] shrink-0 w-[720px] hidden lg:block" data-name="image">
+    <div className="relative rounded-tr-[80px] shrink-0 w-2/5 self-stretch hidden lg:block" data-name="image">
       <div aria-hidden="true" className="absolute inset-0 pointer-events-none rounded-tr-[80px]">
         <div className="absolute inset-0 overflow-hidden rounded-tr-[80px]">
-          <img alt="" className="absolute h-full left-[-236.64%] max-w-none top-0 w-[426.67%]" src={imgImage} />
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              backgroundImage: `url(${imgImage})`,
+              backgroundSize: 'cover',
+              backgroundPosition: '68% 38%',
+            }}
+          />
         </div>
-        <div className="absolute inset-0 rounded-tr-[80px]" style={{ backgroundImage: "linear-gradient(238.464deg, rgba(255, 255, 255, 0.45) 8.3009%, rgba(0, 0, 0, 0.45) 42.876%)" }} />
-      </div>
-      <div className="absolute flex h-[906.755px] items-center justify-center left-[41px] top-[27px] w-[290.13px]" style={{ "--transform-inner-width": "0", "--transform-inner-height": "0" } as React.CSSProperties}>
-        <div className="flex-none rotate-[90.39deg]">
-          <div className="h-[283.992px] w-[904.847px]" data-name="02_Giant Group_Logo_White 1" />
-        </div>
+        <div className="absolute inset-0 rounded-tr-[80px]" style={{ backgroundImage: "linear-gradient(210deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.50) 100%)" }} />
       </div>
       <div className="absolute h-[146.257px] left-[127px] top-[407px] w-[466px]" data-name="02_Giant Group_Logo_White 2">
         <img alt="" className="absolute inset-0 max-w-none object-cover opacity-60 pointer-events-none size-full" src={img02GiantGroupLogoWhite2} />
@@ -670,21 +673,23 @@ export function ForgotPasswordPage({ onBackToLogin, onGoToRegister }: ForgotPass
   };
 
   return (
-    <div className="bg-white content-stretch flex items-center relative size-full min-h-screen" data-name="login-forgot-password">
-      <div className="content-stretch flex flex-[1_0_0] gap-0 lg:gap-[165px] h-full items-center min-h-px min-w-px relative flex-col lg:flex-row" data-name="stack">
+    <div className="bg-white flex min-h-screen" data-name="login-forgot-password">
+      <div className="flex flex-1 min-h-screen flex-col lg:flex-row" data-name="stack">
         <ImageSection />
-        <div className="flex flex-col items-center gap-4">
-          {renderContent()}
-          {/* Demo: simulate clicking reset link (only in email-sent step) */}
-          {step === 'email-sent' && (
-            <button
-              type="button"
-              onClick={handleSimulateResetLink}
-              className="mt-4 px-4 py-2 border border-dashed border-[#005eb8] text-[#005eb8] rounded-md text-[13px] cursor-pointer hover:bg-[#f0f7ff] transition-colors font-['Public_Sans:Medium',sans-serif]"
-            >
-              {t('forgot.simulateResetLink')}
-            </button>
-          )}
+        <div className="flex flex-1 items-center justify-center py-12 px-8">
+          <div className="flex flex-col items-center gap-4">
+            {renderContent()}
+            {/* Demo: simulate clicking reset link (only in email-sent step) */}
+            {step === 'email-sent' && (
+              <button
+                type="button"
+                onClick={handleSimulateResetLink}
+                className="mt-4 px-4 py-2 border border-dashed border-[#005eb8] text-[#005eb8] rounded-md text-[13px] cursor-pointer hover:bg-[#f0f7ff] transition-colors font-['Public_Sans:Medium',sans-serif]"
+              >
+                {t('forgot.simulateResetLink')}
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

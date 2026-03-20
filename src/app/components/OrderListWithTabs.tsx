@@ -360,43 +360,30 @@ export function OrderListWithTabs({ defaultTab = 'NP', userRole }: OrderListWith
       let confirmedCount = 0;
       for (const order of selected) {
         const s = order.status;
-        // NP / V → B（廠商確認交期OK）、B → CK（採購確認訂單）
-        let newStatus: OrderRow['status'] | null = null;
-        let eventText = '';
-        if (s === 'NP' || s === 'V') {
-          newStatus = 'B';
-          eventText = `廠商確認交期OK (${s}→B)【批次同意】`;
-        } else if (s === 'B') {
-          newStatus = 'CK';
-          eventText = '採購確認訂單 (B→CK)【批次同意】';
-        }
-        if (!newStatus) continue;
+        // 訂單確認：不論當前狀態（NP/V/B），一律直接轉 CK
+        if (s !== 'NP' && s !== 'V' && s !== 'B') continue; // CK/CL 已結案不動
+
+        const newStatus: OrderRow['status'] = 'CK';
+        const eventText = `訂單確認 (${s}→CK)【批次同意】`;
 
         const rowUpdate: Partial<Omit<OrderRow, 'id' | 'status'>> = {};
-        let remarkText = '';
-
-        if (s === 'NP' || s === 'V') {
-          // NP/V → B：廠商確認交期OK，記錄廠商可交貨日期
-          const vendorDate = order.expectedDelivery || '';
-          if (vendorDate) {
-            rowUpdate.vendorDeliveryDate = vendorDate;
-            remarkText = `廠商可交貨日期：${vendorDate}`;
-          }
+        // 若廠商可交貨日期為空，預設帶入預計交期
+        if (!order.vendorDeliveryDate && order.expectedDelivery) {
+          rowUpdate.vendorDeliveryDate = order.expectedDelivery;
         }
-        // B → CK：採購確認訂單，不需額外設定廠商可交貨日期
 
         const entry: HistoryEntry = {
           date: nowDateStr(),
           event: eventText,
           operator: operatorByRole(userRole),
-          remark: remarkText,
+          remark: rowUpdate.vendorDeliveryDate ? `廠商可交貨日期：${rowUpdate.vendorDeliveryDate}` : '',
         };
 
         updateOrderStatus(order.id, newStatus, entry, Object.keys(rowUpdate).length > 0 ? rowUpdate : undefined);
         confirmedCount++;
 
-        // ── 批次確認 B→CK 時，若為拆單訂單：執行拆單 + 自動開立修正單 ──
-        if (newStatus === 'CK' && order.adjustmentType === 'split-order' && order.scheduleLines && order.scheduleLines.length > 0) {
+        // 拆單訂單轉 CK 時：執行拆單 + 自動開立修正單
+        if (order.adjustmentType === 'split-order' && order.scheduleLines && order.scheduleLines.length > 0) {
           executeSplitOrder(order, order.scheduleLines, 'CK');
           autoCreateSplitCorrectionOrder(order, order.scheduleLines);
         }
@@ -841,6 +828,7 @@ export function OrderListWithTabs({ defaultTab = 'NP', userRole }: OrderListWith
             unit: selectedOrder.unit,
             acceptQty: selectedOrder.acceptQty,
             adjustmentType: selectedOrder.adjustmentType,
+            expectedDelivery: selectedOrder.expectedDelivery,
           } : undefined}
           onStatusChange={handleStatusChange}
           isReadOnly={isReadOnlyMode}

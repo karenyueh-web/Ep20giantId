@@ -92,6 +92,7 @@ const tabs: TabDef[] = [
   { key: 'B',  label: '採購確認中(B)', activeBadgeBg: 'bg-[rgba(142,51,255,0.16)]', activeBadgeText: 'text-[#5119b7]', statusBg: 'bg-[rgba(142,51,255,0.16)]', statusText: 'text-[#5119b7]' },
   { key: 'CP', label: '單據已確認，資料處理中(CP)', activeBadgeBg: 'bg-[rgba(0,184,217,0.16)]', activeBadgeText: 'text-[#006c9c]', statusBg: 'bg-[rgba(0,184,217,0.16)]', statusText: 'text-[#006c9c]' },
   { key: 'SS', label: '修正通過(SS)', activeBadgeBg: 'bg-[rgba(34,197,94,0.16)]', activeBadgeText: 'text-[#118d57]', statusBg: 'bg-[rgba(34,197,94,0.16)]', statusText: 'text-[#118d57]' },
+  { key: 'CL', label: '單據結案(CL)', activeBadgeBg: 'bg-[rgba(145,158,171,0.16)]', activeBadgeText: 'text-[#637381]', statusBg: 'bg-[rgba(145,158,171,0.16)]', statusText: 'text-[#637381]' },
 ];
 
 // ─── viewMode 對應 ────────────────────────────────────────────────────────────
@@ -353,8 +354,6 @@ function SelectionToolbar({
           <ToolbarBtn label="檢視" onClick={onView} disabled={!canView} title={!canView ? '請選取修正單以檢視' : undefined} />
           <ToolbarDivider />
           <ToolbarBtn label="全部同意" onClick={onBulkAgree} />
-          <ToolbarDivider />
-          <ToolbarBtn label="刪除" onClick={onDelete} />
         </>
       )}
 
@@ -363,8 +362,6 @@ function SelectionToolbar({
           <ToolbarBtn label="檢視" onClick={onView} disabled={!canView} title={!canView ? '請選取修正單以檢視' : undefined} />
           <ToolbarDivider />
           <ToolbarBtn label="全部確認" onClick={onBulkConfirm} />
-          <ToolbarDivider />
-          <ToolbarBtn label="刪除" onClick={onDelete} />
         </>
       )}
 
@@ -1112,6 +1109,27 @@ export function CorrectionListWithTabs({ userRole }: CorrectionListWithTabsProps
     if (detailRows.length <= 1) setDetailRows([]);
   };
 
+  // B: 關閉單據（轉 CL）
+  const handleDetailCloseToCL = () => {
+    const row = detailRows[detailIndex];
+    if (!row) return;
+    const newStatus = 'CL' as const;
+    const updates: Partial<CorrectionOrderRow> = { correctionStatus: newStatus };
+    if (!correctionOrders.some(o => o.id === row.id)) {
+      addCorrectionOrder({ ...row, ...updates });
+    } else {
+      updateCorrectionOrder(row.id, row.correctionDocNo, updates);
+    }
+    addCorrectionHistory(row.id, {
+      date: nowDateStr(),
+      event: `單據關閉 — 狀態 ${row.correctionStatus} → CL`,
+      operator: operatorByRole(userRole as any),
+      remark: '',
+    });
+    showToast(`單據已關閉（${row.correctionDocNo}），狀態轉為 CL`);
+    if (detailRows.length <= 1) setDetailRows([]);
+  };
+
   // ── 多張編輯時，組建每張訂單各自的初始資料 map ──────────────────────────
   const initialDataByOrderId = useMemo(() => {
     if (detailRows.length <= 1) return undefined;
@@ -1175,6 +1193,7 @@ export function CorrectionListWithTabs({ userRole }: CorrectionListWithTabsProps
             onApprove={handleDetailApprove}
             onDisagree={handleDetailDisagree}
             onReturnToVendor={handleDetailReturnToVendor}
+            onCloseToCL={handleDetailCloseToCL}
           />
         </div>
         {toastMsg && (

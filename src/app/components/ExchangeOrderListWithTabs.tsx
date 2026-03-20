@@ -503,6 +503,7 @@ export function ExchangeOrderListWithTabs({ userRole }: { userRole?: string }) {
             acceptQty: selectedOrder.acceptQty,
             vendorDeliveryDate: selectedOrder.vendorDeliveryDate,
             scheduleLines: selectedOrder.scheduleLines,
+            expectedDelivery: selectedOrder.expectedDelivery,
           } : undefined}
           onStatusChange={!isReadOnlyMode ? handleStatusChange : undefined}
           isReadOnly={isReadOnlyMode}
