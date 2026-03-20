@@ -200,7 +200,7 @@ const DraggableColumnHeader = ({
 
   return (
     <Resizable
-      size={{ width: column.width, height: 48 }}
+      size={{ width: column.width, height: 56 }}
       minWidth={column.minWidth}
       maxWidth={900}
       enable={{ right: true }}
@@ -235,7 +235,7 @@ const DraggableColumnHeader = ({
             <circle cx="11" cy="13" r="1.5" fill="#919EAB" />
           </svg>
         )}
-        <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[24px] text-[#637381] text-[13px] whitespace-nowrap truncate">
+        <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[24px] text-[#637381] text-[14px] whitespace-nowrap truncate">
           {column.label}
         </p>
         {/* 排序圖示 */}
@@ -253,9 +253,9 @@ const DraggableColumnHeader = ({
 
 // ── 與上期差異量 Cell ──────────────────────────────────────────────────────────
 function DiffQtyCell({ value }: { value: number }) {
-  if (value > 0) return <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#118d57]">+{value.toLocaleString()}</span>;
-  if (value < 0) return <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#b71d18]">{value.toLocaleString()}</span>;
-  return <span className="text-[#919eab] text-[13px]">—</span>;
+  if (value > 0) return <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-[#118d57]">+{value.toLocaleString()}</span>;
+  if (value < 0) return <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-[#b71d18]">{value.toLocaleString()}</span>;
+  return <span className="text-[#919eab] text-[14px]">—</span>;
 }
 
 // ── 儲存格值渲染 ──────────────────────────────────────────────────────────────
@@ -339,7 +339,7 @@ export function AdvancedForecastTable({
   });
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [rowsPerPage, setRowsPerPage] = useState(100);
 
   // ── columnsVersion 變更 → 重新載入 ──
   useEffect(() => {
@@ -445,7 +445,7 @@ export function AdvancedForecastTable({
 
   const totalWidth = CHECKBOX_COL_W + visibleColumns.reduce((s, c) => s + c.width, 0);
 
-  const cellTextCls = "font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] text-[13px] text-[#1c252e] truncate";
+  const cellTextCls = "font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] text-[14px] text-[#1c252e] truncate";
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
@@ -522,7 +522,7 @@ export function AdvancedForecastTable({
               <div
                 data-is-checkbox="true"
                 className="flex items-center justify-center shrink-0 bg-[#f4f6f8] border-r border-[rgba(145,158,171,0.08)]"
-                style={{ width: CHECKBOX_COL_W, minWidth: CHECKBOX_COL_W, height: 48 }}
+                style={{ width: CHECKBOX_COL_W, minWidth: CHECKBOX_COL_W, height: 56, position: 'sticky', left: 0, zIndex: 20, boxShadow: '2px 0 4px -2px rgba(145,158,171,0.16)' }}
               >
                 <CheckboxIcon checked={isAllSelected} onChange={handleSelectAll} />
               </div>
@@ -557,8 +557,8 @@ export function AdvancedForecastTable({
                 {/* Checkbox cell */}
                 <div
                   data-is-checkbox="true"
-                  className="flex items-center justify-center shrink-0 border-r border-[rgba(145,158,171,0.08)]"
-                  style={{ width: CHECKBOX_COL_W, minWidth: CHECKBOX_COL_W }}
+                  className="flex items-center justify-center shrink-0 border-r border-[rgba(145,158,171,0.08)] bg-white"
+                  style={{ width: CHECKBOX_COL_W, minWidth: CHECKBOX_COL_W, position: 'sticky', left: 0, zIndex: 4, boxShadow: '2px 0 4px -2px rgba(145,158,171,0.16)' }}
                 >
                   <CheckboxIcon checked={selectedIds.has(row.id)} onChange={() => handleToggle(row.id)} />
                 </div>

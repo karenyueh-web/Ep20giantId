@@ -721,7 +721,7 @@ export function AdvancedOrderTable({
 
   // ── Pagination state ──────────────────────────────────────────────────────
   const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(25);
+  const [rowsPerPage, setRowsPerPage] = useState(100);
 
   useEffect(() => {
     setIsLoadingFromStorage(true);

@@ -74,7 +74,7 @@ const correctionMockData: CorrectionOrderRow[] = [
 ];
 
 // ─── Tab 定義 ─────────────────────────────────────────────────────────────────
-type TabKey = 'ALL' | CorrectionStatus;
+type TabKey = 'ALL' | 'CK' | CorrectionStatus;
 
 interface TabDef {
   key: TabKey;
@@ -93,6 +93,37 @@ const tabs: TabDef[] = [
   { key: 'CP', label: '單據已確認，資料處理中(CP)', activeBadgeBg: 'bg-[rgba(0,184,217,0.16)]', activeBadgeText: 'text-[#006c9c]', statusBg: 'bg-[rgba(0,184,217,0.16)]', statusText: 'text-[#006c9c]' },
   { key: 'SS', label: '修正通過(SS)', activeBadgeBg: 'bg-[rgba(34,197,94,0.16)]', activeBadgeText: 'text-[#118d57]', statusBg: 'bg-[rgba(34,197,94,0.16)]', statusText: 'text-[#118d57]' },
   { key: 'CL', label: '單據結案(CL)', activeBadgeBg: 'bg-[rgba(145,158,171,0.16)]', activeBadgeText: 'text-[#637381]', statusBg: 'bg-[rgba(145,158,171,0.16)]', statusText: 'text-[#637381]' },
+];
+
+// 歷史修正單專用 Tabs（僅 ALL / CK / CL）
+const historyTabs: TabDef[] = [
+  { key: 'ALL', label: 'All' },
+  { key: 'CK', label: '已確認(CK)', activeBadgeBg: 'bg-[rgba(34,197,94,0.16)]', activeBadgeText: 'text-[#118d57]', statusBg: 'bg-[rgba(34,197,94,0.16)]', statusText: 'text-[#118d57]' },
+  { key: 'CL', label: '單據結案(CL)', activeBadgeBg: 'bg-[rgba(145,158,171,0.16)]', activeBadgeText: 'text-[#637381]', statusBg: 'bg-[rgba(145,158,171,0.16)]', statusText: 'text-[#637381]' },
+];
+
+// 歷史修正單假資料（3年以上，CK / CL）
+const historyCorrectionMockData: CorrectionOrderRow[] = [
+  { id: 70001, correctionDocNo: '202201050001', correctionStatus: 'CK' as CorrectionStatus, correctionType: '不拆單調整', orderNo: '400512345', orderSeq: '10', docSeqNo: '40051234510', vendorCode: '0001000734', vendorName: 'SHIMANOSIC(0001000734)', purchaseOrg: 'GEM採購組織', materialNo: '1129-CSL0075-L01', productName: '碳纖維座管', orderDate: '2021/12/01', orderQty: 200, acceptQty: 200, company: '巨大機械', createdAt: '2022/01/05 09:00' },
+  { id: 70002, correctionDocNo: '202201080002', correctionStatus: 'CK' as CorrectionStatus, correctionType: '不拆單調整', orderNo: '400512346', orderSeq: '20', docSeqNo: '40051234620', vendorCode: '00010046', vendorName: '速聯國際(00010046)', purchaseOrg: 'GEM採購組織', materialNo: '2101-CHN0099-A01', productName: '12速鏈條', orderDate: '2021/12/10', orderQty: 500, acceptQty: 500, company: '巨大機械', createdAt: '2022/01/08 10:30' },
+  { id: 70003, correctionDocNo: '202202100003', correctionStatus: 'CL' as CorrectionStatus, correctionType: '不拆單調整', orderNo: '400512347', orderSeq: '30', docSeqNo: '40051234730', vendorCode: '00010053', vendorName: '久廣精密(00010053)', purchaseOrg: 'GEM採購組織', materialNo: '3301-FRK0055-B01', productName: '碳纖維前叉-D型', orderDate: '2022/01/20', orderQty: 300, acceptQty: 0, company: '巨大機械', createdAt: '2022/02/10 14:00' },
+  { id: 70004, correctionDocNo: '202202150004', correctionStatus: 'CK' as CorrectionStatus, correctionType: '拆單', orderNo: '400512348', orderSeq: '40', docSeqNo: '40051234840', vendorCode: '00010059', vendorName: '金盛元工業(00010059)', purchaseOrg: 'GEM採購組織', materialNo: '4401-GRP0022-C01', productName: '競速握把套', orderDate: '2022/01/25', orderQty: 600, acceptQty: 300, company: '巨大機械', createdAt: '2022/02/15 09:15' },
+  { id: 70005, correctionDocNo: '202203200005', correctionStatus: 'CK' as CorrectionStatus, correctionType: '不拆單調整', orderNo: '400512349', orderSeq: '50', docSeqNo: '40051234950', vendorCode: '00010045', vendorName: '佳承精密(00010045)', purchaseOrg: 'GEM採購組織', materialNo: '5501-WHL0088-D01', productName: '碟煞輪組後輪', orderDate: '2022/02/28', orderQty: 120, acceptQty: 120, company: '巨大機械', createdAt: '2022/03/20 11:00' },
+  { id: 70006, correctionDocNo: '202204050006', correctionStatus: 'CL' as CorrectionStatus, correctionType: '不拆單調整', orderNo: '400512350', orderSeq: '60', docSeqNo: '40051235060', vendorCode: '00010012', vendorName: '台灣製造(00010012)', purchaseOrg: 'GEM採購組織', materialNo: '6601-BRK0044-E01', productName: '後碟煞系統', orderDate: '2022/03/10', orderQty: 400, acceptQty: 0, company: '巨大機械', createdAt: '2022/04/05 08:30' },
+  { id: 70007, correctionDocNo: '202205120007', correctionStatus: 'CK' as CorrectionStatus, correctionType: '不拆單調整', orderNo: '400512351', orderSeq: '70', docSeqNo: '40051235170', vendorCode: '0001000734', vendorName: 'SHIMANOSIC(0001000734)', purchaseOrg: 'GEM採購組織', materialNo: '7701-NIP0011-F01', productName: '鋁合金花鼓螺絲', orderDate: '2022/04/22', orderQty: 800, acceptQty: 800, company: '巨大機械', createdAt: '2022/05/12 13:45' },
+  { id: 70008, correctionDocNo: '202206080008', correctionStatus: 'CK' as CorrectionStatus, correctionType: '拆單', orderNo: '400512352', orderSeq: '80', docSeqNo: '40051235280', vendorCode: '00010046', vendorName: '速聯國際(00010046)', purchaseOrg: 'GEM採購組織', materialNo: '8801-SPK0033-G01', productName: '競速輻條組', orderDate: '2022/05/15', orderQty: 200, acceptQty: 200, company: '巨大機械', createdAt: '2022/06/08 10:00' },
+  { id: 70009, correctionDocNo: '202207150009', correctionStatus: 'CL' as CorrectionStatus, correctionType: '不拆單調整', orderNo: '400512353', orderSeq: '90', docSeqNo: '40051235390', vendorCode: '00010053', vendorName: '久廣精密(00010053)', purchaseOrg: 'GEM採購組織', materialNo: '9901-STM0033-H01', productName: '鋁合金龍頭', orderDate: '2022/06/20', orderQty: 150, acceptQty: 0, company: '巨大機械', createdAt: '2022/07/15 09:30' },
+  { id: 70010, correctionDocNo: '202208200010', correctionStatus: 'CK' as CorrectionStatus, correctionType: '不拆單調整', orderNo: '400512354', orderSeq: '10', docSeqNo: '40051235410', vendorCode: '00010059', vendorName: '金盛元工業(00010059)', purchaseOrg: 'GEM採購組織', materialNo: '1002-HDL0077-I01', productName: '碳纖維把手', orderDate: '2022/07/30', orderQty: 100, acceptQty: 100, company: '巨大機械', createdAt: '2022/08/20 14:20' },
+  { id: 70011, correctionDocNo: '202104010011', correctionStatus: 'CK' as CorrectionStatus, correctionType: '不拆單調整', orderNo: '400488001', orderSeq: '10', docSeqNo: '40048800110', vendorCode: '00010045', vendorName: '佳承精密(00010045)', purchaseOrg: 'GEM採購組織', materialNo: '2003-BBX0044-J01', productName: '鋁合金底架', orderDate: '2021/03/15', orderQty: 350, acceptQty: 350, company: '巨大機械', createdAt: '2021/04/01 09:00' },
+  { id: 70012, correctionDocNo: '202105200012', correctionStatus: 'CL' as CorrectionStatus, correctionType: '拆單', orderNo: '400488002', orderSeq: '20', docSeqNo: '40048800220', vendorCode: '00010012', vendorName: '台灣製造(00010012)', purchaseOrg: 'GEM採購組織', materialNo: '3004-CHN0055-K01', productName: '10速鏈條', orderDate: '2021/04/25', orderQty: 700, acceptQty: 0, company: '巨大機械', createdAt: '2021/05/20 11:00' },
+  { id: 70013, correctionDocNo: '202106100013', correctionStatus: 'CK' as CorrectionStatus, correctionType: '不拆單調整', orderNo: '400488003', orderSeq: '30', docSeqNo: '40048800330', vendorCode: '0001000734', vendorName: 'SHIMANOSIC(0001000734)', purchaseOrg: 'GEM採購組織', materialNo: '4005-FRK0066-L01', productName: '鋼製前叉', orderDate: '2021/05/30', orderQty: 250, acceptQty: 250, company: '巨大機械', createdAt: '2021/06/10 08:45' },
+  { id: 70014, correctionDocNo: '202107250014', correctionStatus: 'CK' as CorrectionStatus, correctionType: '不拆單調整', orderNo: '400488004', orderSeq: '40', docSeqNo: '40048800440', vendorCode: '00010046', vendorName: '速聯國際(00010046)', purchaseOrg: 'GEM採購組織', materialNo: '5006-GRP0077-M01', productName: '橡膠握把', orderDate: '2021/06/20', orderQty: 1000, acceptQty: 1000, company: '巨大機械', createdAt: '2021/07/25 15:30' },
+  { id: 70015, correctionDocNo: '202109050015', correctionStatus: 'CK' as CorrectionStatus, correctionType: '不拆單調整', orderNo: '400488005', orderSeq: '50', docSeqNo: '40048800550', vendorCode: '00010053', vendorName: '久廣精密(00010053)', purchaseOrg: 'GEM採購組織', materialNo: '6007-WHL0088-N01', productName: '鋁合金輪圈', orderDate: '2021/08/10', orderQty: 80, acceptQty: 80, company: '巨大機械', createdAt: '2021/09/05 10:00' },
+  { id: 70016, correctionDocNo: '202110150016', correctionStatus: 'CL' as CorrectionStatus, correctionType: '不拆單調整', orderNo: '400488006', orderSeq: '60', docSeqNo: '40048800660', vendorCode: '00010059', vendorName: '金盛元工業(00010059)', purchaseOrg: 'GEM採購組織', materialNo: '7008-BRK0099-O01', productName: '碟煞來令片', orderDate: '2021/09/15', orderQty: 500, acceptQty: 0, company: '巨大機械', createdAt: '2021/10/15 16:00' },
+  { id: 70017, correctionDocNo: '202111280017', correctionStatus: 'CK' as CorrectionStatus, correctionType: '拆單', orderNo: '400488007', orderSeq: '70', docSeqNo: '40048800770', vendorCode: '00010045', vendorName: '佳承精密(00010045)', purchaseOrg: 'GEM採購組織', materialNo: '8009-NUT0011-P01', productName: '快拆螺帽組', orderDate: '2021/10/20', orderQty: 2000, acceptQty: 2000, company: '巨大機械', createdAt: '2021/11/28 09:30' },
+  { id: 70018, correctionDocNo: '202112100018', correctionStatus: 'CK' as CorrectionStatus, correctionType: '不拆單調整', orderNo: '400488008', orderSeq: '80', docSeqNo: '40048800880', vendorCode: '00010012', vendorName: '台灣製造(00010012)', purchaseOrg: 'GEM採購組織', materialNo: '9010-SAD0022-Q01', productName: '競速車座', orderDate: '2021/11/25', orderQty: 90, acceptQty: 90, company: '巨大機械', createdAt: '2021/12/10 13:00' },
+  { id: 70019, correctionDocNo: '202009200019', correctionStatus: 'CL' as CorrectionStatus, correctionType: '不拆單調整', orderNo: '400455001', orderSeq: '10', docSeqNo: '40045500110', vendorCode: '0001000734', vendorName: 'SHIMANOSIC(0001000734)', purchaseOrg: 'GEM採購組織', materialNo: '1011-PDL0033-R01', productName: '卡踏踏板', orderDate: '2020/08/30', orderQty: 400, acceptQty: 0, company: '巨大機械', createdAt: '2020/09/20 08:00' },
+  { id: 70020, correctionDocNo: '202011050020', correctionStatus: 'CK' as CorrectionStatus, correctionType: '不拆單調整', orderNo: '400455002', orderSeq: '20', docSeqNo: '40045500220', vendorCode: '00010046', vendorName: '速聯國際(00010046)', purchaseOrg: 'GEM採購組織', materialNo: '2012-CST0044-S01', productName: '11速飛輪組', orderDate: '2020/10/15', orderQty: 180, acceptQty: 180, company: '巨大機械', createdAt: '2020/11/05 11:30' },
 ];
 
 // ─── viewMode 對應 ────────────────────────────────────────────────────────────
@@ -369,6 +400,10 @@ function SelectionToolbar({
         <ToolbarBtn label="檢視" onClick={onView} disabled={!canView} title={!canView ? '請選取修正單以檢視' : undefined} />
       )}
 
+      {(activeTab === 'CK' || activeTab === 'CL') && (
+        <ToolbarBtn label="檢視" onClick={onView} disabled={!canView} title={!canView ? '請選取修正單以檢視' : undefined} />
+      )}
+
       {activeTab === 'ALL' && (
         <ToolbarBtn label="檢視" onClick={onView} disabled={!canView} title={!canView ? '請選取修正單以檢視' : undefined} />
       )}
@@ -379,9 +414,11 @@ function SelectionToolbar({
 // ─── 主元件 ───────────────────────────────────────────────────────────────────
 interface CorrectionListWithTabsProps {
   userRole?: string;
+  /** 歷史修正單模式：只顯示 CK/CL Tab、注入歷史假資料、唯讀不提供操作 */
+  historyMode?: boolean;
 }
 
-export function CorrectionListWithTabs({ userRole }: CorrectionListWithTabsProps) {
+export function CorrectionListWithTabs({ userRole, historyMode = false }: CorrectionListWithTabsProps) {
   const { correctionOrders, addCorrectionOrder, addCorrectionHistory, updateCorrectionOrder, deleteCorrectionOrders, orders: storeOrders, addOrder: addStoreOrder, updateOrderFields: updateStoreOrderFields, addOrderHistory: addStoreOrderHistory } = useOrderStore();
   const [activeTab, setActiveTab] = useState<TabKey>('ALL');
   const [orderNoSearch, setOrderNoSearch] = useState('');
@@ -390,7 +427,7 @@ export function CorrectionListWithTabs({ userRole }: CorrectionListWithTabsProps
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [deletedMockIds, setDeletedMockIds] = useState<Set<number>>(new Set());
   const [page, setPage] = useState(1);
-  const [perPage, setPerPage] = useState(10);
+  const [perPage, setPerPage] = useState(100);
 
   // ── Column / Filter / Sort state ───────────────────────────────────────────
   const [showColumnSelector, setShowColumnSelector] = useState(false);
@@ -533,6 +570,8 @@ export function CorrectionListWithTabs({ userRole }: CorrectionListWithTabsProps
 
   // ── Data merge: store + mock ──────────────────────────────────────────────
   const allCorrectionOrders = useMemo(() => {
+    // 歷史模式：直接使用歷史假資料，不合併 store
+    if (historyMode) return historyCorrectionMockData;
     const storeIds = new Set(correctionOrders.map(o => o.id));
     const mock = correctionMockData.filter(o => !storeIds.has(o.id) && !deletedMockIds.has(o.id));
     const merged = [...correctionOrders, ...mock];
@@ -544,7 +583,7 @@ export function CorrectionListWithTabs({ userRole }: CorrectionListWithTabsProps
       seen.add(k);
       return true;
     });
-  }, [correctionOrders, deletedMockIds]);
+  }, [correctionOrders, deletedMockIds, historyMode]);
 
   // ── 修正類型選項（動態從資料中收集，確保含已知類型）──────────────────────
   const correctionTypeOptions = useMemo(() => {
@@ -633,14 +672,15 @@ export function CorrectionListWithTabs({ userRole }: CorrectionListWithTabsProps
   }, [advancedFilteredOrders, sortConfig, activeTab]);
 
   // ── Tab counts ────────────────────────────────────────────────────────────
+  const activeTabs = historyMode ? historyTabs : tabs;
   const counts = useMemo(() => {
     const c: Record<string, number> = {};
-    for (const t of tabs) {
+    for (const t of activeTabs) {
       if (t.key === 'ALL') continue;
       c[t.key] = allCorrectionOrders.filter(o => o.correctionStatus === t.key).length;
     }
     return c;
-  }, [allCorrectionOrders]);
+  }, [allCorrectionOrders, activeTabs]);
 
   // ── Pagination ────────────────────────────────────────────────────────────
   const totalItems = sortedOrders.length;
@@ -1213,11 +1253,23 @@ export function CorrectionListWithTabs({ userRole }: CorrectionListWithTabsProps
     <DndProvider backend={HTML5Backend}>
       <div className="bg-white flex flex-col h-full relative rounded-[16px] shadow-[0px_0px_2px_0px_rgba(145,158,171,0.2),0px_12px_24px_-4px_rgba(145,158,171,0.12)] w-full overflow-hidden">
 
+        {/* ── 歷史修正單提示橫幅 ────────────────────────────────────── */}
+        {historyMode && (
+          <div className="flex items-center gap-[8px] px-[20px] py-[10px] bg-[#fff7e6] border-b border-[#ffe4a0] shrink-0">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="#d97706" />
+            </svg>
+            <p className="text-[13px] text-[#92400e]" style={{ fontFamily: "'Public_Sans:Medium',sans-serif" }}>
+              本頁顯示 <strong>3 年以上</strong>（2022/12 以前）已確認（CK）或已關單（CL）的歷史修正單，僅供查詢，不提供編輯。
+            </p>
+          </div>
+        )}
+
         {/* ── Tabs ──────────────────────────────────────────────────────── */}
         <div className="relative shrink-0 w-full">
           <div className="flex flex-row items-center size-full">
             <div className="content-stretch flex gap-[40px] items-center px-[20px] py-0 relative w-full overflow-x-hidden">
-              {tabs.map(t => (
+              {activeTabs.map(t => (
                 <TabItem
                   key={t.key}
                   tabDef={t}

@@ -8,6 +8,7 @@ import { GiantAccountManagementPageNew } from "@/app/components/GiantAccountMana
 import { UnderConstructionPage } from "@/app/components/UnderConstructionPage";
 import { CorrectionCreatePage } from "@/app/components/CorrectionCreatePage";
 import { CorrectionListWithTabs } from "@/app/components/CorrectionListWithTabs";
+import { HistoryCorrectionListPage } from "@/app/components/HistoryCorrectionListPage";
 import { ResponsivePageLayout } from "@/app/components/ResponsivePageLayout";
 import { LoginPage } from "@/app/components/LoginPage";
 import { RegisterPage } from "@/app/components/RegisterPage";
@@ -139,6 +140,19 @@ export default function App() {
             breadcrumb="修正單管理 • 修正單查詢"
           >
             <CorrectionListWithTabs userRole={userRole} />
+          </ResponsivePageLayout>
+        );
+      case 'correction-history':
+        return (
+          <ResponsivePageLayout
+            currentPage={currentPage}
+            onPageChange={handlePageChange}
+            onLogout={handleLogout}
+            userRole={userRole}
+            title="歷史修正單"
+            breadcrumb="修正單管理 • 歷史修正單"
+          >
+            <HistoryCorrectionListPage userRole={userRole} />
           </ResponsivePageLayout>
         );
       case 'quality-abnormal':

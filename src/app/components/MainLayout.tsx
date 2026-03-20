@@ -13,7 +13,7 @@ export type PageType =
   | 'order-list' | 'order-forecast' | 'order-exchange' | 'order-return' | 'order-history'
   | 'order-schedule-change'
   // ── MANAGEMENT > 修正單管理 ──
-  | 'correction-create' | 'correction-list'
+  | 'correction-create' | 'correction-list' | 'correction-history'
   // ── MANAGEMENT > 出貨單 ──
   | 'shipping-create' | 'shipping-list' | 'shipping-packing' | 'shipping-print' | 'shipping-settings'
   // ── MANAGEMENT > 發票作業 ──

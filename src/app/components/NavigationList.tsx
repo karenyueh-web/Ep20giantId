@@ -498,6 +498,7 @@ const MINI_SUBMENUS: Record<string, { label: string; page?: PageType }[]> = {
   correction: [
     { label: '建立修正單',    page: 'correction-create' },
     { label: '修正單查詢',    page: 'correction-list' },
+    { label: '歷史修正單',    page: 'correction-history' },
   ],
   shipping: [
     { label: '建立出貨單',    page: 'shipping-create' },
@@ -925,6 +926,7 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
           <div className="w-full">
             <SubMenuItem label="建立修正單" page="correction-create" onNavigate={onPageChange} isActive={currentPage === 'correction-create'} />
             <SubMenuItem label="修正單查詢" page="correction-list" onNavigate={onPageChange} isActive={currentPage === 'correction-list'} />
+            <SubMenuItem label="歷史修正單" page="correction-history" onNavigate={onPageChange} isActive={currentPage === 'correction-history'} />
           </div>
         )}
       </div>
