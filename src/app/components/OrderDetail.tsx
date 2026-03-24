@@ -449,8 +449,7 @@ function AdjustOrderForm({ onCancel, onConfirm, orderSeq, defaultDate, hideRejec
           return (
             <div className={`flex items-center gap-[6px] px-[32px] py-[6px] ${isMatch ? '' : ''}`}>
               <p className={`font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] ${isMatch ? 'text-[#637381]' : 'text-[#ff5630]'}`}>
-                交貨量加總：{totalQty} / 訂貨量：{orderQuantity}
-                {!isMatch && ` （差異 ${totalQty - orderQuantity > 0 ? '+' : ''}${totalQty - orderQuantity}，交貨量加總須等於訂貨量）`}
+                總交貨量({totalQty})需等於訂貨量({orderQuantity})
               </p>
             </div>
           );
@@ -669,7 +668,8 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
       : latest.event.includes('需修改交期') ||
         latest.event.includes('拆單') ||
         latest.event.includes('拆 Schedule Line') ||
-        latest.event.includes('不接單');
+        latest.event.includes('不接單') ||
+        latest.event.includes('抽單');
     if (isReturnEvent) {
       setShowOrderHistory(true);
     }
@@ -1276,6 +1276,19 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
                         onClick={() => setShowForceCloseForm(true)}
                       >
                         <p className="font-['Public_Sans:Bold',sans-serif] font-bold leading-[22px] text-[13px] text-white whitespace-nowrap">強制關單</p>
+                      </div>
+                    )}
+                    {/* 抽單按鈕（V 狀態 + 採購/巨大角色）：把單據從 V 抽回 B，採購再決定後續 */}
+                    {orderData?.status === 'V' && (userRole === 'purchaser' || userRole === 'giant') && !isReadOnly && (
+                      <div
+                        className="bg-[#637381] h-[32px] px-[14px] rounded-[8px] cursor-pointer hover:bg-[#4a555f] transition-colors flex items-center justify-center"
+                        onClick={() => {
+                          if (onStatusChange) {
+                            onStatusChange('B', '抽單 (V→B)');
+                          }
+                        }}
+                      >
+                        <p className="font-['Public_Sans:Bold',sans-serif] font-bold leading-[22px] text-[13px] text-white whitespace-nowrap">抽單</p>
                       </div>
                     )}
                     {/* 聊天Icon：hideChatIcon=true 時隱藏 */}

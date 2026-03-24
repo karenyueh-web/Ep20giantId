@@ -435,6 +435,14 @@ export function OrderListWithTabs({ defaultTab = 'NP', userRole }: OrderListWith
       rowUpdate.adjustmentType = 'split';
     } else if (eventText.startsWith('需修改交期')) {
       rowUpdate.adjustmentType = 'modify';
+      // 廠商從拆期/拆單改回需修改交期時，把多筆排程合併回 1 筆
+      // （vendorDeliveryDate 已在上方寫入 rowUpdate，這裡同步重設 scheduleLines）
+      rowUpdate.scheduleLines = [{
+        index: 1,
+        expectedDelivery: selectedOrder.expectedDelivery,
+        deliveryDate: vendorDeliveryDate || selectedOrder.vendorDeliveryDate || '',
+        quantity: selectedOrder.orderQty,
+      }];
     } else if (eventText === '不接單') {
       rowUpdate.adjustmentType = 'reject';
     }

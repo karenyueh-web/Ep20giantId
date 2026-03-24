@@ -261,6 +261,23 @@ export function ExchangeOrderListWithTabs({ userRole }: { userRole?: string }) {
         rowUpdate.vendorDeliveryDate = splitLines[splitLines.length - 1].deliveryDate;
       }
     }
+    // ── 追蹤調整單據類型 ──
+    if (resolvedEventText.startsWith('拆單')) {
+      rowUpdate.adjustmentType = 'split-order';
+    } else if (resolvedEventText.startsWith('拆 Schedule Line')) {
+      rowUpdate.adjustmentType = 'split';
+    } else if (resolvedEventText.startsWith('需修改交期')) {
+      rowUpdate.adjustmentType = 'modify';
+      // 廠商從拆期/拆單改回需修改交期時，把多筆排程合併回 1 筆
+      rowUpdate.scheduleLines = [{
+        index: 1,
+        expectedDelivery: selectedOrder.expectedDelivery,
+        deliveryDate: vendorDeliveryDate || selectedOrder.vendorDeliveryDate || '',
+        quantity: selectedOrder.orderQty,
+      }];
+    } else if (resolvedEventText === '不接單') {
+      rowUpdate.adjustmentType = 'reject';
+    }
     // ── 不接單訂單確認 CL 覆寫：若廠商對此單選擇了「不接單」，採購進行訂單確認時狀態直接轉 CL
     const isVendorRejected = selectedOrder.isRejectedOrder === true;
     const effectiveStatus = (newStatus === 'CK' && isVendorRejected) ? 'CL' : newStatus;
