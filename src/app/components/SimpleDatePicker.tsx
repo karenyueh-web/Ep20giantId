@@ -4,11 +4,13 @@ import datePickerSvg from "@/imports/svg-z6udnuarbn";
 interface SimpleDatePickerProps {
   selectedDate: string;
   onDateSelect: (date: string) => void;
+  /** Earliest selectable date (YYYY/MM/DD). Days before this are disabled. */
+  minDate?: string;
 }
 
 type ViewMode = 'calendar' | 'year' | 'month';
 
-export function SimpleDatePicker({ selectedDate, onDateSelect }: SimpleDatePickerProps) {
+export function SimpleDatePicker({ selectedDate, onDateSelect, minDate }: SimpleDatePickerProps) {
   const today = new Date();
   const todayYear = today.getFullYear();
   const todayMonth = today.getMonth();
@@ -51,7 +53,27 @@ export function SimpleDatePicker({ selectedDate, onDateSelect }: SimpleDatePicke
     return day === sel.day && currentMonth.getMonth() === sel.month && currentMonth.getFullYear() === sel.year;
   };
 
+  // ─── Parse minDate ───
+  const parseMinDate = () => {
+    if (!minDate) return null;
+    const parts = minDate.split('/');
+    if (parts.length !== 3) return null;
+    return { year: parseInt(parts[0]), month: parseInt(parts[1]) - 1, day: parseInt(parts[2]) };
+  };
+  const minDateParsed = parseMinDate();
+
+  const isDayDisabled = (day: number): boolean => {
+    if (!minDateParsed) return false;
+    const y = currentMonth.getFullYear();
+    const m = currentMonth.getMonth();
+    if (y < minDateParsed.year) return true;
+    if (y === minDateParsed.year && m < minDateParsed.month) return true;
+    if (y === minDateParsed.year && m === minDateParsed.month && day < minDateParsed.day) return true;
+    return false;
+  };
+
   const handleDateSelect = (day: number) => {
+    if (isDayDisabled(day)) return;
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth() + 1;
     onDateSelect(`${year}/${month.toString().padStart(2, '0')}/${day.toString().padStart(2, '0')}`);
@@ -201,16 +223,18 @@ export function SimpleDatePicker({ selectedDate, onDateSelect }: SimpleDatePicke
                 {week.map((day, dayIndex) => {
                   const isTodayDate = day ? isToday(day) : false;
                   const isSelectedDate = day ? isSelected(day) : false;
+                  const isDisabled = day ? isDayDisabled(day) : false;
                   return (
                     <div
                       key={dayIndex}
                       className={`flex flex-col justify-center size-[32px] rounded-[500px] ${
-                        day ? 'cursor-pointer hover:bg-[rgba(0,0,0,0.04)]' : ''
-                      } ${isSelectedDate ? 'bg-[#005EB8]' : ''} ${isTodayDate && !isSelectedDate ? 'border border-[#005EB8]' : ''}`}
-                      onClick={() => day && handleDateSelect(day)}
+                        day && !isDisabled ? 'cursor-pointer hover:bg-[rgba(0,0,0,0.04)]' : ''
+                      } ${isSelectedDate && !isDisabled ? 'bg-[#005EB8]' : ''} ${isTodayDate && !isSelectedDate && !isDisabled ? 'border border-[#005EB8]' : ''}`}
+                      onClick={() => day && !isDisabled && handleDateSelect(day)}
                     >
                       {day && (
                         <p className={`font-['Public_Sans:Regular',sans-serif] font-normal leading-[20px] text-[13px] text-center ${
+                          isDisabled ? 'text-[#c4cdd6]' :
                           isSelectedDate ? 'text-white font-semibold' : isTodayDate ? 'text-[#005EB8] font-semibold' : 'text-[#1c252e]'
                         }`}>
                           {day}

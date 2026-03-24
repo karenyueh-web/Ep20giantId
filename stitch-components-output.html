@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+
+<html lang="zh-Hant"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Giant Global EP - UI Component Library</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&amp;family=Noto+Sans+TC:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              colors: {
+                "surface-dim": "#d2dbe7",
+                "on-tertiary-fixed-variant": "#044882",
+                "on-tertiary-container": "#fdfcff",
+                "on-secondary-fixed": "#0d1d29",
+                "on-error": "#ffffff",
+                "tertiary-fixed": "#d3e3ff",
+                "primary": "#0059ba",
+                "on-primary-container": "#fefcff",
+                "background": "#f7f9ff",
+                "on-secondary": "#ffffff",
+                "secondary-fixed": "#d4e5f5",
+                "inverse-on-surface": "#e8f2fe",
+                "secondary-container": "#d4e5f5",
+                "on-surface": "#131c25",
+                "tertiary-fixed-dim": "#a3c9ff",
+                "surface-container": "#e6effb",
+                "surface": "#f7f9ff",
+                "primary-container": "#0071e9",
+                "surface-tint": "#005bbf",
+                "surface-container-low": "#edf4ff",
+                "outline-variant": "#c1c6d6",
+                "on-primary-fixed-variant": "#004492",
+                "surface-container-high": "#e0e9f5",
+                "tertiary": "#295d99",
+                "outline": "#727785",
+                "secondary": "#50606e",
+                "tertiary-container": "#4576b3",
+                "inverse-primary": "#acc7ff",
+                "on-secondary-fixed-variant": "#394955",
+                "on-background": "#131c25",
+                "error-container": "#ffdad6",
+                "secondary-fixed-dim": "#b8c8d8",
+                "surface-variant": "#dae3f0",
+                "surface-container-lowest": "#ffffff",
+                "on-tertiary": "#ffffff",
+                "on-surface-variant": "#414754",
+                "on-secondary-container": "#566674",
+                "surface-container-highest": "#dae3f0",
+                "inverse-surface": "#28313b",
+                "error": "#ba1a1a",
+                "on-error-container": "#93000a",
+                "primary-fixed": "#d7e2ff",
+                "surface-bright": "#f7f9ff",
+                "on-tertiary-fixed": "#001c39",
+                "on-primary-fixed": "#001a40",
+                "on-primary": "#ffffff",
+                "primary-fixed-dim": "#acc7ff"
+              },
+              fontFamily: {
+                "headline": ["Public Sans", "Noto Sans TC"],
+                "body": ["Public Sans", "Noto Sans TC"],
+                "label": ["Public Sans", "Noto Sans TC"]
+              },
+              borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+            },
+          },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        body {
+            font-family: 'Public Sans', 'Noto Sans TC', sans-serif;
+            background-color: #f7f9ff;
+            color: #1c252e;
+        }
+        .section-header {
+            color: #1c252e;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            margin-top: 4rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #edf4ff;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="antialiased pb-24">
+<!-- Top Navigation Anchor (As per Shared Components JSON) -->
+<header class="fixed top-0 w-full z-50 bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-[0_8px_24px_-4px_rgba(19,28,37,0.06)] flex justify-between items-center px-6 py-4">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-blue-600 cursor-pointer" data-icon="menu">menu</span>
+<h1 class="text-xl font-bold tracking-tight text-slate-900">Giant Global EP</h1>
+</div>
+<div class="flex items-center gap-6">
+<nav class="hidden md:flex gap-8 text-sm font-medium">
+<span class="text-slate-500 hover:bg-blue-50/50 p-2 rounded transition-colors cursor-pointer">儀表板</span>
+<span class="text-slate-500 hover:bg-blue-50/50 p-2 rounded transition-colors cursor-pointer">採購管理</span>
+<span class="text-blue-700 font-semibold p-2 rounded transition-colors cursor-pointer">組件庫</span>
+<span class="text-slate-500 hover:bg-blue-50/50 p-2 rounded transition-colors cursor-pointer">系統設定</span>
+</nav>
+<div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-600 overflow-hidden">
+<img alt="用戶頭像" data-alt="User profile avatar circle" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC_a4jwyUURF0ilyeluQOhSfFjUSB38Cw-_GE91-T3jsJ8ORHf_KReEBDuinoIJ4Z1-XwOytQql2s8T0Fyr8gqaDs6O6LIgWTbzMI1WfprMHEvrV2O1Md_Vve6gdRPNovcqeFrWTXC_LjVpp8GGJiSdkV7WgCqW9aoLhxJNOC2ebwV6V97VZfrcjWEsZK8pV_kteRZmWc3c6l7lxd8uVZjceEcbmwdUu55-DnK1txTemNB254gTjostqoGUh6SsYA7JWmw4N5oh3Q"/>
+</div>
+</div>
+</header>
+<main class="max-w-6xl mx-auto px-6 pt-24">
+<div class="mb-12">
+<h2 class="text-4xl font-extrabold tracking-tight mb-2">組件指南</h2>
+<p class="text-on-surface-variant">為 Giant Global EP 打造的高階採購系統 UI 規範與組件展示。</p>
+</div>
+<!-- Section 1: Checkboxes -->
+<section>
+<h3 class="section-header">第一節：基礎選取 (Checkboxes)</h3>
+<div class="flex flex-wrap gap-12 items-end">
+<div class="space-y-4">
+<p class="text-xs font-bold text-outline uppercase tracking-wider">CheckboxIcon (20x20)</p>
+<div class="flex gap-6">
+<div class="flex items-center gap-2">
+<div class="w-[20px] h-[20px] border-2 border-[#919EAB] rounded flex items-center justify-center cursor-pointer"></div>
+<span class="text-sm">未選取</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-[20px] h-[20px] bg-[#1D7BF5] rounded flex items-center justify-center cursor-pointer">
+<span class="material-symbols-outlined text-white text-[16px]" style="font-variation-settings: 'wght' 700;">check</span>
+</div>
+<span class="text-sm font-semibold">已選取</span>
+</div>
+</div>
+</div>
+<div class="space-y-4">
+<p class="text-xs font-bold text-outline uppercase tracking-wider">CustomCheckbox (16x16)</p>
+<div class="flex gap-6">
+<div class="flex items-center gap-2">
+<div class="w-[16px] h-[16px] border-2 border-outline-variant rounded-sm cursor-pointer"></div>
+<span class="text-xs">選單用樣式</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Section 2: Dropdowns -->
+<section>
+<h3 class="section-header">第二節：下拉選單 (Dropdowns)</h3>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-2xl">
+<div class="relative h-[54px] w-full bg-white border border-outline-variant/30 rounded-lg px-4 flex flex-col justify-center shadow-sm">
+<span class="text-[10px] font-bold text-blue-600 uppercase tracking-tighter">狀態</span>
+<div class="flex justify-between items-center">
+<span class="text-sm font-medium">廠商確認中</span>
+<span class="material-symbols-outlined text-slate-400">expand_more</span>
+</div>
+</div>
+<div class="h-[40px] w-full bg-surface-container-low border border-outline-variant/20 rounded px-4 flex items-center justify-between">
+<span class="text-sm text-slate-400">選擇廠商...</span>
+<span class="material-symbols-outlined text-slate-400 text-sm">expand_more</span>
+</div>
+</div>
+</section>
+<!-- Section 3: ColumnSelector -->
+<section>
+<h3 class="section-header">第三節：欄位選取面板 (ColumnSelector)</h3>
+<div class="w-[280px] bg-white rounded-xl shadow-[0_8px_24px_-4px_rgba(19,28,37,0.06)] overflow-hidden">
+<div class="p-4 flex justify-between items-center border-b border-outline-variant/10">
+<span class="text-sm font-bold">顯示欄位 (5/8)</span>
+<button class="text-xs font-bold text-blue-600 hover:underline">全選</button>
+</div>
+<div class="p-2 max-h-64 overflow-y-auto">
+<div class="flex items-center gap-3 px-3 py-2 hover:bg-surface-container-low rounded-lg transition-colors cursor-pointer group">
+<div class="w-4 h-4 bg-primary rounded-sm flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-[12px] font-bold">check</span>
+</div>
+<span class="text-sm font-medium">訂單狀態</span>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 hover:bg-surface-container-low rounded-lg transition-colors cursor-pointer group">
+<div class="w-4 h-4 bg-primary rounded-sm flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-[12px] font-bold">check</span>
+</div>
+<span class="text-sm font-medium">訂單號碼</span>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 hover:bg-surface-container-low rounded-lg transition-colors cursor-pointer group">
+<div class="w-4 h-4 bg-primary rounded-sm flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-[12px] font-bold">check</span>
+</div>
+<span class="text-sm font-medium">廠商名稱</span>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 hover:bg-surface-container-low rounded-lg transition-colors cursor-pointer group">
+<div class="w-4 h-4 bg-primary rounded-sm flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-[12px] font-bold">check</span>
+</div>
+<span class="text-sm font-medium">料號</span>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 hover:bg-surface-container-low rounded-lg transition-colors cursor-pointer group">
+<div class="w-4 h-4 bg-primary rounded-sm flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-[12px] font-bold">check</span>
+</div>
+<span class="text-sm font-medium">規格</span>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 hover:bg-surface-container-low rounded-lg transition-colors cursor-pointer group">
+<div class="w-4 h-4 border-2 border-outline-variant/30 rounded-sm"></div>
+<span class="text-sm text-slate-500">採購人員</span>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 hover:bg-surface-container-low rounded-lg transition-colors cursor-pointer group">
+<div class="w-4 h-4 border-2 border-outline-variant/30 rounded-sm"></div>
+<span class="text-sm text-slate-500">公司</span>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 hover:bg-surface-container-low rounded-lg transition-colors cursor-pointer group">
+<div class="w-4 h-4 border-2 border-outline-variant/30 rounded-sm"></div>
+<span class="text-sm text-slate-500">採購組織</span>
+</div>
+</div>
+<div class="p-3 border-t border-outline-variant/10 flex justify-end gap-2">
+<button class="px-3 py-1.5 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded">取消</button>
+<button class="px-4 py-1.5 text-xs font-bold bg-primary text-white rounded shadow-sm hover:opacity-90 transition-opacity">應用</button>
+</div>
+</div>
+</section>
+<!-- Section 4: FilterDialog -->
+<section>
+<h3 class="section-header">第四節：進階篩選面板 (FilterDialog)</h3>
+<div class="max-w-lg w-full bg-white rounded-xl shadow-xl overflow-hidden">
+<div class="px-6 py-4 border-b border-outline-variant/10 flex justify-between items-center bg-surface-container-low/30">
+<h4 class="font-bold">進階篩選 (2)</h4>
+<span class="material-symbols-outlined text-slate-400 cursor-pointer">close</span>
+</div>
+<div class="p-6 space-y-4">
+<!-- Row 1 -->
+<div class="flex items-center gap-2 group">
+<div class="flex-1 grid grid-cols-3 gap-2">
+<div class="bg-surface-container-low px-3 py-2 rounded text-sm flex justify-between items-center border border-transparent hover:border-outline-variant/30 cursor-pointer">
+<span>廠商名稱</span> <span class="material-symbols-outlined text-[16px]">expand_more</span>
+</div>
+<div class="bg-surface-container-low px-3 py-2 rounded text-sm flex justify-between items-center border border-transparent hover:border-outline-variant/30 cursor-pointer">
+<span>包含</span> <span class="material-symbols-outlined text-[16px]">expand_more</span>
+</div>
+<div class="bg-white border border-outline-variant px-3 py-2 rounded text-sm outline-none focus:border-primary">
+<span>速聯</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-slate-300 hover:text-error cursor-pointer">close</span>
+</div>
+<!-- Row 2 -->
+<div class="flex items-center gap-2 group">
+<div class="flex-1 grid grid-cols-3 gap-2">
+<div class="bg-surface-container-low px-3 py-2 rounded text-sm flex justify-between items-center border border-transparent hover:border-outline-variant/30 cursor-pointer">
+<span>訂單狀態</span> <span class="material-symbols-outlined text-[16px]">expand_more</span>
+</div>
+<div class="bg-surface-container-low px-3 py-2 rounded text-sm flex justify-between items-center border border-transparent hover:border-outline-variant/30 cursor-pointer">
+<span>等於</span> <span class="material-symbols-outlined text-[16px]">expand_more</span>
+</div>
+<div class="bg-white border border-outline-variant px-3 py-2 rounded text-sm flex justify-between items-center cursor-pointer">
+<span class="px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-[10px] font-bold">V</span> <span class="material-symbols-outlined text-[16px]">expand_more</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-slate-300 hover:text-error cursor-pointer">close</span>
+</div>
+<button class="w-full py-2.5 border-2 border-dashed border-blue-200 rounded-lg text-sm font-bold text-blue-600 hover:bg-blue-50 transition-colors flex items-center justify-center gap-1">
+<span class="material-symbols-outlined text-[20px]">add</span> 新增篩選條件
+                    </button>
+</div>
+<div class="px-6 py-4 bg-slate-50 flex justify-end gap-3">
+<button class="px-6 py-2 text-sm font-bold text-slate-500 hover:text-slate-700">取消</button>
+<button class="px-8 py-2 text-sm font-bold bg-primary text-white rounded-lg shadow-md hover:shadow-lg transition-all">應用</button>
+</div>
+</div>
+</section>
+<!-- Section 5: TableToolbar -->
+<section>
+<h3 class="section-header">第五節：表格工具列 (TableToolbar)</h3>
+<div class="w-full bg-white px-6 py-3 rounded-xl border border-outline-variant/15 flex justify-between items-center shadow-sm">
+<div class="flex items-center gap-2">
+<span class="text-sm font-medium text-slate-500">找到</span>
+<span class="text-lg font-bold">1842</span>
+<span class="text-sm font-medium text-slate-500">筆結果</span>
+</div>
+<div class="flex items-center gap-2">
+<button class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-surface-container-low text-slate-600">
+<span class="material-symbols-outlined" data-icon="view_column">view_column</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-surface-container-low text-slate-600">
+<span class="material-symbols-outlined" data-icon="filter_list">filter_list</span>
+</button>
+<div class="h-6 w-[1px] bg-outline-variant/30 mx-2"></div>
+<button class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-surface-container-low text-slate-600 font-bold text-sm">
+<span>導出</span>
+<span class="material-symbols-outlined text-[18px]">expand_more</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Section 6: Status Badges -->
+<section>
+<h3 class="section-header">第六節：狀態標籤 (Status Badges)</h3>
+<div class="flex flex-wrap gap-4">
+<div class="px-4 py-1.5 bg-slate-100 text-slate-600 rounded-full text-xs font-extrabold tracking-widest">NP</div>
+<div class="px-4 py-1.5 bg-amber-100 text-amber-700 rounded-full text-xs font-extrabold tracking-widest">V</div>
+<div class="px-4 py-1.5 bg-red-100 text-red-700 rounded-full text-xs font-extrabold tracking-widest">B</div>
+<div class="px-4 py-1.5 bg-cyan-100 text-cyan-700 rounded-full text-xs font-extrabold tracking-widest">CK</div>
+<div class="px-4 py-1.5 bg-green-100 text-green-700 rounded-full text-xs font-extrabold tracking-widest">CP</div>
+<div class="px-4 py-1.5 bg-slate-200 text-slate-500 rounded-full text-xs font-extrabold tracking-widest">DR</div>
+<div class="px-4 py-1.5 bg-slate-800 text-white rounded-full text-xs font-extrabold tracking-widest">SS</div>
+<div class="px-4 py-1.5 bg-slate-400 text-white rounded-full text-xs font-extrabold tracking-widest">CL</div>
+</div>
+</section>
+<!-- Section 7: Button System -->
+<section>
+<h3 class="section-header">第七節：按鈕系統 (Button System)</h3>
+<div class="flex flex-wrap gap-6 items-center">
+<button class="bg-[#1D7BF5] text-white px-6 py-2.5 rounded-lg font-bold shadow-md hover:bg-blue-600 transition-colors">主要按鈕</button>
+<button class="text-slate-500 px-6 py-2.5 rounded-lg font-bold hover:bg-slate-100 transition-colors">次要按鈕</button>
+<button class="text-[#004680] px-4 py-2 rounded-lg font-bold flex items-center gap-1 hover:bg-blue-50 transition-colors">
+<span class="material-symbols-outlined text-[20px]">download</span> 工具列按鈕
+                </button>
+<button class="border-2 border-dashed border-outline-variant text-slate-500 px-6 py-2 rounded-lg font-bold hover:bg-slate-50 transition-colors">虛線按鈕</button>
+</div>
+</section>
+<!-- Section 8: PaginationControls -->
+<section>
+<h3 class="section-header">第八節：分頁控制 (PaginationControls)</h3>
+<div class="flex items-center gap-8 text-sm text-slate-600 font-medium">
+<div class="flex items-center gap-2">
+<span>每頁顯示:</span>
+<div class="bg-white border border-outline-variant/30 rounded px-2 py-1 flex items-center gap-1 cursor-pointer">
+<span class="font-bold">100</span>
+<span class="material-symbols-outlined text-[16px]">expand_more</span>
+</div>
+</div>
+<div>
+<span class="font-bold text-on-surface">1–100</span> / 1842
+                </div>
+<div class="flex items-center gap-1">
+<button class="w-8 h-8 flex items-center justify-center rounded-full text-slate-300 cursor-not-allowed">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-blue-50 text-blue-600">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Section 9: BaseOverlay -->
+<section class="pb-24">
+<h3 class="section-header">第九節：疊加層預覽 (BaseOverlay)</h3>
+<div class="relative w-full h-[400px] bg-slate-100 rounded-2xl overflow-hidden flex items-center justify-center border-4 border-white shadow-inner">
+<div class="absolute inset-0 opacity-20 pointer-events-none">
+<img class="w-full h-full object-cover" data-alt="Abstract blue gradient pattern background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCIvSoXJdjq1hY_FWXgEfULAJ2i99CKN8DuGze3Q6aHmSidMXOLDtvHL6lZZfnEHUZreJLNKkXVeb0OaE3ROrg5oBO7ie_s_thYbtFrmIsZKDlYZRenAOLZdWYto6c5SsLy1bEfTRMxQ9OUYspvfS5YtQ930GnRKnZ2M8YrP8mG2vX7Z_NndVnTiW3qkjVoMdfYG77RXRGx1p-kvHEhslkT-nkCEoVFT6itu8h2Sq6RDRiX8xS88__LvOWPSRuaoK3hgqj5DILJ0g"/>
+</div>
+<!-- Mock Modal -->
+<div class="z-10 w-[360px] bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] p-6 scale-90 md:scale-100">
+<div class="flex items-center justify-between mb-6">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
+<span class="material-symbols-outlined">info</span>
+</div>
+<div>
+<h5 class="font-bold text-slate-900">確認操作</h5>
+<p class="text-xs text-slate-500">此動作無法復原</p>
+</div>
+</div>
+</div>
+<p class="text-sm text-slate-600 leading-relaxed mb-8">
+                        您確定要將這 12 筆訂單狀態更新為「已完成 (CP)」嗎？系統將同步通知供應商。
+                    </p>
+<div class="flex gap-3">
+<button class="flex-1 py-2.5 text-sm font-bold text-slate-500 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">取消</button>
+<button class="flex-1 py-2.5 text-sm font-bold text-white bg-primary rounded-lg shadow-lg shadow-blue-200 hover:shadow-xl transition-all">確認更新</button>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Bottom Navigation for Mobile -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full flex justify-around items-center py-3 px-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-t border-slate-200/15 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] z-50">
+<div class="flex flex-col items-center text-slate-400">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="text-[10px] font-medium tracking-wide">首頁</span>
+</div>
+<div class="flex flex-col items-center text-slate-400">
+<span class="material-symbols-outlined" data-icon="receipt_long">receipt_long</span>
+<span class="text-[10px] font-medium tracking-wide">採購</span>
+</div>
+<div class="flex flex-col items-center text-blue-600">
+<span class="material-symbols-outlined" data-icon="widgets">widgets</span>
+<span class="text-[10px] font-medium tracking-wide">組件</span>
+</div>
+<div class="flex flex-col items-center text-slate-400">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="text-[10px] font-medium tracking-wide">設定</span>
+</div>
+</nav>
+</body></html>

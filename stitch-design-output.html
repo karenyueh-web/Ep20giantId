@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Design DNA Specification | Giant Global EP</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "on-error": "#ffffff",
+            "tertiary-fixed": "#d3e3ff",
+            "primary": "#0059ba",
+            "on-primary-container": "#fefcff",
+            "surface-dim": "#d2dbe7",
+            "on-tertiary-fixed-variant": "#044882",
+            "on-tertiary-container": "#fdfcff",
+            "on-secondary-fixed": "#0d1d29",
+            "on-secondary": "#ffffff",
+            "secondary-fixed": "#d4e5f5",
+            "inverse-on-surface": "#e8f2fe",
+            "background": "#f7f9ff",
+            "secondary-container": "#d4e5f5",
+            "on-surface": "#131c25",
+            "tertiary-fixed-dim": "#a3c9ff",
+            "surface-container": "#e6effb",
+            "tertiary": "#295d99",
+            "outline": "#727785",
+            "secondary": "#50606e",
+            "surface": "#f7f9ff",
+            "primary-container": "#0071e9",
+            "surface-tint": "#005bbf",
+            "surface-container-low": "#edf4ff",
+            "outline-variant": "#c1c6d6",
+            "on-primary-fixed-variant": "#004492",
+            "surface-container-high": "#e0e9f5",
+            "error-container": "#ffdad6",
+            "secondary-fixed-dim": "#b8c8d8",
+            "surface-variant": "#dae3f0",
+            "surface-container-lowest": "#ffffff",
+            "on-tertiary": "#ffffff",
+            "on-surface-variant": "#414754",
+            "tertiary-container": "#4576b3",
+            "inverse-primary": "#acc7ff",
+            "on-secondary-fixed-variant": "#394955",
+            "on-background": "#131c25",
+            "surface-container-highest": "#dae3f0",
+            "on-secondary-container": "#566674",
+            "error": "#ba1a1a",
+            "on-error-container": "#93000a",
+            "inverse-surface": "#28313b",
+            "on-primary-fixed": "#001a40",
+            "on-primary": "#ffffff",
+            "primary-fixed-dim": "#acc7ff",
+            "primary-fixed": "#d7e2ff",
+            "surface-bright": "#f7f9ff",
+            "on-tertiary-fixed": "#001c39",
+            // Custom Brand Colors from prompt
+            "brand-blue": "#1D7BF5",
+            "link-blue": "#1677ff",
+            "action-text": "#004680",
+            "success-green": "#118d57",
+            "error-red": "#b71d18",
+            "warning-amber": "#b76e00",
+            "table-header-bg": "#f4f6f8",
+            "primary-text": "#1c252e",
+            "secondary-text": "#637381",
+            "disabled-text": "#919eab"
+          },
+          fontFamily: {
+            "headline": ["Public Sans"],
+            "body": ["Public Sans"],
+            "label": ["Public Sans"]
+          },
+          borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+        },
+      },
+    }
+  </script>
+<style>
+    body { font-family: 'Public Sans', sans-serif; }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      vertical-align: middle;
+    }
+    .ghost-border { border: 1px solid rgba(193, 198, 214, 0.15); }
+    .glass { backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-primary-text min-h-screen">
+<!-- TOP APP BAR (Shared Component Reference) -->
+<header class="flex justify-between items-center w-full px-8 py-4 sticky top-0 z-50 bg-slate-50/80 backdrop-blur-xl shadow-sm font-['Public_Sans'] tracking-tight">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-blue-600" data-icon="grid_view">grid_view</span>
+<h1 class="text-xl font-bold tracking-tighter text-slate-900">Giant Global EP</h1>
+</div>
+<div class="hidden md:flex gap-8">
+<a class="text-blue-700 font-semibold border-b-2 border-blue-600" href="#">Dashboard</a>
+<a class="text-slate-500 hover:text-slate-900 transition-colors" href="#">Inventory</a>
+<a class="text-slate-500 hover:text-slate-900 transition-colors" href="#">Procurement</a>
+<a class="text-slate-500 hover:text-slate-900 transition-colors" href="#">Analytics</a>
+</div>
+<div class="w-10 h-10 rounded-full bg-slate-200 overflow-hidden flex items-center justify-center">
+<img alt="User Profile" data-alt="System administrator user profile avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCdIRAFH3gYxF9plV3PMr6odceXiv321bIyPfs_CjxlYDffOE7jtKVxOSiImntMLq4t2U6KtLCghIi_CouRmfjt_9c5DaO8JRuYXW0oOR07hCk6qR4IGHN9uTDv73VFT9zIRC44jzgYaVC7xMEA-0zfRyKRjurQYEZLxLXh02QSwt_o4gqwfvNGnxNJH_1Fpn_oCD5bQ04fccinGBflDc7bd42XNprkXDlf1KmiuGvAfJaUdu-W2u90lC_dbHxQJSqgP5Du4r7TtA"/>
+</div>
+</header>
+<main class="max-w-7xl mx-auto px-8 py-16 space-y-24">
+<!-- HEADER SECTION -->
+<section>
+<h2 class="text-5xl font-extrabold tracking-tight mb-4">Design DNA Specification</h2>
+<p class="text-secondary-text text-xl max-w-2xl leading-relaxed">
+        Transitioning from "managing data" to "orchestrating outcomes." A high-end editorial procurement experience focused on precision, tonal layering, and sophisticated transitions.
+      </p>
+</section>
+<!-- 01. COLOR PALETTE -->
+<section class="space-y-10">
+<div class="flex items-baseline gap-4">
+<span class="text-sm font-bold tracking-widest text-primary uppercase">01</span>
+<h3 class="text-2xl font-bold tracking-tight">COLOR PALETTE</h3>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+<!-- Neutral Tones -->
+<div class="space-y-3">
+<div class="h-24 w-full bg-[#1c252e] rounded-xl shadow-inner"></div>
+<div>
+<p class="text-sm font-bold">Primary Text</p>
+<p class="text-xs text-secondary-text">#1C252E</p>
+</div>
+</div>
+<div class="space-y-3">
+<div class="h-24 w-full bg-[#637381] rounded-xl shadow-inner"></div>
+<div>
+<p class="text-sm font-bold">Secondary Text</p>
+<p class="text-xs text-secondary-text">#637381</p>
+</div>
+</div>
+<div class="space-y-3">
+<div class="h-24 w-full bg-[#919eab] rounded-xl shadow-inner"></div>
+<div>
+<p class="text-sm font-bold">Disabled</p>
+<p class="text-xs text-secondary-text">#919EAB</p>
+</div>
+</div>
+<div class="space-y-3">
+<div class="h-24 w-full bg-white rounded-xl shadow-sm border border-slate-100"></div>
+<div>
+<p class="text-sm font-bold">Card BG</p>
+<p class="text-xs text-secondary-text">#FFFFFF</p>
+</div>
+</div>
+<!-- Brand & Actions -->
+<div class="space-y-3">
+<div class="h-24 w-full bg-brand-blue rounded-xl shadow-inner"></div>
+<div>
+<p class="text-sm font-bold">Brand Blue</p>
+<p class="text-xs text-secondary-text">#1D7BF5</p>
+</div>
+</div>
+<div class="space-y-3">
+<div class="h-24 w-full bg-link-blue rounded-xl shadow-inner"></div>
+<div>
+<p class="text-sm font-bold">Link Blue</p>
+<p class="text-xs text-secondary-text">#1677FF</p>
+</div>
+</div>
+<div class="space-y-3">
+<div class="h-24 w-full bg-action-text rounded-xl shadow-inner"></div>
+<div>
+<p class="text-sm font-bold">Action Text</p>
+<p class="text-xs text-secondary-text">#004680</p>
+</div>
+</div>
+<div class="space-y-3">
+<div class="h-24 w-full bg-[#d9e8f5] rounded-xl shadow-inner"></div>
+<div>
+<p class="text-sm font-bold">Toolbar BG</p>
+<p class="text-xs text-secondary-text">#D9E8F5</p>
+</div>
+</div>
+<!-- Semantic Colors -->
+<div class="space-y-3">
+<div class="h-24 w-full bg-success-green rounded-xl shadow-inner"></div>
+<div>
+<p class="text-sm font-bold">Success Green</p>
+<p class="text-xs text-secondary-text">#118D57</p>
+</div>
+</div>
+<div class="space-y-3">
+<div class="h-24 w-full bg-error-red rounded-xl shadow-inner"></div>
+<div>
+<p class="text-sm font-bold">Error Red</p>
+<p class="text-xs text-secondary-text">#B71D18</p>
+</div>
+</div>
+<div class="space-y-3">
+<div class="h-24 w-full bg-warning-amber rounded-xl shadow-inner"></div>
+<div>
+<p class="text-sm font-bold">Warning Amber</p>
+<p class="text-xs text-secondary-text">#B76E00</p>
+</div>
+</div>
+<div class="space-y-3">
+<div class="h-24 w-full bg-table-header-bg rounded-xl shadow-inner"></div>
+<div>
+<p class="text-sm font-bold">Table Header BG</p>
+<p class="text-xs text-secondary-text">#F4F6F8</p>
+</div>
+</div>
+</div>
+</section>
+<!-- 02. TYPOGRAPHY SCALE -->
+<section class="space-y-10">
+<div class="flex items-baseline gap-4">
+<span class="text-sm font-bold tracking-widest text-primary uppercase">02</span>
+<h3 class="text-2xl font-bold tracking-tight">TYPOGRAPHY SCALE</h3>
+</div>
+<div class="bg-surface-container-low rounded-2xl p-10 space-y-8">
+<div class="grid grid-cols-1 md:grid-cols-2 items-center gap-4">
+<p class="text-xs font-bold uppercase tracking-widest text-secondary-text">Table Header</p>
+<p class="text-[14px] font-semibold text-secondary-text">Document Identification Number</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 items-center gap-4">
+<p class="text-xs font-bold uppercase tracking-widest text-secondary-text">Table Body</p>
+<p class="text-[14px] font-normal text-primary-text">Mitsui Chemicals Global Logistics Unit</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 items-center gap-4">
+<p class="text-xs font-bold uppercase tracking-widest text-secondary-text">Toolbar Action</p>
+<p class="text-[14px] font-semibold text-action-text cursor-pointer hover:opacity-80">全部提交廠商</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 items-center gap-4">
+<p class="text-xs font-bold uppercase tracking-widest text-secondary-text">Link / Doc No</p>
+<p class="text-[14px] font-normal text-link-blue underline underline-offset-4 cursor-pointer">EP-008271</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 items-center gap-4">
+<p class="text-xs font-bold uppercase tracking-widest text-secondary-text">Status Badge</p>
+<p class="text-[12px] font-bold">VERIFIED ASSET</p>
+</div>
+</div>
+</section>
+<!-- 03. STATUS BADGES -->
+<section class="space-y-10">
+<div class="flex items-baseline gap-4">
+<span class="text-sm font-bold tracking-widest text-primary uppercase">03</span>
+<h3 class="text-2xl font-bold tracking-tight">STATUS BADGES</h3>
+</div>
+<div class="flex flex-wrap gap-4 items-center">
+<!-- CL (Closed) -->
+<span class="px-3 py-1 bg-surface-variant text-on-secondary-container rounded-full text-[12px] font-bold tracking-wider">CL</span>
+<!-- V (Verified) -->
+<span class="px-3 py-1 bg-success-green/10 text-success-green rounded-full text-[12px] font-bold tracking-wider">V</span>
+<!-- B (Blocked) -->
+<span class="px-3 py-1 bg-error-container text-error-red rounded-full text-[12px] font-bold tracking-wider">B</span>
+<!-- CK (Checked) -->
+<span class="px-3 py-1 bg-secondary-fixed text-brand-blue rounded-full text-[12px] font-bold tracking-wider">CK</span>
+<!-- CP (Complete) -->
+<span class="px-3 py-1 bg-secondary-fixed text-brand-blue rounded-full text-[12px] font-bold tracking-wider">CP</span>
+<!-- DR (Draft) -->
+<span class="px-3 py-1 bg-surface-dim text-on-surface-variant rounded-full text-[12px] font-bold tracking-wider">DR</span>
+</div>
+</section>
+<!-- 04. TABLE ROW ANATOMY -->
+<section class="space-y-10">
+<div class="flex items-baseline gap-4">
+<span class="text-sm font-bold tracking-widest text-primary uppercase">04</span>
+<h3 class="text-2xl font-bold tracking-tight">TABLE ROW ANATOMY</h3>
+</div>
+<div class="bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-table-header-bg">
+<th class="px-6 py-4 w-12"><input class="rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"/></th>
+<th class="px-6 py-4 text-[14px] font-semibold text-secondary-text">Doc No.</th>
+<th class="px-6 py-4 text-[14px] font-semibold text-secondary-text">Supplier</th>
+<th class="px-6 py-4 text-[14px] font-semibold text-secondary-text">Category</th>
+<th class="px-6 py-4 text-[14px] font-semibold text-secondary-text">Notes</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100">
+<!-- Selected Row -->
+<tr class="bg-primary/5">
+<td class="px-6 py-5"><input checked="" class="rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"/></td>
+<td class="px-6 py-5 text-[14px] text-link-blue underline cursor-pointer">EP-008271</td>
+<td class="px-6 py-5 text-[14px] text-primary-text font-medium">Mitsui Chemicals</td>
+<td class="px-6 py-5">
+<span class="px-3 py-1 bg-slate-100 rounded-lg text-xs font-medium text-slate-600">Raw Materials</span>
+</td>
+<td class="px-6 py-5 text-disabled-text">—</td>
+</tr>
+<!-- Normal Row -->
+<tr>
+<td class="px-6 py-5"><input class="rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"/></td>
+<td class="px-6 py-5 text-[14px] text-primary-text">EP-008272</td>
+<td class="px-6 py-5 text-[14px] text-primary-text font-medium">Itan Steel Works</td>
+<td class="px-6 py-5">
+<span class="px-3 py-1 bg-slate-100 rounded-lg text-xs font-medium text-slate-600">Hardware</span>
+</td>
+<td class="px-6 py-5 text-disabled-text">—</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<!-- 05. SELECTION TOOLBAR -->
+<section class="space-y-10">
+<div class="flex items-baseline gap-4">
+<span class="text-sm font-bold tracking-widest text-primary uppercase">05</span>
+<h3 class="text-2xl font-bold tracking-tight">SELECTION TOOLBAR</h3>
+</div>
+<div class="h-48 bg-[#d9e8f5] rounded-3xl flex items-center justify-center relative overflow-hidden group">
+<div class="absolute inset-0 bg-gradient-to-br from-blue-400/10 to-transparent"></div>
+<!-- Floating Toolbar Mockup -->
+<div class="glass bg-white/85 shadow-2xl rounded-2xl px-8 py-4 flex items-center gap-8 z-10">
+<div class="flex items-center gap-3">
+<input checked="" class="rounded border-action-text text-action-text focus:ring-action-text" type="checkbox"/>
+<span class="text-sm font-bold text-action-text">2 selected</span>
+</div>
+<div class="h-6 w-px bg-action-text/20"></div>
+<div class="flex items-center gap-6">
+<button class="text-sm font-semibold text-action-text hover:underline underline-offset-4">檢視</button>
+<button class="text-sm font-semibold text-action-text hover:underline underline-offset-4">全部提交廠商</button>
+</div>
+<button class="flex items-center justify-center p-2 rounded-lg hover:bg-slate-200/50 transition-colors">
+<span class="material-symbols-outlined text-action-text" data-icon="close">close</span>
+</button>
+</div>
+</div>
+</section>
+<!-- 06. CARD + DROPDOWN -->
+<section class="space-y-10">
+<div class="flex items-baseline gap-4">
+<span class="text-sm font-bold tracking-widest text-primary uppercase">06</span>
+<h3 class="text-2xl font-bold tracking-tight">CARD + DROPDOWN</h3>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
+<!-- Content Card -->
+<div class="bg-surface-container-lowest rounded-2xl p-8 shadow-sm space-y-6">
+<div class="flex justify-between items-start">
+<div class="space-y-1">
+<p class="text-xs font-bold uppercase tracking-widest text-secondary-text">Procurement Batch</p>
+<h4 class="text-xl font-bold text-primary-text">Global Logistics Q3 Expansion</h4>
+</div>
+<span class="px-3 py-1 bg-secondary-fixed text-brand-blue rounded-full text-[10px] font-bold tracking-wider">CK</span>
+</div>
+<div class="space-y-4">
+<div class="flex items-center gap-3 text-sm text-secondary-text">
+<span class="material-symbols-outlined text-lg" data-icon="calendar_today">calendar_today</span>
+<span>October 12, 2024</span>
+</div>
+<div class="flex items-center gap-3 text-sm text-secondary-text">
+<span class="material-symbols-outlined text-lg" data-icon="factory">factory</span>
+<span>4 Active Suppliers</span>
+</div>
+</div>
+<div class="pt-4 flex justify-between items-center border-t border-slate-50">
+<div class="flex -space-x-2">
+<div class="w-8 h-8 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center overflow-hidden">
+<img alt="Supplier 1" data-alt="Small circular logo for supplier 1" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBmimC_Oq4fKSIQ0Qw8Wr5Eh1uPUzO_w5WcmltvDa_O2MZFo1Krm8ICIeEMNCbu-oLAfUnd44Wh1VXGARv29uUe9gYa3ki0uVBAiPBbU9yrq84tfVO5yoe6ekJYcB5ctZuYpErYt9Md1lkVIPA_JPabLy7ZXUXYRs2QBvfyJTrijwbJ8JZRPtER3qXk32WTBK6qulVFPDlhPca-w7fk2-uhWpKuUOb7BTZX6GSpOI6_qaghekw3r6UmWTIIy8mbfSLnLRgjZ3ef6Q"/>
+</div>
+<div class="w-8 h-8 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center overflow-hidden">
+<img alt="Supplier 2" data-alt="Small circular logo for supplier 2" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBTUQyPmHhz0hSK2tvL5xUCqB2aNfQ18ySA669qDEIS_-vQGJo1-ZpwearaASlhEaoAXReY99PwkTASyHtFkx-w6p8yiJ95NfIXKXFC2THsL0sh1zc1c6iWpjekk1lWGRbjfA8LQ4LetCRXfEqR1SU7GtDftWcoRwwI37PAy0lLiRhoQzUqQRucsgGN21DXDJicJkLwY6HkzTC1lKWyrGIuL_uFr1299JS_vJaVkGi_uFbpmakfDh4ecZapfP7eRWRDtBfDzUw8xQ"/>
+</div>
+<div class="w-8 h-8 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center overflow-hidden">
+<img alt="Supplier 3" data-alt="Small circular logo for supplier 3" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBTUQyPmHhz0hSK2tvL5xUCqB2aNfQ18ySA669qDEIS_-vQGJo1-ZpwearaASlhEaoAXReY99PwkTASyHtFkx-w6p8yiJ95NfIXKXFC2THsL0sh1zc1c6iWpjekk1lWGRbjfA8LQ4LetCRXfEqR1SU7GtDftWcoRwwI37PAy0lLiRhoQzUqQRucsgGN21DXDJicJkLwY6HkzTC1lKWyrGIuL_uFr1299JS_vJaVkGi_uFbpmakfDh4ecZapfP7eRWRDtBfDzUw8xQ"/>
+</div>
+</div>
+<button class="bg-gradient-to-tr from-primary to-primary-container text-white px-5 py-2 rounded-lg font-medium text-sm shadow-md hover:shadow-lg transition-all">
+              Manage Assets
+            </button>
+</div>
+</div>
+<!-- Dropdown Component -->
+<div class="relative inline-block text-left w-64 mt-8">
+<div class="bg-surface-container-lowest rounded-xl shadow-2xl overflow-hidden ring-1 ring-slate-100">
+<div class="py-1" role="none">
+<a class="group flex items-center px-4 py-3 text-sm text-primary-text hover:bg-surface-container-low transition-colors" href="#" role="menuitem">
+<span class="material-symbols-outlined mr-3 text-secondary-text group-hover:text-primary" data-icon="visibility">visibility</span>
+                View Detail
+              </a>
+<a class="group flex items-center px-4 py-3 text-sm text-primary-text hover:bg-surface-container-low transition-colors" href="#" role="menuitem">
+<span class="material-symbols-outlined mr-3 text-secondary-text group-hover:text-primary" data-icon="edit_note">edit_note</span>
+                Quick Edit
+              </a>
+<div class="h-px bg-slate-100 mx-2 my-1"></div>
+<a class="group flex items-center px-4 py-3 text-sm text-error-red hover:bg-error-container/20 transition-colors" href="#" role="menuitem">
+<span class="material-symbols-outlined mr-3 text-error-red" data-icon="delete">delete</span>
+                Remove Item
+              </a>
+</div>
+</div>
+<p class="mt-4 text-xs text-secondary-text italic px-2">Editorial Dropdown: Soft shadows, icon-driven, semantic separation.</p>
+</div>
+</div>
+</section>
+</main>
+<!-- NAVIGATION SHELL (Shared Component Reference - Bottom NavBar) -->
+<nav class="md:hidden fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex justify-between items-center p-2 bg-white/80 backdrop-blur-2xl w-[90%] max-w-lg rounded-3xl shadow-[0_8px_24px_-4px_rgba(19,28,37,0.06)]">
+<div class="flex flex-col items-center justify-center text-slate-400 px-6 py-2">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="text-[10px] font-bold uppercase tracking-widest mt-1">Home</span>
+</div>
+<div class="flex flex-col items-center justify-center bg-blue-50 text-blue-700 rounded-2xl px-6 py-2">
+<span class="material-symbols-outlined" data-icon="assessment">assessment</span>
+<span class="text-[10px] font-bold uppercase tracking-widest mt-1">Reports</span>
+</div>
+<div class="flex flex-col items-center justify-center text-slate-400 px-6 py-2">
+<span class="material-symbols-outlined" data-icon="factory">factory</span>
+<span class="text-[10px] font-bold uppercase tracking-widest mt-1">Suppliers</span>
+</div>
+</nav>
+<footer class="max-w-7xl mx-auto px-8 py-12 border-t border-slate-100 mt-12 flex justify-between items-center">
+<div class="text-sm text-secondary-text">
+      © 2024 Giant Global EP. High-End Editorial Procurement Framework.
+    </div>
+<div class="flex gap-4">
+<span class="text-[10px] font-bold text-slate-400 tracking-[0.2em] uppercase">Built for Scale</span>
+<span class="text-[10px] font-bold text-slate-400 tracking-[0.2em] uppercase">Precision Driven</span>
+</div>
+</footer>
+</body></html>

@@ -261,16 +261,23 @@ export function ExchangeOrderListWithTabs({ userRole }: { userRole?: string }) {
         rowUpdate.vendorDeliveryDate = splitLines[splitLines.length - 1].deliveryDate;
       }
     }
+    // ── 不接單訂單確認 CL 覆寫：若廠商對此單選擇了「不接單」，採購進行訂單確認時狀態直接轉 CL
+    const isVendorRejected = selectedOrder.isRejectedOrder === true;
+    const effectiveStatus = (newStatus === 'CK' && isVendorRejected) ? 'CL' : newStatus;
+    if (effectiveStatus !== newStatus) {
+      entry.event = `訂單確認（不接單→CL）`;
+    }
+
     updateExchangeOrderStatus(
       selectedOrder.id,
-      newStatus as OrderRow['status'],
+      effectiveStatus as OrderRow['status'],
       entry,
       Object.keys(rowUpdate).length > 0 ? rowUpdate : undefined
     );
     setShowOrderDetail(false);
     setSelectedOrder(null);
-    setActiveTab(newStatus as ExchangeStatus);
-    showToast(`訂單已更新為 ${newStatus} 狀態`);
+    setActiveTab(effectiveStatus as ExchangeStatus);
+    showToast(`訂單已更新為 ${effectiveStatus} 狀態`);
   };
 
   const handleColumnsChange = (columns: OrderColumn[]) => setAvailableColumns(columns);

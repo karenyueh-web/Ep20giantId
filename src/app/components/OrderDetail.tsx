@@ -76,12 +76,47 @@ function AdjustOrderForm({ onCancel, onConfirm, orderSeq, defaultDate, hideRejec
   const [rejectReason, setRejectReason] = useState('');
   const [splitPeriods, setSplitPeriods] = useState('');
   const [splitOrderPeriods, setSplitOrderPeriods] = useState('');
+
+  /** 切換選項時，重置目標選項以外的欄位回預設值 */
+  const switchReason = (to: 'modify' | 'reject' | 'split' | 'split-order') => {
+    setSelectedReason(to);
+    setShowDatePicker(false);
+    // 每次切換回 modify，日期強制重置為預設（強制廠商重填）
+    if (to === 'modify') {
+      setModifyDate(defaultDate || '');
+      setModifyReason('');
+    }
+    // 切換離開 split/split-order 時清除期數（切換到另一個拆的品項時也清除）
+    if (to !== 'split') setSplitPeriods('');
+    if (to !== 'split-order') setSplitOrderPeriods('');
+    // splitItems 由 useEffect 監聽期數自動清空（期數清掉後會自動清 items）
+  };
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [activeDatePickerIndex, setActiveDatePickerIndex] = useState<number | null>(null);
   const [datePickerPosition, setDatePickerPosition] = useState({ top: 0, left: 0 });
   const datePickerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // 今日日期字串（YYYY/MM/DD），用於過去日期判斷與 minDate
+  const todayStr = (() => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}/${m}/${day}`;
+  })();
+
+  // 判斷日期字串是否早於今日（過去日期）
+  const isDateInPast = (dateStr: string): boolean => {
+    if (!dateStr) return false;
+    const parts = dateStr.split('/');
+    if (parts.length !== 3) return false;
+    const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return d < today;
+  };
 
   // 訂貨量（從訂單資料獲取，優先使用傳入的 prop）
   const orderQuantity = orderQtyProp ?? 100;
@@ -198,7 +233,7 @@ function AdjustOrderForm({ onCancel, onConfirm, orderSeq, defaultDate, hideRejec
         <div className="p-[20px] flex flex-col gap-[10px]">
           {/* 選項1: 需修改交期為 */}
           <div className="flex items-center gap-[10px] flex-shrink-0">
-            <div className="flex items-center gap-[8px] cursor-pointer" onClick={() => setSelectedReason('modify')}>
+            <div className="flex items-center gap-[8px] cursor-pointer" onClick={() => switchReason('modify')}>
               <div className="relative size-[24px]">
                 <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 24 24">
                   <path clipRule="evenodd" d={selectedReason === 'modify' ? adjustSvgPaths.p27863c80 : adjustSvgPaths.p3b336900} fill={selectedReason === 'modify' ? '#005EB8' : '#637381'} fillRule="evenodd" />
@@ -207,7 +242,7 @@ function AdjustOrderForm({ onCancel, onConfirm, orderSeq, defaultDate, hideRejec
               <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[#1c252e] text-[14px]">需修改交期為</p>
             </div>
             <div className="relative" ref={triggerRef}>
-              <div className={`border ${selectedReason === 'modify' ? 'border-[#005eb8]' : 'border-[rgba(145,158,171,0.16)]'} rounded-[8px] px-[12px] py-[6px] flex items-center gap-[12px] cursor-pointer`} onClick={() => { setSelectedReason('modify'); setShowDatePicker(prev => !prev); }}>
+              <div className={`border ${selectedReason === 'modify' && isDateInPast(modifyDate) ? 'border-[#ff5630]' : selectedReason === 'modify' ? 'border-[#005eb8]' : 'border-[rgba(145,158,171,0.16)]'} rounded-[8px] px-[12px] py-[6px] flex items-center gap-[12px] cursor-pointer`} onClick={() => { switchReason('modify'); setShowDatePicker(prev => !prev); }}>
                 <p className="font-['Public_Sans:Regular',sans-serif] font-normal leading-[22px] text-[14px]" style={{ color: modifyDate && defaultDate && modifyDate !== defaultDate ? '#ff5630' : '#919eab' }}>{modifyDate}</p>
                 <div className="relative size-[16px]">
                   <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
@@ -215,10 +250,11 @@ function AdjustOrderForm({ onCancel, onConfirm, orderSeq, defaultDate, hideRejec
                   </svg>
                 </div>
               </div>
-              {showDatePicker && (
+                {showDatePicker && (
                 <div ref={datePickerRef} className="absolute top-0 left-[calc(100%+10px)] z-50">
                   <SimpleDatePicker
                     selectedDate={modifyDate}
+                    minDate={todayStr}
                     onDateSelect={(date) => {
                       setModifyDate(date);
                       setShowDatePicker(false);
@@ -242,7 +278,7 @@ function AdjustOrderForm({ onCancel, onConfirm, orderSeq, defaultDate, hideRejec
           {/* 選項2: 不接單 */}
           {!hideRejectAndSplitOrder && (
           <div className="flex items-center gap-[10px] flex-shrink-0">
-            <div className="flex items-center gap-[8px] cursor-pointer" onClick={() => setSelectedReason('reject')}>
+            <div className="flex items-center gap-[8px] cursor-pointer" onClick={() => switchReason('reject')}>
               <div className="relative size-[24px]">
                 <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 24 24">
                   <path clipRule="evenodd" d={selectedReason === 'reject' ? adjustSvgPaths.p27863c80 : adjustSvgPaths.p3b336900} fill={selectedReason === 'reject' ? '#005EB8' : '#637381'} fillRule="evenodd" />
@@ -265,7 +301,7 @@ function AdjustOrderForm({ onCancel, onConfirm, orderSeq, defaultDate, hideRejec
 
           {/* 選項3: 需拆期 */}
           <div className="flex items-center gap-[10px] flex-shrink-0">
-            <div className="flex items-center gap-[8px] cursor-pointer" onClick={() => setSelectedReason('split')}>
+            <div className="flex items-center gap-[8px] cursor-pointer" onClick={() => switchReason('split')}>
               <div className="relative size-[24px]">
                 <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 24 24">
                   <path clipRule="evenodd" d={selectedReason === 'split' ? adjustSvgPaths.p27863c80 : adjustSvgPaths.p3b336900} fill={selectedReason === 'split' ? '#005EB8' : '#637381'} fillRule="evenodd" />
@@ -288,7 +324,7 @@ function AdjustOrderForm({ onCancel, onConfirm, orderSeq, defaultDate, hideRejec
           {/* 選項4: 拆單 */}
           {!hideRejectAndSplitOrder && (
           <div className="flex items-center gap-[10px] flex-shrink-0">
-            <div className="flex items-center gap-[8px] cursor-pointer" onClick={() => setSelectedReason('split-order')}>
+            <div className="flex items-center gap-[8px] cursor-pointer" onClick={() => switchReason('split-order')}>
               <div className="relative size-[24px]">
                 <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 24 24">
                   <path clipRule="evenodd" d={selectedReason === 'split-order' ? adjustSvgPaths.p27863c80 : adjustSvgPaths.p3b336900} fill={selectedReason === 'split-order' ? '#005EB8' : '#637381'} fillRule="evenodd" />
@@ -346,7 +382,7 @@ function AdjustOrderForm({ onCancel, onConfirm, orderSeq, defaultDate, hideRejec
                 <div className="w-[160px] relative">
                   <div 
                     ref={activeDatePickerIndex === item.index ? triggerRef : undefined}
-                    className="border border-[#005eb8] rounded-[8px] px-[12px] py-[6px] flex items-center gap-[12px] cursor-pointer"
+                    className={`border ${isDateInPast(item.deliveryDate) ? 'border-[#ff5630]' : 'border-[#005eb8]'} rounded-[8px] px-[12px] py-[6px] flex items-center gap-[12px] cursor-pointer`}
                     onClick={(e) => {
                       const rect = e.currentTarget.getBoundingClientRect();
                       const containerRect = containerRef.current?.getBoundingClientRect();
@@ -378,13 +414,26 @@ function AdjustOrderForm({ onCancel, onConfirm, orderSeq, defaultDate, hideRejec
                   </div>
                 </div>
                 <div className="w-[120px]">
-                  <div className="border border-[#005eb8] rounded-[8px] px-[12px] py-[6px]">
+                  <div className={`border ${!item.quantity || item.quantity <= 0 ? 'border-[#ff5630]' : 'border-[#005eb8]'} rounded-[8px] px-[12px] py-[6px]`}>
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
                       className="font-['Public_Sans:Regular',sans-serif] font-normal text-[14px] w-full outline-none bg-transparent"
                       style={{ color: item.quantity !== orderQuantity ? '#ff5630' : '#1c252e' }}
-                      value={item.quantity}
-                      onChange={(e) => updateSplitItemQuantity(item.index, parseInt(e.target.value) || 0)}
+                      value={item.quantity === 0 ? '' : String(item.quantity)}
+                      placeholder="0"
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        // 只允許純正整數（不含 0 開頭、不含 0）
+                        if (raw === '') {
+                          updateSplitItemQuantity(item.index, 0);
+                          return;
+                        }
+                        if (/^[1-9][0-9]*$/.test(raw)) {
+                          updateSplitItemQuantity(item.index, parseInt(raw, 10));
+                        }
+                        // 其他格式（0010、018、-1 等）直接忽略，不更新
+                      }}
                     />
                   </div>
                 </div>
@@ -407,25 +456,102 @@ function AdjustOrderForm({ onCancel, onConfirm, orderSeq, defaultDate, hideRejec
           );
         })()}
 
-        {/* 提示訊息 */}
-        <div className="flex items-center gap-[4px] px-[32px] py-[12px]">
-          <div className="relative size-[16px]">
-            <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
-              <path clipRule="evenodd" d={adjustSvgPaths.p144ee300} fill="#637381" fillRule="evenodd" />
-            </svg>
-          </div>
-          <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[18px] text-[#637381] text-[12px]">異動原因送出後不可再進行修改，請確認後再送出</p>
-        </div>
+        {/* 提示訊息 + 錯誤警示（顯示在卡片內，交貨量加總下方） */}
+        {(() => {
+          // 驗證邏輯（與底部按鈕共用）
+          const _modifyDateError = selectedReason === 'modify' && (
+            modifyDate === (defaultDate || '') || isDateInPast(modifyDate)
+          );
+          const _activePeriodStr = selectedReason === 'split' ? splitPeriods : selectedReason === 'split-order' ? splitOrderPeriods : '';
+          const _activePeriodNum = parseInt(_activePeriodStr);
+          const _splitPeriodsError = (selectedReason === 'split' || selectedReason === 'split-order')
+            && (_activePeriodStr.trim() === '' || isNaN(_activePeriodNum) || _activePeriodNum < 1 || !Number.isInteger(_activePeriodNum));
+          const _splitItemDateError = (selectedReason === 'split' || selectedReason === 'split-order')
+            && splitItems.length > 0 && splitItems.some(item => isDateInPast(item.deliveryDate));
+          const _splitItemQtyError = (selectedReason === 'split' || selectedReason === 'split-order')
+            && splitItems.length > 0 && splitItems.some(item => !item.quantity || item.quantity <= 0);
+
+          const _modifyDateErrMsg = selectedReason === 'modify'
+            ? (modifyDate === (defaultDate || '') ? '請選擇新交期（不可與原預計交期相同）'
+              : isDateInPast(modifyDate) ? '廠商可交貨日期不可為過去日期'
+              : null)
+            : null;
+          const _errorMsg = _modifyDateErrMsg
+            ?? (_splitPeriodsError ? '請輸入有效的期數（正整數）' : null)
+            ?? (_splitItemDateError ? '廠商可交貨日期不可為過去日期' : null)
+            ?? (_splitItemQtyError ? '交貨量必須大於 0' : null);
+
+          return (
+            <>
+              {/* 錯誤訊息 */}
+              {_errorMsg && (
+                <div className="flex items-center gap-[6px] px-[32px] py-[6px]">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="shrink-0">
+                    <path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="#ff5630" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  <p className="font-['Public_Sans:Regular',sans-serif] font-normal text-[#ff5630] text-[12px] leading-[18px]">{_errorMsg}</p>
+                </div>
+              )}
+              {/* 提示訊息 */}
+              <div className="flex items-center gap-[4px] px-[32px] py-[12px]">
+                <div className="relative size-[16px]">
+                  <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
+                    <path clipRule="evenodd" d={adjustSvgPaths.p144ee300} fill="#637381" fillRule="evenodd" />
+                  </svg>
+                </div>
+                <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[18px] text-[#637381] text-[12px]">異動原因送出後不可再進行修改，請確認後再送出</p>
+              </div>
+            </>
+          );
+        })()}
       </div>
 
       {/* 底部按鈕 - 固定在底部 */}
       {(() => {
+        // ── 驗證邏輯 ──
+        // 1. 需修改交期：① 必須改動日期（不能與預設交期相同）② 不能是過去日期
+        const modifyDateError = selectedReason === 'modify' && (
+          modifyDate === (defaultDate || '') || isDateInPast(modifyDate)
+        );
+
+        // 2. 拆期/拆單：期數必須是有效正整數
+        const activePeriodStr = selectedReason === 'split' ? splitPeriods : selectedReason === 'split-order' ? splitOrderPeriods : '';
+        const activePeriodNum = parseInt(activePeriodStr);
+        const splitPeriodsError = (selectedReason === 'split' || selectedReason === 'split-order')
+          && (activePeriodStr.trim() === '' || isNaN(activePeriodNum) || activePeriodNum < 1 || !Number.isInteger(activePeriodNum));
+
+        // 3. 拆期/拆單：每列廠商可交貨日期不可為過去
+        const splitItemDateError = (selectedReason === 'split' || selectedReason === 'split-order')
+          && splitItems.length > 0
+          && splitItems.some(item => isDateInPast(item.deliveryDate));
+
+        // 4. 拆期/拆單：每列交貨量必須 > 0
+        const splitItemQtyError = (selectedReason === 'split' || selectedReason === 'split-order')
+          && splitItems.length > 0
+          && splitItems.some(item => !item.quantity || item.quantity <= 0);
+
+        // 5. 交貨量加總需等於訂貨量（原有邏輯）
         const splitQtyMismatch = (selectedReason === 'split' || selectedReason === 'split-order') && splitItems.length > 0
           && splitItems.reduce((s, item) => s + (item.quantity || 0), 0) !== orderQuantity;
+
+        const hasError = modifyDateError || splitPeriodsError || splitItemDateError || splitItemQtyError || splitQtyMismatch;
+
+        // 錯誤訊息（優先顯示第一個錯誤；modify 狀況分兩種）
+        const modifyDateErrMsg = selectedReason === 'modify'
+          ? (modifyDate === (defaultDate || '') ? '請選擇新交期（不可與原預計交期相同）'
+            : isDateInPast(modifyDate) ? '廠商可交貨日期不可為過去日期'
+            : null)
+          : null;
+        // splitQtyMismatch 不在底部重複顯示（表格下方已有紅字提示）
+        const errorMsg = modifyDateErrMsg
+          ?? (splitPeriodsError ? '請輸入有效的期數（正整數）' : null)
+          ?? (splitItemDateError ? '廠商可交貨日期不可為過去日期' : null)
+          ?? (splitItemQtyError ? '交貨量必須大於 0' : null);
+
         return (
       <div className="flex gap-[12px] mt-[24px] flex-shrink-0">
-        <div className={`${splitQtyMismatch ? 'bg-[rgba(145,158,171,0.24)] cursor-not-allowed' : 'bg-[#004680] cursor-pointer hover:bg-[#003a6b]'} flex-1 h-[36px] rounded-[8px] transition-colors flex items-center justify-center`} onClick={() => {
-          if (splitQtyMismatch) return;
+        <div className={`${hasError ? 'bg-[rgba(145,158,171,0.24)] cursor-not-allowed' : 'bg-[#004680] cursor-pointer hover:bg-[#003a6b]'} flex-1 h-[36px] rounded-[8px] transition-colors flex items-center justify-center`} onClick={() => {
+          if (hasError) return;
           let reasonText = '提交採購';
           let remark = '';
           let vendorDate: string | undefined;
@@ -478,6 +604,7 @@ function AdjustOrderForm({ onCancel, onConfirm, orderSeq, defaultDate, hideRejec
         );
       })()}
 
+
       {/* 固定定位的日期選擇器 */}
       {activeDatePickerIndex !== null && (
         <div 
@@ -490,6 +617,7 @@ function AdjustOrderForm({ onCancel, onConfirm, orderSeq, defaultDate, hideRejec
         >
           <SimpleDatePicker
             selectedDate={splitItems.find(item => item.index === activeDatePickerIndex)?.deliveryDate || defaultDate || '2026/03/02'}
+            minDate={todayStr}
             onDateSelect={(date) => {
               updateSplitItemDate(activeDatePickerIndex, date);
               setActiveDatePickerIndex(null);

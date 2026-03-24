@@ -1,0 +1,186 @@
+{
+  "outputComponents": [
+    {
+      "design": {
+        "screens": [
+          {
+            "designSystem": {
+              "designSystem": {
+                "displayName": "Global Ledger",
+                "theme": {
+                  "bodyFont": "PUBLIC_SANS",
+                  "colorMode": "LIGHT",
+                  "colorVariant": "FIDELITY",
+                  "customColor": "#1D7BF5",
+                  "designMd": "# The Design System Specification: High-End Editorial Procurement\n\n## 1. Overview & Creative North Star: \"The Precision Curator\"\nThis design system moves away from the \"industrial warehouse\" feel typical of B2B procurement and toward a \"High-End Editorial\" experience. The Creative North Star is **The Precision Curator**. \n\nWe treat complex procurement data not as a cluttered ledger, but as a curated gallery of high-value assets. The system breaks the standard \"template\" look through **intentional white space, asymmetric data density, and tonal layering**. We favor breathing room and sophisticated transitions over rigid borders and heavy lines. The goal is to make a user feel in total command of a massive global enterprise, moving from \"managing data\" to \"orchestrating outcomes.\"\n\n---\n\n## 2. Colors & Surface Architecture\nThe color palette is built on a foundation of sophisticated blues and neutral greys, utilizing Material-style tonal tiers to define hierarchy without visual noise.\n\n### The \"No-Line\" Rule\n**Strict Mandate:** Designers are prohibited from using 1px solid borders for sectioning or containment. \nBoundaries must be defined solely through:\n- **Background Tonal Shifts:** Placing a `surface-container-low` element against a `surface` background.\n- **Shadow Depth:** Using diffused ambient shadows to lift elements.\n- **Negative Space:** Utilizing the Spacing Scale (specifically `8`, `10`, and `12`) to create logical separation.\n\n### Surface Hierarchy & Nesting\nTreat the UI as a series of stacked, physical layers. \n- **Base Layer:** `surface` (#f7f9ff)\n- **Secondary Workspace:** `surface-container-low` (#edf4ff)\n- **Interactive Cards:** `surface-container-lowest` (#ffffff)\n- **Emphasis/Modals:** `surface-container-high` (#e0e9f5)\n\n### The \"Glass & Gradient\" Rule\nTo elevate the experience, use **Glassmorphism** for floating elements (dropdowns, sticky toolbars). Use `surface-container-lowest` at 80% opacity with a `20px` backdrop-blur. \n**Signature Textures:** Main CTAs should use a subtle linear gradient from `primary` (#0059ba) to `primary-container` (#0071e9) at a 135-degree angle to add \"soul\" and depth.\n\n---\n\n## 3. Typography: Authoritative Clarity\nWe utilize **Public Sans** for its neutral, rhythmic reliability and **Noto Sans JP** for seamless CJK integration.\n\n*   **Display (lg/md):** Reserved for high-level dashboard summaries. Large, airy, and confident.\n*   **Headline (sm):** Used for primary section titles. Always paired with generous top-margin (Spacing `16`).\n*   **Title (md/sm):** Used for card headers. This is where the \"Editorial\" feel lives—clear, bold, and high-contrast against `secondary-text` (#637381).\n*   **Body (md):** The workhorse for data tables. Line height is set to `1.6` to ensure readability in dense procurement lists.\n*   **Label (sm):** Used for status badges and micro-data. Always uppercase with `0.05rem` letter spacing to feel \"designed.\"\n\n---\n\n## 4. Elevation & Depth: Tonal Layering\nTraditional structural lines are replaced by **The Layering Principle**.\n\n*   **Ambient Shadows:** For floating elements like dropdowns or sticky toolbars, use a shadow color derived from `on-surface` (#131c25) at 6% opacity. Blur: `24px`, Y-Offset: `8px`, Spread: `-4px`.\n*   **The \"Ghost Border\" Fallback:** If a border is required for accessibility (e.g., input fields), use `outline-variant` (#c1c6d6) at **15% opacity**. Never use a 100% opaque border.\n*   **Sticky Elements:** Sticky table headers use `surface-container-low` (#edf4ff) with a subtle bottom-to-top gradient to imply the content is sliding \"under\" the header.\n\n---\n\n## 5. Components\n\n### Sticky Tables & Headers\n*   **Header BG:** `table-header-bg` (#f4f6f8).\n*   **Styling:** No vertical lines. Horizontal separators are \"Ghost Borders\" (15% opacity). Sticky headers must have a subtle `surface-container-high` shadow on the bottom edge only when scrolled.\n\n### Status Badges (The Signature Tags)\nBadges use `label-sm` (bold) and a `full` (9999px) corner radius.\n*   **CL (Closed):** `secondary-container` text on `surface-variant`.\n*   **V (Verified):** `success-green` text on a 10% opacity green background.\n*   **B (Blocked):** `error-red` text on `error-container`.\n*   **CK/CP (Checked/Complete):** `brand-blue` text on `secondary-fixed`.\n*   **DR (Draft):** `on-surface-variant` text on `surface-dim`.\n\n### Selection Toolbars\n*   **Visuals:** Floating at the bottom-center of the viewport.\n*   **Styling:** Glassmorphic `surface-container-highest` background (#dae3f0) with 85% opacity and a `16px` blur. Corner radius: `xl` (1.5rem).\n\n### Cards & Dropdowns\n*   **Cards:** Corner radius `lg` (16px). No border. Background: `surface-container-lowest` (#ffffff). Use vertical white space `spacing-8` to separate internal content.\n*   **Dropdowns:** Corner radius `md` (10px). Background: `surface-container-lowest` with an Ambient Shadow. Hover states use `surface-container-low`.\n\n### Buttons\n*   **Primary:** Gradient from `primary` to `primary-container`. White text. Corner radius `DEFAULT` (0.5rem).\n*   **Secondary:** `on-secondary-container` text on `secondary-container`. No border.\n*   **Action Text:** `action-text` (#004680) with a 2px underline (spacing-0.5) to signify interactivity.\n\n---\n\n## 6. Do’s and Don’ts\n\n### Do:\n*   **Do** use asymmetrical padding. Give more space to the left of a content block than the top to create an editorial flow.\n*   **Do** use `surface-container` tiers to group related items instead of drawing a box around them.\n*   **Do** ensure that the most important procurement KPI is 2x the size of the secondary data (using the Typography Scale).\n\n### Don’t:\n*   **Don’t** use black (#000000). Use `primary-text` (#1c252e) to maintain a soft, professional tone.\n*   **Don’t** use 1px solid dividers between list items. Use a 12px vertical gap instead.\n*   **Don’t** use standard \"drop shadows.\" If it looks like a shadow from 2010, it’s too heavy. It should feel like a \"glow of absence.\"\n*   **Don’t** use fully opaque red for error backgrounds. Use `error-container` (#ffdad6) with `on-error-container` (#93000a) text for a sophisticated, readable alert.",
+                  "font": "PUBLIC_SANS",
+                  "headlineFont": "PUBLIC_SANS",
+                  "labelFont": "PUBLIC_SANS",
+                  "namedColors": {
+                    "background": "#f7f9ff",
+                    "error": "#ba1a1a",
+                    "error_container": "#ffdad6",
+                    "inverse_on_surface": "#e8f2fe",
+                    "inverse_primary": "#acc7ff",
+                    "inverse_surface": "#28313b",
+                    "on_background": "#131c25",
+                    "on_error": "#ffffff",
+                    "on_error_container": "#93000a",
+                    "on_primary": "#ffffff",
+                    "on_primary_container": "#fefcff",
+                    "on_primary_fixed": "#001a40",
+                    "on_primary_fixed_variant": "#004492",
+                    "on_secondary": "#ffffff",
+                    "on_secondary_container": "#566674",
+                    "on_secondary_fixed": "#0d1d29",
+                    "on_secondary_fixed_variant": "#394955",
+                    "on_surface": "#131c25",
+                    "on_surface_variant": "#414754",
+                    "on_tertiary": "#ffffff",
+                    "on_tertiary_container": "#fdfcff",
+                    "on_tertiary_fixed": "#001c39",
+                    "on_tertiary_fixed_variant": "#044882",
+                    "outline": "#727785",
+                    "outline_variant": "#c1c6d6",
+                    "primary": "#0059ba",
+                    "primary_container": "#0071e9",
+                    "primary_fixed": "#d7e2ff",
+                    "primary_fixed_dim": "#acc7ff",
+                    "secondary": "#50606e",
+                    "secondary_container": "#d4e5f5",
+                    "secondary_fixed": "#d4e5f5",
+                    "secondary_fixed_dim": "#b8c8d8",
+                    "surface": "#f7f9ff",
+                    "surface_bright": "#f7f9ff",
+                    "surface_container": "#e6effb",
+                    "surface_container_high": "#e0e9f5",
+                    "surface_container_highest": "#dae3f0",
+                    "surface_container_low": "#edf4ff",
+                    "surface_container_lowest": "#ffffff",
+                    "surface_dim": "#d2dbe7",
+                    "surface_tint": "#005bbf",
+                    "surface_variant": "#dae3f0",
+                    "tertiary": "#295d99",
+                    "tertiary_container": "#4576b3",
+                    "tertiary_fixed": "#d3e3ff",
+                    "tertiary_fixed_dim": "#a3c9ff"
+                  },
+                  "overrideNeutralColor": "#1C252E",
+                  "overridePrimaryColor": "#1D7BF5",
+                  "overrideSecondaryColor": "#637381",
+                  "overrideTertiaryColor": "#004680",
+                  "roundness": "ROUND_EIGHT",
+                  "spacingScale": 1
+                }
+              },
+              "name": "assets/94fe6077ef8041e395403f582057ce0a",
+              "version": "1"
+            },
+            "deviceType": "MOBILE",
+            "generatedBy": "figaro_agent",
+            "height": "7254",
+            "htmlCode": {
+              "downloadUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ6Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpZCiVodG1sXzExYzJhOWRiY2FhZjRiNjdiNWNmN2FlYjg1MDM3Y2E2EgsSBxCBsunArxwYAZIBIgoKcHJvamVjdF9pZBIUQhI3NTg3NDEzNTI1Mjc0ODMzNjA&filename=&opi=96797242",
+              "mimeType": "text/html",
+              "name": "projects/758741352527483360/files/0647d680f0d7441c8933e1e4528567f5"
+            },
+            "id": "a0d06b29dd4347aaa8e5a050bb17edc1",
+            "name": "projects/758741352527483360/screens/a0d06b29dd4347aaa8e5a050bb17edc1",
+            "prompt": "A simple color palette page showing 5 color swatches with their hex labels. \\n\\nColors to show:\\n1. #1c252e (Primary Text)\\n2. #637381 (Secondary Text)\\n3. #1D7BF5 (Brand Blue)\\n4. #118D57 (Success Green)\\n5. #B71D18 (Error Red)\\n\\nLayout: A vertical stack of color cards. Each card should show a large block of the color, with its hex code and a short descriptive name underneath. The background of the page should be a clean, solid white (#FFFFFF). Use the typography from the Global Ledger design system.",
+            "screenMetadata": {
+              "agentType": "HATTER_AGENT",
+              "status": "COMPLETE"
+            },
+            "screenType": "DESIGN",
+            "screenshot": {
+              "downloadUrl": "https://lh3.googleusercontent.com/aida/ADBb0ujsDv2VTcoTUeMWoefW8L-cwG6d7mFU0_oglSudGH6JrHCgNKXqRu00mX_ZR5aU39IJ4hpjEF9e4jeSwDbumrkOzIRZT7Oh_eo5nMsw6SKNgVvXthYBqsfnY_7rdKwML3QwWTigoWe7XqNTqLX2K9VqlrZsD2dqKotZ1k88qX1mj1GbFR6ymiiT4zhCOsV4IPg6QJNX07BlOJ-kYlhZ0PjPmOJxavF6mJFqZ6Fv8qee07O-crjYalrgPg",
+              "name": "projects/758741352527483360/files/c05bca72700b435ab1db9d275eb0252e"
+            },
+            "theme": {
+              "bodyFont": "PUBLIC_SANS",
+              "colorMode": "LIGHT",
+              "colorVariant": "FIDELITY",
+              "customColor": "#1D7BF5",
+              "designMd": "# The Design System Specification: High-End Editorial Procurement\n\n## 1. Overview & Creative North Star: \"The Precision Curator\"\nThis design system moves away from the \"industrial warehouse\" feel typical of B2B procurement and toward a \"High-End Editorial\" experience. The Creative North Star is **The Precision Curator**. \n\nWe treat complex procurement data not as a cluttered ledger, but as a curated gallery of high-value assets. The system breaks the standard \"template\" look through **intentional white space, asymmetric data density, and tonal layering**. We favor breathing room and sophisticated transitions over rigid borders and heavy lines. The goal is to make a user feel in total command of a massive global enterprise, moving from \"managing data\" to \"orchestrating outcomes.\"\n\n---\n\n## 2. Colors & Surface Architecture\nThe color palette is built on a foundation of sophisticated blues and neutral greys, utilizing Material-style tonal tiers to define hierarchy without visual noise.\n\n### The \"No-Line\" Rule\n**Strict Mandate:** Designers are prohibited from using 1px solid borders for sectioning or containment. \nBoundaries must be defined solely through:\n- **Background Tonal Shifts:** Placing a `surface-container-low` element against a `surface` background.\n- **Shadow Depth:** Using diffused ambient shadows to lift elements.\n- **Negative Space:** Utilizing the Spacing Scale (specifically `8`, `10`, and `12`) to create logical separation.\n\n### Surface Hierarchy & Nesting\nTreat the UI as a series of stacked, physical layers. \n- **Base Layer:** `surface` (#f7f9ff)\n- **Secondary Workspace:** `surface-container-low` (#edf4ff)\n- **Interactive Cards:** `surface-container-lowest` (#ffffff)\n- **Emphasis/Modals:** `surface-container-high` (#e0e9f5)\n\n### The \"Glass & Gradient\" Rule\nTo elevate the experience, use **Glassmorphism** for floating elements (dropdowns, sticky toolbars). Use `surface-container-lowest` at 80% opacity with a `20px` backdrop-blur. \n**Signature Textures:** Main CTAs should use a subtle linear gradient from `primary` (#0059ba) to `primary-container` (#0071e9) at a 135-degree angle to add \"soul\" and depth.\n\n---\n\n## 3. Typography: Authoritative Clarity\nWe utilize **Public Sans** for its neutral, rhythmic reliability and **Noto Sans JP** for seamless CJK integration.\n\n*   **Display (lg/md):** Reserved for high-level dashboard summaries. Large, airy, and confident.\n*   **Headline (sm):** Used for primary section titles. Always paired with generous top-margin (Spacing `16`).\n*   **Title (md/sm):** Used for card headers. This is where the \"Editorial\" feel lives—clear, bold, and high-contrast against `secondary-text` (#637381).\n*   **Body (md):** The workhorse for data tables. Line height is set to `1.6` to ensure readability in dense procurement lists.\n*   **Label (sm):** Used for status badges and micro-data. Always uppercase with `0.05rem` letter spacing to feel \"designed.\"\n\n---\n\n## 4. Elevation & Depth: Tonal Layering\nTraditional structural lines are replaced by **The Layering Principle**.\n\n*   **Ambient Shadows:** For floating elements like dropdowns or sticky toolbars, use a shadow color derived from `on-surface` (#131c25) at 6% opacity. Blur: `24px`, Y-Offset: `8px`, Spread: `-4px`.\n*   **The \"Ghost Border\" Fallback:** If a border is required for accessibility (e.g., input fields), use `outline-variant` (#c1c6d6) at **15% opacity**. Never use a 100% opaque border.\n*   **Sticky Elements:** Sticky table headers use `surface-container-low` (#edf4ff) with a subtle bottom-to-top gradient to imply the content is sliding \"under\" the header.\n\n---\n\n## 5. Components\n\n### Sticky Tables & Headers\n*   **Header BG:** `table-header-bg` (#f4f6f8).\n*   **Styling:** No vertical lines. Horizontal separators are \"Ghost Borders\" (15% opacity). Sticky headers must have a subtle `surface-container-high` shadow on the bottom edge only when scrolled.\n\n### Status Badges (The Signature Tags)\nBadges use `label-sm` (bold) and a `full` (9999px) corner radius.\n*   **CL (Closed):** `secondary-container` text on `surface-variant`.\n*   **V (Verified):** `success-green` text on a 10% opacity green background.\n*   **B (Blocked):** `error-red` text on `error-container`.\n*   **CK/CP (Checked/Complete):** `brand-blue` text on `secondary-fixed`.\n*   **DR (Draft):** `on-surface-variant` text on `surface-dim`.\n\n### Selection Toolbars\n*   **Visuals:** Floating at the bottom-center of the viewport.\n*   **Styling:** Glassmorphic `surface-container-highest` background (#dae3f0) with 85% opacity and a `16px` blur. Corner radius: `xl` (1.5rem).\n\n### Cards & Dropdowns\n*   **Cards:** Corner radius `lg` (16px). No border. Background: `surface-container-lowest` (#ffffff). Use vertical white space `spacing-8` to separate internal content.\n*   **Dropdowns:** Corner radius `md` (10px). Background: `surface-container-lowest` with an Ambient Shadow. Hover states use `surface-container-low`.\n\n### Buttons\n*   **Primary:** Gradient from `primary` to `primary-container`. White text. Corner radius `DEFAULT` (0.5rem).\n*   **Secondary:** `on-secondary-container` text on `secondary-container`. No border.\n*   **Action Text:** `action-text` (#004680) with a 2px underline (spacing-0.5) to signify interactivity.\n\n---\n\n## 6. Do’s and Don’ts\n\n### Do:\n*   **Do** use asymmetrical padding. Give more space to the left of a content block than the top to create an editorial flow.\n*   **Do** use `surface-container` tiers to group related items instead of drawing a box around them.\n*   **Do** ensure that the most important procurement KPI is 2x the size of the secondary data (using the Typography Scale).\n\n### Don’t:\n*   **Don’t** use black (#000000). Use `primary-text` (#1c252e) to maintain a soft, professional tone.\n*   **Don’t** use 1px solid dividers between list items. Use a 12px vertical gap instead.\n*   **Don’t** use standard \"drop shadows.\" If it looks like a shadow from 2010, it’s too heavy. It should feel like a \"glow of absence.\"\n*   **Don’t** use fully opaque red for error backgrounds. Use `error-container` (#ffdad6) with `on-error-container` (#93000a) text for a sophisticated, readable alert.",
+              "font": "PUBLIC_SANS",
+              "headlineFont": "PUBLIC_SANS",
+              "labelFont": "PUBLIC_SANS",
+              "namedColors": {
+                "background": "#f7f9ff",
+                "error": "#ba1a1a",
+                "error_container": "#ffdad6",
+                "inverse_on_surface": "#e8f2fe",
+                "inverse_primary": "#acc7ff",
+                "inverse_surface": "#28313b",
+                "on_background": "#131c25",
+                "on_error": "#ffffff",
+                "on_error_container": "#93000a",
+                "on_primary": "#ffffff",
+                "on_primary_container": "#fefcff",
+                "on_primary_fixed": "#001a40",
+                "on_primary_fixed_variant": "#004492",
+                "on_secondary": "#ffffff",
+                "on_secondary_container": "#566674",
+                "on_secondary_fixed": "#0d1d29",
+                "on_secondary_fixed_variant": "#394955",
+                "on_surface": "#131c25",
+                "on_surface_variant": "#414754",
+                "on_tertiary": "#ffffff",
+                "on_tertiary_container": "#fdfcff",
+                "on_tertiary_fixed": "#001c39",
+                "on_tertiary_fixed_variant": "#044882",
+                "outline": "#727785",
+                "outline_variant": "#c1c6d6",
+                "primary": "#0059ba",
+                "primary_container": "#0071e9",
+                "primary_fixed": "#d7e2ff",
+                "primary_fixed_dim": "#acc7ff",
+                "secondary": "#50606e",
+                "secondary_container": "#d4e5f5",
+                "secondary_fixed": "#d4e5f5",
+                "secondary_fixed_dim": "#b8c8d8",
+                "surface": "#f7f9ff",
+                "surface_bright": "#f7f9ff",
+                "surface_container": "#e6effb",
+                "surface_container_high": "#e0e9f5",
+                "surface_container_highest": "#dae3f0",
+                "surface_container_low": "#edf4ff",
+                "surface_container_lowest": "#ffffff",
+                "surface_dim": "#d2dbe7",
+                "surface_tint": "#005bbf",
+                "surface_variant": "#dae3f0",
+                "tertiary": "#295d99",
+                "tertiary_container": "#4576b3",
+                "tertiary_fixed": "#d3e3ff",
+                "tertiary_fixed_dim": "#a3c9ff"
+              },
+              "overrideNeutralColor": "#1C252E",
+              "overridePrimaryColor": "#1D7BF5",
+              "overrideSecondaryColor": "#637381",
+              "overrideTertiaryColor": "#004680",
+              "roundness": "ROUND_EIGHT",
+              "spacingScale": 1
+            },
+            "title": "Color Palette",
+            "width": "780"
+          }
+        ],
+        "theme": {}
+      }
+    },
+    {
+      "text": "I've created the clean color palette page with the #1c252e, #637381, #1D7BF5, #118d57, and #b71d18 swatches. You can see it on the canvas now."
+    },
+    {
+      "suggestion": "Add descriptive names to each color swatch"
+    },
+    {
+      "suggestion": "Change the layout to a grid of swatches"
+    },
+    {
+      "suggestion": "Apply this color palette to a new dashboard design"
+    }
+  ],
+  "projectId": "758741352527483360",
+  "sessionId": "5763699829606016524"
+}

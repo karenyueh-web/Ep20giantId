@@ -439,15 +439,23 @@ export function OrderListWithTabs({ defaultTab = 'NP', userRole }: OrderListWith
       rowUpdate.adjustmentType = 'reject';
     }
 
+    // ── 不接單訂單確認 CL 覆寫：若廠商對此單選擇了「不接單」，採購進行訂單確認時狀態直接轉 CL
+    const isVendorRejected = selectedOrder.isRejectedOrder === true;
+    const effectiveStatus = (newStatus === 'CK' && isVendorRejected) ? 'CL' : newStatus;
+    if (effectiveStatus !== newStatus) {
+      // 更新歷程事件文字與 entry
+      entry.event = `訂單確認（不接單→CL）`;
+    }
+
     updateOrderStatus(
       selectedOrder.id,
-      newStatus as OrderRow['status'],
+      effectiveStatus as OrderRow['status'],
       entry,
       Object.keys(rowUpdate).length > 0 ? rowUpdate : undefined
     );
 
-    // ── 拆單單轉 CK 時：執行拆單 + 自動開立拆單類型修正單（最終狀態 SS） ──
-    if (newStatus === 'CK') {
+    // ── 拆單單轉 CK 時：執行拆單 + 自動開立拆單類型修正單（最終狀態 SS）──
+    if (effectiveStatus === 'CK') {
       // 從 store 取最新的 order（因為上方 updateOrderStatus 已更新）
       const latestOrder = orders.find(o => o.id === selectedOrder.id);
       const adjType = rowUpdate.adjustmentType || latestOrder?.adjustmentType;
@@ -462,8 +470,8 @@ export function OrderListWithTabs({ defaultTab = 'NP', userRole }: OrderListWith
 
     setShowOrderDetail(false);
     setSelectedOrder(null);
-    setActiveTab(newStatus as OrderStatus);
-    showToast(`訂單已更新為 ${newStatus} 狀態`);
+    setActiveTab(effectiveStatus as OrderStatus);
+    showToast(`訂單已更新為 ${effectiveStatus} 狀態`);
   };
 
   // ── 拆單執行：將一張拆單訂單拆成多張獨立訂單 ──────────────────────────────

@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+
+<html lang="zh-Hant"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Giant Global EP - UI Patterns Reference</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&amp;family=Noto+Sans+TC:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "on-error-container": "#93000a",
+                        "on-secondary-container": "#566674",
+                        "surface-bright": "#f7f9ff",
+                        "surface-dim": "#d2dbe7",
+                        "tertiary": "#295d99",
+                        "secondary": "#50606e",
+                        "secondary-fixed-dim": "#b8c8d8",
+                        "on-surface-variant": "#414754",
+                        "on-primary-fixed": "#001a40",
+                        "on-error": "#ffffff",
+                        "tertiary-container": "#4576b3",
+                        "surface-container-highest": "#dae3f0",
+                        "surface-tint": "#005bbf",
+                        "surface": "#f7f9ff",
+                        "tertiary-fixed": "#d3e3ff",
+                        "outline-variant": "#c1c6d6",
+                        "on-surface": "#131c25",
+                        "on-tertiary-container": "#fdfcff",
+                        "on-secondary": "#ffffff",
+                        "surface-container": "#e6effb",
+                        "on-primary-fixed-variant": "#004492",
+                        "tertiary-fixed-dim": "#a3c9ff",
+                        "on-primary": "#ffffff",
+                        "primary-fixed-dim": "#acc7ff",
+                        "on-tertiary": "#ffffff",
+                        "surface-variant": "#dae3f0",
+                        "on-secondary-fixed": "#0d1d29",
+                        "on-primary-container": "#fefcff",
+                        "on-tertiary-fixed": "#001c39",
+                        "error-container": "#ffdad6",
+                        "primary-container": "#0071e9",
+                        "primary": "#0059ba",
+                        "on-tertiary-fixed-variant": "#044882",
+                        "on-secondary-fixed-variant": "#394955",
+                        "inverse-on-surface": "#e8f2fe",
+                        "primary-fixed": "#d7e2ff",
+                        "surface-container-low": "#edf4ff",
+                        "error": "#ba1a1a",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-fixed": "#d4e5f5",
+                        "inverse-primary": "#acc7ff",
+                        "background": "#f7f9ff",
+                        "on-background": "#131c25",
+                        "inverse-surface": "#28313b",
+                        "outline": "#727785",
+                        "surface-container-high": "#e0e9f5",
+                        "secondary-container": "#d4e5f5",
+                        "brand-blue": "#1D7BF5",
+                        "deep-blue": "#004680",
+                        "success-green": "#118d57",
+                        "error-red": "#b71d18",
+                        "warning-gold": "#b76e00",
+                        "table-header": "#f4f6f8"
+                    },
+                    fontFamily: {
+                        "headline": ["Public Sans", "Noto Sans TC"],
+                        "body": ["Public Sans", "Noto Sans TC"],
+                        "label": ["Public Sans", "Noto Sans TC"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1rem",
+                        "full": "9999px"
+                    },
+                    boxShadow: {
+                        "card": "0 2px 8px rgba(0,0,0,0.1)",
+                        "modal": "0 12px 32px rgba(0,0,0,0.15)",
+                        "toast": "0 4px 12px rgba(0,0,0,0.2)"
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .editorial-strip {
+            background-color: #f4f6f8;
+            border-left: 4px solid #1D7BF5;
+        }
+        .z-layer {
+            transition: transform 0.3s ease;
+        }
+        .z-layer:hover {
+            transform: translateX(10px);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface font-body min-h-screen pb-24">
+<!-- Navigation Shell -->
+<aside class="fixed left-0 top-0 h-full w-64 z-40 flex flex-col p-4 bg-white dark:bg-slate-950 shadow-[24px_0_48px_-4px_rgba(19,28,37,0.06)] rounded-r-lg hidden md:flex">
+<div class="mb-8 px-2">
+<span class="text-lg font-black text-[#1D7BF5]">Giant Global EP</span>
+</div>
+<nav class="space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-[#637381] hover:bg-[#f7f9ff] transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span>儀表板</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#637381] hover:bg-[#f7f9ff] transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined">description</span>
+<span>採購單</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#637381] hover:bg-[#f7f9ff] transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined">storefront</span>
+<span>供應商管理</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#637381] hover:bg-[#f7f9ff] transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined">inventory_2</span>
+<span>庫存查詢</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#637381] hover:bg-[#f7f9ff] transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span>系統設定</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 bg-[#edf4ff] text-[#1D7BF5] font-bold rounded-lg relative overflow-hidden group" href="#">
+<span class="absolute left-0 top-0 h-full w-1 bg-amber-400"></span>
+<span class="material-symbols-outlined">style</span>
+<span>模式參考</span>
+</a>
+</nav>
+</aside>
+<main class="md:ml-64 p-8 max-w-7xl mx-auto">
+<!-- Header Section -->
+<header class="mb-12">
+<h1 class="text-4xl font-extrabold tracking-tight text-[#1c252e] mb-2">模式參考系統 (UI Patterns)</h1>
+<p class="text-[#637381] text-lg">Giant Global EP 視覺語言與標準元件規範</p>
+</header>
+<!-- 1. BORDER RADIUS SCALE -->
+<section class="mb-16">
+<div class="editorial-strip px-6 py-3 mb-8">
+<h2 class="text-xl font-bold text-[#1c252e]">圓角縮放標籤 (Border Radius Scale)</h2>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+<div class="flex flex-col items-center gap-3">
+<div class="w-full h-24 bg-primary rounded-[6px] shadow-sm"></div>
+<span class="text-sm font-bold text-[#637381]">6px (Small)</span>
+</div>
+<div class="flex flex-col items-center gap-3">
+<div class="w-full h-24 bg-primary rounded-[8px] shadow-sm"></div>
+<span class="text-sm font-bold text-[#637381]">8px (Medium)</span>
+</div>
+<div class="flex flex-col items-center gap-3">
+<div class="w-full h-24 bg-primary rounded-[10px] shadow-sm"></div>
+<span class="text-sm font-bold text-[#637381]">10px (Regular)</span>
+</div>
+<div class="flex flex-col items-center gap-3">
+<div class="w-full h-24 bg-primary rounded-[12px] shadow-sm"></div>
+<span class="text-sm font-bold text-[#637381]">12px (Large)</span>
+</div>
+<div class="flex flex-col items-center gap-3">
+<div class="w-full h-24 bg-primary rounded-[16px] shadow-sm"></div>
+<span class="text-sm font-bold text-[#637381]">16px (Extra)</span>
+</div>
+<div class="flex flex-col items-center gap-3">
+<div class="w-full h-24 bg-primary rounded-[500px] shadow-sm"></div>
+<span class="text-sm font-bold text-[#637381]">500px (Full)</span>
+</div>
+</div>
+</section>
+<!-- 2. SHADOW LEVELS -->
+<section class="mb-16">
+<div class="editorial-strip px-6 py-3 mb-8">
+<h2 class="text-xl font-bold text-[#1c252e]">陰影層次 (Shadow Levels)</h2>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+<div class="bg-white p-8 rounded-xl border border-outline-variant/10">
+<p class="font-bold text-center">Flat</p>
+<p class="text-[10px] text-center text-slate-400 mt-2">No Elevation</p>
+</div>
+<div class="bg-white p-8 rounded-xl shadow-card">
+<p class="font-bold text-center">Card</p>
+<p class="text-[10px] text-center text-slate-400 mt-2">2px Blur 8px Opacity</p>
+</div>
+<div class="bg-white p-8 rounded-xl shadow-modal">
+<p class="font-bold text-center">Modal</p>
+<p class="text-[10px] text-center text-slate-400 mt-2">12px Offset 32px Blur</p>
+</div>
+<div class="bg-white p-8 rounded-xl shadow-toast">
+<p class="font-bold text-center">Toast</p>
+<p class="text-[10px] text-center text-slate-400 mt-2">4px Offset 12px Blur</p>
+</div>
+</div>
+</section>
+<!-- 3. BUTTON PATTERNS -->
+<section class="mb-16">
+<div class="editorial-strip px-6 py-3 mb-8">
+<h2 class="text-xl font-bold text-[#1c252e]">按鈕模式 (Button Patterns)</h2>
+</div>
+<div class="flex flex-wrap items-center gap-6">
+<!-- Primary -->
+<button class="bg-[#1D7BF5] hover:bg-deep-blue text-white px-6 py-2 rounded-lg font-semibold transition-all">主要操作</button>
+<!-- Secondary Ghost -->
+<button class="border border-[#1D7BF5] text-[#1D7BF5] px-6 py-2 rounded-lg font-semibold hover:bg-surface-container-low transition-all">取消 / 返回</button>
+<!-- Toolbar Icons -->
+<div class="flex items-center gap-2 bg-white p-1 rounded-lg border border-outline-variant/20 shadow-sm">
+<button class="flex items-center gap-1.5 px-3 py-1.5 text-sm text-[#637381] hover:text-[#1c252e]">
+<span class="material-symbols-outlined text-lg">view_column</span> 欄位
+                    </button>
+<div class="w-px h-4 bg-outline-variant/30"></div>
+<button class="flex items-center gap-1.5 px-3 py-1.5 text-sm text-[#637381] hover:text-[#1c252e]">
+<span class="material-symbols-outlined text-lg">filter_alt</span> 篩選
+                    </button>
+<div class="w-px h-4 bg-outline-variant/30"></div>
+<button class="flex items-center gap-1.5 px-3 py-1.5 text-sm text-[#637381] hover:text-[#1c252e]">
+<span class="material-symbols-outlined text-lg">download</span> 匯出
+                    </button>
+</div>
+<!-- Toolbar Action Text Only -->
+<div class="flex items-center gap-4 px-2">
+<button class="text-[#1677ff] font-semibold hover:underline decoration-2 underline-offset-4">檢視</button>
+<button class="text-[#1677ff] font-semibold hover:underline decoration-2 underline-offset-4">提交</button>
+</div>
+<!-- Danger Delete -->
+<button class="w-9 h-9 flex items-center justify-center bg-white border border-error-red/20 text-error-red rounded-[6px] hover:bg-error-container/20 transition-all">
+<span class="material-symbols-outlined text-lg">close</span>
+</button>
+<!-- Ghost Add -->
+<button class="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-outline-variant text-[#637381] rounded-lg hover:border-[#1D7BF5] hover:text-[#1D7BF5] transition-all">
+<span class="material-symbols-outlined">add</span>
+<span>新增篩選條件</span>
+</button>
+</div>
+</section>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
+<!-- 4. INPUT PATTERNS -->
+<section>
+<div class="editorial-strip px-6 py-3 mb-8">
+<h2 class="text-xl font-bold text-[#1c252e]">輸入框模式 (Input Patterns)</h2>
+</div>
+<div class="space-y-6 bg-white p-8 rounded-2xl shadow-sm">
+<div class="space-y-1.5">
+<label class="text-sm font-bold text-[#637381]">標準輸入框 (H-36px)</label>
+<input class="w-full h-9 px-3 border border-outline-variant/40 rounded-[6px] focus:ring-2 focus:ring-[#1D7BF5]/20 focus:border-[#1D7BF5] outline-none" placeholder="請輸入關鍵字..." type="text"/>
+</div>
+<div class="relative h-[54px] border border-outline-variant/40 rounded-[6px] px-3 pt-4 focus-within:ring-2 focus-within:ring-[#1D7BF5]/20">
+<span class="absolute top-1 left-3 text-[10px] font-bold text-[#1D7BF5] uppercase tracking-wider">狀態</span>
+<select class="w-full bg-transparent border-none p-0 focus:ring-0 text-sm font-semibold appearance-none">
+<option>已發送 (Sent)</option>
+<option>草稿 (Draft)</option>
+<option>已完成 (Completed)</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-4 pointer-events-none text-[#637381]">expand_more</span>
+</div>
+<div class="space-y-1.5">
+<label class="text-sm font-bold text-[#637381]">可搜尋下拉框 (React-Select Style)</label>
+<div class="relative flex items-center border border-outline-variant/40 rounded-[6px] px-3 h-10 bg-[#f4f6f8]">
+<span class="material-symbols-outlined text-[#637381] mr-2">search</span>
+<input class="bg-transparent border-none p-0 focus:ring-0 flex-1 text-sm font-medium" type="text" value="供應商 A..."/>
+<button class="text-[#919eab] hover:text-[#1c252e]">
+<span class="material-symbols-outlined text-sm">close</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- 5. POPOVER / PANEL PATTERNS -->
+<section>
+<div class="editorial-strip px-6 py-3 mb-8">
+<h2 class="text-xl font-bold text-[#1c252e]">面板模式 (Panel Patterns)</h2>
+</div>
+<div class="flex flex-col md:flex-row gap-8 items-start">
+<!-- Column Selector Panel -->
+<div class="w-full max-w-[240px] bg-white rounded-xl shadow-modal overflow-hidden">
+<div class="px-4 py-3 bg-[#f4f6f8] border-b border-outline-variant/10">
+<h3 class="text-sm font-bold">自定義欄位</h3>
+</div>
+<div class="p-4 space-y-3">
+<div class="flex items-center gap-3">
+<input checked="" class="rounded border-outline-variant text-[#1D7BF5] focus:ring-[#1D7BF5]" type="checkbox"/>
+<span class="text-sm">採購編號</span>
+</div>
+<div class="flex items-center gap-3">
+<input checked="" class="rounded border-outline-variant text-[#1D7BF5] focus:ring-[#1D7BF5]" type="checkbox"/>
+<span class="text-sm">供應商名稱</span>
+</div>
+<div class="flex items-center gap-3">
+<input class="rounded border-outline-variant text-[#1D7BF5] focus:ring-[#1D7BF5]" type="checkbox"/>
+<span class="text-sm">建立日期</span>
+</div>
+</div>
+<div class="px-4 py-2 border-t border-outline-variant/10 flex justify-end">
+<button class="text-[12px] text-[#1D7BF5] font-bold">重置</button>
+</div>
+</div>
+<!-- Export List Dropdown -->
+<div class="w-full max-w-[200px] bg-white rounded-lg shadow-card border border-outline-variant/10 py-1">
+<button class="w-full px-4 py-2 flex items-center gap-3 hover:bg-[#f7f9ff] transition-colors">
+<span class="material-symbols-outlined text-[#118d57]" data-weight="fill">description</span>
+<span class="text-sm">匯出為 Excel</span>
+</button>
+<button class="w-full px-4 py-2 flex items-center gap-3 hover:bg-[#f7f9ff] transition-colors">
+<span class="material-symbols-outlined text-blue-500">csv</span>
+<span class="text-sm">匯出為 CSV</span>
+</button>
+<div class="mx-4 my-1 border-t border-outline-variant/10"></div>
+<button class="w-full px-4 py-2 flex items-center gap-3 hover:bg-[#f7f9ff] transition-colors">
+<span class="material-symbols-outlined text-error-red">picture_as_pdf</span>
+<span class="text-sm">下載 PDF</span>
+</button>
+</div>
+</div>
+</section>
+</div>
+<!-- 6. MODAL OVERLAY PREVIEW -->
+<section class="mb-16">
+<div class="editorial-strip px-6 py-3 mb-8">
+<h2 class="text-xl font-bold text-[#1c252e]">彈窗預覽 (Modal Overlay)</h2>
+</div>
+<div class="relative h-[400px] w-full rounded-2xl overflow-hidden bg-slate-100 flex items-center justify-center p-8 border border-outline-variant/20">
+<div class="absolute inset-0 bg-black/30 backdrop-blur-[2px]"></div>
+<div class="relative bg-white w-full max-w-md rounded-[16px] shadow-modal overflow-hidden">
+<div class="p-6 border-b border-outline-variant/10 flex justify-between items-center">
+<h3 class="text-xl font-bold text-[#1c252e]">確認提交表單</h3>
+<button class="text-[#919eab] hover:text-[#1c252e]">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<div class="p-6">
+<p class="text-[#637381] leading-relaxed">您確定要提交這 3 筆採購申請單嗎？提交後將進入審核流程，無法再次編輯內容。</p>
+</div>
+<div class="p-6 bg-surface-container-low flex justify-end gap-3">
+<button class="px-6 py-2 text-[#637381] font-semibold">取消</button>
+<button class="px-6 py-2 bg-[#1D7BF5] text-white rounded-lg font-semibold shadow-sm">確認提交</button>
+</div>
+</div>
+</div>
+</section>
+<!-- 7. FUNCTIONAL PATTERNS -->
+<section class="mb-16">
+<div class="editorial-strip px-6 py-3 mb-8">
+<h2 class="text-xl font-bold text-[#1c252e]">功能性元件 (Functional Patterns)</h2>
+</div>
+<div class="space-y-12">
+<!-- Search Bar Row -->
+<div class="flex items-center gap-3 p-4 bg-white rounded-xl shadow-sm border border-outline-variant/10">
+<div class="w-48 relative">
+<select class="w-full h-10 pl-3 pr-8 bg-[#f4f6f8] border-none rounded-lg text-sm font-semibold appearance-none focus:ring-2 focus:ring-[#1D7BF5]/20">
+<option>所有分類</option>
+<option>電子零件</option>
+<option>辦公用品</option>
+</select>
+<span class="material-symbols-outlined absolute right-2 top-2 pointer-events-none text-[#637381]">expand_more</span>
+</div>
+<div class="flex-1 relative">
+<span class="material-symbols-outlined absolute left-3 top-2.5 text-[#637381]">search</span>
+<input class="w-full h-10 pl-10 pr-4 bg-[#f4f6f8] border-none rounded-lg text-sm focus:ring-2 focus:ring-[#1D7BF5]/20" placeholder="搜尋編號、供應商..." type="text"/>
+</div>
+<button class="h-10 px-6 bg-[#1D7BF5] text-white rounded-lg font-bold">執行搜尋</button>
+</div>
+<!-- Selection Toolbar -->
+<div class="h-12 bg-[#d9e8f5] rounded-xl flex items-center justify-between px-6 shadow-sm border border-[#1D7BF5]/10">
+<div class="flex items-center gap-4">
+<span class="bg-[#1D7BF5] text-white text-[10px] font-black px-2 py-0.5 rounded-full">2</span>
+<span class="text-sm font-bold text-[#1c252e]">已選擇項目 (Selected)</span>
+</div>
+<div class="flex items-center gap-6">
+<button class="text-[#1D7BF5] text-sm font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-lg">edit</span> 批次編輯
+                        </button>
+<button class="text-error-red text-sm font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-lg">delete</span> 刪除
+                        </button>
+<div class="w-px h-6 bg-[#1D7BF5]/20"></div>
+<button class="material-symbols-outlined text-[#637381]">close</button>
+</div>
+</div>
+<!-- Toast -->
+<div class="flex justify-center">
+<div class="bg-[#1c252e] text-white px-6 py-3 rounded-full shadow-toast flex items-center gap-3">
+<span class="material-symbols-outlined text-success-green" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<span class="text-sm font-medium tracking-wide">✓ 檔案下載成功，請至下載資料夾查看</span>
+<button class="ml-4 text-xs font-bold text-[#1D7BF5] tracking-widest uppercase">撤回</button>
+</div>
+</div>
+</div>
+</section>
+<!-- 8. Z-INDEX STACK DIAGRAM -->
+<section class="mb-16">
+<div class="editorial-strip px-6 py-3 mb-8">
+<h2 class="text-xl font-bold text-[#1c252e]">層級疊加說明 (Z-Index Stack Diagram)</h2>
+</div>
+<div class="bg-white p-12 rounded-2xl shadow-sm border border-outline-variant/10">
+<div class="flex flex-col items-center gap-2">
+<!-- Layer: Toast -->
+<div class="z-layer w-full max-w-lg h-12 bg-on-surface text-white rounded-lg flex items-center justify-between px-6 -mb-6 shadow-2xl relative z-[9999] border-2 border-white/20">
+<span class="text-xs font-bold uppercase tracking-tighter">z-9999 : Toast / Notifications</span>
+<span class="material-symbols-outlined">layers</span>
+</div>
+<!-- Layer: Modal -->
+<div class="z-layer w-full max-w-md h-24 bg-surface-container-highest border border-outline-variant rounded-xl flex items-center justify-between px-6 -mb-12 shadow-xl relative z-[5000]">
+<span class="text-xs font-bold text-on-surface-variant uppercase tracking-tighter">z-5000 : Modal Overlays</span>
+<span class="material-symbols-outlined">layers</span>
+</div>
+<!-- Layer: Dropdown -->
+<div class="z-layer w-full max-w-sm h-16 bg-white border border-outline-variant shadow-lg rounded-lg flex items-center justify-between px-6 -mb-8 relative z-[1000]">
+<span class="text-xs font-bold text-on-surface-variant uppercase tracking-tighter">z-1000 : Popovers / Dropdowns</span>
+<span class="material-symbols-outlined">layers</span>
+</div>
+<!-- Layer: Sticky Header -->
+<div class="z-layer w-full max-w-xs h-12 bg-table-header border border-outline-variant/30 rounded flex items-center justify-between px-6 -mb-6 relative z-[100]">
+<span class="text-xs font-bold text-on-surface-variant uppercase tracking-tighter">z-100 : Sticky Table Headers</span>
+<span class="material-symbols-outlined">layers</span>
+</div>
+<!-- Layer: Sticky Columns -->
+<div class="z-layer w-full max-w-[200px] h-10 bg-white border border-outline-variant/20 rounded flex items-center justify-between px-6 relative z-[10]">
+<span class="text-xs font-bold text-on-surface-variant uppercase tracking-tighter">z-10 : Fixed Columns</span>
+<span class="material-symbols-outlined">layers</span>
+</div>
+</div>
+<div class="mt-16 grid grid-cols-2 md:grid-cols-3 gap-4 text-center">
+<div class="p-3 bg-surface-container-low rounded-lg">
+<p class="text-[10px] font-bold text-[#637381]">分頁組件 (Pagination)</p>
+<p class="text-xs font-black text-[#1c252e]">z-1</p>
+</div>
+<div class="p-3 bg-surface-container-low rounded-lg">
+<p class="text-[10px] font-bold text-[#637381]">表格背景 (Background)</p>
+<p class="text-xs font-black text-[#1c252e]">z-0</p>
+</div>
+<div class="p-3 bg-surface-container-low rounded-lg">
+<p class="text-[10px] font-bold text-[#637381]">側邊導覽 (Sidebar)</p>
+<p class="text-xs font-black text-[#1c252e]">z-40</p>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Mobile Bottom Nav -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-3 pb-safe bg-white/80 dark:bg-slate-900/80 backdrop-blur-md md:hidden shadow-[0_-8px_24px_-4px_rgba(19,28,37,0.06)] rounded-t-2xl">
+<div class="flex flex-col items-center justify-center text-[#637381]">
+<span class="material-symbols-outlined">home</span>
+<span class="font-['Public_Sans'] text-[10px] font-bold uppercase tracking-wider">首頁</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#637381]">
+<span class="material-symbols-outlined">search</span>
+<span class="font-['Public_Sans'] text-[10px] font-bold uppercase tracking-wider">搜尋</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#637381]">
+<span class="material-symbols-outlined">notifications</span>
+<span class="font-['Public_Sans'] text-[10px] font-bold uppercase tracking-wider">通知</span>
+</div>
+<div class="flex flex-col items-center justify-center bg-[#edf4ff] text-[#1D7BF5] rounded-xl px-3 py-1">
+<span class="material-symbols-outlined">person</span>
+<span class="font-['Public_Sans'] text-[10px] font-bold uppercase tracking-wider">個人</span>
+</div>
+</nav>
+</body></html>
