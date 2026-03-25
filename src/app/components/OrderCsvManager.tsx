@@ -738,12 +738,12 @@ export function CsvToolbarButtons({ onExportSelect, onImport, importLabel = '批
 }
 
 // ===== Helper: shared batch reply headers & escape =====
+// 拆 Schedule Line 範本標題（無「不接單原因」欄）
 const BATCH_REPLY_HEADERS = [
   '訂單號碼', '訂單序號', '料號', '比對單價', '幣別',
   '預計交期', '訂貨量', '單位',
-  '同意碼', '項次', '廠商可交貨日期1', '交貨量1',
-  '項次', '廠商可交貨日期2', '交貨量2',
-  '不接單原因',
+  '同意碼', '項次1', '廠商可交貨日期1', '交貨量1',
+  '項次2', '廠商可交貨日期2', '交貨量2',
 ];
 
 // Headers for 拆單 mode — 包含 '新序號1'（原序號）與 '新序號2'（自動計算）
@@ -968,45 +968,17 @@ export function exportForecastCsv(
 export function exportBatchReplyScheduleLine(orders: OrderRow[], filename?: string, options?: { hideRejectOption?: boolean }) {
   const npvOrders = orders.filter(o => o.status === 'NP' || o.status === 'V');
   let totalRows = 0;
-  const hideReject = options?.hideRejectOption ?? false;
 
-  // Headers: 換貨單不含「不接單原因」欄位
-  const headers = hideReject
-    ? BATCH_REPLY_HEADERS.filter(h => h !== '不接單原因')
-    : BATCH_REPLY_HEADERS;
+  // 標題（統一格式，無「不接單原因」）
+  const headers = BATCH_REPLY_HEADERS;
 
-  // Instruction rows (說明列)
-  const instructionRows: string[][] = hideReject
-    ? [
-        [
-          '', '', '', '', '',
-          '', '', '',
-          '同意碼說明：Y＝訂單確認 / N＝調整單據（需填新交期）', '', '', '',
-          '', '', '',
-        ],
-        [
-          '', '', '', '', '',
-          '', '', '',
-          '若交期有問題，同意碼請填：N，並在後面填入新交期和數量', '', '', '',
-          '', '', '',
-        ],
-      ]
-    : [
-        [
-          '', '', '', '', '',
-          '', '', '',
-          '同意碼說明：Y＝訂單確認 / N＝調整單據（需填新交期）/ X＝不接單', '', '', '',
-          '', '', '',
-          '',
-        ],
-        [
-          '', '', '', '', '',
-          '', '', '',
-          '若交期有問題，同意碼請填：N，並在後面填入新交期和數量；不接單請填：X，可在「不接單原因」欄填寫原因（非必填）', '', '', '',
-          '', '', '',
-          '',
-        ],
-      ];
+  // 說明列（圖2格式）
+  // Row1: 同意碼說明；Row2: 拆更多期提示；Row3: 空列
+  const instructionRows: string[][] = [
+    ['同意碼說明：Y=訂單確認 / N=調整單據（需填新交期）/ X=不接單'],
+    ['若需拆更多期，請在O欄後繼續增加交貨資訊(項次3+廠商可交貨日期3+交貨量3)以此類推'],
+    [],
+  ];
 
   const rows: string[][] = [];
   for (const order of npvOrders) {
@@ -1026,16 +998,13 @@ export function exportBatchReplyScheduleLine(orders: OrderRow[], filename?: stri
         sl ? sl.quantity : order.orderQty,
         order.unit || '',
         '', // 同意碼
-        sl ? sl.index : (li + 1), // 項次
+        sl ? sl.index : (li + 1), // 項次1
         '', // 廠商可交貨日期1
         '', // 交貨量1
         '', // 項次2
         '', // 廠商可交貨日期2
         '', // 交貨量2
       ];
-      if (!hideReject) {
-        baseRow.push(''); // 不接單原因
-      }
       rows.push(baseRow as string[]);
       totalRows++;
     }
@@ -1043,7 +1012,7 @@ export function exportBatchReplyScheduleLine(orders: OrderRow[], filename?: stri
 
   const defaultName = filename || `批次回覆_拆ScheduleLine_${new Date().toISOString().slice(0, 10)}.csv`;
   const xlsxName = defaultName.replace(/\.csv$/i, '.xlsx');
-  buildXlsx('批次回覆', [headers, ...instructionRows, ...rows], xlsxName);
+  buildXlsx('批次回覆', [...instructionRows, headers, ...rows], xlsxName);
   return totalRows;
 }
 
@@ -1243,17 +1212,24 @@ export function parseBatchReplyCsv(content: string, allOrders: OrderRow[]): Batc
     else if (agreeCodeRaw === 'X') agreeCode = 'X';
     else if (agreeCodeRaw !== '') error = `同意碼無效: "${agreeCodeRaw}"（僅接受 Y、N 或 X）`;
     if (!orderNo && agreeCode === '') continue;
-    const rejectReason = (f[15] || '').trim();
+    // 不接單原因：僅拆單模式（split-order）有此欄（col 15）; 拆 Schedule Line 無此欄
+    const rejectReason = mode === 'split-order' ? (f[15] || '').trim() : '';
     const deliveries: BatchDelivery[] = [];
     let schedLineIndex: string | undefined;
     let newSeq1: string | undefined;
     let newSeq2: string | undefined;
     if (mode === 'schedule-line') {
       schedLineIndex = (f[9] || '').trim();
-      const d1 = normalizeDateStr((f[10] || '').trim()), q1 = (f[11] || '').trim();
-      if (d1 || q1) deliveries.push({ date: d1, qty: parseInt(q1, 10) || 0, seq: schedLineIndex });
-      const d2 = normalizeDateStr((f[13] || '').trim()), q2 = (f[14] || '').trim();
-      if (d2 || q2) deliveries.push({ date: d2, qty: parseInt(q2, 10) || 0, seq: (f[12] || '').trim() });
+      // 動態解析交貨欄位：從 col 9 開始，每組 3 欄（項次, 廠商可交貨日期, 交貨量）
+      // 支援使用者自行增加 項次3、廠商可交貨日期3、交貨量3 等欄位
+      for (let colStart = 9; colStart + 2 < f.length; colStart += 3) {
+        const seqVal = (f[colStart] || '').trim();
+        const dateVal = normalizeDateStr((f[colStart + 1] || '').trim());
+        const qtyVal = (f[colStart + 2] || '').trim();
+        if (dateVal || qtyVal) {
+          deliveries.push({ date: dateVal, qty: parseInt(qtyVal, 10) || 0, seq: seqVal });
+        }
+      }
     } else {
       newSeq1 = (f[9] || '').trim();
       const d1 = normalizeDateStr((f[10] || '').trim()), q1 = (f[11] || '').trim();
@@ -1415,7 +1391,7 @@ export function BatchReplyImportOverlay({ allOrders, onConfirm, onClose, hideRej
                 {!hideRejectOption && (
                 <div className="flex items-center gap-[6px]">
                   <Package size={14} className="text-[#637381] shrink-0" />
-                  <p className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#1c252e]"><span className="font-semibold">X</span> — 執行【不接單】，推進至 B；可在「不接單原因」欄填寫原因（非必填）</p>
+                  <p className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#1c252e]"><span className="font-semibold">X</span> — 執行【不接單】，推進至 B</p>
                 </div>
                 )}
                 <div className="flex items-center gap-[6px]">
