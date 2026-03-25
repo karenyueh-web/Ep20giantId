@@ -708,16 +708,16 @@ function MiniNavLayout({ currentPage, onPageChange, onLogout }: MiniNavLayoutPro
       <div className="w-full h-px bg-[rgba(145,158,171,0.12)] my-[4px]" />
 
       {/* Submenu items — hover reveals flyout */}
+      <MiniSubmenuItem menuId="parts" icon={<PartsIcon />} label="零件維護" onShow={showFlyout} onHide={startHide} />
+      <MiniSubmenuItem menuId="newparts" icon={<PartsIcon />} label="新零件" onShow={showFlyout} onHide={startHide} />
       <MiniSubmenuItem menuId="order" icon={<OrderIcon />} label="訂單管理" isActive={['order-list','order-forecast','order-exchange','order-return'].includes(currentPage)} onShow={showFlyout} onHide={startHide} />
       <MiniSubmenuItem menuId="correction" icon={<CorrectOrderIcon />} label="修正單" onShow={showFlyout} onHide={startHide} />
       <MiniSubmenuItem menuId="shipping" icon={<ShippingIcon />} label="出貨單" onShow={showFlyout} onHide={startHide} />
-      <MiniSubmenuItem menuId="invoice" icon={<InvoiceIcon />} label="發票作業" onShow={showFlyout} onHide={startHide} />
-      <MiniSubmenuItem menuId="parts" icon={<PartsIcon />} label="零件維護" onShow={showFlyout} onHide={startHide} />
       <MiniSubmenuItem menuId="quality" icon={<QualityIcon />} label="品保作業" isActive={currentPage === 'quality-abnormal'} onShow={showFlyout} onHide={startHide} />
+      <MiniSubmenuItem menuId="invoice" icon={<InvoiceIcon />} label="發票作業" onShow={showFlyout} onHide={startHide} />
       <NavItemMini icon={<InsuranceIcon />} label="產險維護" onClick={() => {}} />
-      <MiniSubmenuItem menuId="newparts" icon={<PartsIcon />} label="新零件" onShow={showFlyout} onHide={startHide} />
-      <NavItemMini icon={<QualityIcon />} label="廠商評價" onClick={() => {}} />
       <MiniSubmenuItem menuId="esg" icon={<InsuranceIcon />} label="ESG" onShow={showFlyout} onHide={startHide} />
+      <NavItemMini icon={<QualityIcon />} label="廠商評價" onClick={() => {}} />
       <MiniSubmenuItem menuId="shipment-tw" icon={<ShippingIcon />} label="出貨台灣" onShow={showFlyout} onHide={startHide} />
       <MiniSubmenuItem menuId="account" icon={<AccountIcon />} label="帳號管理" isActive={['vendor-account-management','giant-account-management'].includes(currentPage)} onShow={showFlyout} onHide={startHide} />
 
@@ -875,7 +875,42 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
         </div>
       </div>
 
-      {/* 1. 訂單管理 */}
+      {/* 1. 零件/索樣維護 */}
+      <div className="w-full">
+        <NavItem 
+          icon={<PartsIcon />} 
+          label="零件/索樣維護" 
+          hasSubmenu 
+          isExpanded={expandedMenus.includes('parts')}
+          onClick={() => toggleMenu('parts')}
+        />
+        {expandedMenus.includes('parts') && (
+          <div className="w-full">
+            <SubMenuItem label="零件資訊維護" page="parts-maintain" onNavigate={onPageChange} isActive={currentPage === 'parts-maintain'} />
+            <SubMenuItem label="列印報價單" page="parts-quote" onNavigate={onPageChange} isActive={currentPage === 'parts-quote'} />
+            <SubMenuItem label="索樣單" page="parts-sample" onNavigate={onPageChange} isActive={currentPage === 'parts-sample'} />
+          </div>
+        )}
+      </div>
+
+      {/* 2. 新零件維護 */}
+      <div className="w-full">
+        <NavItem 
+          icon={<PartsIcon />} 
+          label="新零件維護" 
+          hasSubmenu 
+          isExpanded={expandedMenus.includes('newparts')}
+          onClick={() => toggleMenu('newparts')}
+        />
+        {expandedMenus.includes('newparts') && (
+          <div className="w-full">
+            <SubMenuItem label="新零件專案維護" page="newparts-project" onNavigate={onPageChange} isActive={currentPage === 'newparts-project'} />
+            <SubMenuItem label="專案設定" page="newparts-settings" onNavigate={onPageChange} isActive={currentPage === 'newparts-settings'} />
+          </div>
+        )}
+      </div>
+
+      {/* 3. 訂單管理 */}
       <div className="w-full">
         <NavItem 
           icon={<OrderIcon />} 
@@ -906,14 +941,13 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
               isActive={currentPage === 'order-forecast'}
               onClick={() => onPageChange('order-forecast')} 
             />
-            {/* 新增子功能 */}
             <SubMenuItem label="變更生管排程" page="order-schedule-change" onNavigate={onPageChange} isActive={currentPage === 'order-schedule-change'} />
             <SubMenuItem label="歷史訂單查詢" isActive={currentPage === 'order-history'} onClick={() => onPageChange('order-history')} />
           </div>
         )}
       </div>
 
-      {/* 2. 修正單管理 */}
+      {/* 4. 修正單管理 */}
       <div className="w-full">
         <NavItem 
           icon={<CorrectOrderIcon />} 
@@ -931,7 +965,7 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
         )}
       </div>
 
-      {/* 3. 出貨單 */}
+      {/* 5. 出貨單 */}
       <div className="w-full">
         <NavItem 
           icon={<ShippingIcon />} 
@@ -946,46 +980,7 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
             <SubMenuItem label="出貨單查詢" page="shipping-list" onNavigate={onPageChange} isActive={currentPage === 'shipping-list'} />
             <SubMenuItem label="出貨/裝箱明細" page="shipping-packing" onNavigate={onPageChange} isActive={currentPage === 'shipping-packing'} />
             <SubMenuItem label="列印單據" page="shipping-print" onNavigate={onPageChange} isActive={currentPage === 'shipping-print'} />
-            {/* 新增子功能 */}
             <SubMenuItem label="基本設定" page="shipping-settings" onNavigate={onPageChange} isActive={currentPage === 'shipping-settings'} />
-          </div>
-        )}
-      </div>
-
-      {/* 4. 發票作業 */}
-      <div className="w-full">
-        <NavItem 
-          icon={<InvoiceIcon />} 
-          label="發票作業" 
-          hasSubmenu 
-          isExpanded={expandedMenus.includes('invoice')}
-          onClick={() => toggleMenu('invoice')}
-        />
-        {expandedMenus.includes('invoice') && (
-          <div className="w-full">
-            <SubMenuItem label="開立發票" page="invoice-create" onNavigate={onPageChange} isActive={currentPage === 'invoice-create'} />
-            <SubMenuItem label="發票查詢" page="invoice-list" onNavigate={onPageChange} isActive={currentPage === 'invoice-list'} />
-            {/* 新增子功能 */}
-            <SubMenuItem label="發票設定" page="invoice-settings" onNavigate={onPageChange} isActive={currentPage === 'invoice-settings'} />
-          </div>
-        )}
-      </div>
-
-      {/* 5. 零件/索樣維護 */}
-      <div className="w-full">
-        <NavItem 
-          icon={<PartsIcon />} 
-          label="零件/索樣維護" 
-          hasSubmenu 
-          isExpanded={expandedMenus.includes('parts')}
-          onClick={() => toggleMenu('parts')}
-        />
-        {expandedMenus.includes('parts') && (
-          <div className="w-full">
-            <SubMenuItem label="零件資訊維護" page="parts-maintain" onNavigate={onPageChange} isActive={currentPage === 'parts-maintain'} />
-            <SubMenuItem label="列印報價單" page="parts-quote" onNavigate={onPageChange} isActive={currentPage === 'parts-quote'} />
-            {/* 新增子功能 */}
-            <SubMenuItem label="索樣單" page="parts-sample" onNavigate={onPageChange} isActive={currentPage === 'parts-sample'} />
           </div>
         )}
       </div>
@@ -1009,42 +1004,36 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
             />
             <SubMenuItem label="檢驗/測試報告" page="quality-report" onNavigate={onPageChange} isActive={currentPage === 'quality-report'} />
             <SubMenuItem label="危害物質管理" page="quality-hazard" onNavigate={onPageChange} isActive={currentPage === 'quality-hazard'} />
-            {/* 新增子功能 */}
             <SubMenuItem label="其他設定" page="quality-other" onNavigate={onPageChange} isActive={currentPage === 'quality-other'} />
           </div>
         )}
       </div>
 
-      {/* 7. 產險資料維護 */}
+      {/* 7. 發票作業 */}
+      <div className="w-full">
+        <NavItem 
+          icon={<InvoiceIcon />} 
+          label="發票作業" 
+          hasSubmenu 
+          isExpanded={expandedMenus.includes('invoice')}
+          onClick={() => toggleMenu('invoice')}
+        />
+        {expandedMenus.includes('invoice') && (
+          <div className="w-full">
+            <SubMenuItem label="開立發票" page="invoice-create" onNavigate={onPageChange} isActive={currentPage === 'invoice-create'} />
+            <SubMenuItem label="發票查詢" page="invoice-list" onNavigate={onPageChange} isActive={currentPage === 'invoice-list'} />
+            <SubMenuItem label="發票設定" page="invoice-settings" onNavigate={onPageChange} isActive={currentPage === 'invoice-settings'} />
+          </div>
+        )}
+      </div>
+
+      {/* 8. 產險資料維護 */}
       <NavItem 
         icon={<InsuranceIcon />} 
         label="產險資料維護" 
       />
 
-      {/* 8. 新零件維護 */}
-      <div className="w-full">
-        <NavItem 
-          icon={<PartsIcon />} 
-          label="新零件維護" 
-          hasSubmenu 
-          isExpanded={expandedMenus.includes('newparts')}
-          onClick={() => toggleMenu('newparts')}
-        />
-        {expandedMenus.includes('newparts') && (
-          <div className="w-full">
-            <SubMenuItem label="新零件專案維護" page="newparts-project" onNavigate={onPageChange} isActive={currentPage === 'newparts-project'} />
-            <SubMenuItem label="專案設定" page="newparts-settings" onNavigate={onPageChange} isActive={currentPage === 'newparts-settings'} />
-          </div>
-        )}
-      </div>
-
-      {/* 9. 廠商評價 */}
-      <NavItem 
-        icon={<QualityIcon />} 
-        label="廠商評價" 
-      />
-
-      {/* 10. ESG */}
+      {/* 9. ESG */}
       <div className="w-full">
         <NavItem 
           icon={<InsuranceIcon />} 
@@ -1060,6 +1049,12 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
           </div>
         )}
       </div>
+
+      {/* 10. 廠商評價 */}
+      <NavItem 
+        icon={<QualityIcon />} 
+        label="廠商評價" 
+      />
 
       {/* 11. 出貨台灣捷安特 */}
       <div className="w-full">
@@ -1079,7 +1074,7 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
         )}
       </div>
 
-      {/* 12. 帳號管理 - 移到最後 */}
+      {/* 12. 帳號管理 */}
       <div className="w-full">
         <NavItem 
           icon={<AccountIcon />} 
