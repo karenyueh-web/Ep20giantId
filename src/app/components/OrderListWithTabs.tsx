@@ -743,13 +743,13 @@ export function OrderListWithTabs({ defaultTab = 'NP', userRole }: OrderListWith
       const oldStatus = order.status;
 
       const validDeliveries = row.deliveries.filter(d => d.date && d.qty > 0);
-      const orderSeqNum = parseInt(order.orderSeq, 10) || 10;
       const schedLines: ScheduleLine[] = validDeliveries.map((d, i) => ({
         index: result.mode === 'split-order'
-          ? orderSeqNum + i * 10   // 拆單：新序號 = 原序號 + idx*10
+          ? parseInt(d.newOrderSeq || String(parseInt(order.orderSeq, 10) + i * 10), 10)  // 用 parser 預算好的新序號
           : i + 1,                 // 拆 Schedule Line：項次 1,2,3...
         deliveryDate: d.date,
         quantity: d.qty,
+        expectedDelivery: order.expectedDelivery,
       }));
 
       const vendorDate = validDeliveries.length > 0
@@ -769,8 +769,8 @@ export function OrderListWithTabs({ defaultTab = 'NP', userRole }: OrderListWith
       } else if (result.mode === 'split-order') {
         // 拆單（N 期）
         reasonText = `拆單（${validDeliveries.length} 期）`;
-        remarkText = validDeliveries.map((d, idx) =>
-          `項次${orderSeqNum + idx * 10}：${d.date} × ${d.qty}`
+        remarkText = validDeliveries.map((d) =>
+          `序號${d.newOrderSeq || '?'}：${d.date} × ${d.qty}`
         ).join('；');
       } else {
         // 拆 Schedule Line（N 期）

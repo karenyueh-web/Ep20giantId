@@ -746,13 +746,12 @@ const BATCH_REPLY_HEADERS = [
   '項次2', '廠商可交貨日期2', '交貨量2',
 ];
 
-// Headers for 拆單 mode — 包含 '新序號1'（原序號）與 '新序號2'（自動計算）
+// Headers for 拆單 mode
 const BATCH_REPLY_SPLIT_HEADERS = [
   '訂單號碼', '訂單序號', '料號', '比對單價', '幣別',
   '預計交期', '訂貨量', '單位',
-  '同意碼', '新序號1', '廠商可交貨日期1', '交貨量1',
-  '新序號2', '廠商可交貨日期2', '交貨量2',
-  '不接單原因',
+  '同意碼', '廠商可交貨日期1', '交貨量1',
+  '廠商可交貨日期2', '交貨量2',
 ];
 
 function escCsv(val: string) {
@@ -1021,68 +1020,35 @@ export function exportBatchReplyScheduleLine(orders: OrderRow[], filename?: stri
 // `allOrders` is used to compute 新序號2 (next available seq for the same orderNo).
 export function exportBatchReplySplitOrder(orders: OrderRow[], allOrders?: OrderRow[], filename?: string, options?: { hideRejectOption?: boolean }) {
   const npvOrders = orders.filter(o => o.status === 'NP' || o.status === 'V');
-  const sourceOrders = allOrders || orders;
-  const hideReject = options?.hideRejectOption ?? false;
 
-  // Build map: orderNo → max orderSeq (numeric)
-  const maxSeqMap = new Map<string, number>();
-  for (const o of sourceOrders) {
-    const seq = parseInt(o.orderSeq, 10);
-    if (!isNaN(seq)) {
-      maxSeqMap.set(o.orderNo, Math.max(maxSeqMap.get(o.orderNo) || 0, seq));
-    }
-  }
-
-  // Instruction rows (說明列)
+  // 說明列（同 Schedule Line 格式：放在 A1/A2）
   const instructionRows: string[][] = [
-    [
-      '', '', '', '', '',
-      '', '', '',
-      hideReject ? '同意碼說明：Y＝訂單確認 / N＝調整單據（需填新交期）' : '同意碼說明：Y＝訂單確認 / N＝調整單據（需填新交期）/ X＝不接單', '', '', '',
-      '', '', '',
-      ...(hideReject ? [] : ['']),
-    ],
-    [
-      '', '', '', '', '',
-      '', '', '',
-      hideReject ? '若交期有問題，同意碼請填：N，並在後面填入新交期和數量' : '若交期有問題，同意碼請填：N，並在後面填入新交期和數量；不接單請填：X，可在「不接單原因」欄填寫原因（非必填）', '', '', '',
-      '如有更多件數交貨則自行在後面增加欄位', '', '',
-      ...(hideReject ? [] : ['']),
-    ],
+    ['同意碼說明：Y=訂單確認 / N=調整單據（需填新交期）/ X=不接單'],
+    ['若需拆更多單，請在M欄後繼續增加交貨資訊(廠商可交貨日期3+交貨量3)以此類推'],
+    [],
   ];
 
-  const rows = npvOrders.map(order => {
-    const currentSeq = parseInt(order.orderSeq, 10) || 0;
-    const maxSeq = maxSeqMap.get(order.orderNo) || currentSeq;
-    // 新序號2 = max seq under the same orderNo + 10
-    const newSeq2 = maxSeq + 10;
+  const headers = BATCH_REPLY_SPLIT_HEADERS;
 
-    return [
-      order.orderNo,
-      order.orderSeq,
-      order.materialNo,
-      order.comparePrice || '',
-      order.currency || 'TWD',
-      order.expectedDelivery,
-      order.orderQty,
-      order.unit || '',
-      '',                      // 同意碼
-      order.orderSeq,          // 新序號1 — 原序號（供匯入核對）
-      '',                      // 廠商可交貨日期1
-      '',                      // 交貨量1
-      newSeq2,                 // 新序號2 — auto-calculated
-      '',                      // 廠商可交貨日期2
-      '',                      // 交貨量2
-      ...(hideReject ? [] : ['']),  // 不接單原因
-    ];
-  });
+  const rows = npvOrders.map(order => [
+    order.orderNo,
+    order.orderSeq,
+    order.materialNo,
+    order.comparePrice || '',
+    order.currency || 'TWD',
+    order.expectedDelivery,
+    order.orderQty,
+    order.unit || '',
+    '',   // 同意碼
+    '',   // 廠商可交貨日期1
+    '',   // 交貨量1
+    '',   // 廠商可交貨日期2
+    '',   // 交貨量2
+  ]);
 
-  const headers = hideReject
-    ? BATCH_REPLY_SPLIT_HEADERS.filter(h => h !== '不接單原因')
-    : BATCH_REPLY_SPLIT_HEADERS;
   const defaultName = filename || `批次回覆_拆單_${new Date().toISOString().slice(0, 10)}.csv`;
   const xlsxName = defaultName.replace(/\.csv$/i, '.xlsx');
-  buildXlsx('批次回覆', [headers, ...instructionRows, ...rows], xlsxName);
+  buildXlsx('批次回覆', [...instructionRows, headers, ...rows], xlsxName);
   return npvOrders.length;
 }
 
@@ -1100,6 +1066,8 @@ export interface BatchDelivery {
   date: string;
   qty: number;
   seq?: string;
+  /** 拆單模式下，此組交貨對應的新訂單序號（第1組＝原序號，第2組起由系統計算） */
+  newOrderSeq?: string;
 }
 
 export interface BatchReplyParsedRow {
@@ -1137,8 +1105,12 @@ export interface BatchReplyImportResult {
 
 function detectBatchReplyMode(headerLine: string): BatchReplyMode {
   const headers = parseCsvLine(headerLine);
-  if (headers.includes('新序號1') || headers.includes('新序號2')) return 'split-order';
-  if (headers.includes('同意碼')) return 'schedule-line';
+  // Legacy: old split-order template had 新序號1/新序號2
+  if (headers.includes('\u65b0\u5e8f\u865f1') || headers.includes('\u65b0\u5e8f\u865f2')) return 'split-order';
+  // Schedule Line template has 項次1（schedule line index column）
+  if (headers.includes('\u9805\u6b4c1')) return 'schedule-line';
+  // New split-order template: has 同意碼 but no 項次1
+  if (headers.includes('\u540c\u610f\u78bc')) return 'split-order';
   return 'unknown';
 }
 
@@ -1206,6 +1178,20 @@ export function parseBatchReplyCsv(content: string, allOrders: OrderRow[]): Batc
   if (mode === 'unknown') return empty;
   const dataLines = lines.slice(headerIndex + 1);
   const rows: BatchReplyParsedRow[] = [];
+  // 拆單模式：預先計算各 orderNo 的序號 tracker（用於填入新序號預覽）
+  const splitSeqTracker: Record<string, number> = {};
+  const getNextSplitSeq = (orderNo: string, currentSeq: number): string => {
+    if (!(orderNo in splitSeqTracker)) {
+      const seqs = allOrders
+        .filter(o => o.orderNo === orderNo)
+        .map(o => parseInt(o.orderSeq, 10))
+        .filter(n => !isNaN(n));
+      if (!isNaN(currentSeq)) seqs.push(currentSeq);
+      splitSeqTracker[orderNo] = seqs.length > 0 ? Math.max(...seqs) : 0;
+    }
+    splitSeqTracker[orderNo] += 10;
+    return String(splitSeqTracker[orderNo]);
+  };
   for (let i = 0; i < dataLines.length; i++) {
     const f = parseCsvLine(dataLines[i]);
     if (isInstructionRow(f)) continue;
@@ -1240,12 +1226,16 @@ export function parseBatchReplyCsv(content: string, allOrders: OrderRow[]): Batc
         }
       }
     } else {
-      newSeq1 = (f[9] || '').trim();
-      const d1 = normalizeDateStr((f[10] || '').trim()), q1 = (f[11] || '').trim();
-      if (d1 || q1) deliveries.push({ date: d1, qty: parseInt(q1, 10) || 0, seq: newSeq1 });
-      newSeq2 = (f[12] || '').trim();
-      const d2 = normalizeDateStr((f[13] || '').trim()), q2 = (f[14] || '').trim();
-      if (d2 || q2) deliveries.push({ date: d2, qty: parseInt(q2, 10) || 0, seq: newSeq2 });
+      // 新格式：col 9 = 廠商可交貨日期1, col 10 = 交貨量1,
+      //         col 11 = 廠商可交貨日期2, col 12 = 交貨量2,
+      //         col 13 = 廠商可交貨日期3, col 14 = 交貨量3, ... 動態
+      for (let colStart = 9; colStart + 1 < f.length; colStart += 2) {
+        const dateVal = normalizeDateStr((f[colStart] || '').trim());
+        const qtyVal = (f[colStart + 1] || '').trim();
+        if (dateVal || qtyVal) {
+          deliveries.push({ date: dateVal, qty: parseInt(qtyVal, 10) || 0 });
+        }
+      }
     }
     const matched = allOrders.find(o => o.orderNo === orderNo && o.orderSeq === orderSeq);
     if (!matched && agreeCode !== '') error = error || `找不到對應訂單 (${orderNo} / ${orderSeq})`;
@@ -1255,11 +1245,44 @@ export function parseBatchReplyCsv(content: string, allOrders: OrderRow[]): Batc
       skipReason = `狀態 ${matched.status} 不接受批次回覆（僅限 NP/V）`;
       agreeCode = ''; // 強制清空同意碼，歸入 skipRows
     }
-    if (agreeCode === 'N' && !error && !deliveries.some(d => d.date && isValidDateStr(d.date)))
-      error = '同意碼 N 需填入至少一組新交期';
+    // 拆單模式：為每組 delivery 計算新序號
+    if (mode === 'split-order') {
+      const currentSeqNum = parseInt(orderSeq, 10);
+      // 先將已推進的 tracker 備用（同一個 orderNo 的多行批次中序號接續累加）
+      for (let i = 0; i < deliveries.length; i++) {
+        if (i === 0) {
+          deliveries[i].newOrderSeq = orderSeq; // 第1組保留原序號
+        } else {
+          deliveries[i].newOrderSeq = getNextSplitSeq(orderNo, currentSeqNum);
+        }
+      }
+    }
+    // Y：直接同意，後面不應該填任何交貨資訊
+    if (agreeCode === 'Y' && !error && deliveries.some(d => d.date || d.qty)) {
+      error = '同意碼 Y 為直接確認，不需填入交貨資訊';
+    }
+    // N（拆單模式）：至少需要 2 組有效交貨資料
+    if (agreeCode === 'N' && !error && mode === 'split-order') {
+      const validGroups = deliveries.filter(d => d.date && isValidDateStr(d.date) && d.qty > 0);
+      if (validGroups.length < 2) error = '拆單需填入至少 2 組交貨資料（交貨日期+數量）';
+    }
+    // N（schedule-line 模式）：至少需要 1 組有效交期
+    if (agreeCode === 'N' && !error && mode === 'schedule-line') {
+      if (!deliveries.some(d => d.date && isValidDateStr(d.date))) error = '同意碼 N 需填入至少一組新交期';
+    }
     // X（不接單）不需要交期，不接單原因為選填
     if ((agreeCode === 'Y' || agreeCode === 'N') && !error) {
       for (const d of deliveries) { if (d.date && !isValidDateStr(d.date)) { error = `日期格式錯誤: "${d.date}"`; break; } }
+    }
+    // 過去日期驗證：廠商填入的交貨日期不得早於今天
+    if ((agreeCode === 'Y' || agreeCode === 'N') && !error) {
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      for (const d of deliveries) {
+        if (d.date && isValidDateStr(d.date)) {
+          const [y, m, day] = d.date.split('/').map(Number);
+          if (new Date(y, m - 1, day) < today) { error = `交貨日期不得為過去日期: "${d.date}"`; break; }
+        }
+      }
     }
     // 交貨量加總驗證：Y 或 N 的交貨量加總必須等於訂貨量
     if ((agreeCode === 'Y' || agreeCode === 'N') && !error && matched) {
@@ -1467,12 +1490,14 @@ export function BatchReplyImportOverlay({ allOrders, onConfirm, onClose, hideRej
                   ...batchResult.skipRows,
                 ];
                 const maxDeliveries = Math.max(2, ...allRows.map(r => r.deliveries.length));
+                const isSplitOrder = batchResult.mode === 'split-order';
                 const deliveryHeaders: string[] = [];
                 for (let i = 1; i <= maxDeliveries; i++) {
+                  if (isSplitOrder) deliveryHeaders.push(`新序號${i}`);
                   deliveryHeaders.push(`交貨日期${i}`, `量${i}`);
                 }
                 return (
-                  <table className="w-full min-w-[900px]">
+                  <table className="w-full min-w-[1200px]">
                     <thead className="sticky top-0 z-[1]"><tr className="bg-[#f4f6f8]">
                       {['行','同意碼','訂單號碼','序號','料號','預計交期','訂貨量',...deliveryHeaders,'驗證'].map(h => (
                         <th key={h} className="px-[8px] py-[8px] text-left font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[11px] text-[#637381] whitespace-nowrap">{h}</th>
@@ -1480,7 +1505,7 @@ export function BatchReplyImportOverlay({ allOrders, onConfirm, onClose, hideRej
                     </tr></thead>
                     <tbody>
                       {allRows.map(r => (
-                        <BRRow key={`${r.agreeCode}${r.rowIndex}`} row={r} maxDeliveries={maxDeliveries} />
+                        <BRRow key={`${r.agreeCode}${r.rowIndex}`} row={r} maxDeliveries={maxDeliveries} isSplitOrder={isSplitOrder} />
                       ))}
                     </tbody>
                   </table>
@@ -1503,23 +1528,34 @@ export function BatchReplyImportOverlay({ allOrders, onConfirm, onClose, hideRej
   );
 }
 
-function BRRow({ row, maxDeliveries = 2 }: { row: BatchReplyParsedRow; maxDeliveries?: number }) {
+function BRRow({ row, maxDeliveries = 2, isSplitOrder = false }: { row: BatchReplyParsedRow; maxDeliveries?: number; isSplitOrder?: boolean }) {
   const c = "px-[8px] py-[7px] font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#1c252e]";
   const badge = () => {
-    if (!row.isValid) return <div className="bg-[rgba(255,171,0,0.12)] flex items-center gap-[4px] px-[8px] h-[22px] rounded-[4px]"><AlertTriangle size={12} className="text-[#b76e00]" /><p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[11px] text-[#b76e00]">錯誤</p></div>;
-    if (row.agreeCode === 'Y') return <div className="bg-[rgba(34,197,94,0.12)] flex items-center gap-[4px] px-[8px] h-[22px] rounded-[4px]"><CheckCircle2 size={12} className="text-[#118d57]" /><p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[11px] text-[#118d57]">Y 訂單確認</p></div>;
-    if (row.agreeCode === 'N') return <div className="bg-[rgba(255,86,48,0.12)] flex items-center gap-[4px] px-[8px] h-[22px] rounded-[4px]"><XCircle size={12} className="text-[#b71d18]" /><p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[11px] text-[#b71d18]">N 調整單據</p></div>;
-    if (row.agreeCode === 'X') return <div className="bg-[rgba(99,115,129,0.12)] flex items-center gap-[4px] px-[8px] h-[22px] rounded-[4px]"><Package size={12} className="text-[#454f5b]" /><p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[11px] text-[#454f5b]">X 不接單</p></div>;
+    if (!row.isValid) return <div className="bg-[rgba(255,171,0,0.12)] flex items-center gap-[4px] px-[8px] h-[22px] rounded-[4px] whitespace-nowrap"><AlertTriangle size={12} className="text-[#b76e00]" /><p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[11px] text-[#b76e00]">錯誤</p></div>;
+    if (row.agreeCode === 'Y') return <div className="bg-[rgba(34,197,94,0.12)] flex items-center gap-[4px] px-[8px] h-[22px] rounded-[4px] whitespace-nowrap"><CheckCircle2 size={12} className="text-[#118d57]" /><p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[11px] text-[#118d57]">Y 訂單確認</p></div>;
+    if (row.agreeCode === 'N') return <div className="bg-[rgba(255,86,48,0.12)] flex items-center gap-[4px] px-[8px] h-[22px] rounded-[4px] whitespace-nowrap"><XCircle size={12} className="text-[#b71d18]" /><p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[11px] text-[#b71d18]">N 拆單</p></div>;
+    if (row.agreeCode === 'X') return <div className="bg-[rgba(99,115,129,0.12)] flex items-center gap-[4px] px-[8px] h-[22px] rounded-[4px] whitespace-nowrap"><Package size={12} className="text-[#454f5b]" /><p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[11px] text-[#454f5b]">X 不接單</p></div>;
     return <p className="text-[12px] text-[#919eab]">—</p>;
   };
   const bg = !row.isValid ? 'bg-[rgba(255,171,0,0.04)]' : row.skipReason ? 'bg-[rgba(145,158,171,0.04)]' : row.agreeCode === 'Y' ? 'bg-[rgba(34,197,94,0.02)]' : row.agreeCode === 'N' ? 'bg-[rgba(255,86,48,0.02)]' : row.agreeCode === 'X' ? 'bg-[rgba(99,115,129,0.02)]' : '';
 
-  // 動態建立交貨期資料格 (maxDeliveries 欄)
+  // 動態建立交貨期資料格
   const deliveryCells: React.ReactNode[] = [];
   for (let i = 0; i < maxDeliveries; i++) {
     const d = row.deliveries[i];
+    // 新序號欄（split-order 模式才有）
+    if (isSplitOrder) {
+      const seqVal = d?.newOrderSeq;
+      const isOriginal = i === 0;
+      deliveryCells.push(
+        <td key={`seq${i}`} className={c}>
+          {seqVal
+            ? <span className={`font-semibold ${isOriginal ? 'text-[#637381]' : 'text-[#005eb8]'}`}>{seqVal}</span>
+            : <span className="text-[#919eab]">—</span>}
+        </td>
+      );
+    }
     if (row.agreeCode === 'X') {
-      // X 不接單：第1期展示劃挈9交期，其餘為—
       if (i === 0) {
         deliveryCells.push(
           <td key={`d${i}`} className={c}><span style={{ color: '#ff5630', textDecoration: 'line-through', textDecorationColor: '#ff5630' }}>{row.expectedDelivery || '—'}</span></td>,
