@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 
-<html lang="zh-Hant"><head>
+<html class="light" lang="en"><head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>Giant Global EP - UI Patterns Reference</title>
+<title>UI Patterns Reference | Giant Global EP</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800;900&amp;family=Noto+Sans+TC:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700;800;900&amp;family=Noto+Sans+JP:wght@300;400;500;700&amp;display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
 <script id="tailwind-config">
@@ -14,96 +14,88 @@
             theme: {
                 extend: {
                     colors: {
-                        "on-error-container": "#93000a",
-                        "on-secondary-container": "#566674",
-                        "surface-bright": "#f7f9ff",
-                        "surface-dim": "#d2dbe7",
-                        "tertiary": "#295d99",
-                        "secondary": "#50606e",
-                        "secondary-fixed-dim": "#b8c8d8",
-                        "on-surface-variant": "#414754",
+                        "surface-dim": "#cbdcec",
+                        "surface-container": "#e0f0ff",
+                        "inverse-surface": "#22323e",
+                        "tertiary-container": "#006ef2",
                         "on-primary-fixed": "#001a40",
-                        "on-error": "#ffffff",
-                        "tertiary-container": "#4576b3",
-                        "surface-container-highest": "#dae3f0",
-                        "surface-tint": "#005bbf",
-                        "surface": "#f7f9ff",
-                        "tertiary-fixed": "#d3e3ff",
+                        "surface-bright": "#f6f9ff",
                         "outline-variant": "#c1c6d6",
-                        "on-surface": "#131c25",
-                        "on-tertiary-container": "#fdfcff",
-                        "on-secondary": "#ffffff",
-                        "surface-container": "#e6effb",
-                        "on-primary-fixed-variant": "#004492",
-                        "tertiary-fixed-dim": "#a3c9ff",
+                        "inverse-on-surface": "#e6f2ff",
+                        "error": "#b71d18", // System Specific Error
+                        "secondary-fixed": "#d3e3ff",
+                        "surface-tint": "#005bbf",
+                        "on-secondary-fixed-variant": "#044882",
+                        "on-background": "#0d1d29",
+                        "on-tertiary-fixed-variant": "#004398",
                         "on-primary": "#ffffff",
-                        "primary-fixed-dim": "#acc7ff",
-                        "on-tertiary": "#ffffff",
-                        "surface-variant": "#dae3f0",
-                        "on-secondary-fixed": "#0d1d29",
-                        "on-primary-container": "#fefcff",
-                        "on-tertiary-fixed": "#001c39",
-                        "error-container": "#ffdad6",
-                        "primary-container": "#0071e9",
-                        "primary": "#0059ba",
-                        "on-tertiary-fixed-variant": "#044882",
-                        "on-secondary-fixed-variant": "#394955",
-                        "inverse-on-surface": "#e8f2fe",
-                        "primary-fixed": "#d7e2ff",
-                        "surface-container-low": "#edf4ff",
-                        "error": "#ba1a1a",
-                        "surface-container-lowest": "#ffffff",
-                        "secondary-fixed": "#d4e5f5",
+                        "tertiary-fixed-dim": "#afc6ff",
                         "inverse-primary": "#acc7ff",
-                        "background": "#f7f9ff",
-                        "on-background": "#131c25",
-                        "inverse-surface": "#28313b",
+                        "on-tertiary-container": "#fefcff",
+                        "on-surface": "#0d1d29",
+                        "primary-fixed": "#d7e2ff",
+                        "on-secondary-fixed": "#001c39",
+                        "on-primary-fixed-variant": "#004492",
+                        "error-container": "#ffdad6",
+                        "secondary-fixed-dim": "#a3c9ff",
+                        "on-secondary-container": "#0e4c86",
+                        "surface-variant": "#d4e5f5",
+                        "on-error-container": "#93000a",
+                        "on-secondary": "#ffffff",
+                        "surface-container-high": "#d9eafa",
+                        "on-tertiary": "#ffffff",
+                        "surface-container-low": "#ebf5ff",
+                        "on-error": "#ffffff",
+                        "secondary": "#2c609b",
+                        "surface": "#f6f9ff",
+                        "on-primary-container": "#fefcff",
+                        "background": "#f6f9ff",
+                        "surface-container-highest": "#d4e5f5",
+                        "secondary-container": "#8fbeff",
+                        "primary-container": "#0071e9",
+                        "primary": "#1D7BF5", // Brand Blue
+                        "primary-fixed-dim": "#acc7ff",
                         "outline": "#727785",
-                        "surface-container-high": "#e0e9f5",
-                        "secondary-container": "#d4e5f5",
-                        "brand-blue": "#1D7BF5",
-                        "deep-blue": "#004680",
-                        "success-green": "#118d57",
-                        "error-red": "#b71d18",
-                        "warning-gold": "#b76e00",
-                        "table-header": "#f4f6f8"
+                        "tertiary-fixed": "#d9e2ff",
+                        "on-surface-variant": "#414754",
+                        "tertiary": "#0057c2",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary-fixed": "#001a43",
+                        "brand-text": "#1c252e",
+                        "brand-secondary": "#637381",
+                        "brand-disabled": "#919eab",
+                        "brand-deep": "#004680",
+                        "brand-link": "#1677ff",
+                        "brand-success": "#118d57",
+                        "brand-warning": "#b76e00",
+                        "table-header": "#f4f6f8",
+                        "selection-toolbar": "#d9e8f5"
                     },
                     fontFamily: {
-                        "headline": ["Public Sans", "Noto Sans TC"],
-                        "body": ["Public Sans", "Noto Sans TC"],
-                        "label": ["Public Sans", "Noto Sans TC"]
+                        "headline": ["Public Sans", "Noto Sans JP"],
+                        "body": ["Public Sans", "Noto Sans JP"],
+                        "label": ["Public Sans", "Noto Sans JP"]
                     },
                     borderRadius: {
-                        "DEFAULT": "0.25rem",
-                        "lg": "0.5rem",
-                        "xl": "0.75rem",
-                        "2xl": "1rem",
-                        "full": "9999px"
+                        "DEFAULT": "0.125rem",
+                        "xs": "6px",
+                        "sm": "8px",
+                        "md": "10px",
+                        "lg": "12px",
+                        "xl": "16px",
+                        "full": "500px"
                     },
-                    boxShadow: {
-                        "card": "0 2px 8px rgba(0,0,0,0.1)",
-                        "modal": "0 12px 32px rgba(0,0,0,0.15)",
-                        "toast": "0 4px 12px rgba(0,0,0,0.2)"
-                    }
                 },
             },
         }
     </script>
 <style>
-        .material-symbols-outlined {
-            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-            vertical-align: middle;
-        }
-        .editorial-strip {
-            background-color: #f4f6f8;
-            border-left: 4px solid #1D7BF5;
-        }
-        .z-layer {
-            transition: transform 0.3s ease;
-        }
-        .z-layer:hover {
-            transform: translateX(10px);
-        }
+        body { font-family: 'Public Sans', 'Noto Sans JP', sans-serif; color: #1c252e; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; vertical-align: middle; }
+        .shadow-card { box-shadow: 0px 0px 2px rgba(145,158,171,0.2), 0px 12px 24px rgba(145,158,171,0.12); }
+        .shadow-modal { box-shadow: -40px 40px 80px rgba(145,158,171,0.24); }
+        .shadow-toast { box-shadow: 0px 8px 16px rgba(0,0,0,0.16); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 <style>
     body {
@@ -111,362 +103,353 @@
     }
   </style>
   </head>
-<body class="bg-surface text-on-surface font-body min-h-screen pb-24">
-<!-- Navigation Shell -->
-<aside class="fixed left-0 top-0 h-full w-64 z-40 flex flex-col p-4 bg-white dark:bg-slate-950 shadow-[24px_0_48px_-4px_rgba(19,28,37,0.06)] rounded-r-lg hidden md:flex">
-<div class="mb-8 px-2">
-<span class="text-lg font-black text-[#1D7BF5]">Giant Global EP</span>
+<body class="bg-surface">
+<!-- Top Navigation Anchor -->
+<header class="bg-[#f6f9ff] dark:bg-slate-900 fixed top-0 w-full z-[100] px-6 py-4 flex justify-between items-center">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[#1D7BF5] text-3xl" data-icon="grid_view">grid_view</span>
+<h1 class="text-xl font-bold tracking-tighter text-[#1c252e] dark:text-white">Giant Global EP</h1>
 </div>
-<nav class="space-y-1">
-<a class="flex items-center gap-3 px-3 py-2 text-[#637381] hover:bg-[#f7f9ff] transition-colors rounded-lg" href="#">
-<span class="material-symbols-outlined">dashboard</span>
-<span>儀表板</span>
+<div class="hidden md:flex gap-8 items-center">
+<nav class="flex gap-6 text-sm font-semibold">
+<a class="text-[#1D7BF5] border-b-2 border-[#1D7BF5] pb-1" href="#">UI Patterns</a>
+<a class="text-[#637381] hover:text-[#1c252e] transition-colors" href="#">Documentation</a>
+<a class="text-[#637381] hover:text-[#1c252e] transition-colors" href="#">Components</a>
+</nav>
+<div class="h-8 w-8 rounded-full bg-surface-container-highest overflow-hidden">
+<img alt="User" data-alt="professional corporate headshot of a procurement manager in business casual attire with soft office lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCODv91Pb9F5S6FSLjWPpE3IBvlxSQLdypq7_larNqnAcsQkiCrQrtmFb1N_aGuFf9MDRncEXL_x-ElHHB7ryERuefzTs1STxUvlBd3PuaoZ-9Wyt9w4LVqA18HAUq-TS1LXYnECnfF-ygMydwQ6g36p1NctgzjMBnPKw2rGVbAo08QFJrbnClIky9Hnj0tZvjfgIQ8c8I9mFdmwPNU1tK0C_yaVtr1AR5l_CV_bNzZHZR0Z-npU6dMXHXpVhlKLCBrF9QQ1PRrUOTR"/>
+</div>
+</div>
+</header>
+<!-- Side Navigation Anchor -->
+<aside class="fixed left-0 top-0 h-screen w-64 bg-[#ebf5ff] dark:bg-slate-900 p-4 pt-24 hidden lg:flex flex-col">
+<h2 class="text-lg font-black text-[#1c252e] dark:text-white mb-8">Architectural Ledger</h2>
+<nav class="flex flex-col gap-1">
+<a class="flex items-center gap-3 p-3 bg-white dark:bg-slate-800 text-[#1D7BF5] font-semibold rounded-r-full -ml-4 pl-8" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span>Dashboard</span>
 </a>
-<a class="flex items-center gap-3 px-3 py-2 text-[#637381] hover:bg-[#f7f9ff] transition-colors rounded-lg" href="#">
-<span class="material-symbols-outlined">description</span>
-<span>採購單</span>
+<a class="flex items-center gap-3 p-3 text-[#637381] hover:bg-[#d9eafa] transition-all rounded-r-full -ml-4 pl-8" href="#">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+<span>Inventory</span>
 </a>
-<a class="flex items-center gap-3 px-3 py-2 text-[#637381] hover:bg-[#f7f9ff] transition-colors rounded-lg" href="#">
-<span class="material-symbols-outlined">storefront</span>
-<span>供應商管理</span>
+<a class="flex items-center gap-3 p-3 text-[#637381] hover:bg-[#d9eafa] transition-all rounded-r-full -ml-4 pl-8" href="#">
+<span class="material-symbols-outlined" data-icon="factory">factory</span>
+<span>Suppliers</span>
 </a>
-<a class="flex items-center gap-3 px-3 py-2 text-[#637381] hover:bg-[#f7f9ff] transition-colors rounded-lg" href="#">
-<span class="material-symbols-outlined">inventory_2</span>
-<span>庫存查詢</span>
-</a>
-<a class="flex items-center gap-3 px-3 py-2 text-[#637381] hover:bg-[#f7f9ff] transition-colors rounded-lg" href="#">
-<span class="material-symbols-outlined">settings</span>
-<span>系統設定</span>
-</a>
-<a class="flex items-center gap-3 px-3 py-2 bg-[#edf4ff] text-[#1D7BF5] font-bold rounded-lg relative overflow-hidden group" href="#">
-<span class="absolute left-0 top-0 h-full w-1 bg-amber-400"></span>
-<span class="material-symbols-outlined">style</span>
-<span>模式參考</span>
+<a class="flex items-center gap-3 p-3 text-[#637381] hover:bg-[#d9eafa] transition-all rounded-r-full -ml-4 pl-8" href="#">
+<span class="material-symbols-outlined" data-icon="shopping_cart">shopping_cart</span>
+<span>Orders</span>
 </a>
 </nav>
 </aside>
-<main class="md:ml-64 p-8 max-w-7xl mx-auto">
-<!-- Header Section -->
+<main class="lg:ml-64 pt-24 pb-20 px-6 md:px-12 max-w-7xl mx-auto">
 <header class="mb-12">
-<h1 class="text-4xl font-extrabold tracking-tight text-[#1c252e] mb-2">模式參考系統 (UI Patterns)</h1>
-<p class="text-[#637381] text-lg">Giant Global EP 視覺語言與標準元件規範</p>
+<h1 class="text-4xl font-extrabold tracking-tight text-brand-text mb-2">UI Patterns Reference</h1>
+<p class="text-brand-secondary text-lg">System-wide visual language and functional components for Procurement Intelligence.</p>
 </header>
-<!-- 1. BORDER RADIUS SCALE -->
+<!-- SECTION 1: BORDER RADIUS -->
 <section class="mb-16">
-<div class="editorial-strip px-6 py-3 mb-8">
-<h2 class="text-xl font-bold text-[#1c252e]">圓角縮放標籤 (Border Radius Scale)</h2>
+<div class="bg-table-header px-6 py-3 mb-8">
+<h2 class="text-xl font-bold uppercase tracking-wider text-brand-text">Section 1: Border Radius Scale</h2>
 </div>
 <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
 <div class="flex flex-col items-center gap-3">
-<div class="w-full h-24 bg-primary rounded-[6px] shadow-sm"></div>
-<span class="text-sm font-bold text-[#637381]">6px (Small)</span>
+<div class="w-full h-24 bg-brand-deep rounded-xs flex items-center justify-center text-white font-bold text-lg">6px</div>
+<span class="text-xs text-brand-secondary text-center">Badge, Small Input</span>
 </div>
 <div class="flex flex-col items-center gap-3">
-<div class="w-full h-24 bg-primary rounded-[8px] shadow-sm"></div>
-<span class="text-sm font-bold text-[#637381]">8px (Medium)</span>
+<div class="w-full h-24 bg-brand-deep rounded-sm flex items-center justify-center text-white font-bold text-lg">8px</div>
+<span class="text-xs text-brand-secondary text-center">Button, Input</span>
 </div>
 <div class="flex flex-col items-center gap-3">
-<div class="w-full h-24 bg-primary rounded-[10px] shadow-sm"></div>
-<span class="text-sm font-bold text-[#637381]">10px (Regular)</span>
+<div class="w-full h-24 bg-brand-deep rounded-md flex items-center justify-center text-white font-bold text-lg">10px</div>
+<span class="text-xs text-brand-secondary text-center">Dropdown Panel</span>
 </div>
 <div class="flex flex-col items-center gap-3">
-<div class="w-full h-24 bg-primary rounded-[12px] shadow-sm"></div>
-<span class="text-sm font-bold text-[#637381]">12px (Large)</span>
+<div class="w-full h-24 bg-brand-deep rounded-lg flex items-center justify-center text-white font-bold text-lg">12px</div>
+<span class="text-xs text-brand-secondary text-center">Medium Card</span>
 </div>
 <div class="flex flex-col items-center gap-3">
-<div class="w-full h-24 bg-primary rounded-[16px] shadow-sm"></div>
-<span class="text-sm font-bold text-[#637381]">16px (Extra)</span>
+<div class="w-full h-24 bg-brand-deep rounded-xl flex items-center justify-center text-white font-bold text-lg">16px</div>
+<span class="text-xs text-brand-secondary text-center">Page Card, Modal</span>
 </div>
 <div class="flex flex-col items-center gap-3">
-<div class="w-full h-24 bg-primary rounded-[500px] shadow-sm"></div>
-<span class="text-sm font-bold text-[#637381]">500px (Full)</span>
+<div class="w-full h-24 bg-brand-deep rounded-full flex items-center justify-center text-white font-bold text-lg">500px</div>
+<span class="text-xs text-brand-secondary text-center">Avatar, Chip</span>
 </div>
 </div>
 </section>
-<!-- 2. SHADOW LEVELS -->
+<!-- SECTION 2: SHADOW LEVELS -->
 <section class="mb-16">
-<div class="editorial-strip px-6 py-3 mb-8">
-<h2 class="text-xl font-bold text-[#1c252e]">陰影層次 (Shadow Levels)</h2>
+<div class="bg-table-header px-6 py-3 mb-8">
+<h2 class="text-xl font-bold uppercase tracking-wider text-brand-text">Section 2: Shadow Levels</h2>
 </div>
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-<div class="bg-white p-8 rounded-xl border border-outline-variant/10">
-<p class="font-bold text-center">Flat</p>
-<p class="text-[10px] text-center text-slate-400 mt-2">No Elevation</p>
+<div class="p-8 bg-white border border-outline-variant/15 flex flex-col items-center justify-center rounded-xl">
+<span class="font-bold text-brand-text">Flat</span>
+<span class="text-xs text-brand-secondary">No Shadow</span>
 </div>
-<div class="bg-white p-8 rounded-xl shadow-card">
-<p class="font-bold text-center">Card</p>
-<p class="text-[10px] text-center text-slate-400 mt-2">2px Blur 8px Opacity</p>
+<div class="p-8 bg-white shadow-card flex flex-col items-center justify-center rounded-xl">
+<span class="font-bold text-brand-text">Card</span>
+<span class="text-xs text-brand-secondary">Soft Elevation</span>
 </div>
-<div class="bg-white p-8 rounded-xl shadow-modal">
-<p class="font-bold text-center">Modal</p>
-<p class="text-[10px] text-center text-slate-400 mt-2">12px Offset 32px Blur</p>
+<div class="p-8 bg-white shadow-modal flex flex-col items-center justify-center rounded-xl">
+<span class="font-bold text-brand-text">Modal</span>
+<span class="text-xs text-brand-secondary">Deep Perspective</span>
 </div>
-<div class="bg-white p-8 rounded-xl shadow-toast">
-<p class="font-bold text-center">Toast</p>
-<p class="text-[10px] text-center text-slate-400 mt-2">4px Offset 12px Blur</p>
+<div class="p-8 bg-white shadow-toast flex flex-col items-center justify-center rounded-xl">
+<span class="font-bold text-brand-text">Toast</span>
+<span class="text-xs text-brand-secondary">Floating Prompt</span>
 </div>
 </div>
 </section>
-<!-- 3. BUTTON PATTERNS -->
+<!-- SECTION 3: BUTTON PATTERNS -->
 <section class="mb-16">
-<div class="editorial-strip px-6 py-3 mb-8">
-<h2 class="text-xl font-bold text-[#1c252e]">按鈕模式 (Button Patterns)</h2>
+<div class="bg-table-header px-6 py-3 mb-8">
+<h2 class="text-xl font-bold uppercase tracking-wider text-brand-text">Section 3: Button Patterns</h2>
 </div>
-<div class="flex flex-wrap items-center gap-6">
-<!-- Primary -->
-<button class="bg-[#1D7BF5] hover:bg-deep-blue text-white px-6 py-2 rounded-lg font-semibold transition-all">主要操作</button>
-<!-- Secondary Ghost -->
-<button class="border border-[#1D7BF5] text-[#1D7BF5] px-6 py-2 rounded-lg font-semibold hover:bg-surface-container-low transition-all">取消 / 返回</button>
-<!-- Toolbar Icons -->
-<div class="flex items-center gap-2 bg-white p-1 rounded-lg border border-outline-variant/20 shadow-sm">
-<button class="flex items-center gap-1.5 px-3 py-1.5 text-sm text-[#637381] hover:text-[#1c252e]">
-<span class="material-symbols-outlined text-lg">view_column</span> 欄位
-                    </button>
-<div class="w-px h-4 bg-outline-variant/30"></div>
-<button class="flex items-center gap-1.5 px-3 py-1.5 text-sm text-[#637381] hover:text-[#1c252e]">
-<span class="material-symbols-outlined text-lg">filter_alt</span> 篩選
-                    </button>
-<div class="w-px h-4 bg-outline-variant/30"></div>
-<button class="flex items-center gap-1.5 px-3 py-1.5 text-sm text-[#637381] hover:text-[#1c252e]">
-<span class="material-symbols-outlined text-lg">download</span> 匯出
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-12 gap-x-8 items-start">
+<div class="space-y-4">
+<h3 class="text-xs font-bold text-brand-secondary uppercase tracking-widest">A) Primary Button</h3>
+<button class="bg-[#1D7BF5] text-white px-6 py-2 rounded-sm font-semibold hover:opacity-90 transition-opacity">
+                        Save Changes
                     </button>
 </div>
-<!-- Toolbar Action Text Only -->
-<div class="flex items-center gap-4 px-2">
-<button class="text-[#1677ff] font-semibold hover:underline decoration-2 underline-offset-4">檢視</button>
-<button class="text-[#1677ff] font-semibold hover:underline decoration-2 underline-offset-4">提交</button>
+<div class="space-y-4">
+<h3 class="text-xs font-bold text-brand-secondary uppercase tracking-widest">B) Secondary Button</h3>
+<button class="text-[#637381] bg-transparent hover:bg-[#919eab14] px-6 py-2 rounded-sm font-semibold transition-colors">
+                        Cancel Action
+                    </button>
 </div>
-<!-- Danger Delete -->
-<button class="w-9 h-9 flex items-center justify-center bg-white border border-error-red/20 text-error-red rounded-[6px] hover:bg-error-container/20 transition-all">
-<span class="material-symbols-outlined text-lg">close</span>
+<div class="space-y-4">
+<h3 class="text-xs font-bold text-brand-secondary uppercase tracking-widest">C) Toolbar Cluster</h3>
+<div class="flex gap-2">
+<button class="flex items-center gap-1 text-sm font-medium px-3 py-1.5 bg-white border border-outline-variant/30 rounded-xs hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-lg" data-icon="view_column">view_column</span>
+                            Columns
+                        </button>
+<button class="flex items-center gap-1 text-sm font-medium px-3 py-1.5 bg-white border border-outline-variant/30 rounded-xs hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-lg" data-icon="filter_list">filter_list</span>
+                            Filters
+                        </button>
+</div>
+</div>
+<div class="space-y-4">
+<h3 class="text-xs font-bold text-brand-secondary uppercase tracking-widest">D) Toolbar Action</h3>
+<button class="text-[#004680] font-semibold text-sm px-2 py-1 hover:underline">
+                        Apply Bulk Actions
+                    </button>
+</div>
+<div class="space-y-4">
+<h3 class="text-xs font-bold text-brand-secondary uppercase tracking-widest">E) Danger Delete</h3>
+<button class="h-[36px] w-[36px] flex items-center justify-center bg-error-container/20 text-error rounded-xs hover:bg-error-container transition-colors">
+<span class="material-symbols-outlined" data-icon="delete">delete</span>
 </button>
-<!-- Ghost Add -->
-<button class="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-outline-variant text-[#637381] rounded-lg hover:border-[#1D7BF5] hover:text-[#1D7BF5] transition-all">
-<span class="material-symbols-outlined">add</span>
-<span>新增篩選條件</span>
-</button>
+</div>
+<div class="space-y-4">
+<h3 class="text-xs font-bold text-brand-secondary uppercase tracking-widest">F) Ghost Add</h3>
+<button class="w-full border-2 border-dashed border-outline-variant text-brand-secondary px-4 py-2 rounded-sm hover:border-primary hover:text-primary transition-all text-sm font-medium">
+                        + 新增篩選條件
+                    </button>
+</div>
 </div>
 </section>
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
-<!-- 4. INPUT PATTERNS -->
-<section>
-<div class="editorial-strip px-6 py-3 mb-8">
-<h2 class="text-xl font-bold text-[#1c252e]">輸入框模式 (Input Patterns)</h2>
+<!-- SECTION 4: INPUT PATTERNS -->
+<section class="mb-16">
+<div class="bg-table-header px-6 py-3 mb-8">
+<h2 class="text-xl font-bold uppercase tracking-wider text-brand-text">Section 4: Input Patterns</h2>
 </div>
-<div class="space-y-6 bg-white p-8 rounded-2xl shadow-sm">
-<div class="space-y-1.5">
-<label class="text-sm font-bold text-[#637381]">標準輸入框 (H-36px)</label>
-<input class="w-full h-9 px-3 border border-outline-variant/40 rounded-[6px] focus:ring-2 focus:ring-[#1D7BF5]/20 focus:border-[#1D7BF5] outline-none" placeholder="請輸入關鍵字..." type="text"/>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+<div class="space-y-2">
+<label class="text-xs font-bold text-brand-secondary">STANDARD INPUT (36px)</label>
+<input class="w-full h-[36px] border border-outline-variant rounded-xs px-3 focus:ring-1 focus:ring-primary outline-none" placeholder="Search SKU..." type="text"/>
 </div>
-<div class="relative h-[54px] border border-outline-variant/40 rounded-[6px] px-3 pt-4 focus-within:ring-2 focus-within:ring-[#1D7BF5]/20">
-<span class="absolute top-1 left-3 text-[10px] font-bold text-[#1D7BF5] uppercase tracking-wider">狀態</span>
-<select class="w-full bg-transparent border-none p-0 focus:ring-0 text-sm font-semibold appearance-none">
-<option>已發送 (Sent)</option>
-<option>草稿 (Draft)</option>
-<option>已完成 (Completed)</option>
+<div class="space-y-2">
+<label class="text-xs font-bold text-brand-secondary">FLOATING LABEL DROPDOWN (54px)</label>
+<div class="relative h-[54px] w-full bg-white border border-outline-variant rounded-sm px-3 pt-4">
+<span class="absolute top-1 left-3 text-[10px] font-bold text-primary uppercase">Region</span>
+<select class="w-full bg-transparent outline-none text-sm font-medium border-none p-0 focus:ring-0">
+<option>North America (Global)</option>
+<option>EMEA</option>
+<option>APAC</option>
 </select>
-<span class="material-symbols-outlined absolute right-3 top-4 pointer-events-none text-[#637381]">expand_more</span>
 </div>
-<div class="space-y-1.5">
-<label class="text-sm font-bold text-[#637381]">可搜尋下拉框 (React-Select Style)</label>
-<div class="relative flex items-center border border-outline-variant/40 rounded-[6px] px-3 h-10 bg-[#f4f6f8]">
-<span class="material-symbols-outlined text-[#637381] mr-2">search</span>
-<input class="bg-transparent border-none p-0 focus:ring-0 flex-1 text-sm font-medium" type="text" value="供應商 A..."/>
-<button class="text-[#919eab] hover:text-[#1c252e]">
-<span class="material-symbols-outlined text-sm">close</span>
-</button>
+</div>
+<div class="space-y-2">
+<label class="text-xs font-bold text-brand-secondary">REACT-SELECT (40px)</label>
+<div class="h-[40px] w-full bg-white border border-outline-variant rounded-sm px-3 flex items-center justify-between">
+<span class="text-sm text-brand-text">Select suppliers...</span>
+<span class="material-symbols-outlined text-brand-secondary" data-icon="keyboard_arrow_down">keyboard_arrow_down</span>
 </div>
 </div>
 </div>
 </section>
-<!-- 5. POPOVER / PANEL PATTERNS -->
-<section>
-<div class="editorial-strip px-6 py-3 mb-8">
-<h2 class="text-xl font-bold text-[#1c252e]">面板模式 (Panel Patterns)</h2>
-</div>
-<div class="flex flex-col md:flex-row gap-8 items-start">
-<!-- Column Selector Panel -->
-<div class="w-full max-w-[240px] bg-white rounded-xl shadow-modal overflow-hidden">
-<div class="px-4 py-3 bg-[#f4f6f8] border-b border-outline-variant/10">
-<h3 class="text-sm font-bold">自定義欄位</h3>
-</div>
-<div class="p-4 space-y-3">
-<div class="flex items-center gap-3">
-<input checked="" class="rounded border-outline-variant text-[#1D7BF5] focus:ring-[#1D7BF5]" type="checkbox"/>
-<span class="text-sm">採購編號</span>
-</div>
-<div class="flex items-center gap-3">
-<input checked="" class="rounded border-outline-variant text-[#1D7BF5] focus:ring-[#1D7BF5]" type="checkbox"/>
-<span class="text-sm">供應商名稱</span>
-</div>
-<div class="flex items-center gap-3">
-<input class="rounded border-outline-variant text-[#1D7BF5] focus:ring-[#1D7BF5]" type="checkbox"/>
-<span class="text-sm">建立日期</span>
-</div>
-</div>
-<div class="px-4 py-2 border-t border-outline-variant/10 flex justify-end">
-<button class="text-[12px] text-[#1D7BF5] font-bold">重置</button>
-</div>
-</div>
-<!-- Export List Dropdown -->
-<div class="w-full max-w-[200px] bg-white rounded-lg shadow-card border border-outline-variant/10 py-1">
-<button class="w-full px-4 py-2 flex items-center gap-3 hover:bg-[#f7f9ff] transition-colors">
-<span class="material-symbols-outlined text-[#118d57]" data-weight="fill">description</span>
-<span class="text-sm">匯出為 Excel</span>
-</button>
-<button class="w-full px-4 py-2 flex items-center gap-3 hover:bg-[#f7f9ff] transition-colors">
-<span class="material-symbols-outlined text-blue-500">csv</span>
-<span class="text-sm">匯出為 CSV</span>
-</button>
-<div class="mx-4 my-1 border-t border-outline-variant/10"></div>
-<button class="w-full px-4 py-2 flex items-center gap-3 hover:bg-[#f7f9ff] transition-colors">
-<span class="material-symbols-outlined text-error-red">picture_as_pdf</span>
-<span class="text-sm">下載 PDF</span>
-</button>
-</div>
-</div>
-</section>
-</div>
-<!-- 6. MODAL OVERLAY PREVIEW -->
+<!-- SECTION 5: POPOVER / PANEL -->
 <section class="mb-16">
-<div class="editorial-strip px-6 py-3 mb-8">
-<h2 class="text-xl font-bold text-[#1c252e]">彈窗預覽 (Modal Overlay)</h2>
+<div class="bg-table-header px-6 py-3 mb-8">
+<h2 class="text-xl font-bold uppercase tracking-wider text-brand-text">Section 5: Popover / Panel Patterns</h2>
 </div>
-<div class="relative h-[400px] w-full rounded-2xl overflow-hidden bg-slate-100 flex items-center justify-center p-8 border border-outline-variant/20">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+<div class="max-w-xs shadow-modal bg-white rounded-md overflow-hidden">
+<div class="px-4 py-3 border-b border-outline-variant/15 flex justify-between items-center bg-surface">
+<span class="font-bold text-sm">Filter Options</span>
+<span class="material-symbols-outlined text-sm cursor-pointer" data-icon="close">close</span>
+</div>
+<div class="p-2 space-y-1">
+<div class="flex items-center gap-3 p-2 hover:bg-surface-container-low rounded-xs cursor-pointer">
+<input class="rounded-xs text-primary border-outline" type="checkbox"/>
+<span class="text-sm">In Stock Only</span>
+</div>
+<div class="flex items-center gap-3 p-2 hover:bg-surface-container-low rounded-xs cursor-pointer">
+<input class="rounded-xs text-primary border-outline" type="checkbox"/>
+<span class="text-sm">Pre-Order</span>
+</div>
+</div>
+<div class="p-3 border-t border-outline-variant/15 flex justify-end gap-2">
+<button class="text-xs font-bold text-brand-secondary px-3 py-1.5">Cancel</button>
+<button class="text-xs font-bold bg-brand-deep text-white px-4 py-1.5 rounded-xs">Apply</button>
+</div>
+</div>
+<div class="max-w-xs shadow-modal bg-white rounded-md p-2 space-y-1">
+<div class="flex items-center gap-3 p-3 hover:bg-surface-container-low rounded-xs cursor-pointer transition-colors group">
+<span class="material-symbols-outlined text-brand-success" data-icon="description">description</span>
+<span class="text-sm font-medium">匯出 Excel</span>
+</div>
+<div class="flex items-center gap-3 p-3 hover:bg-surface-container-low rounded-xs cursor-pointer transition-colors group">
+<span class="material-symbols-outlined text-brand-link" data-icon="csv">csv</span>
+<span class="text-sm font-medium">匯出 CSV</span>
+</div>
+<div class="flex items-center gap-3 p-3 hover:bg-surface-container-low rounded-xs cursor-pointer transition-colors group border-t border-outline-variant/10">
+<span class="material-symbols-outlined text-brand-secondary" data-icon="print">print</span>
+<span class="text-sm font-medium">列印當前檢視</span>
+</div>
+</div>
+</div>
+</section>
+<!-- SECTION 6: MODAL OVERLAY -->
+<section class="mb-16">
+<div class="bg-table-header px-6 py-3 mb-8">
+<h2 class="text-xl font-bold uppercase tracking-wider text-brand-text">Section 6: Modal Overlay Pattern</h2>
+</div>
+<div class="relative h-[400px] w-full bg-slate-200 rounded-xl overflow-hidden flex items-center justify-center p-6">
+<img alt="Background" class="absolute inset-0 w-full h-full object-cover opacity-50 blur-sm" data-alt="blurred background of a complex data dashboard with charts and tables representing a procurement system interface" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAU6E90YX6T3r0oPT14E9d_FGTznSjLl4FCZi8Ad4SFznbpiFh551ao1PCVSOyM-piMPYRTlWG1jiEFu79Nw3XKVZ7Y8AlgmCbzE2Ie8aulPFLC2sEWRPhAhYz8OZNjphttui6GiS-1J36H5Fo96BQEi8YHoERrJAy4ayd5LW5NhSkWIuoz18jXZy97eIM6ElC7UTdiCn3r8gLK5nZU8uEsUbuNynS8aH8909Qws_Jf3_bAv-_NpqJe-p3ypAcKaB2chzIMbB9a-T1i"/>
 <div class="absolute inset-0 bg-black/30 backdrop-blur-[2px]"></div>
-<div class="relative bg-white w-full max-w-md rounded-[16px] shadow-modal overflow-hidden">
-<div class="p-6 border-b border-outline-variant/10 flex justify-between items-center">
-<h3 class="text-xl font-bold text-[#1c252e]">確認提交表單</h3>
-<button class="text-[#919eab] hover:text-[#1c252e]">
-<span class="material-symbols-outlined">close</span>
-</button>
+<div class="relative bg-white w-full max-w-lg shadow-modal rounded-xl overflow-hidden flex flex-col">
+<div class="px-6 py-4 flex justify-between items-center border-b border-outline-variant/10">
+<h3 class="text-xl font-bold text-brand-text">Confirm Procurement Order</h3>
+<button class="material-symbols-outlined text-brand-secondary" data-icon="close">close</button>
 </div>
 <div class="p-6">
-<p class="text-[#637381] leading-relaxed">您確定要提交這 3 筆採購申請單嗎？提交後將進入審核流程，無法再次編輯內容。</p>
+<p class="text-brand-secondary leading-relaxed">
+                            You are about to authorize a bulk purchase for 500 units of <span class="text-brand-text font-bold">Industrial Grade Fasteners</span>. This action will notify the vendor immediately and cannot be undone.
+                        </p>
 </div>
-<div class="p-6 bg-surface-container-low flex justify-end gap-3">
-<button class="px-6 py-2 text-[#637381] font-semibold">取消</button>
-<button class="px-6 py-2 bg-[#1D7BF5] text-white rounded-lg font-semibold shadow-sm">確認提交</button>
+<div class="px-6 py-4 bg-surface border-t border-outline-variant/10 flex justify-end gap-3">
+<button class="px-5 py-2 text-brand-secondary font-semibold hover:bg-surface-container-highest rounded-sm transition-colors">Discard Draft</button>
+<button class="px-6 py-2 bg-[#1D7BF5] text-white font-semibold rounded-sm shadow-sm">Confirm &amp; Send</button>
 </div>
 </div>
 </div>
 </section>
-<!-- 7. FUNCTIONAL PATTERNS -->
+<!-- SECTION 7: FUNCTIONAL PATTERNS -->
 <section class="mb-16">
-<div class="editorial-strip px-6 py-3 mb-8">
-<h2 class="text-xl font-bold text-[#1c252e]">功能性元件 (Functional Patterns)</h2>
+<div class="bg-table-header px-6 py-3 mb-8">
+<h2 class="text-xl font-bold uppercase tracking-wider text-brand-text">Section 7: Functional Patterns</h2>
 </div>
 <div class="space-y-12">
 <!-- Search Bar Row -->
-<div class="flex items-center gap-3 p-4 bg-white rounded-xl shadow-sm border border-outline-variant/10">
-<div class="w-48 relative">
-<select class="w-full h-10 pl-3 pr-8 bg-[#f4f6f8] border-none rounded-lg text-sm font-semibold appearance-none focus:ring-2 focus:ring-[#1D7BF5]/20">
-<option>所有分類</option>
-<option>電子零件</option>
-<option>辦公用品</option>
+<div class="bg-white p-4 shadow-card rounded-lg flex flex-wrap gap-4 items-center">
+<div class="flex-1 min-w-[200px]">
+<input class="w-full h-[40px] bg-surface border-none rounded-sm px-4 focus:ring-1 focus:ring-primary" placeholder="Search orders, SKU, or suppliers..." type="text"/>
+</div>
+<select class="h-[40px] bg-surface border-none rounded-sm px-3 text-sm font-medium">
+<option>Status: All</option>
 </select>
-<span class="material-symbols-outlined absolute right-2 top-2 pointer-events-none text-[#637381]">expand_more</span>
-</div>
-<div class="flex-1 relative">
-<span class="material-symbols-outlined absolute left-3 top-2.5 text-[#637381]">search</span>
-<input class="w-full h-10 pl-10 pr-4 bg-[#f4f6f8] border-none rounded-lg text-sm focus:ring-2 focus:ring-[#1D7BF5]/20" placeholder="搜尋編號、供應商..." type="text"/>
-</div>
-<button class="h-10 px-6 bg-[#1D7BF5] text-white rounded-lg font-bold">執行搜尋</button>
+<select class="h-[40px] bg-surface border-none rounded-sm px-3 text-sm font-medium">
+<option>Date: Last 30 Days</option>
+</select>
+<button class="h-[40px] px-6 bg-brand-deep text-white rounded-sm font-bold flex items-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="search">search</span>
+                        Search
+                    </button>
 </div>
 <!-- Selection Toolbar -->
-<div class="h-12 bg-[#d9e8f5] rounded-xl flex items-center justify-between px-6 shadow-sm border border-[#1D7BF5]/10">
+<div class="h-14 bg-selection-toolbar rounded-lg px-6 flex items-center justify-between border-l-4 border-primary">
 <div class="flex items-center gap-4">
-<span class="bg-[#1D7BF5] text-white text-[10px] font-black px-2 py-0.5 rounded-full">2</span>
-<span class="text-sm font-bold text-[#1c252e]">已選擇項目 (Selected)</span>
+<input checked="" class="w-5 h-5 rounded-xs text-primary bg-white border-outline" type="checkbox"/>
+<span class="font-bold text-brand-deep">2 items selected</span>
 </div>
-<div class="flex items-center gap-6">
-<button class="text-[#1D7BF5] text-sm font-bold flex items-center gap-1">
-<span class="material-symbols-outlined text-lg">edit</span> 批次編輯
-                        </button>
-<button class="text-error-red text-sm font-bold flex items-center gap-1">
-<span class="material-symbols-outlined text-lg">delete</span> 刪除
-                        </button>
-<div class="w-px h-6 bg-[#1D7BF5]/20"></div>
-<button class="material-symbols-outlined text-[#637381]">close</button>
+<div class="flex items-center gap-3">
+<button class="material-symbols-outlined p-2 text-brand-deep hover:bg-white/50 rounded-full transition-colors" data-icon="archive">archive</button>
+<button class="material-symbols-outlined p-2 text-brand-deep hover:bg-white/50 rounded-full transition-colors" data-icon="download">download</button>
+<button class="material-symbols-outlined p-2 text-error hover:bg-white/50 rounded-full transition-colors" data-icon="delete">delete</button>
 </div>
 </div>
-<!-- Toast -->
+<!-- Toast Notification -->
 <div class="flex justify-center">
-<div class="bg-[#1c252e] text-white px-6 py-3 rounded-full shadow-toast flex items-center gap-3">
-<span class="material-symbols-outlined text-success-green" style="font-variation-settings: 'FILL' 1;">check_circle</span>
-<span class="text-sm font-medium tracking-wide">✓ 檔案下載成功，請至下載資料夾查看</span>
-<button class="ml-4 text-xs font-bold text-[#1D7BF5] tracking-widest uppercase">撤回</button>
+<div class="bg-brand-text text-white px-6 py-3 rounded-sm shadow-toast flex items-center gap-4 min-w-[320px]">
+<span class="material-symbols-outlined text-brand-success" data-icon="check_circle" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<span class="text-sm font-medium">Order #PU-8821 has been approved successfully.</span>
+<button class="text-brand-link text-sm font-bold ml-auto">UNDO</button>
+</div>
+</div>
+<!-- Sidebar Nav Item -->
+<div class="max-w-[240px] bg-brand-text p-4 space-y-2 rounded-lg">
+<div class="flex items-center gap-3 p-3 text-white bg-white/10 rounded-sm relative overflow-hidden">
+<div class="absolute left-0 top-0 h-full w-1 bg-[#ffb400] shadow-[0_0_12px_#ffb400]"></div>
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+<span class="font-semibold">Analytics View</span>
+</div>
+<div class="flex items-center gap-3 p-3 text-brand-disabled hover:text-white transition-colors cursor-pointer">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span>Settings</span>
 </div>
 </div>
 </div>
 </section>
-<!-- 8. Z-INDEX STACK DIAGRAM -->
-<section class="mb-16">
-<div class="editorial-strip px-6 py-3 mb-8">
-<h2 class="text-xl font-bold text-[#1c252e]">層級疊加說明 (Z-Index Stack Diagram)</h2>
+<!-- SECTION 8: Z-INDEX STACK -->
+<section class="mb-20">
+<div class="bg-table-header px-6 py-3 mb-8">
+<h2 class="text-xl font-bold uppercase tracking-wider text-brand-text">Section 8: Z-Index Stack Diagram</h2>
 </div>
-<div class="bg-white p-12 rounded-2xl shadow-sm border border-outline-variant/10">
-<div class="flex flex-col items-center gap-2">
-<!-- Layer: Toast -->
-<div class="z-layer w-full max-w-lg h-12 bg-on-surface text-white rounded-lg flex items-center justify-between px-6 -mb-6 shadow-2xl relative z-[9999] border-2 border-white/20">
-<span class="text-xs font-bold uppercase tracking-tighter">z-9999 : Toast / Notifications</span>
-<span class="material-symbols-outlined">layers</span>
+<div class="relative h-[500px] w-full max-w-2xl mx-auto flex items-end justify-center perspective-[1000px]">
+<!-- Stack Layers -->
+<div class="absolute bottom-0 w-full bg-white/20 border-2 border-outline-variant h-40 transform rotate-x-[60deg] -translate-y-[280px] flex items-center justify-center group hover:bg-white/40 transition-colors cursor-default">
+<span class="transform rotate-x-[-60deg] font-black text-4xl text-brand-disabled/30">z-9999 (Overlays)</span>
 </div>
-<!-- Layer: Modal -->
-<div class="z-layer w-full max-w-md h-24 bg-surface-container-highest border border-outline-variant rounded-xl flex items-center justify-between px-6 -mb-12 shadow-xl relative z-[5000]">
-<span class="text-xs font-bold text-on-surface-variant uppercase tracking-tighter">z-5000 : Modal Overlays</span>
-<span class="material-symbols-outlined">layers</span>
+<div class="absolute bottom-0 w-full bg-white/40 border-2 border-outline-variant h-40 transform rotate-x-[60deg] -translate-y-[210px] flex items-center justify-center">
+<span class="transform rotate-x-[-60deg] font-bold text-brand-secondary">z-250 (Modals)</span>
 </div>
-<!-- Layer: Dropdown -->
-<div class="z-layer w-full max-w-sm h-16 bg-white border border-outline-variant shadow-lg rounded-lg flex items-center justify-between px-6 -mb-8 relative z-[1000]">
-<span class="text-xs font-bold text-on-surface-variant uppercase tracking-tighter">z-1000 : Popovers / Dropdowns</span>
-<span class="material-symbols-outlined">layers</span>
+<div class="absolute bottom-0 w-full bg-white/60 border-2 border-outline-variant h-40 transform rotate-x-[60deg] -translate-y-[140px] flex items-center justify-center">
+<span class="transform rotate-x-[-60deg] font-bold text-brand-secondary">z-200 (Popovers)</span>
 </div>
-<!-- Layer: Sticky Header -->
-<div class="z-layer w-full max-w-xs h-12 bg-table-header border border-outline-variant/30 rounded flex items-center justify-between px-6 -mb-6 relative z-[100]">
-<span class="text-xs font-bold text-on-surface-variant uppercase tracking-tighter">z-100 : Sticky Table Headers</span>
-<span class="material-symbols-outlined">layers</span>
+<div class="absolute bottom-0 w-full bg-white/80 border-2 border-outline-variant h-40 transform rotate-x-[60deg] -translate-y-[70px] flex items-center justify-center">
+<span class="transform rotate-x-[-60deg] font-bold text-brand-secondary">z-100 (Navigation)</span>
 </div>
-<!-- Layer: Sticky Columns -->
-<div class="z-layer w-full max-w-[200px] h-10 bg-white border border-outline-variant/20 rounded flex items-center justify-between px-6 relative z-[10]">
-<span class="text-xs font-bold text-on-surface-variant uppercase tracking-tighter">z-10 : Fixed Columns</span>
-<span class="material-symbols-outlined">layers</span>
-</div>
-</div>
-<div class="mt-16 grid grid-cols-2 md:grid-cols-3 gap-4 text-center">
-<div class="p-3 bg-surface-container-low rounded-lg">
-<p class="text-[10px] font-bold text-[#637381]">分頁組件 (Pagination)</p>
-<p class="text-xs font-black text-[#1c252e]">z-1</p>
-</div>
-<div class="p-3 bg-surface-container-low rounded-lg">
-<p class="text-[10px] font-bold text-[#637381]">表格背景 (Background)</p>
-<p class="text-xs font-black text-[#1c252e]">z-0</p>
-</div>
-<div class="p-3 bg-surface-container-low rounded-lg">
-<p class="text-[10px] font-bold text-[#637381]">側邊導覽 (Sidebar)</p>
-<p class="text-xs font-black text-[#1c252e]">z-40</p>
-</div>
+<div class="absolute bottom-0 w-full bg-white border-2 border-brand-deep h-40 transform rotate-x-[60deg] flex items-center justify-center">
+<span class="transform rotate-x-[-60deg] font-bold text-brand-text">z-1 (Base Content)</span>
 </div>
 </div>
 </section>
 </main>
-<!-- Mobile Bottom Nav -->
-<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-3 pb-safe bg-white/80 dark:bg-slate-900/80 backdrop-blur-md md:hidden shadow-[0_-8px_24px_-4px_rgba(19,28,37,0.06)] rounded-t-2xl">
-<div class="flex flex-col items-center justify-center text-[#637381]">
-<span class="material-symbols-outlined">home</span>
-<span class="font-['Public_Sans'] text-[10px] font-bold uppercase tracking-wider">首頁</span>
-</div>
-<div class="flex flex-col items-center justify-center text-[#637381]">
-<span class="material-symbols-outlined">search</span>
-<span class="font-['Public_Sans'] text-[10px] font-bold uppercase tracking-wider">搜尋</span>
-</div>
-<div class="flex flex-col items-center justify-center text-[#637381]">
-<span class="material-symbols-outlined">notifications</span>
-<span class="font-['Public_Sans'] text-[10px] font-bold uppercase tracking-wider">通知</span>
-</div>
-<div class="flex flex-col items-center justify-center bg-[#edf4ff] text-[#1D7BF5] rounded-xl px-3 py-1">
-<span class="material-symbols-outlined">person</span>
-<span class="font-['Public_Sans'] text-[10px] font-bold uppercase tracking-wider">個人</span>
-</div>
+<!-- Bottom Navigation for Mobile -->
+<nav class="fixed bottom-0 w-full flex justify-around items-center py-3 px-6 md:hidden bg-white/80 dark:bg-slate-900/80 backdrop-blur-md z-50 border-t border-[#c1c6d6]/15 shadow-[0_-12px_32px_rgba(13,29,41,0.08)]">
+<a class="flex flex-col items-center text-[#1D7BF5] font-bold" href="#">
+<span class="material-symbols-outlined" data-icon="search">search</span>
+<span class="font-['Public_Sans'] text-[10px] uppercase tracking-widest mt-1">Search</span>
+</a>
+<a class="flex flex-col items-center text-[#637381] opacity-70" href="#">
+<span class="material-symbols-outlined" data-icon="fact_check">fact_check</span>
+<span class="font-['Public_Sans'] text-[10px] uppercase tracking-widest mt-1">Approvals</span>
+</a>
+<a class="flex flex-col items-center text-[#637381] opacity-70" href="#">
+<span class="material-symbols-outlined" data-icon="mail">mail</span>
+<span class="font-['Public_Sans'] text-[10px] uppercase tracking-widest mt-1">Messages</span>
+</a>
+<a class="flex flex-col items-center text-[#637381] opacity-70" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-['Public_Sans'] text-[10px] uppercase tracking-widest mt-1">Profile</span>
+</a>
 </nav>
 </body></html>

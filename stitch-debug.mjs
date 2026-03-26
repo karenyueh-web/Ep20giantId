@@ -1,9 +1,10 @@
-// stitch-debug.mjs ???¥ç? Stitch raw response
+import 'dotenv/config';
+// stitch-debug.mjs ???ï¿½ï¿½? Stitch raw response
 import { StitchToolClient } from '@google/stitch-sdk';
 import { writeFileSync } from 'fs';
 
 const client = new StitchToolClient({
-  apiKey: 'AQ.Ab8RN6LueFDYKPCrhoZlNxui7kc6PgpmXFdXxsLl4KIzfgnSlg',
+  apiKey: process.env.STITCH_API_KEY,
 });
 
 try {
@@ -35,3 +36,4 @@ try {
 } finally {
   await client.close().catch(() => {});
 }
+
