@@ -617,6 +617,7 @@ export function ExchangeOrderListWithTabs({ userRole }: { userRole?: string }) {
               onImport={() => setShowCsvImport(true)}
               hideBatchReply={activeTab === 'B' || activeTab === 'CK' || activeTab === 'CL'}
               hideBatchReplySplit
+              hideBatchCorrection
             />
             {/* 資料更新時間 */}
             <div className="flex gap-0 h-[36px] items-center shrink-0 rounded-[8px] border border-[#005eb8] border-solid overflow-hidden">

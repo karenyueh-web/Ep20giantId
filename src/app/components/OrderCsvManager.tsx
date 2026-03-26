@@ -1192,10 +1192,19 @@ export function parseBatchReplyCsv(content: string, allOrders: OrderRow[]): Batc
   const cleanContent = content.replace(/^\uFEFF/, '');
   const lines = cleanContent.split(/\r?\n/).filter(l => l.trim() !== '');
   const empty: BatchReplyImportResult = { mode: 'unknown', totalRows: 0, agreeRows: [], disagreeRows: [], rejectOrderRows: [], skipRows: [], errorRows: [] };
-  if (lines.length < 2) return empty;
-  const mode = detectBatchReplyMode(lines[0]);
+  // 動態找到標題列（含獨立「同意碼」欄的那一行），跳過最前面的說明列
+  let headerIndex = -1;
+  for (let i = 0; i < lines.length; i++) {
+    const fields = parseCsvLine(lines[i]);
+    if (fields.includes('同意碼')) {
+      headerIndex = i;
+      break;
+    }
+  }
+  if (headerIndex === -1) return empty;
+  const mode = detectBatchReplyMode(lines[headerIndex]);
   if (mode === 'unknown') return empty;
-  const dataLines = lines.slice(1);
+  const dataLines = lines.slice(headerIndex + 1);
   const rows: BatchReplyParsedRow[] = [];
   for (let i = 0; i < dataLines.length; i++) {
     const f = parseCsvLine(dataLines[i]);
@@ -1426,27 +1435,57 @@ export function BatchReplyImportOverlay({ allOrders, onConfirm, onClose, hideRej
               </div>
             </div>
             <div className="flex gap-[8px] flex-wrap shrink-0">
-              <TotalSummaryBadge total={batchResult.totalRows} validCount={actionCount} skipCount={batchResult.skipRows.length} errorCount={batchResult.errorRows.length} />
-              <SummaryBadge label="Y 訂單確認" count={batchResult.agreeRows.length} bgColor="bg-[rgba(34,197,94,0.12)]" textColor="text-[#118d57]" icon={<CheckCircle2 size={14} />} />
-              <SummaryBadge label="N 調整單據" count={batchResult.disagreeRows.length} bgColor="bg-[rgba(255,86,48,0.12)]" textColor="text-[#b71d18]" icon={<XCircle size={14} />} />
-              {!hideRejectOption && <SummaryBadge label="X 不接單" count={batchResult.rejectOrderRows.length} bgColor="bg-[rgba(99,115,129,0.12)]" textColor="text-[#454f5b]" icon={<Package size={14} />} />}
-              <SummaryBadge label="不處理" count={batchResult.skipRows.length} bgColor="bg-[rgba(145,158,171,0.08)]" textColor="text-[#919eab]" />
+              {/* 共計 tag：包含 Y/N/X/不處理的括弧小字 */}
+              {(() => {
+                const valid = batchResult.agreeRows.length + batchResult.disagreeRows.length + (hideRejectOption ? 0 : batchResult.rejectOrderRows.length);
+                const err = batchResult.errorRows.length;
+                const skip = batchResult.skipRows.length;
+                const parts: string[] = [];
+                if (valid > 0) parts.push(`有效 ${valid}`);
+                if (err > 0) parts.push(`錯誤 ${err}`);
+                if (skip > 0) parts.push(`不處理 ${skip}`);
+                const subtitle = parts.length > 0 ? `（${parts.join('、')}）` : '';
+                return (
+                  <div className="flex items-center gap-[6px] px-[10px] h-[28px] bg-[rgba(145,158,171,0.12)] rounded-[6px]">
+                    <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#1c252e]">
+                      共計 {batchResult.totalRows} 筆
+                    </p>
+                    {subtitle && (
+                      <p className="font-['Public_Sans:Regular',sans-serif] text-[11px] text-[#637381]">{subtitle}</p>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
             <div className="flex-1 min-h-0 overflow-auto custom-scrollbar border border-[rgba(145,158,171,0.16)] rounded-[8px]">
-              <table className="w-full min-w-[1060px]">
-                <thead className="sticky top-0 z-[1]"><tr className="bg-[#f4f6f8]">
-                  {['行','同意碼','訂單號碼','序號','料號','預計交期','訂貨量','交貨日期1','量1','交貨日期2','量2',...(hideRejectOption ? [] : ['不接單原因']),'狀態變更','驗證'].map(h => (
-                    <th key={h} className="px-[8px] py-[8px] text-left font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[11px] text-[#637381] whitespace-nowrap">{h}</th>
-                  ))}
-                </tr></thead>
-                <tbody>
-                  {batchResult.errorRows.map(r => <BRRow key={`e${r.rowIndex}`} row={r} hideRejectColumn={hideRejectOption} />)}
-                  {batchResult.agreeRows.map(r => <BRRow key={`y${r.rowIndex}`} row={r} hideRejectColumn={hideRejectOption} />)}
-                  {batchResult.disagreeRows.map(r => <BRRow key={`n${r.rowIndex}`} row={r} hideRejectColumn={hideRejectOption} />)}
-                  {!hideRejectOption && batchResult.rejectOrderRows.map(r => <BRRow key={`x${r.rowIndex}`} row={r} hideRejectColumn={false} />)}
-                  {batchResult.skipRows.map(r => <BRRow key={`s${r.rowIndex}`} row={r} hideRejectColumn={hideRejectOption} />)}
-                </tbody>
-              </table>
+              {(() => {
+                const allRows = [
+                  ...batchResult.errorRows,
+                  ...batchResult.agreeRows,
+                  ...batchResult.disagreeRows,
+                  ...(!hideRejectOption ? batchResult.rejectOrderRows : []),
+                  ...batchResult.skipRows,
+                ];
+                const maxDeliveries = Math.max(2, ...allRows.map(r => r.deliveries.length));
+                const deliveryHeaders: string[] = [];
+                for (let i = 1; i <= maxDeliveries; i++) {
+                  deliveryHeaders.push(`交貨日期${i}`, `量${i}`);
+                }
+                return (
+                  <table className="w-full min-w-[900px]">
+                    <thead className="sticky top-0 z-[1]"><tr className="bg-[#f4f6f8]">
+                      {['行','同意碼','訂單號碼','序號','料號','預計交期','訂貨量',...deliveryHeaders,'驗證'].map(h => (
+                        <th key={h} className="px-[8px] py-[8px] text-left font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[11px] text-[#637381] whitespace-nowrap">{h}</th>
+                      ))}
+                    </tr></thead>
+                    <tbody>
+                      {allRows.map(r => (
+                        <BRRow key={`${r.agreeCode}${r.rowIndex}`} row={r} maxDeliveries={maxDeliveries} />
+                      ))}
+                    </tbody>
+                  </table>
+                );
+              })()}
             </div>
           </div>
           <div className="flex items-center justify-between px-[24px] py-[16px] border-t border-[rgba(145,158,171,0.12)] shrink-0">
@@ -1464,7 +1503,7 @@ export function BatchReplyImportOverlay({ allOrders, onConfirm, onClose, hideRej
   );
 }
 
-function BRRow({ row, hideRejectColumn = false }: { row: BatchReplyParsedRow; hideRejectColumn?: boolean }) {
+function BRRow({ row, maxDeliveries = 2 }: { row: BatchReplyParsedRow; maxDeliveries?: number }) {
   const c = "px-[8px] py-[7px] font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#1c252e]";
   const badge = () => {
     if (!row.isValid) return <div className="bg-[rgba(255,171,0,0.12)] flex items-center gap-[4px] px-[8px] h-[22px] rounded-[4px]"><AlertTriangle size={12} className="text-[#b76e00]" /><p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[11px] text-[#b76e00]">錯誤</p></div>;
@@ -1473,16 +1512,34 @@ function BRRow({ row, hideRejectColumn = false }: { row: BatchReplyParsedRow; hi
     if (row.agreeCode === 'X') return <div className="bg-[rgba(99,115,129,0.12)] flex items-center gap-[4px] px-[8px] h-[22px] rounded-[4px]"><Package size={12} className="text-[#454f5b]" /><p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[11px] text-[#454f5b]">X 不接單</p></div>;
     return <p className="text-[12px] text-[#919eab]">—</p>;
   };
-  const trans = () => {
-    if (!row.isValid) return <span className="text-[#919eab]">—</span>;
-    if (!row.matchedOrder || !row.agreeCode) return <span className="text-[#919eab]">—</span>;
-    const s = row.matchedOrder.status;
-    if (row.agreeCode === 'Y') return <div className="flex items-center gap-[4px]"><span className="text-[#919eab]">{s}</span><ArrowRight size={12} className="text-[#22c55e]" /><span className="font-semibold text-[#22c55e]">B</span></div>;
-    if (row.agreeCode === 'X') return <div className="flex items-center gap-[4px]"><span className="text-[#919eab]">{s}</span><ArrowRight size={12} className="text-[#637381]" /><span className="font-semibold text-[#637381]">B</span></div>;
-    return <div className="flex items-center gap-[4px]"><span className="text-[#919eab]">{s}</span><ArrowRight size={12} className="text-[#8e33ff]" /><span className="font-semibold text-[#8e33ff]">B</span></div>;
-  };
-  const d1 = row.deliveries[0], d2 = row.deliveries[1];
   const bg = !row.isValid ? 'bg-[rgba(255,171,0,0.04)]' : row.skipReason ? 'bg-[rgba(145,158,171,0.04)]' : row.agreeCode === 'Y' ? 'bg-[rgba(34,197,94,0.02)]' : row.agreeCode === 'N' ? 'bg-[rgba(255,86,48,0.02)]' : row.agreeCode === 'X' ? 'bg-[rgba(99,115,129,0.02)]' : '';
+
+  // 動態建立交貨期資料格 (maxDeliveries 欄)
+  const deliveryCells: React.ReactNode[] = [];
+  for (let i = 0; i < maxDeliveries; i++) {
+    const d = row.deliveries[i];
+    if (row.agreeCode === 'X') {
+      // X 不接單：第1期展示劃挈9交期，其餘為—
+      if (i === 0) {
+        deliveryCells.push(
+          <td key={`d${i}`} className={c}><span style={{ color: '#ff5630', textDecoration: 'line-through', textDecorationColor: '#ff5630' }}>{row.expectedDelivery || '—'}</span></td>,
+          <td key={`q${i}`} className={c}>—</td>
+        );
+      } else {
+        deliveryCells.push(
+          <td key={`d${i}`} className={`${c} text-[#919eab]`}>—</td>,
+          <td key={`q${i}`} className={`${c} text-[#919eab]`}>—</td>
+        );
+      }
+    } else {
+      const hasDate = !!(d?.date);
+      deliveryCells.push(
+        <td key={`d${i}`} className={`${c} ${hasDate ? 'text-[#005eb8] font-semibold' : 'text-[#919eab]'}`}>{d?.date || '—'}</td>,
+        <td key={`q${i}`} className={c}>{d?.qty || '—'}</td>
+      );
+    }
+  }
+
   return (
     <tr className={`border-t border-[rgba(145,158,171,0.08)] ${bg}`}>
       <td className={`${c} text-[#919eab]`}>{row.rowIndex}</td>
@@ -1490,16 +1547,7 @@ function BRRow({ row, hideRejectColumn = false }: { row: BatchReplyParsedRow; hi
       <td className={c}>{row.orderNo}</td><td className={c}>{row.orderSeq}</td>
       <td className={`${c} truncate max-w-[110px]`}>{row.materialNo}</td>
       <td className={c}>{row.expectedDelivery}</td><td className={c}>{row.orderQty}</td>
-      <td className={`${c} ${row.agreeCode === 'X' ? '' : d1?.date ? 'text-[#005eb8] font-semibold' : 'text-[#919eab]'}`}>
-        {row.agreeCode === 'X'
-          ? <span style={{ color: '#ff5630', textDecoration: 'line-through', textDecorationColor: '#ff5630' }}>{row.expectedDelivery || '—'}</span>
-          : (d1?.date || '—')}
-      </td>
-      <td className={c}>{row.agreeCode === 'X' ? '—' : (d1?.qty || '—')}</td>
-      <td className={`${c} ${row.agreeCode === 'X' ? 'text-[#919eab]' : d2?.date ? 'text-[#005eb8] font-semibold' : 'text-[#919eab]'}`}>{row.agreeCode === 'X' ? '—' : (d2?.date || '—')}</td>
-      <td className={c}>{row.agreeCode === 'X' ? '—' : (d2?.qty || '—')}</td>
-      {!hideRejectColumn && <td className={`${c} truncate max-w-[120px] ${row.rejectReason ? 'text-[#1c252e]' : 'text-[#919eab]'}`}>{row.rejectReason || '—'}</td>}
-      <td className={c}>{trans()}</td>
+      {deliveryCells}
       <td className="px-[8px] py-[7px]">{!row.isValid ? <p className="text-[11px] text-[#b76e00] max-w-[140px]" title={row.error}>{row.error}</p> : row.skipReason ? <p className="text-[11px] text-[#919eab] max-w-[140px]" title={row.skipReason}>{row.skipReason}</p> : row.agreeCode ? <CheckCircle2 size={14} className="text-[#22c55e]" /> : <span className="text-[#919eab] text-[12px]">—</span>}</td>
     </tr>
   );
