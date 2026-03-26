@@ -1,20 +1,20 @@
-// sync-design-system.mjs â€” åŒæ­¥æœ€çµ‚ DESIGN_SYSTEM.md è‡³ Stitch
+// sync-design-system.mjs ???Œæ­¥?€çµ?DESIGN_SYSTEM.md ??Stitch
 import { StitchToolClient } from '@google/stitch-sdk';
 import { Stitch } from './node_modules/@google/stitch-sdk/dist/generated/src/index.js';
 import { readFileSync, writeFileSync } from 'fs';
 
 const client = new StitchToolClient({
-  apiKey: 'AQ.Ab8RN6Kws5loiUQF-EC9yyTGKjQZumRwSZ9WcX1tOZMGH_3rmA',
+  apiKey: 'AQ.Ab8RN6LueFDYKPCrhoZlNxui7kc6PgpmXFdXxsLl4KIzfgnSlg',
 });
 const stitch = new Stitch(client);
 const PROJECT_ID = '758741352527483360';
 const project = stitch.project(PROJECT_ID);
 
 const doc = readFileSync('./DESIGN_SYSTEM.md', 'utf8');
-console.log(`ðŸ“„ DESIGN_SYSTEM.md loaded (${doc.length} chars)`);
+console.log(`?? DESIGN_SYSTEM.md loaded (${doc.length} chars)`);
 
 const prompt = `
-Create a "Design System Reference" page for "Giant Global EP" â€” a B2B procurement platform.
+Create a "Design System Reference" page for "Giant Global EP" ??a B2B procurement platform.
 
 Use STRICTLY these design tokens:
 - Font: Public Sans + Noto Sans JP
@@ -27,67 +27,66 @@ Use STRICTLY these design tokens:
 
 Show this design system in a beautiful single-page layout:
 
-â•â•â•â•â•â• SECTION 1: COLOR PALETTE â•â•â•â•â•â•
+?â??â??â? SECTION 1: COLOR PALETTE ?â??â??â?
 Grid of color swatches (3 columns):
-Row 1 â€“ Text colors: #1c252e "Primary Text" | #637381 "Secondary" | #919eab "Disabled"
-Row 2 â€“ Action colors: #1677ff "Link Blue â† unified" | #004680 "Action" | #1D7BF5 "Brand Blue"
-Row 3 â€“ Semantic: #118d57 "Success" | #b71d18 "Error" | #b76e00 "Warning"
-Row 4 â€“ Backgrounds: #f4f6f8 "Table Header" | #d9e8f5 "Selected Toolbar" | #1c252e "Sidebar"
+Row 1 ??Text colors: #1c252e "Primary Text" | #637381 "Secondary" | #919eab "Disabled"
+Row 2 ??Action colors: #1677ff "Link Blue ??unified" | #004680 "Action" | #1D7BF5 "Brand Blue"
+Row 3 ??Semantic: #118d57 "Success" | #b71d18 "Error" | #b76e00 "Warning"
+Row 4 ??Backgrounds: #f4f6f8 "Table Header" | #d9e8f5 "Selected Toolbar" | #1c252e "Sidebar"
 
-â•â•â•â•â•â• SECTION 2: TYPOGRAPHY â•â•â•â•â•â•
+?â??â??â? SECTION 2: TYPOGRAPHY ?â??â??â?
 Show 4 text examples with Public Sans:
 - Heading Bold 20px #1c252e
 - Body Regular 14px #1c252e
 - Secondary 14px #637381
 - Disabled/Placeholder 14px #919eab
 
-â•â•â•â•â•â• SECTION 3: STATUS BADGES â•â•â•â•â•â•
+?â??â??â? SECTION 3: STATUS BADGES ?â??â??â?
 All 8 badges in a row:
 NP(gray bg #637381 text) | V(amber #b76e00) | B(red #b71d18) | CK(cyan #006c9c)
 CP(green #118d57) | DR(gray) | SS(dark #454f5b) | CL(gray)
 Each: rounded-6px, px-8 py-2, SemiBold 12px
 
-â•â•â•â•â•â• SECTION 4: BORDER RADIUS SCALE â•â•â•â•â•â•
-6 boxes: [6px Badge] [8px Buttonâ˜…] [10px Dropdown] [12px Card] [16px Page] [â—500px Avatar]
+?â??â??â? SECTION 4: BORDER RADIUS SCALE ?â??â??â?
+6 boxes: [6px Badge] [8px Button?…] [10px Dropdown] [12px Card] [16px Page] [??00px Avatar]
 
-â•â•â•â•â•â• SECTION 5: BUTTON SYSTEM â•â•â•â•â•â•
+?â??â??â? SECTION 5: BUTTON SYSTEM ?â??â??â?
 All 6 button variants in a row:
-A) Primary: bg #1D7BF5 white text "æ‡‰ç”¨"
-B) Secondary: text #637381 "å–æ¶ˆ"
+A) Primary: bg #1D7BF5 white text "?‰ç”¨"
+B) Secondary: text #637381 "?–æ?"
 C) Toolbar: icon+text #1c252e "Columns"
-D) ToolbarAction: text-only #004680 "æª¢è¦–"
-E) Danger: 36px red hover âœ•
-F) Ghost: dashed border "+ æ–°å¢žæ¢ä»¶"
+D) ToolbarAction: text-only #004680 "æª¢è?"
+E) Danger: 36px red hover ??F) Ghost: dashed border "+ ?°å?æ¢ä»¶"
 
-â•â•â•â•â•â• SECTION 6: INPUT PATTERNS â•â•â•â•â•â•
+?â??â??â? SECTION 6: INPUT PATTERNS ?â??â??â?
 3 inputs stacked:
-- Standard h-36 border rounded-8 "æœå°‹å» å•†..."
-- Floating label h-54 "ç‹€æ…‹ â–¾" with label "è¨‚å–®ç‹€æ…‹" at top-left edge
-- react-select h-40 clearable "é¸æ“‡å» å•†... Ã—"
+- Standard h-36 border rounded-8 "?œå?å» å?..."
+- Floating label h-54 "?€???? with label "è¨‚å–®?€?? at top-left edge
+- react-select h-40 clearable "?¸æ?å» å?... ?"
 
-â•â•â•â•â•â• SECTION 7: PANEL PATTERN (ColumnSelector) â•â•â•â•â•â•
+?â??â??â? SECTION 7: PANEL PATTERN (ColumnSelector) ?â??â??â?
 Show a small panel card (280px):
-Header: "é¡¯ç¤ºæ¬„ä½ (5/8)" | [all]
+Header: "é¡¯ç¤ºæ¬„ä? (5/8)" | [all]
 Body: checkbox list (3 checked, 2 unchecked)
-Footer: [å–æ¶ˆ] [æ‡‰ç”¨]
+Footer: [?–æ?] [?‰ç”¨]
 
-â•â•â•â•â•â• SECTION 8: TABLE COMPONENT â•â•â•â•â•â•
+?â??â??â? SECTION 8: TABLE COMPONENT ?â??â??â?
 Mini procurement table:
-Header row (56px bg #f4f6f8): [â˜‘ 88px sticky] [å–®è™Ÿåºè™Ÿ 160px sticky] [è¨‚å–®æ—¥æœŸ] [å» å•†åç¨±] [ç‹€æ…‹]
-Row 1 (76px, selected #rgba(0,94,184,0.04)): [â˜‘] [400649723010 â† #1677ff underline] [2025/04/10] [é€Ÿè¯åœ‹éš›] [CP badge]
-Row 2 (76px): [â˜] [400649724020] [2025/04/11] [ä¹…å»£ç²¾å¯†] [V badge]
-Footer: SelectionToolbar h-48 bg #d9e8f5: [â˜‘] "1 selected" | "æª¢è¦–" "æäº¤"
+Header row (56px bg #f4f6f8): [??88px sticky] [?®è?åºè? 160px sticky] [è¨‚å–®?¥æ?] [å» å??ç¨±] [?€?‹]
+Row 1 (76px, selected #rgba(0,94,184,0.04)): [?‘] [400649723010 ??#1677ff underline] [2025/04/10] [?Ÿè¯?‹é?] [CP badge]
+Row 2 (76px): [?] [400649724020] [2025/04/11] [ä¹…å»£ç²¾å?] [V badge]
+Footer: SelectionToolbar h-48 bg #d9e8f5: [?‘] "1 selected" | "æª¢è?" "?äº¤"
 
-â•â•â•â•â•â• SECTION 9: Z-INDEX STACK â•â•â•â•â•â•
+?â??â??â? SECTION 9: Z-INDEX STACK ?â??â??â?
 Horizontal layers visualization showing:
-Sticky(z-4) â†’ Table Header(z-10) â†’ Toolbar Dropdown(z-100) â†’ Modal(z-200) â†’ Toast(z-250) â†’ Pagination(z-9999)
+Sticky(z-4) ??Table Header(z-10) ??Toolbar Dropdown(z-100) ??Modal(z-200) ??Toast(z-250) ??Pagination(z-9999)
 
 White background, clean grid layout.
 `;
 
 async function run() {
   try {
-    console.log('â³ Syncing DESIGN_SYSTEM.md to Stitch...');
+    console.log('??Syncing DESIGN_SYSTEM.md to Stitch...');
     const screen = await project.generate(prompt);
     console.log('Screen ID:', screen.id);
 
@@ -98,19 +97,19 @@ async function run() {
       const res = await fetch(raw.htmlCode.downloadUrl);
       const html = await res.text();
       writeFileSync('./stitch-design-system-output.html', html, 'utf8');
-      console.log(`âœ… HTML (${html.length} chars) â†’ stitch-design-system-output.html`);
+      console.log(`??HTML (${html.length} chars) ??stitch-design-system-output.html`);
     }
 
     if (raw.screenshot?.downloadUrl) {
       const res2 = await fetch(raw.screenshot.downloadUrl);
       const buf = Buffer.from(await res2.arrayBuffer());
       writeFileSync('./stitch-design-system-preview.png', buf);
-      console.log(`ðŸ–¼ï¸  Screenshot (${buf.length}B) â†’ stitch-design-system-preview.png`);
+      console.log(`?–¼ï¸? Screenshot (${buf.length}B) ??stitch-design-system-preview.png`);
     }
 
-    console.log('\nâœ… DESIGN_SYSTEM.md synced to Stitch!');
+    console.log('\n??DESIGN_SYSTEM.md synced to Stitch!');
   } catch (err) {
-    console.error('âŒ Error:', err.message || err);
+    console.error('??Error:', err.message || err);
   } finally {
     await client.close().catch(() => {});
   }

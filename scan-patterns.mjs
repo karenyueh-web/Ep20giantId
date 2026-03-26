@@ -1,11 +1,11 @@
-// scan-patterns.mjs — 全專案 UI Patterns 掃描
+// scan-patterns.mjs ???��?�?UI Patterns ?��?
 import { readFileSync, readdirSync, statSync, writeFileSync } from 'fs';
 import { join, extname } from 'path';
 
 const SRC_DIR = './src';
 const RESULTS = {};
 
-// 收集所有 .tsx .ts .css 檔案
+// ?��??�??.tsx .ts .css 檔�?
 function collectFiles(dir, files = []) {
   for (const entry of readdirSync(dir)) {
     if (entry === 'node_modules') continue;
@@ -18,10 +18,9 @@ function collectFiles(dir, files = []) {
 }
 
 const files = collectFiles(SRC_DIR);
-console.log(`📂 Found ${files.length} files`);
+console.log(`?? Found ${files.length} files`);
 
-// 計數器工具
-function countMatches(text, pattern) {
+// 計數?�工??function countMatches(text, pattern) {
   const map = {};
   let m;
   const re = new RegExp(pattern, 'g');
@@ -32,14 +31,14 @@ function countMatches(text, pattern) {
   return map;
 }
 
-// 合併計數
+// ?�併計數
 function merge(target, source) {
   for (const [k, v] of Object.entries(source)) {
     target[k] = (target[k] || 0) + v;
   }
 }
 
-// 各種模式
+// ?�種模�?
 const rounded = {};
 const shadows = {};
 const bgColors = {};
@@ -69,14 +68,13 @@ for (const f of files) {
   merge(fontFamilies, countMatches(text, "font-\\['.+?'\\]"));
 }
 
-// 排序 top N
+// ?��? top N
 function top(obj, n = 20) {
   return Object.entries(obj).sort((a,b) => b[1]-a[1]).slice(0, n);
 }
 
-// 還要抓 UI Pattern：按鈕 / input / popover / modal 類的 className 集合
-// 掃描常見 pattern 行
-const buttonPatterns = [];
+// ?��???UI Pattern：�???/ input / popover / modal 類�? className ?��?
+// ?��?常�? pattern �?const buttonPatterns = [];
 const inputPatterns = [];
 const popoverPatterns = [];
 const modalPatterns = [];
@@ -84,7 +82,7 @@ const modalPatterns = [];
 const BTN_RE = /className="([^"]*(?:rounded|px|py|bg|text|hover|font)[^"]{30,})"/g;
 const INPUT_RE = /className="([^"]*(?:border|rounded|px|h-\[|focus)[^"]{30,})"/g;
 
-// 取前 5 個唯一樣本
+// ?��? 5 ?�唯一�?��
 const seen = new Set();
 for (const f of files) {
   let text;
@@ -153,7 +151,7 @@ const report = {
 };
 
 writeFileSync('./patterns-report.json', JSON.stringify(report, null, 2), 'utf8');
-console.log('✅ patterns-report.json saved');
+console.log('??patterns-report.json saved');
 console.log('\n=== TOP rounded-* ===');
 report.roundedValues.forEach(([k,v]) => console.log(`  ${v.toString().padStart(4)} ${k}`));
 console.log('\n=== TOP shadow-* ===');

@@ -1,10 +1,9 @@
-// grab-latest.mjs — 取得最新 screen 的 HTML 和截圖
-import { StitchToolClient } from '@google/stitch-sdk';
+// grab-latest.mjs ???��??�??screen ??HTML ?�截??import { StitchToolClient } from '@google/stitch-sdk';
 import { Stitch } from './node_modules/@google/stitch-sdk/dist/generated/src/index.js';
 import { writeFileSync } from 'fs';
 
 const client = new StitchToolClient({
-  apiKey: 'AQ.Ab8RN6Kws5loiUQF-EC9yyTGKjQZumRwSZ9WcX1tOZMGH_3rmA',
+  apiKey: 'AQ.Ab8RN6LueFDYKPCrhoZlNxui7kc6PgpmXFdXxsLl4KIzfgnSlg',
 });
 const stitch = new Stitch(client);
 
@@ -14,7 +13,7 @@ const SCREEN_ID = '9a1ac2dab21842e6ab99c0b8eaec575f';
 
 try {
   const screen = await project.getScreen(SCREEN_ID);
-  // screen 是 Screen 物件，raw data 在 screen.data
+  // screen ??Screen ?�件，raw data ??screen.data
   const raw = screen.data || screen;
   console.log('Keys:', Object.keys(raw));
 
@@ -25,7 +24,7 @@ try {
     const res = await fetch(htmlObj.downloadUrl);
     const html = await res.text();
     writeFileSync('./stitch-design-output.html', html, 'utf8');
-    console.log(`✅ HTML (${html.length} chars) → stitch-design-output.html`);
+    console.log(`??HTML (${html.length} chars) ??stitch-design-output.html`);
   } else {
     console.log('htmlCode:', JSON.stringify(htmlObj).slice(0, 200));
   }
@@ -34,7 +33,7 @@ try {
     const res2 = await fetch(ssObj.downloadUrl);
     const buf = Buffer.from(await res2.arrayBuffer());
     writeFileSync('./stitch-design-preview.png', buf);
-    console.log(`🖼️  Screenshot (${buf.length}B) → stitch-design-preview.png`);
+    console.log(`?���? Screenshot (${buf.length}B) ??stitch-design-preview.png`);
   } else {
     console.log('screenshot:', JSON.stringify(ssObj).slice(0, 200));
   }

@@ -1,20 +1,19 @@
-// sync-patterns.mjs â€” å°‡ UI_PATTERNS.md åŒæ­¥åˆ° Stitchï¼Œç”Ÿæˆå…¨ UI Patterns å±•ç¤ºé 
-import { StitchToolClient } from '@google/stitch-sdk';
+// sync-patterns.mjs ??å°?UI_PATTERNS.md ?Œæ­¥??Stitchï¼Œç??å…¨ UI Patterns å±•ç¤º??import { StitchToolClient } from '@google/stitch-sdk';
 import { Stitch } from './node_modules/@google/stitch-sdk/dist/generated/src/index.js';
 import { readFileSync, writeFileSync } from 'fs';
 
 const client = new StitchToolClient({
-  apiKey: 'AQ.Ab8RN6Kws5loiUQF-EC9yyTGKjQZumRwSZ9WcX1tOZMGH_3rmA',
+  apiKey: 'AQ.Ab8RN6LueFDYKPCrhoZlNxui7kc6PgpmXFdXxsLl4KIzfgnSlg',
 });
 const stitch = new Stitch(client);
 const PROJECT_ID = '758741352527483360';
 const project = stitch.project(PROJECT_ID);
 
 const patterns = readFileSync('./UI_PATTERNS.md', 'utf8');
-console.log(`ðŸ“„ UI_PATTERNS.md loaded (${patterns.length} chars)`);
+console.log(`?? UI_PATTERNS.md loaded (${patterns.length} chars)`);
 
 const prompt = `
-Design a comprehensive "UI Patterns Reference" page for "Giant Global EP" â€” a B2B procurement system.
+Design a comprehensive "UI Patterns Reference" page for "Giant Global EP" ??a B2B procurement system.
 
 DESIGN TOKENS (strict):
 - Primary text: #1c252e, Secondary: #637381, Disabled: #919eab
@@ -25,48 +24,38 @@ DESIGN TOKENS (strict):
 
 Show ALL of these patterns as live visual examples:
 
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-SECTION 1: BORDER RADIUS SCALE
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-Show 6 boxes side by side, each labeled:
-â€¢ 6px â€” Badge, small input
-â€¢ 8px â€” Button, Input (most common, 1466 uses)
-â€¢ 10px â€” Dropdown panel
-â€¢ 12px â€” Medium card
-â€¢ 16px â€” Page card, Modal
-â€¢ 500px â€” Avatar, Chip
+?â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â???SECTION 1: BORDER RADIUS SCALE
+?â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â???Show 6 boxes side by side, each labeled:
+??6px ??Badge, small input
+??8px ??Button, Input (most common, 1466 uses)
+??10px ??Dropdown panel
+??12px ??Medium card
+??16px ??Page card, Modal
+??500px ??Avatar, Chip
 
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-SECTION 2: SHADOW LEVELS
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-4 cards showing shadow intensity levels:
-â€¢ Flat: no shadow (inline)
-â€¢ Card: 0px 0px 2px rgba(145,158,171,0.2), 0px 12px 24px rgba(145,158,171,0.12)
-â€¢ Modal: -40px 40px 80px rgba(145,158,171,0.24)
-â€¢ Toast: 0px 8px 16px rgba(0,0,0,0.16)
+?â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â???SECTION 2: SHADOW LEVELS
+?â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â???4 cards showing shadow intensity levels:
+??Flat: no shadow (inline)
+??Card: 0px 0px 2px rgba(145,158,171,0.2), 0px 12px 24px rgba(145,158,171,0.12)
+??Modal: -40px 40px 80px rgba(145,158,171,0.24)
+??Toast: 0px 8px 16px rgba(0,0,0,0.16)
 
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-SECTION 3: BUTTON PATTERNS (Aâ€“C)
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-Row of buttons:
+?â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â???SECTION 3: BUTTON PATTERNS (A?“C)
+?â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â???Row of buttons:
 A) Primary: bg #1D7BF5, white text, rounded-8px, px-16 py-8, hover #1565C0
 B) Secondary/Cancel: text #637381, rounded-8px, hover bg rgba(145,158,171,0.08)
-C) Toolbar icon+text: h-30px gap-8 rounded-8 hover light gray â€” show "Columns", "Filters", "Export â–¾"
-D) ToolbarAction (text-only): text #004680, SemiBold, no border â€” "æª¢è¦–", "æäº¤"
-E) Danger delete: 36Ã—36px, rounded-6, hover red bg â€” show âœ• icon
-F) Ghost add: full-width dashed border, hover blue border â€” "+ æ–°å¢žç¯©é¸æ¢ä»¶"
+C) Toolbar icon+text: h-30px gap-8 rounded-8 hover light gray ??show "Columns", "Filters", "Export ??
+D) ToolbarAction (text-only): text #004680, SemiBold, no border ??"æª¢è?", "?äº¤"
+E) Danger delete: 36?36px, rounded-6, hover red bg ??show ??icon
+F) Ghost add: full-width dashed border, hover blue border ??"+ ?°å?ç¯©é¸æ¢ä»¶"
 
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-SECTION 4: INPUT PATTERNS (Dâ€“F)
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-D) Standard Input: h-36px rounded-6px border rgba(145,158,171,0.2), focus border #1D7BF5
-E) Floating Label Dropdown (DropdownSelect): h-54px rounded-8px with "ç‹€æ…‹" label floating at top-left edge
+?â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â???SECTION 4: INPUT PATTERNS (D?“F)
+?â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â???D) Standard Input: h-36px rounded-6px border rgba(145,158,171,0.2), focus border #1D7BF5
+E) Floating Label Dropdown (DropdownSelect): h-54px rounded-8px with "?€?? label floating at top-left edge
 F) React-Select (FilterSelect): h-40px rounded-8px with clear button, searchable
 
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-SECTION 5: POPOVER / PANEL PATTERNS (Gâ€“H)
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-G) Small Panel (ColumnSelector / FilterDialog style):
+?â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â???SECTION 5: POPOVER / PANEL PATTERNS (G?“H)
+?â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â???G) Small Panel (ColumnSelector / FilterDialog style):
   - Header: px-16 py-12, border-bottom rgba(0.08), SemiBold 14px title
   - Body: list rows with hover
   - Footer: px-16 py-12, border-top rgba(0.08), Cancel + Apply buttons
@@ -75,34 +64,28 @@ G) Small Panel (ColumnSelector / FilterDialog style):
 H) Dropdown List (Export style):
   - rounded-10, Dropdown shadow
   - Items: px-14 py-10, hover rgba(145,158,171,0.06)
-  - Show: "åŒ¯å‡º Excel" (icon green) + "åŒ¯å‡º CSV" (icon blue)
+  - Show: "?¯å‡º Excel" (icon green) + "?¯å‡º CSV" (icon blue)
 
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-SECTION 6: MODAL OVERLAY PATTERN (I)
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-I) Show modal preview:
+?â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â???SECTION 6: MODAL OVERLAY PATTERN (I)
+?â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â???I) Show modal preview:
   - Dark overlay: bg-black/30 (show as semi-transparent background)
   - White card: rounded-16px, Modal shadow
   - Modal header + content area + footer pattern
 
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-SECTION 7: FUNCTIONAL PATTERNS (Jâ€“M)
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-J) Toast: fixed bottom, bg #1c252e, text white, rounded-8, shadow â€” "âœ“ ä¸‹è¼‰æˆåŠŸ"
+?â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â???SECTION 7: FUNCTIONAL PATTERNS (J?“M)
+?â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â???J) Toast: fixed bottom, bg #1c252e, text white, rounded-8, shadow ??"??ä¸‹è??å?"
 K) Search Bar Row: flex gap-16, FilterSelect fields side by side + search button
 L) Selection Toolbar: h-48 bg #d9e8f5, checkbox area + "2 selected" + text-only action buttons
 M) Sidebar Nav Item: dark bg #1c252e, active item amber glow rgba(255,184,0,0.2), icon + label
 
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-SECTION 8: Z-INDEX STACK DIAGRAM
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-Vertical diagram showing layers:
-â€¢ z-1 to z-5: Sticky columns, Resizable handles
-â€¢ z-10: Table header sticky
-â€¢ z-100: Toolbar dropdowns
-â€¢ z-200: Modal overlays
-â€¢ z-250: Toast notifications
-â€¢ z-9999: Fixed pagination dropdown
+?â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â???SECTION 8: Z-INDEX STACK DIAGRAM
+?â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â??â???Vertical diagram showing layers:
+??z-1 to z-5: Sticky columns, Resizable handles
+??z-10: Table header sticky
+??z-100: Toolbar dropdowns
+??z-200: Modal overlays
+??z-250: Toast notifications
+??z-9999: Fixed pagination dropdown
 
 Clean white background, section titles as bold headers #1c252e with #f4f6f8 section bg strips.
 Show actual rendered examples, NOT just text descriptions.
@@ -110,7 +93,7 @@ Show actual rendered examples, NOT just text descriptions.
 
 async function run() {
   try {
-    console.log('â³ Generating UI Patterns showcase in Stitch...');
+    console.log('??Generating UI Patterns showcase in Stitch...');
     const screen = await project.generate(prompt);
     console.log('Screen ID:', screen.id);
 
@@ -121,19 +104,19 @@ async function run() {
       const res = await fetch(raw.htmlCode.downloadUrl);
       const html = await res.text();
       writeFileSync('./stitch-patterns-output.html', html, 'utf8');
-      console.log(`âœ… HTML (${html.length} chars) â†’ stitch-patterns-output.html`);
+      console.log(`??HTML (${html.length} chars) ??stitch-patterns-output.html`);
     }
 
     if (raw.screenshot?.downloadUrl) {
       const res2 = await fetch(raw.screenshot.downloadUrl);
       const buf = Buffer.from(await res2.arrayBuffer());
       writeFileSync('./stitch-patterns-preview.png', buf);
-      console.log(`ðŸ–¼ï¸  Screenshot (${buf.length}B) â†’ stitch-patterns-preview.png`);
+      console.log(`?–¼ï¸? Screenshot (${buf.length}B) ??stitch-patterns-preview.png`);
     }
 
-    console.log('\nâœ… UI Patterns synced to Stitch!');
+    console.log('\n??UI Patterns synced to Stitch!');
   } catch (err) {
-    console.error('âŒ Error:', err.message || err);
+    console.error('??Error:', err.message || err);
   } finally {
     await client.close().catch(() => {});
   }

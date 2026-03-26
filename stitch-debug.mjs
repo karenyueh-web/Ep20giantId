@@ -1,15 +1,15 @@
-// stitch-debug.mjs — 查看 Stitch raw response
+// stitch-debug.mjs ???��? Stitch raw response
 import { StitchToolClient } from '@google/stitch-sdk';
 import { writeFileSync } from 'fs';
 
 const client = new StitchToolClient({
-  apiKey: 'AQ.Ab8RN6Kws5loiUQF-EC9yyTGKjQZumRwSZ9WcX1tOZMGH_3rmA',
+  apiKey: 'AQ.Ab8RN6LueFDYKPCrhoZlNxui7kc6PgpmXFdXxsLl4KIzfgnSlg',
 });
 
 try {
   await client.connect();
 
-  // 先 list projects
+  // ??list projects
   const projectsRaw = await client.callTool('list_projects', {});
   console.log('=== list_projects raw ===');
   console.log(JSON.stringify(projectsRaw, null, 2).slice(0, 500));
