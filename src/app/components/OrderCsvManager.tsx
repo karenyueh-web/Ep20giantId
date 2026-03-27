@@ -1628,75 +1628,77 @@ export function exportBatchCorrectionTemplate(orders: OrderRow[], filename?: str
 // ───────────────────────────────────────────────────────────────────────────
 
 const BATCH_CORRECTION_ADJUST_HEADERS = [
-  '訂單號碼', '訂單序號', '交貨量', '驗收量', '在途量',
+  '訂單號碼', '訂單序號', '訂貨量', '驗收量', '在途量',
   '廠商名稱', '廠商編號',
   '修正碼',
-  '料號', '新料號1', '品名',
-  '預計交期',
-  '新廠商交期1', '新廠商交期2',
-  '訂貨量', '新交貨量1', '新交貨量2',
+  '料號', '新料號',
+  '品名', '預計交期',
+  '新廠商交期1', '新交貨量1',
+  '新廠商交期2', '新交貨量2',
 ];
 
 const BATCH_CORRECTION_SPLIT_HEADERS = [
   '訂單號碼', '訂單序號', '廠商名稱', '廠商編號', '料號', '品名',
-  '預計交期', '訂貨量', '交貨量', '驗收量', '在途量',
+  '預計交期', '訂貨量', '驗收量', '在途量',
   '拆單數',
   '新廠商交期1', '交貨量1', '料號1',
   '新廠商交期2', '交貨量2', '料號2',
-  '新廠商交期3', '交貨量3', '料號3',
-  '備註',
 ];
 
 export function exportBatchCorrectionAdjustTemplate(orders: OrderRow[], filename?: string) {
   const eligible = orders.filter(o => o.status === 'CK');
+  // 說明列：文字在 A 欄（index 0）
   const instructionRows: (string | number | null)[][] = [
-    ['', '', '', '', '', '', '',
-      '不拆單調整請填A，不須調整請留白',
-      '', '', '', '', '', '', '', '', ''],
+    ['需調整的單請於【修正碼】填A，留白者視同不處理',
+      '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
   ];
   const rows: (string | number | null)[][] = eligible.map(order => [
     order.orderNo, order.orderSeq,
-    (order as any).deliveryQty ?? order.orderQty,
-    order.acceptQty, order.inTransitQty,
+    order.orderQty,        // 訂貨量
+    order.acceptQty,       // 驗收量
+    order.inTransitQty,    // 在途量
     order.vendorName, order.vendorCode,
-    '',  // 修正碼
-    order.materialNo, '', // 料號, 新料號1
-    order.productName, order.expectedDelivery,
-    '', '', // 新廠商交期1, 新廠商交期2
-    order.orderQty, '', '', // 訂貨量, 新交貨量1, 新交貨量2
+    '',                    // 修正碼（A=調整，留白=略過）
+    order.materialNo,      // 料號
+    '',                    // 新料號（用戶填寫）
+    order.productName, order.expectedDelivery,  // 品名, 預計交期
+    '', '',                // 新廠商交期1, 新交貨量1
+    '', '',                // 新廠商交期2, 新交貨量2
   ]);
   const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  buildXlsx('批次修正單(不拆單)', [BATCH_CORRECTION_ADJUST_HEADERS, ...instructionRows, ...rows],
-    filename || `批次建立修正單(不拆單調整)_${datePart}.csv`);
+  // 說明列在前，空白列，標題列在後（對應圖1格式：說明列→空白列→欄名列→資料）
+  const emptyRow: (string)[] = [];
+  buildXlsx('批次修正單(不拆單)', [...instructionRows, emptyRow, BATCH_CORRECTION_ADJUST_HEADERS, ...rows],
+    filename || `批次建立修正單(不拆單調整)_${datePart}.xlsx`);
   return eligible.length;
 }
 
 export function exportBatchCorrectionSplitTemplate(orders: OrderRow[], filename?: string) {
   const eligible = orders.filter(o => o.status === 'CK');
+  // 說明列：3 列說明，文字全部在 A 欄（index 0）
   const instructionRows: (string | number | null)[][] = [
-    ['', '', '', '', '', '', '', '', '', '', '',
-      '拆單數：必填 2 以上；填幾就需要填幾組「新廠商交期+交貨量」，缺少任一組將報錯',
-      '新廠商交期1：第1拆（原序號）交期（必填）', '交貨量1：第1拆數量（必填）', '料號1：第1拆料號（可留空）',
-      '新廠商交期2：第2拆（新序號）交期（必填）', '交貨量2：第2拆數量（必填）', '料號2：第2拆料號（可留空）',
-      '新廠商交期3：第3拆交期（選填，拆單數=3 時必填）', '交貨量3：第3拆數量', '料號3：第3拆料號（可留空）', '備註'],
-    ['', '', '', '', '', '', '', '', '', '', '',
-      '不調整請將「拆單數」留空。各拆出數量合計必須等於交貨量。拆出序號自動計算，無需手動填寫。',
-      '', '', '', '', '', '', '', '', '', ''],
+    ['【料號】欄位若不需填寫請直接留白',
+      '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+    ['要拆單的單需在【拆單數】填入拆單數量，最少為2，空白者視同不處理',
+      '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+    ['拆單數3以上者，請於Q欄後自行補上交貨資料(新廠商交期3+交貨量3+料號3)，以此類推',
+      '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
   ];
   const rows: (string | number | null)[][] = eligible.map(order => [
     order.orderNo, order.orderSeq, order.vendorName, order.vendorCode,
     order.materialNo, order.productName, order.expectedDelivery,
-    order.orderQty, (order as any).deliveryQty ?? order.orderQty,
-    order.acceptQty, order.inTransitQty,
-    '',  // 拆單數
+    order.orderQty,                               // 訂貨量
+    order.acceptQty,                              // 驗收量
+    order.inTransitQty,                           // 在途量
+    '',   // 拆單數
     '', '', '', // 新廠商交期1, 交貨量1, 料號1
     '', '', '', // 新廠商交期2, 交貨量2, 料號2
-    '', '', '', // 新廠商交期3, 交貨量3, 料號3
-    '',  // 備註
   ]);
   const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  buildXlsx('批次修正單(拆單)', [BATCH_CORRECTION_SPLIT_HEADERS, ...instructionRows, ...rows],
-    filename || `批次建立修正單_拆單_${datePart}.csv`);
+  // 說明列在前，空白列，標題列在後（對應圖2格式：3列說明→空白列→欄名列→資料）
+  const emptyRowSplit: (string)[] = [];
+  buildXlsx('批次修正單(拆單)', [...instructionRows, emptyRowSplit, BATCH_CORRECTION_SPLIT_HEADERS, ...rows],
+    filename || `批次建立修正單_拆單_${datePart}.xlsx`);
   return eligible.length;
 }
 
@@ -1736,11 +1738,24 @@ export function parseBatchCorrectionAdjustCsv(content: string, allOrders: OrderR
   const empty: CorrectionAdjustImportResult = { totalRows: 0, validRows: [], skipRows: [], errorRows: [] };
   if (lines.length < 2) return empty;
   // detect header — 新格式含「修正碼」欄，舊格式含「新料號」或「新廠商交期1」
-  const headerFields = parseCsvLine(lines[0]);
+  // 動態找標題列：說明列在最前，第一個含「訂單號碼」的列才是標題列
+  const headerLineIdx = lines.findIndex(l => {
+    const f = parseCsvLine(l);
+    return f[0]?.trim() === '訂單號碼';
+  });
+  if (headerLineIdx < 0) return empty;
+  const headerFields = parseCsvLine(lines[headerLineIdx]);
   const isNewFormat = headerFields.includes('修正碼');
-  const isOldFormat = !isNewFormat && (headerFields.includes('新廠商交期1') || headerFields.includes('新料號'));
+  // 區分三代格式：
+  //   V3：有「修正碼」+「新料號」(無數字)→ 現在最新格式
+  //   V2：有「修正碼」但無「料號」 → 中間版本（既有程式碼中，對下相容）
+  //   V1：有「修正碼」+「新料號1」 → 舊新格式
+  const isNewFormatV3 = isNewFormat && headerFields.includes('新料號') && !headerFields.includes('新料號1');
+  const isNewFormatV2 = isNewFormat && !headerFields.includes('料號');   // 無料號欄版
+  const isNewFormatV1 = isNewFormat && headerFields.includes('新料號1');             // 舊新格式
+  const isOldFormat = !isNewFormat && headerFields.includes('新廠商交期1'); // 最舊格式：無修正碼欄
   if (!isNewFormat && !isOldFormat) return empty;
-  const dataLines = lines.slice(1);
+  const dataLines = lines.slice(headerLineIdx + 1);
   const rows: CorrectionAdjustParsedRow[] = [];
   for (let i = 0; i < dataLines.length; i++) {
     const f = parseCsvLine(dataLines[i]);
@@ -1759,9 +1774,51 @@ export function parseBatchCorrectionAdjustCsv(content: string, allOrders: OrderR
     let schedules: { newVendorDate: string; newQty: string }[] = [];
     let remark: string;
 
-    if (isNewFormat) {
-      // 新欄位格式：A訂單號碼 B訂單序號 C交貨量 D驗收量 E在途量 F廠商名稱 G廠商編號 H修正碼
-      //             I料號 J新料號1 K品名 L預計交期 M新廠商交期1 N新廠商交期2 O訂貨量 P新交貨量1 Q新交貨量2
+    if (isNewFormatV3) {
+      // 最新格式：A訂單號碼 B訂單序號 C訂貨量 D驗收量 E在途量 F廠商名稱 G廠商編號 H修正碼
+      //                    I料號 J新料號 K品名 L預計交期 M新廠商交期1 N新交貨量1 O新廠商交期2 P新交貨量2
+      orderQty      = (f[2] || '').trim();
+      deliveryQty   = (f[2] || '').trim();
+      acceptQty     = (f[3] || '').trim();
+      inTransitQty  = (f[4] || '').trim();
+      vendorName    = (f[5] || '').trim();
+      vendorCode    = (f[6] || '').trim();
+      correctionCode = (f[7] || '').trim().toUpperCase();
+      materialNo    = (f[8] || '').trim();
+      newMaterialNo = (f[9] || '').trim();
+      productName   = (f[10] || '').trim();
+      expectedDelivery = normalizeDateStr((f[11] || '').trim());
+      const date1 = normalizeDateStr((f[12] || '').trim()); // 新廠商交期1
+      const qty1  = (f[13] || '').trim();                   // 新交貨量1
+      const date2 = normalizeDateStr((f[14] || '').trim()); // 新廠商交期2
+      const qty2  = (f[15] || '').trim();                   // 新交貨量2
+      if (date1 || qty1) schedules.push({ newVendorDate: date1, newQty: qty1 });
+      if (date2 || qty2) schedules.push({ newVendorDate: date2, newQty: qty2 });
+      remark = '';
+    } else if (isNewFormatV2) {
+      // 中間版本（無料號）：A訂單號碼 B訂單序號 C訂貨量 D驗收量 E在途量 F廠商名稱 G廠商編號 H修正碼
+      //                    I品名 J預計交期 K新廠商交期1 L新交貨量1 M新廠商交期2 N新交貨量2
+      orderQty      = (f[2] || '').trim();
+      deliveryQty   = (f[2] || '').trim(); // 同訂貨量
+      acceptQty     = (f[3] || '').trim();
+      inTransitQty  = (f[4] || '').trim();
+      vendorName    = (f[5] || '').trim();
+      vendorCode    = (f[6] || '').trim();
+      correctionCode = (f[7] || '').trim().toUpperCase();
+      materialNo    = '';
+      newMaterialNo = '';
+      productName   = (f[8] || '').trim();
+      expectedDelivery = normalizeDateStr((f[9] || '').trim());
+      const date1 = normalizeDateStr((f[10] || '').trim()); // 新廠商交期1
+      const qty1  = (f[11] || '').trim();                   // 新交貨量1
+      const date2 = normalizeDateStr((f[12] || '').trim()); // 新廠商交期2
+      const qty2  = (f[13] || '').trim();                   // 新交貨量2
+      if (date1 || qty1) schedules.push({ newVendorDate: date1, newQty: qty1 });
+      if (date2 || qty2) schedules.push({ newVendorDate: date2, newQty: qty2 });
+      remark = '';
+    } else if (isNewFormat) {
+      // 舊新格式（有料號）：A訂單號碼 B訂單序號 C交貨量 D驗收量 E在途量 F廠商名稱 G廠商編號 H修正碼
+      //                    I料號 J新料號1 K品名 L預計交期 M新廠商交期1 N新廠商交期2 O訂貨量 P新交貨量1 Q新交貨量2
       deliveryQty   = (f[2] || '').trim();
       acceptQty     = (f[3] || '').trim();
       inTransitQty  = (f[4] || '').trim();
@@ -1773,11 +1830,10 @@ export function parseBatchCorrectionAdjustCsv(content: string, allOrders: OrderR
       productName   = (f[10] || '').trim();
       expectedDelivery = normalizeDateStr((f[11] || '').trim());
       orderQty      = (f[14] || '').trim();
-      // 新廠商交期1(M=12), 新廠商交期2(N=13)
       const date1 = normalizeDateStr((f[12] || '').trim());
-      const qty1  = (f[15] || '').trim(); // 新交貨量1(P=15)
+      const qty1  = (f[15] || '').trim();
       const date2 = normalizeDateStr((f[13] || '').trim());
-      const qty2  = (f[16] || '').trim(); // 新交貨量2(Q=16)
+      const qty2  = (f[16] || '').trim();
       if (date1 || qty1) schedules.push({ newVendorDate: date1, newQty: qty1 });
       if (date2 || qty2) schedules.push({ newVendorDate: date2, newQty: qty2 });
       remark = '';
@@ -1835,8 +1891,13 @@ export function parseBatchCorrectionAdjustCsv(content: string, allOrders: OrderR
     if (!skipReason && !error && matched) {
       const aQ = matched.acceptQty ?? 0, iQ = matched.inTransitQty ?? 0;
       const minQ = aQ + iQ;
+      const oQ = matched.orderQty ?? 0; // 上限為訂貨量
+      // 今天日期（格式 YYYY/MM/DD）
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}/${String(today.getMonth()+1).padStart(2,'0')}/${String(today.getDate()).padStart(2,'0')}`;
       for (const s of schedules) {
         if (s.newVendorDate && !isValidDateStr(s.newVendorDate)) { error = `日期格式錯誤: "${s.newVendorDate}"`; break; }
+        if (s.newVendorDate && s.newVendorDate < todayStr) { error = `新廠商交期 "${s.newVendorDate}" 不可為過去日期`; break; }
         if (s.newQty) {
           const q = parseInt(s.newQty, 10);
           if (isNaN(q) || q <= 0) { error = `新交貨量格式錯誤: "${s.newQty}"（需大於 0）`; break; }
@@ -1844,9 +1905,8 @@ export function parseBatchCorrectionAdjustCsv(content: string, allOrders: OrderR
       }
       if (!error && schedules.length > 0) {
         const totalNewQty = schedules.reduce((s, r) => s + (parseInt(r.newQty, 10) || 0), 0);
-        const dQ = (matched as any).deliveryQty ?? matched.orderQty ?? 0;
-        if (totalNewQty > dQ) error = `新交貨量合計 ${totalNewQty} 超過交貨量 ${dQ}`;
-        else if (minQ > 0 && totalNewQty < minQ) error = `新交貨量合計 ${totalNewQty} 低於驗收量+在途量 ${minQ}`;
+        if (totalNewQty > oQ) error = `新交貨量合計 ${totalNewQty} 超過訂貨量 ${oQ}`;
+        else if (minQ > 0 && totalNewQty < minQ) error = `新交貨量合計 ${totalNewQty} 不可低於驗收量+在途量 ${minQ}`;
       }
     }
     rows.push({
@@ -1886,10 +1946,17 @@ export interface CorrectionSplitImportResult {
 
 function isSplitInstructionRow(fields: string[]): boolean {
   const colA = (fields[0] || '').trim();
-  if (colA !== '') return false;
+  // 新格式說明列：A欄有「科驗」說明文字，或 K欄(index 10)有拆單數說明文字且A欄空白
+  if (colA !== '') {
+    if (/【科驗】|欄位若不需填寫/.test(colA)) return true;
+    return false;
+  }
+  const colK = (fields[10] || '').trim();
+  if (/拆單數|合計|序號|Q欄|自行補上/.test(colK)) return true;
+  // 舊格式說明列：L欄(index 11)
   const colL = (fields[11] || '').trim();
   if (/拆單數|合計|序號/.test(colL)) return true;
-  if (!colA && !fields[1]?.trim() && !fields[2]?.trim() && colL.length > 5) return true;
+  if (!colA && !fields[1]?.trim() && !fields[2]?.trim() && (colK.length > 5 || colL.length > 5)) return true;
   return false;
 }
 
@@ -1898,9 +1965,18 @@ export function parseBatchCorrectionSplitCsv(content: string, allOrders: OrderRo
   const lines = clean.split(/\r?\n/).filter(l => l.trim() !== '');
   const empty: CorrectionSplitImportResult = { totalRows: 0, validRows: [], skipRows: [], errorRows: [] };
   if (lines.length < 2) return empty;
-  const headerFields = parseCsvLine(lines[0]);
+  // 動態找標題列：說明列在最前，第一個含「訂單號碼」的列才是標題列
+  const headerLineIdx = lines.findIndex(l => {
+    const f = parseCsvLine(l);
+    return f[0]?.trim() === '訂單號碼';
+  });
+  if (headerLineIdx < 0) return empty;
+  const headerFields = parseCsvLine(lines[headerLineIdx]);
   if (!headerFields.includes('拆單數') && !headerFields.includes('交貨量1')) return empty;
-  const dataLines = lines.slice(1);
+  // 判斷是否為新格式（無獨立的「交貨量」欄；舊格式在訂貨量後有「交貨量」欄）
+  const hasStandaloneDeliveryQty = headerFields.includes('交貨量'); // 舊格式才有此欄（交貨量1等不算）
+  const isNewSplitFormat = !hasStandaloneDeliveryQty && headerFields.includes('拆單數');
+  const dataLines = lines.slice(headerLineIdx + 1);
   const rows: CorrectionSplitParsedRow[] = [];
   for (let i = 0; i < dataLines.length; i++) {
     const f = parseCsvLine(dataLines[i]);
@@ -1910,19 +1986,27 @@ export function parseBatchCorrectionSplitCsv(content: string, allOrders: OrderRo
     const orderNo = (f[0] || '').trim();
     const orderSeq = (f[1] || '').trim();
     if (!orderNo) continue;
-    const splitCount = (f[11] || '').trim();
-    // parse up to 3 split groups: date(12+p*3), qty(13+p*3), material(14+p*3)
+    // 新格式：拆單數在 index 10，舊格式在 index 11
+    const splitCountIdx = isNewSplitFormat ? 10 : 11;
+    const splitCount = (f[splitCountIdx] || '').trim();
+    // 新格式：第1組從 index 11，舊格式從 index 12
+    const firstGroupIdx = isNewSplitFormat ? 11 : 12;
     const splits: { newVendorDate: string; qty: string; newMaterialNo: string }[] = [];
     for (let p = 0; p < 3; p++) {
-      const dateRaw = normalizeDateStr((f[12 + p * 3] || '').trim());
-      const qtyRaw = (f[13 + p * 3] || '').trim();
-      const matRaw = (f[14 + p * 3] || '').trim();
+      const dateRaw = normalizeDateStr((f[firstGroupIdx + p * 3] || '').trim());
+      const qtyRaw = (f[firstGroupIdx + p * 3 + 1] || '').trim();
+      const matRaw = (f[firstGroupIdx + p * 3 + 2] || '').trim();
       if (qtyRaw || dateRaw || matRaw) splits.push({ newVendorDate: dateRaw, qty: qtyRaw, newMaterialNo: matRaw });
     }
-    const remark = (f[21] || '').trim();
+    // 備註：新格式無固定備註欄（可能在後面），舊格式在 index 21
+    const remark = isNewSplitFormat ? '' : (f[21] || '').trim();
+    // 驗收量/在途量索引：新格式 8/9，舊格式 9/10
+    const acceptQtyStr = isNewSplitFormat ? (f[8] || '') : (f[9] || '');
+    const inTransitQtyStr = isNewSplitFormat ? (f[9] || '') : (f[10] || '');
+    const deliveryQtyStr = isNewSplitFormat ? (f[7] || '') : (f[8] || ''); // 新格式用訂貨量，舊格式有獨立交貨量
     // 拆單數空白且無任何交期/量 → 略過（不調整）
     if (!splitCount && splits.length === 0) {
-      rows.push({ rowIndex, orderNo, orderSeq, vendorName: f[2]||'', vendorCode: f[3]||'', materialNo: f[4]||'', productName: f[5]||'', expectedDelivery: normalizeDateStr(f[6]||''), orderQty: f[7]||'', deliveryQty: f[8]||'', acceptQty: f[9]||'', inTransitQty: f[10]||'', splitCount, splits, remark, isValid: true, skipReason: '未填拆單數，略過' });
+      rows.push({ rowIndex, orderNo, orderSeq, vendorName: f[2]||'', vendorCode: f[3]||'', materialNo: f[4]||'', productName: f[5]||'', expectedDelivery: normalizeDateStr(f[6]||''), orderQty: f[7]||'', deliveryQty: deliveryQtyStr, acceptQty: acceptQtyStr, inTransitQty: inTransitQtyStr, splitCount, splits, remark, isValid: true, skipReason: '未填拆單數，略過' });
       continue;
     }
     let error: string | undefined;
@@ -1942,27 +2026,28 @@ export function parseBatchCorrectionSplitCsv(content: string, allOrders: OrderRo
         error = `拆單數填 ${splitCountNum}，但只填了 ${splits.length} 組交期/交貨量（每組需同時填寫交期和交貨量）`;
       } else {
         // 3. 每組的交期和交貨量都必須有填
+        // 今天日期（格式 YYYY/MM/DD）
+        const today = new Date();
+        const todayStr = `${today.getFullYear()}/${String(today.getMonth()+1).padStart(2,'0')}/${String(today.getDate()).padStart(2,'0')}`;
         for (let gi = 0; gi < splits.length; gi++) {
           const s = splits[gi];
           if (!s.qty) { error = `第${gi + 1}期缺少交貨量`; break; }
           if (!s.newVendorDate) { error = `第${gi + 1}期缺少新廠商交期`; break; }
           if (s.newVendorDate && !isValidDateStr(s.newVendorDate)) { error = `第${gi + 1}期日期格式錯誤: "${s.newVendorDate}"`; break; }
+          if (s.newVendorDate && s.newVendorDate < todayStr) { error = `第${gi + 1}期新廠商交期 "${s.newVendorDate}" 不可為過去日期`; break; }
         }
         if (!error) {
-          // 4. 合計驗證
+          // 4. 合計驗證：不超過訂貨量且不低於驗收量+在途量
           const totalSplitQty = splits.reduce((s, r) => s + (parseInt(r.qty, 10) || 0), 0);
-          const dQ = matched ? ((matched as any).deliveryQty ?? matched.orderQty ?? 0) : 0;
+          const oQ = matched ? (matched.orderQty ?? 0) : 0;
           const aQ = matched?.acceptQty ?? 0, iQ = matched?.inTransitQty ?? 0;
-          if (matched && totalSplitQty !== dQ) error = `各拆出量合計 ${totalSplitQty} 必須等於交貨量 ${dQ}`;
-          else if (matched && aQ + iQ > 0) {
-            const firstQty = parseInt(splits[0].qty, 10) || 0;
-            if (firstQty < aQ + iQ) error = `第1拆出量 ${firstQty} 不可低於驗收量+在途量 ${aQ + iQ}`;
-          }
+          if (matched && totalSplitQty > oQ) error = `各拆出量合計 ${totalSplitQty} 超過訂貨量 ${oQ}`;
+          else if (matched && aQ + iQ > 0 && totalSplitQty < aQ + iQ) error = `各拆出量合計 ${totalSplitQty} 不可低於驗收量+在途量 ${aQ + iQ}`;
         }
       }
     }
     rows.push({
-      rowIndex, orderNo, orderSeq, vendorName: f[2]||'', vendorCode: f[3]||'', materialNo: f[4]||'', productName: f[5]||'', expectedDelivery: normalizeDateStr(f[6]||''), orderQty: f[7]||'', deliveryQty: f[8]||'', acceptQty: f[9]||'', inTransitQty: f[10]||'',
+      rowIndex, orderNo, orderSeq, vendorName: f[2]||'', vendorCode: f[3]||'', materialNo: f[4]||'', productName: f[5]||'', expectedDelivery: normalizeDateStr(f[6]||''), orderQty: f[7]||'', deliveryQty: deliveryQtyStr, acceptQty: acceptQtyStr, inTransitQty: inTransitQtyStr,
       splitCount, splits, remark, matchedOrder: matched, error, skipReason, isValid: !error && !skipReason,
     });
   }
@@ -2323,7 +2408,10 @@ export function BatchCorrectionCombinedImportOverlay({
       const errors: string[] = [];
       for (const res of results) {
         if (!res) continue;
-        const headers = parseCsvLine(res.csv.split(/\r?\n/)[0] || '');
+        // 動態找標題列（說明列在最前，需掃描找到 A 欄為「訂單號碼」的列）
+        const csvLines = res.csv.split(/\r?\n/);
+        const hIdx = csvLines.findIndex(l => parseCsvLine(l)[0]?.trim() === '訂單號碼');
+        const headers = hIdx >= 0 ? parseCsvLine(csvLines[hIdx]) : [];
         if (headers.includes('拆單數') || (headers.includes('交貨量1') && !headers.includes('新交貨量1'))) {
           const r = parseBatchCorrectionSplitCsv(res.csv, allOrders);
           if (r.totalRows > 0) { newSplit = r; continue; }
