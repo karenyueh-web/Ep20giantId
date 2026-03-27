@@ -466,7 +466,51 @@ export function CorrectionCreatePage({ userRole, onNavigateToList }: CorrectionC
       });
       createdCount++;
     }
-    showToast(`批次建立修正單完成：${createdCount} 張已提交廠商 (V)（不拆單調整）${createdCount < result.validRows.length ? `（${result.validRows.length - createdCount} 張無欄位變更已略過）` : ''}`);
+    // ── 刪單（D碼）──
+    let deleteCount = 0;
+    for (const row of result.deleteRows) {
+      if (!row.matchedOrder) continue;
+      const order = row.matchedOrder;
+      const docNo = generateCorrectionDocNo();
+      const correctionId = Date.now() + Math.floor(Math.random() * 10000) + row.rowIndex;
+      const corrRow: CorrectionOrderRow = {
+        id: correctionId, correctionDocNo: docNo, correctionStatus: 'V', correctionType: '刪單',
+        orderNo: order.orderNo, orderSeq: order.orderSeq,
+        docSeqNo: (order.orderNo || '') + (order.orderSeq || ''),
+        vendorCode: order.vendorCode, vendorName: order.vendorName,
+        purchaseOrg: (order as any).purchaseOrg || '', materialNo: order.materialNo,
+        productName: order.productName, orderDate: order.orderDate || '',
+        orderQty: order.orderQty, acceptQty: order.acceptQty, company: (order as any).company || '',
+        createdAt: now, expectedDelivery: order.expectedDelivery,
+        vendorDeliveryDate: order.vendorDeliveryDate || '', agreedDate: (order as any).agreedDate || '',
+        inTransitQty: order.inTransitQty, deliveryQty: (order as any).deliveryQty ?? order.orderQty,
+        newMaterialNo: '', correctionNote: '刪單', savedDeliveryRows: (() => {
+          const aQ = order.acceptQty ?? 0;
+          const iQ = order.inTransitQty ?? 0;
+          const calcNewQty = aQ + iQ;
+          return [{
+            expectedDelivery: order.expectedDelivery,
+            vendorOriginalDate: order.vendorDeliveryDate || order.expectedDelivery || '',
+            newVendorDate: order.vendorDeliveryDate || order.expectedDelivery || '',
+            originalQty: (order as any).deliveryQty ?? order.orderQty ?? 0,
+            newQty: String(calcNewQty),
+            deleted: false,
+          }];
+        })(),
+      };
+      addCorrectionOrder(corrRow);
+      addCorrectionHistory(correctionId, {
+        date: now, event: '修正單開立並提交（批次匯入-刪單）', operator: op,
+        remark: `修正單號: ${docNo}，刪單 → V`,
+      });
+      deleteCount++;
+    }
+    const parts: string[] = [];
+    if (createdCount > 0) parts.push(`${createdCount} 張不拆單調整`);
+    if (deleteCount > 0) parts.push(`${deleteCount} 張刪單`);
+    const totalCreated = createdCount + deleteCount;
+    const skippedAdj = result.validRows.length - createdCount;
+    showToast(`批次建立修正單完成：${parts.join('、')}已提交廠商 (V)${skippedAdj > 0 ? `（${skippedAdj} 張無欄位變更已略過）` : ''}`);
     setShowBatchCorrectionImport(false);
     setTimeout(() => onNavigateToList?.(), 2200);
   };

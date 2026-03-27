@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { X, Upload, Download, FileSpreadsheet, AlertTriangle, CheckCircle2, XCircle, CalendarDays, ArrowRight, ChevronDown, FileText, Table, Package, Truck, FilePlus2 } from 'lucide-react';
+import { X, Upload, Download, FileSpreadsheet, AlertTriangle, CheckCircle2, XCircle, CalendarDays, ArrowRight, ChevronDown, FileText, Table, Package, Truck, FilePlus2, Trash2 } from 'lucide-react';
 import type { OrderRow, ScheduleLine, OrderColumn, OrderColumnKey } from './AdvancedOrderTable';
 import { computeRowDayDiff, computeProdSchedDayDiff } from './AdvancedOrderTable';
 import * as XLSX from 'xlsx';
@@ -1649,7 +1649,7 @@ export function exportBatchCorrectionAdjustTemplate(orders: OrderRow[], filename
   const eligible = orders.filter(o => o.status === 'CK');
   // 說明列：文字在 A 欄（index 0）
   const instructionRows: (string | number | null)[][] = [
-    ['需調整的單請於【修正碼】填A，留白者視同不處理',
+    ['需調整的單請於【修正碼】填A，要刪單請填D，留白者視同不處理',
       '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
   ];
   const rows: (string | number | null)[][] = eligible.map(order => [
@@ -1712,12 +1712,14 @@ export interface CorrectionAdjustParsedRow {
   newMaterialNo: string;
   schedules: { newVendorDate: string; newQty: string }[];
   remark: string;
+  isDelete?: boolean;
   matchedOrder?: OrderRow; error?: string; skipReason?: string; isValid: boolean;
 }
 
 export interface CorrectionAdjustImportResult {
   totalRows: number;
   validRows: CorrectionAdjustParsedRow[];
+  deleteRows: CorrectionAdjustParsedRow[];
   skipRows: CorrectionAdjustParsedRow[];
   errorRows: CorrectionAdjustParsedRow[];
 }
@@ -1735,7 +1737,7 @@ function isAdjustInstructionRow(fields: string[]): boolean {
 export function parseBatchCorrectionAdjustCsv(content: string, allOrders: OrderRow[]): CorrectionAdjustImportResult {
   const clean = content.replace(/^\uFEFF/, '');
   const lines = clean.split(/\r?\n/).filter(l => l.trim() !== '');
-  const empty: CorrectionAdjustImportResult = { totalRows: 0, validRows: [], skipRows: [], errorRows: [] };
+  const empty: CorrectionAdjustImportResult = { totalRows: 0, validRows: [], deleteRows: [], skipRows: [], errorRows: [] };
   if (lines.length < 2) return empty;
   // detect header — 新格式含「修正碼」欄，舊格式含「新料號」或「新廠商交期1」
   // 動態找標題列：說明列在最前，第一個含「訂單號碼」的列才是標題列
@@ -1870,17 +1872,31 @@ export function parseBatchCorrectionAdjustCsv(content: string, allOrders: OrderR
     let error: string | undefined;
     const matched = allOrders.find(o => o.orderNo === orderNo && o.orderSeq === orderSeq);
     if (!matched) {
-      if (!newMaterialNo && schedules.length === 0) {
+      if (!newMaterialNo && schedules.length === 0 && correctionCode !== 'D') {
         rows.push({ rowIndex, orderNo, orderSeq, vendorName, vendorCode, materialNo, productName,
           expectedDelivery, orderQty, deliveryQty, acceptQty, inTransitQty,
           newMaterialNo, schedules, remark, isValid: true });
         continue;
       }
-      error = `找不到對應訂單 (${orderNo} / ${orderSeq})`;
+      if (correctionCode !== 'D') error = `找不到對應訂單 (${orderNo} / ${orderSeq})`;
     }
     let skipReason: string | undefined;
     if (matched && matched.status !== 'CK') {
       skipReason = `狀態 ${matched.status} 不允許開立修正單（僅限 CK）`;
+    }
+    // D碼 → 刪單，不需要交貨資料，直接推入 deleteRow
+    if (correctionCode === 'D') {
+      if (schedules.length > 0 || newMaterialNo) {
+        rows.push({ rowIndex, orderNo, orderSeq, vendorName, vendorCode, materialNo, productName,
+          expectedDelivery, orderQty, deliveryQty, acceptQty, inTransitQty,
+          newMaterialNo, schedules, remark, matchedOrder: matched, isDelete: true,
+          error: '修正碼 D（刪單）後方不可填寫交貨資料或新料號', isValid: false });
+      } else {
+        rows.push({ rowIndex, orderNo, orderSeq, vendorName, vendorCode, materialNo, productName,
+          expectedDelivery, orderQty, deliveryQty, acceptQty, inTransitQty,
+          newMaterialNo, schedules, remark, matchedOrder: matched, isDelete: true, isValid: true });
+      }
+      continue;
     }
     if (!skipReason && !error && schedules.length === 0 && !newMaterialNo) {
       rows.push({ rowIndex, orderNo, orderSeq, vendorName, vendorCode, materialNo, productName,
@@ -1915,10 +1931,11 @@ export function parseBatchCorrectionAdjustCsv(content: string, allOrders: OrderR
       newMaterialNo, schedules, remark, matchedOrder: matched, error, skipReason, isValid: !error,
     });
   }
-  const hasAction = (r: CorrectionAdjustParsedRow) => r.schedules.length > 0 || !!r.newMaterialNo;
+  const hasAction = (r: CorrectionAdjustParsedRow) => r.schedules.length > 0 || !!r.newMaterialNo || !!r.isDelete;
   return {
     totalRows: rows.length,
-    validRows: rows.filter(r => r.isValid && !r.skipReason && hasAction(r)),
+    validRows: rows.filter(r => r.isValid && !r.skipReason && hasAction(r) && !r.isDelete),
+    deleteRows: rows.filter(r => r.isValid && !!r.isDelete),
     skipRows: rows.filter(r => r.isValid && (r.skipReason || !hasAction(r))),
     errorRows: rows.filter(r => !r.isValid),
   };
@@ -2120,9 +2137,9 @@ export function BatchCorrectionAdjustImportOverlay({ allOrders, onConfirm, onClo
           <div className="flex flex-col gap-[20px] px-[24px] py-[24px]">
             <div className="flex flex-col gap-[4px] bg-[#f4f6f8] rounded-[8px] px-[16px] py-[12px]">
               <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#637381]">欄位說明（不拆單調整）：</p>
-              <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381]">• <span className="font-semibold text-[#1c252e]">新料號</span>：選填，覆蓋整張訂單的料號</p>
-              <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381]">• <span className="font-semibold text-[#1c252e]">新廠商交期1/新交貨量1～3</span>：至少填寫一期，最多三期</p>
-              <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381]">• 各期合計不可低於驗收量＋在途量，且不可超過交貨量</p>
+              <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381]">• 需調整的單請於【修正碼】填A，要刪單請填D，留白者視同不處理</p>
+              <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381]">• 各期合計不可低於驗收量＋在途量，且不可超過訂貨量</p>
+              <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381]">• 新廠商交期不可填入過去日期</p>
             </div>
             {parseError && <div className="flex items-start gap-[8px] bg-[rgba(255,171,0,0.08)] rounded-[8px] px-[14px] py-[10px]"><AlertTriangle size={16} className="text-[#b76e00] shrink-0 mt-[2px]" /><p className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#b76e00]">{parseError}</p></div>}
             <div
@@ -2148,7 +2165,9 @@ export function BatchCorrectionAdjustImportOverlay({ allOrders, onConfirm, onClo
               <p className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#637381]">{fileName}</p>
             </div>
             <div className="flex gap-[8px] flex-wrap shrink-0">
-              <TotalSummaryBadge total={result.totalRows} validCount={result.validRows.length} skipCount={result.skipRows.length} errorCount={result.errorRows.length} />
+              <TotalSummaryBadge total={result.totalRows} validCount={result.validRows.length + result.deleteRows.length} skipCount={result.skipRows.length} errorCount={result.errorRows.length} />
+              <SummaryBadge label="A 調整" count={result.validRows.length} bgColor="bg-[rgba(0,167,111,0.12)]" textColor="text-[#00a76f]" icon={<FilePlus2 size={14} />} />
+              <SummaryBadge label="D 刪單" count={result.deleteRows.length} bgColor="bg-[rgba(255,86,48,0.12)]" textColor="text-[#ff5630]" icon={<Trash2 size={14} />} />
             </div>
             <div className="flex-1 min-h-0 overflow-auto custom-scrollbar border border-[rgba(145,158,171,0.16)] rounded-[8px]">
               <table className="w-full min-w-[900px]">
@@ -2160,6 +2179,7 @@ export function BatchCorrectionAdjustImportOverlay({ allOrders, onConfirm, onClo
                 <tbody>
                   {result.errorRows.map(r => <BCAdjustRow key={`e${r.rowIndex}`} row={r} />)}
                   {result.validRows.map(r => <BCAdjustRow key={`v${r.rowIndex}`} row={r} />)}
+                  {result.deleteRows.map(r => <BCAdjustRow key={`d${r.rowIndex}`} row={r} />)}
                   {result.skipRows.map(r => <BCAdjustRow key={`s${r.rowIndex}`} row={r} />)}
                 </tbody>
               </table>
@@ -2170,7 +2190,7 @@ export function BatchCorrectionAdjustImportOverlay({ allOrders, onConfirm, onClo
             <div className="flex gap-[12px]">
               <button className="h-[36px] px-[16px] rounded-[8px] border border-[rgba(145,158,171,0.32)] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-[#637381] hover:bg-[rgba(145,158,171,0.08)]" onClick={onClose}>取消</button>
               <button className="h-[36px] px-[20px] rounded-[8px] bg-[#00a76f] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-white hover:bg-[#007b55] disabled:opacity-50 disabled:cursor-not-allowed"
-                onClick={() => onConfirm(result)} disabled={result.validRows.length === 0}>確認建立修正單 ({result.validRows.length} 筆)</button>
+                onClick={() => onConfirm(result)} disabled={result.validRows.length + result.deleteRows.length === 0}>確認建立修正單 ({result.validRows.length + result.deleteRows.length} 筆)</button>
             </div>
           </div>
         </>)}
@@ -2181,8 +2201,8 @@ export function BatchCorrectionAdjustImportOverlay({ allOrders, onConfirm, onClo
 
 function BCAdjustRow({ row }: { row: CorrectionAdjustParsedRow }) {
   const c = "px-[8px] py-[7px] font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#1c252e]";
-  const isSkip = !row.error && (!!row.skipReason || (row.schedules.length === 0 && !row.newMaterialNo));
-  const bg = !row.isValid ? 'bg-[rgba(255,171,0,0.04)]' : isSkip ? 'bg-[rgba(145,158,171,0.04)]' : 'bg-[rgba(0,167,111,0.02)]';
+  const isSkip = !row.error && (!!row.skipReason || (row.schedules.length === 0 && !row.newMaterialNo && !row.isDelete));
+  const bg = !row.isValid ? 'bg-[rgba(255,171,0,0.04)]' : row.isDelete ? 'bg-[rgba(255,86,48,0.02)]' : isSkip ? 'bg-[rgba(145,158,171,0.04)]' : 'bg-[rgba(0,167,111,0.02)]';
   const isOk = row.isValid && !isSkip;
   const accent = isOk ? 'text-[#118d57] font-semibold' : 'text-[#b71d18] font-semibold';
   const s1 = row.schedules[0], s2 = row.schedules[1], s3 = row.schedules[2];
@@ -2199,9 +2219,10 @@ function BCAdjustRow({ row }: { row: CorrectionAdjustParsedRow }) {
       <td className={`${c} ${s2?.newQty ? accent : 'text-[#919eab]'}`}>{s2?.newQty || '—'}</td>
       <td className={`${c} ${s3?.newVendorDate ? accent : 'text-[#919eab]'}`}>{s3?.newVendorDate || '—'}</td>
       <td className={`${c} ${s3?.newQty ? accent : 'text-[#919eab]'}`}>{s3?.newQty || '—'}</td>
-      <td className={`${c} truncate max-w-[100px] ${row.remark ? '' : 'text-[#919eab]'}`}>{row.remark || '—'}</td>
+      <td className={`${c} truncate max-w-[100px] ${row.isDelete ? 'text-[#ff5630] font-semibold' : row.remark ? '' : 'text-[#919eab]'}`}>{row.isDelete ? '刪單' : row.remark || '—'}</td>
       <td className="px-[8px] py-[7px]">
         {!row.isValid ? <p className="text-[11px] text-[#b76e00] max-w-[140px]" title={row.error}>{row.error}</p>
+         : row.isDelete ? <CheckCircle2 size={14} className="text-[#22c55e]" />
          : row.skipReason ? <p className="text-[11px] text-[#919eab] max-w-[140px]" title={row.skipReason}>{row.skipReason}</p>
          : isSkip ? <span className="text-[#919eab] text-[12px]">—（不處理）</span>
          : <CheckCircle2 size={14} className="text-[#22c55e]" />}
@@ -2271,10 +2292,11 @@ export function BatchCorrectionSplitImportOverlay({ allOrders, onConfirm, onClos
           <div className="flex flex-col gap-[20px] px-[24px] py-[24px]">
             <div className="flex flex-col gap-[4px] bg-[#f4f6f8] rounded-[8px] px-[16px] py-[12px]">
               <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#637381]">欄位說明（拆單）：</p>
-              <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381]">• <span className="font-semibold text-[#1c252e]">拆單數</span>：選填，2 以上（至少要填 2 組交貨量）</p>
-              <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381]">• <span className="font-semibold text-[#1c252e]">交貨量1～3</span>：各拆出序號的交貨量，合計必須等於原交貨量</p>
-              <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381]">• <span className="font-semibold text-[#1c252e]">料號1～3</span>：各拆出序號的新料號（選填）</p>
-              <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381]">• 拆出序號由系統自動計算，無需填寫</p>
+              <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381]">• 【料號】欄位若不需填寫請直接留白</p>
+              <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381]">• 需在【拆單數】填入拆單數量，最少為2，空白者視同不處理</p>
+              <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381]">• 拆單料3以上者，請於Q欄後自行補上交貨資料(新廠商交期3+交貨量3+料號3)，以此類推</p>
+              <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381]">• 各期合計不可低於驗收量＋在途量，且不可超過訂貨量</p>
+              <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381]">• 新廠商交期不可填入過去日期</p>
             </div>
             {parseError && <div className="flex items-start gap-[8px] bg-[rgba(255,171,0,0.08)] rounded-[8px] px-[14px] py-[10px]"><AlertTriangle size={16} className="text-[#b76e00] shrink-0 mt-[2px]" /><p className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#b76e00]">{parseError}</p></div>}
             <div
@@ -2475,17 +2497,18 @@ export function BatchCorrectionCombinedImportOverlay({
             {/* 拆單說明 */}
             <div className="flex flex-col gap-[4px] bg-[#f4f6f8] rounded-[8px] px-[16px] py-[12px]">
               <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#637381]">欄位說明（拆單）：</p>
-              <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381]">• <span className="font-semibold text-[#1c252e]">拆單數</span>：選填，2 以上（至少要填 2 組交貨量）</p>
-              <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381]">• <span className="font-semibold text-[#1c252e]">交貨量1～3</span>：各拆出序號的交貨量，合計必須等於原交貨量</p>
-              <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381]">• <span className="font-semibold text-[#1c252e]">料號1～3</span>：各拆出序號的新料號（選填）</p>
-              <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381]">• 拆出序號由系統自動計算，無需填寫</p>
+              <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381]">• 【料號】欄位若不需填寫請直接留白</p>
+              <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381]">• 需在【拆單數】填入拆單數量，最少為2，空白者視同不處理</p>
+              <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381]">• 拆單料3以上者，請於Q欄後自行補上交貨資料(新廠商交期3+交貨量3+料號3)，以此類推</p>
+              <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381]">• 各期合計不可低於驗收量＋在途量，且不可超過訂貨量</p>
+              <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381]">• 新廠商交期不可填入過去日期</p>
             </div>
             {/* 不拆單調整說明 */}
             <div className="flex flex-col gap-[4px] bg-[#f4f6f8] rounded-[8px] px-[16px] py-[12px]">
               <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#637381]">欄位說明（不拆單調整）：</p>
-              <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381]">• <span className="font-semibold text-[#1c252e]">新料號</span>：選填，覆蓋整張訂單的料號</p>
-              <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381]">• <span className="font-semibold text-[#1c252e]">新廠商交期1/新交貨量1～3</span>：至少填寫一期，最多三期</p>
-              <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381]">• 各期合計不可低於驗收量＋在途量，且不可超過交貨量</p>
+              <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381]">• 需調整的單請於【修正碼】填A，要刪單請填D，留白者視同不處理</p>
+              <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381]">• 各期合計不可低於驗收量＋在途量，且不可超過訂貨量</p>
+              <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381]">• 新廠商交期不可填入過去日期</p>
             </div>
             {parseError && <div className="flex items-start gap-[8px] bg-[rgba(255,171,0,0.08)] rounded-[8px] px-[14px] py-[10px]"><AlertTriangle size={16} className="text-[#b76e00] shrink-0 mt-[2px]" /><p className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#b76e00]">{parseError}</p></div>}
             <div
@@ -2507,7 +2530,7 @@ export function BatchCorrectionCombinedImportOverlay({
         {step === 'preview' && (() => {
           const hasSplit = !!splitResult;
           const hasAdjust = !!adjustResult;
-          const totalValid = (splitResult?.validRows.length ?? 0) + (adjustResult?.validRows.length ?? 0);
+          const totalValid = (splitResult?.validRows.length ?? 0) + (adjustResult?.validRows.length ?? 0) + (adjustResult?.deleteRows.length ?? 0);
           const headerTitle = hasSplit && hasAdjust
             ? '拆單 ＋ 不拆單調整 — 匯入預覽'
             : hasSplit ? '拆單 — 匯入預覽' : '不拆單調整 — 匯入預覽';
@@ -2567,7 +2590,7 @@ export function BatchCorrectionCombinedImportOverlay({
                   <div className="flex flex-col gap-[8px] px-[24px] pb-[16px]">
                     <div className="flex items-center gap-[8px] shrink-0">
                       <span className="inline-flex items-center gap-[4px] bg-[rgba(0,167,111,0.1)] text-[#00a76f] text-[11px] font-semibold px-[8px] h-[22px] rounded-[4px]">不拆單調整</span>
-                      <TotalSummaryBadge total={adjustResult.totalRows} validCount={adjustResult.validRows.length} skipCount={adjustResult.skipRows.length} errorCount={adjustResult.errorRows.length} />
+                      <TotalSummaryBadge total={adjustResult.totalRows} validCount={adjustResult.validRows.length + adjustResult.deleteRows.length} skipCount={adjustResult.skipRows.length} errorCount={adjustResult.errorRows.length} />
                     </div>
                     <div className="overflow-auto custom-scrollbar border border-[rgba(145,158,171,0.16)] rounded-[8px]" style={{ maxHeight: hasSplit ? '300px' : '420px' }}>
                       <table className="w-full min-w-[900px]">
@@ -2579,6 +2602,7 @@ export function BatchCorrectionCombinedImportOverlay({
                         <tbody>
                           {adjustResult.errorRows.map(r => <BCAdjustRow key={`e${r.rowIndex}`} row={r} />)}
                           {adjustResult.validRows.map(r => <BCAdjustRow key={`v${r.rowIndex}`} row={r} />)}
+                          {adjustResult.deleteRows.map(r => <BCAdjustRow key={`d${r.rowIndex}`} row={r} />)}
                           {adjustResult.skipRows.map(r => <BCAdjustRow key={`s${r.rowIndex}`} row={r} />)}
                         </tbody>
                       </table>
@@ -2615,7 +2639,7 @@ export function BatchCorrectionCombinedImportOverlay({
 
 
 
-export type CorrectionBatchCode = 'A' | 'B' | '';
+export type CorrectionBatchCode = 'A' | 'B' | 'D' | '';
 
 export interface CorrectionBatchParsedRow {
   rowIndex: number; orderNo: string; orderSeq: string;
@@ -2631,6 +2655,7 @@ export interface CorrectionBatchImportResult {
   totalRows: number;
   adjustRows: CorrectionBatchParsedRow[];
   splitRows: CorrectionBatchParsedRow[];
+  deleteRows: CorrectionBatchParsedRow[];
   skipRows: CorrectionBatchParsedRow[];
   errorRows: CorrectionBatchParsedRow[];
 }
@@ -2651,7 +2676,7 @@ function isCorrectionInstructionRow(fields: string[]): boolean {
 export function parseBatchCorrectionCsv(content: string, allOrders: OrderRow[]): CorrectionBatchImportResult {
   const clean = content.replace(/^\uFEFF/, '');
   const lines = clean.split(/\r?\n/).filter(l => l.trim() !== '');
-  const empty: CorrectionBatchImportResult = { totalRows: 0, adjustRows: [], splitRows: [], skipRows: [], errorRows: [] };
+  const empty: CorrectionBatchImportResult = { totalRows: 0, adjustRows: [], splitRows: [], deleteRows: [], skipRows: [], errorRows: [] };
   if (lines.length < 2) return empty;
   if (!detectCorrectionBatchMode(lines[0])) return empty;
   const dataLines = lines.slice(1);
@@ -2668,7 +2693,8 @@ export function parseBatchCorrectionCsv(content: string, allOrders: OrderRow[]):
     let error: string | undefined;
     if (codeRaw === 'A') correctionCode = 'A';
     else if (codeRaw === 'B') correctionCode = 'B';
-    else if (codeRaw !== '') error = `修正碼無效: "${codeRaw}"（僅接受 A、B 或空白）`;
+    else if (codeRaw === 'D') correctionCode = 'D';
+    else if (codeRaw !== '') error = `修正碼無效: "${codeRaw}"（僅接受 A、B、D 或空白）`;
     if (!orderNo && correctionCode === '') continue;
     const newVendorDate = normalizeDateStr((f[12] || '').trim());
     const newDeliveryQty = (f[13] || '').trim();
@@ -2700,6 +2726,12 @@ export function parseBatchCorrectionCsv(content: string, allOrders: OrderRow[]):
         if (newVendorDate === origDate && !hasNewQty && !newMaterialNo) error = '無異動：新廠商交期與原始相同，且未修改交貨量或料號';
       }
     }
+    if (correctionCode === 'D' && !error) {
+      // 刪單：後方不可填任何交貨資料
+      if (newVendorDate || newDeliveryQty || newMaterialNo) {
+        error = '修正碼 D（刪單）後方不可填寫新廠商交期、新交貨量或新料號';
+      }
+    }
     if (correctionCode === 'B' && !error) {
       if (!newDeliveryQty) { error = '修正碼 B（拆單）必須填寫「新交貨量」（原序號保留量）'; }
       else if (matched) {
@@ -2719,6 +2751,7 @@ export function parseBatchCorrectionCsv(content: string, allOrders: OrderRow[]):
       }
       if (!error && newVendorDate && !isValidDateStr(newVendorDate)) error = `日期格式錯誤: "${newVendorDate}"（格式: YYYY/MM/DD）`;
     }
+
     rows.push({
       rowIndex, orderNo, orderSeq,
       vendorName: (f[2] || '').trim(), vendorCode: (f[3] || '').trim(),
@@ -2734,6 +2767,7 @@ export function parseBatchCorrectionCsv(content: string, allOrders: OrderRow[]):
     totalRows: rows.length,
     adjustRows: rows.filter(r => r.correctionCode === 'A' && r.isValid),
     splitRows: rows.filter(r => r.correctionCode === 'B' && r.isValid),
+    deleteRows: rows.filter(r => r.correctionCode === 'D' && r.isValid),
     skipRows: rows.filter(r => r.correctionCode === '' && r.isValid),
     errorRows: rows.filter(r => !r.isValid),
   };
@@ -2789,7 +2823,7 @@ export function BatchCorrectionImportOverlay({ allOrders, onConfirm, onClose }: 
     if (f && (f.name.endsWith('.csv') || f.type === 'text/csv' || f.name.endsWith('.xlsx') || f.name.endsWith('.xls') ||
       f.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || f.type === 'application/vnd.ms-excel')) processFile(f);
   };
-  const actionCount = batchResult ? batchResult.adjustRows.length + batchResult.splitRows.length : 0;
+  const actionCount = batchResult ? batchResult.adjustRows.length + batchResult.splitRows.length + batchResult.deleteRows.length : 0;
   return (
     <div className="fixed inset-0 z-[200] bg-[rgba(145,158,171,0.4)] flex items-center justify-center p-[20px]" onClick={onClose}>
       <div className="bg-white w-full rounded-[16px] shadow-[-40px_40px_80px_0px_rgba(145,158,171,0.24)] flex flex-col overflow-hidden"
@@ -2816,6 +2850,10 @@ export function BatchCorrectionImportOverlay({ allOrders, onConfirm, onClose }: 
                 <div className="flex items-center gap-[6px]">
                   <Truck size={14} className="text-[#8e33ff] shrink-0" />
                   <p className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#1c252e]"><span className="font-semibold">B</span> — 拆單（必填「新交貨量」＝原序號保留量，剩餘量自動拆至新序號；「新料號」套用至新序號）</p>
+                </div>
+                <div className="flex items-center gap-[6px]">
+                  <Trash2 size={14} className="text-[#ff5630] shrink-0" />
+                  <p className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#1c252e]"><span className="font-semibold">D</span> — 刪單（後方欄位請保持空白）</p>
                 </div>
                 <div className="flex items-center gap-[6px]">
                   <div className="w-[14px] h-[14px] flex items-center justify-center shrink-0"><div className="w-[6px] h-[6px] bg-[#919eab] rounded-full" /></div>
@@ -2846,6 +2884,7 @@ export function BatchCorrectionImportOverlay({ allOrders, onConfirm, onClose }: 
               <TotalSummaryBadge total={batchResult.totalRows} validCount={actionCount} skipCount={batchResult.skipRows.length} errorCount={batchResult.errorRows.length} />
               <SummaryBadge label="A 不拆單調整" count={batchResult.adjustRows.length} bgColor="bg-[rgba(0,167,111,0.12)]" textColor="text-[#00a76f]" icon={<FilePlus2 size={14} />} />
               <SummaryBadge label="B 拆單" count={batchResult.splitRows.length} bgColor="bg-[rgba(142,51,255,0.12)]" textColor="text-[#8e33ff]" icon={<Truck size={14} />} />
+              <SummaryBadge label="D 刪單" count={batchResult.deleteRows.length} bgColor="bg-[rgba(255,86,48,0.12)]" textColor="text-[#ff5630]" icon={<Trash2 size={14} />} />
               <SummaryBadge label="不處理" count={batchResult.skipRows.length} bgColor="bg-[rgba(145,158,171,0.08)]" textColor="text-[#919eab]" />
             </div>
             <div className="flex-1 min-h-0 overflow-auto custom-scrollbar border border-[rgba(145,158,171,0.16)] rounded-[8px]">
@@ -2859,6 +2898,7 @@ export function BatchCorrectionImportOverlay({ allOrders, onConfirm, onClose }: 
                   {batchResult.errorRows.map(r => <BCRow key={`e${r.rowIndex}`} row={r} />)}
                   {batchResult.adjustRows.map(r => <BCRow key={`a${r.rowIndex}`} row={r} />)}
                   {batchResult.splitRows.map(r => <BCRow key={`b${r.rowIndex}`} row={r} />)}
+                  {batchResult.deleteRows.map(r => <BCRow key={`d${r.rowIndex}`} row={r} />)}
                   {batchResult.skipRows.map(r => <BCRow key={`s${r.rowIndex}`} row={r} />)}
                 </tbody>
               </table>
@@ -2885,11 +2925,13 @@ function BCRow({ row }: { row: CorrectionBatchParsedRow }) {
     if (!row.isValid) return <div className="bg-[rgba(255,171,0,0.12)] flex items-center gap-[4px] px-[8px] h-[22px] rounded-[4px]"><AlertTriangle size={12} className="text-[#b76e00]" /><p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[11px] text-[#b76e00]">錯誤</p></div>;
     if (row.correctionCode === 'A') return <div className="bg-[rgba(0,167,111,0.12)] flex items-center gap-[4px] px-[8px] h-[22px] rounded-[4px]"><FilePlus2 size={12} className="text-[#00a76f]" /><p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[11px] text-[#00a76f]">A 調整</p></div>;
     if (row.correctionCode === 'B') return <div className="bg-[rgba(142,51,255,0.12)] flex items-center gap-[4px] px-[8px] h-[22px] rounded-[4px]"><Truck size={12} className="text-[#8e33ff]" /><p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[11px] text-[#8e33ff]">B 拆單</p></div>;
+    if (row.correctionCode === 'D') return <div className="bg-[rgba(255,86,48,0.12)] flex items-center gap-[4px] px-[8px] h-[22px] rounded-[4px]"><Trash2 size={12} className="text-[#ff5630]" /><p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[11px] text-[#ff5630]">D 刪單</p></div>;
     return <p className="text-[12px] text-[#919eab]">—</p>;
   };
   const isB = row.correctionCode === 'B';
-  const accentColor = isB ? 'text-[#8e33ff]' : 'text-[#00a76f]';
-  const bg = !row.isValid ? 'bg-[rgba(255,171,0,0.04)]' : row.skipReason ? 'bg-[rgba(145,158,171,0.04)]' : row.correctionCode === 'A' ? 'bg-[rgba(0,167,111,0.02)]' : isB ? 'bg-[rgba(142,51,255,0.02)]' : '';
+  const isD = row.correctionCode === 'D';
+  const accentColor = isB ? 'text-[#8e33ff]' : isD ? 'text-[#ff5630]' : 'text-[#00a76f]';
+  const bg = !row.isValid ? 'bg-[rgba(255,171,0,0.04)]' : row.skipReason ? 'bg-[rgba(145,158,171,0.04)]' : row.correctionCode === 'A' ? 'bg-[rgba(0,167,111,0.02)]' : isB ? 'bg-[rgba(142,51,255,0.02)]' : isD ? 'bg-[rgba(255,86,48,0.02)]' : '';
   // For B (split), compute remainder info
   const splitInfo = isB && row.matchedOrder && row.newDeliveryQty
     ? (() => { const dQ = (row.matchedOrder as any).deliveryQty ?? row.matchedOrder.orderQty ?? 0; const nQ = parseInt(row.newDeliveryQty, 10); return isNaN(nQ) ? '' : `原${nQ} / 拆${dQ - nQ}`; })()

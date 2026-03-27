@@ -194,7 +194,13 @@ function QtyField({ value, onChange, highlight, isChanged }: { value: string; on
       <div aria-hidden="true" className={`absolute border border-solid inset-0 pointer-events-none rounded-[8px] ${highlight || isChanged ? 'border-[#ff5630]' : 'border-[#dfe3e8]'}`} />
       <div className="flex items-center size-full px-[12px] py-[6px]">
         <input
-          type="number" min="0" value={value} onChange={e => onChange(e.target.value)}
+          type="number" min="1" value={value}
+          onChange={e => {
+            const raw = e.target.value;
+            if (raw === '') { onChange(''); return; }
+            const n = parseFloat(raw);
+            if (!isNaN(n) && n > 0) onChange(raw);
+          }}
           className={`flex-1 min-w-0 font-['Public_Sans:Regular',sans-serif] font-normal text-[14px] leading-[22px] bg-transparent outline-none ${isChanged ? 'text-[#ff5630]' : 'text-[#454f5b]'}`}
         />
       </div>
@@ -202,9 +208,10 @@ function QtyField({ value, onChange, highlight, isChanged }: { value: string; on
   );
 }
 
+
 // ── DateCell — SimpleDatePicker popup ─────────────────────────────────────────
-interface DateCellProps { value: string; rowId: number; onSelect: (id: number, date: string) => void; isChanged?: boolean; disabled?: boolean; }
-function DateCell({ value, rowId, onSelect, isChanged, disabled }: DateCellProps) {
+interface DateCellProps { value: string; rowId: number; onSelect: (id: number, date: string) => void; isChanged?: boolean; disabled?: boolean; minDate?: string; }
+function DateCell({ value, rowId, onSelect, isChanged, disabled, minDate }: DateCellProps) {
   const [open, setOpen] = useState(false);
   const btnRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ top: 0, left: 0 });
@@ -259,6 +266,7 @@ function DateCell({ value, rowId, onSelect, isChanged, disabled }: DateCellProps
           <SimpleDatePicker
             selectedDate={value}
             onDateSelect={date => { onSelect(rowId, date); setOpen(false); }}
+            minDate={minDate}
           />
         </div>,
         document.body
@@ -555,9 +563,11 @@ export function CorrectionDetailPage({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── 刪單模式（edit 模式下才可啟動）──
-  const [isDeleteMode, setIsDeleteMode] = useState(false);
-  const preDeleteRowsRef = useRef<DeliveryRow[]>([]);
+  // ── 刪單模式（per-order，各訂單獨立）──
+  const [deleteModeMap, setDeleteModeMap] = useState<Record<number, boolean>>({});
+  const isDeleteMode = deleteModeMap[order.id] ?? false;
+  const setIsDeleteMode = (val: boolean) => setDeleteModeMap(prev => ({ ...prev, [order.id]: val }));
+  const preDeleteRowsMapRef = useRef<Record<number, DeliveryRow[]>>({});
   // ── 退回廠商表單（inline swap，purchaserReview 模式）──
   const [showReturnForm, setShowReturnForm] = useState(false);
   const [returnReason, setReturnReason] = useState('');
@@ -625,7 +635,12 @@ export function CorrectionDetailPage({
 
   // ── 最低需求：新交貨量合計不可少於 驗收量＋在途量 ──────────────────────────
   const minRequiredQty = (order.acceptQty ?? 0) + (order.inTransitQty ?? 0);
-  const belowMinQty = minRequiredQty > 0 && totalNewQty < minRequiredQty;
+  const belowMinQty = !isDeleteMode && minRequiredQty > 0 && totalNewQty < minRequiredQty;
+  const aboveMaxQty = !isDeleteMode && !isSplitMode && totalNewQty > (order.orderQty ?? 0);
+  // 交期不可為過去日期
+  const todayStr = (() => { const t = new Date(); return `${t.getFullYear()}/${String(t.getMonth()+1).padStart(2,'0')}/${String(t.getDate()).padStart(2,'0')}`; })();
+  const hasPastDate = !isReadOnly && !isDeleteMode && form.deliveryRows.some(r => !r.deleted && !!r.newVendorDate && r.newVendorDate < todayStr);
+
 
   const updateRow = (id: number, field: keyof DeliveryRow, val: string) =>
     setForm(p => ({ ...p, deliveryRows: p.deliveryRows.map(r => r.id === id ? { ...r, [field]: val } : r) }));
@@ -751,32 +766,32 @@ export function CorrectionDetailPage({
     return changes.length > 0 ? changes.join('；') : '（無欄位變更）';
   };
 
-  // ── 刪單模式 toggle ─────────────────────────────────────────────────────────
+  // ── 刪單模式 toggle（提交前可取消）─────────────────────────────────────────
   const handleToggleDeleteMode = () => {
     if (isDeleteMode) {
       // 取消刪單：還原到按下前的快照
       setIsDeleteMode(false);
-      const snap = preDeleteRowsRef.current;
-      setForm(p => ({
-        ...p,
-        deliveryRows: snap,
-        periodInput: String(snap.filter(r => !r.deleted).length),
-      }));
+      const snap = preDeleteRowsMapRef.current[order.id];
+      if (snap) {
+        setForm(p => ({
+          ...p,
+          deliveryRows: snap,
+          periodInput: String(snap.length),
+        }));
+      }
     } else {
-      // 啟動刪單：保存快照，自動計算新交貨量（從第一筆開始，合計=驗收量+在途量）
-      preDeleteRowsRef.current = form.deliveryRows.map(r => ({ ...r }));
+      // 啟動刪單：保存快照，自動計算新交貨量（合計=驗收量+在途量）
+      preDeleteRowsMapRef.current[order.id] = form.deliveryRows.map(r => ({ ...r }));
       const minRequired = (order.acceptQty ?? 0) + (order.inTransitQty ?? 0);
       let remaining = minRequired;
       const newRows = form.deliveryRows.map(r => {
-        if (remaining <= 0) return { ...r, deleted: true };
+        if (remaining <= 0) return { ...r, newQty: '0', deleted: false };
         const assignQty = Math.min(r.originalQty, remaining);
         remaining -= assignQty;
-        // 若 assignQty = 0（originalQty 為 0），也標記刪除
-        if (assignQty === 0) return { ...r, deleted: true };
+        if (assignQty === 0) return { ...r, newQty: '0', deleted: false };
         return { ...r, newQty: String(assignQty), deleted: false };
       });
-      const activeCount = newRows.filter(r => !r.deleted).length;
-      setForm(p => ({ ...p, deliveryRows: newRows, periodInput: String(activeCount) }));
+      setForm(p => ({ ...p, deliveryRows: newRows, periodInput: String(newRows.length) }));
       setIsDeleteMode(true);
     }
   };
@@ -794,6 +809,14 @@ export function CorrectionDetailPage({
     }
     if (belowMinQty) {
       showToast(`新交貨量合計（${totalNewQty}）不可少於驗收量＋在途量（${minRequiredQty}），無法開立修正單`);
+      return;
+    }
+    if (aboveMaxQty) {
+      showToast(`新交貨量合計（${totalNewQty}）不可超過訂貨量（${order.orderQty ?? 0}）`);
+      return;
+    }
+    if (hasPastDate) {
+      showToast('新廠商交期不可為過去日期');
       return;
     }
     if (isDeleteOrder) {
@@ -820,6 +843,14 @@ export function CorrectionDetailPage({
     }
     if (belowMinQty) {
       showToast(`新交貨量合計（${totalNewQty}）不可少於驗收量＋在途量（${minRequiredQty}），無法開立修正單`);
+      return;
+    }
+    if (aboveMaxQty) {
+      showToast(`新交貨量合計（${totalNewQty}）不可超過訂貨量（${order.orderQty ?? 0}）`);
+      return;
+    }
+    if (hasPastDate) {
+      showToast('新廠商交期不可為過去日期');
       return;
     }
     recordHistory(order.id, '修正單暫存', buildChangeSummary());
@@ -1513,7 +1544,7 @@ export function CorrectionDetailPage({
                       <div className="shrink-0 w-[76px]"><p className="font-['Public_Sans:Regular',sans-serif] font-normal leading-[22px] text-[13px] whitespace-nowrap text-[#454f5b]">{row.vendorOriginalDate || '—'}</p></div>
                       {/* 新廠商交期 */}
                       <div className={`shrink-0 w-[150px] ${isReadOnly ? 'pointer-events-none' : ''}`}>
-                        <DateCell value={row.newVendorDate} rowId={row.id} onSelect={(id, date) => updateRow(id, 'newVendorDate', date)} isChanged={dateChanged} disabled={isReadOnly} />
+                        <DateCell value={row.newVendorDate} rowId={row.id} onSelect={(id, date) => updateRow(id, 'newVendorDate', date)} isChanged={dateChanged} disabled={isReadOnly} minDate={todayStr} />
                       </div>
                       {/* 新交貨量 */}
                       <div className={`shrink-0 w-[76px] ${isReadOnly ? 'pointer-events-none' : ''}`}>
@@ -1562,6 +1593,14 @@ export function CorrectionDetailPage({
                     </div>
                   );
                 })()}
+                {/* 拆單：過去日期警告 */}
+                {!isReadOnly && form.deliveryRows.some(r => !!r.newVendorDate && r.newVendorDate < todayStr) && (
+                  <div className="px-[12px] py-[9px] border-t border-[rgba(145,158,171,0.1)] flex items-center gap-[12px] bg-[rgba(255,86,48,0.04)]">
+                    <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#ff5630] leading-[18px] shrink-0">
+                      ⚠ 新廠商交期不可為過去日期
+                    </p>
+                  </div>
+                )}
                 {/* 拆單：無異動提示 */}
                 {noChangeBlock && (
                   <div className="px-[12px] py-[9px] border-t border-[rgba(145,158,171,0.1)] flex items-center gap-[12px] bg-[rgba(255,171,0,0.06)]">
@@ -1578,7 +1617,7 @@ export function CorrectionDetailPage({
                 <div className="shrink-0 w-[100px]"><p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[#1c252e] text-[14px] whitespace-nowrap">預計交期</p></div>
                 <div className="shrink-0 w-[100px]"><p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[#1c252e] text-[14px] whitespace-nowrap">原廠商交期</p></div>
                 <div className="shrink-0 w-[150px]">
-                  <p className={`font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] whitespace-nowrap ${isReadOnly ? (hasDateChange ? 'text-[#ff5630]' : 'text-[#1c252e]') : 'text-[#005eb8]'}`}>新廠商交期</p>
+                  <p className={`font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] whitespace-nowrap ${(correctionType === '刪單' || isDeleteMode) ? 'text-[#1c252e]' : isReadOnly ? (hasDateChange ? 'text-[#ff5630]' : 'text-[#1c252e]') : 'text-[#005eb8]'}`}>新廠商交期</p>
                 </div>
                 <div className="shrink-0 w-[100px]"><p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[#1c252e] text-[14px] whitespace-nowrap">原交貨量</p></div>
                 <div className="shrink-0 w-[150px]">
@@ -1605,7 +1644,11 @@ export function CorrectionDetailPage({
                       <p className={`font-['Public_Sans:Regular',sans-serif] font-normal leading-[22px] text-[14px] whitespace-nowrap ${isDeleted ? 'text-[rgba(145,158,171,0.5)]' : 'text-[#454f5b]'}`}>{row.vendorOriginalDate || '—'}</p>
                     </div>
                     <div className={`flex items-center shrink-0 w-[150px] ${isDeleted ? 'opacity-70 pointer-events-none' : (isReadOnly || isDeleteMode) ? 'pointer-events-none' : ''}`}>
-                      <DateCell value={row.newVendorDate} rowId={row.id} onSelect={(id, date) => updateRow(id, 'newVendorDate', date)} isChanged={!isDeleted && row.newVendorDate !== row.vendorOriginalDate} disabled={isReadOnly || isDeleteMode} />
+                      {(correctionType === '刪單' || isDeleteMode) ? (
+                        <p className={`font-['Public_Sans:Regular',sans-serif] font-normal leading-[22px] text-[14px] whitespace-nowrap text-[#454f5b]`}>{row.newVendorDate || '—'}</p>
+                      ) : (
+                        <DateCell value={row.newVendorDate} rowId={row.id} onSelect={(id, date) => updateRow(id, 'newVendorDate', date)} isChanged={!isDeleted && row.newVendorDate !== row.vendorOriginalDate} disabled={isReadOnly || isDeleteMode} minDate={todayStr} />
+                      )}
                     </div>
                     <div className="flex items-center shrink-0 w-[100px]">
                       <p className={`font-['Public_Sans:Regular',sans-serif] font-normal leading-[22px] text-[14px] whitespace-nowrap ${isDeleted ? 'text-[rgba(145,158,171,0.5)]' : 'text-[#454f5b]'}`}>{row.originalQty}</p>
@@ -1677,6 +1720,28 @@ export function CorrectionDetailPage({
                 </div>
               )}
 
+              {/* 超過訂貨量提示列 */}
+              {aboveMaxQty && (
+                <div className="px-[45px] py-[9px] border-t border-[rgba(145,158,171,0.1)] flex items-center gap-[16px] bg-[rgba(255,86,48,0.04)]">
+                  <p className="font-['Public_Sans:Regular',sans-serif] font-normal text-[12px] text-[#637381] leading-[18px] shrink-0">
+                    新交貨量合計：<strong className="text-[#ff5630]">{totalNewQty}</strong>
+                    　｜　不得超過訂貨量 = <strong>{order.orderQty ?? 0}</strong>
+                  </p>
+                  <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#ff5630] leading-[18px] shrink-0">
+                    ⚠ 新交貨量超過訂貨量，暫存及提交已鎖定
+                  </p>
+                </div>
+              )}
+
+              {/* 過去日期提示列 */}
+              {hasPastDate && correctionType !== '刪單' && !isDeleteMode && (
+                <div className="px-[45px] py-[9px] border-t border-[rgba(145,158,171,0.1)] flex items-center gap-[16px] bg-[rgba(255,86,48,0.04)]">
+                  <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#ff5630] leading-[18px] shrink-0">
+                    ⚠ 新廠商交期不可為過去日期，請重新選擇
+                  </p>
+                </div>
+              )}
+
               {/* 無異動提示列（edit 模式下，無任何欄位變更時顯示） */}
               {noChangeBlock && (
                 <div className="px-[45px] py-[9px] border-t border-[rgba(145,158,171,0.1)] flex items-center gap-[16px] bg-[rgba(255,171,0,0.06)]">
@@ -1738,16 +1803,16 @@ export function CorrectionDetailPage({
             ) : (
               /* 'edit' (DR) — 原有按鈕 */
               <>
-                <div className={`flex-[1_0_0] h-[36px] min-h-px min-w-[64px] relative rounded-[8px] transition-opacity ${noChangeBlock || belowMinQty || hasZeroQtyRow ? 'bg-[#919eab] opacity-50' : 'bg-[#004680]'}`}>
-                  <button onClick={handleSubmit} disabled={noChangeBlock || belowMinQty || hasZeroQtyRow} className="flex items-center justify-center min-w-[inherit] size-full disabled:cursor-not-allowed">
+                <div className={`flex-[1_0_0] h-[36px] min-h-px min-w-[64px] relative rounded-[8px] transition-opacity ${noChangeBlock || belowMinQty || aboveMaxQty || hasPastDate || hasZeroQtyRow ? 'bg-[#919eab] opacity-50' : 'bg-[#004680]'}`}>
+                  <button onClick={handleSubmit} disabled={noChangeBlock || belowMinQty || aboveMaxQty || hasPastDate || hasZeroQtyRow} className="flex items-center justify-center min-w-[inherit] size-full disabled:cursor-not-allowed">
                     <p className="font-['Public_Sans:Bold',sans-serif] font-bold leading-[24px] shrink-0 text-[14px] text-center text-white whitespace-nowrap px-[12px]">
                       {isDeleteOrder ? '提交廠商（執行刪單）' : '提交廠商'}
                     </p>
                   </button>
                 </div>
-                <div className={`flex-[1_0_0] h-[36px] min-h-px min-w-[64px] relative rounded-[8px] transition-opacity ${noChangeBlock || belowMinQty || hasZeroQtyRow ? 'opacity-50' : ''}`}>
+                <div className={`flex-[1_0_0] h-[36px] min-h-px min-w-[64px] relative rounded-[8px] transition-opacity ${noChangeBlock || belowMinQty || aboveMaxQty || hasPastDate || hasZeroQtyRow ? 'opacity-50' : ''}`}>
                   <div aria-hidden="true" className="absolute border border-[rgba(145,158,171,0.32)] border-solid inset-0 pointer-events-none rounded-[8px]" />
-                  <button onClick={handleSave} disabled={noChangeBlock || belowMinQty || hasZeroQtyRow} className="flex items-center justify-center min-w-[inherit] size-full disabled:cursor-not-allowed">
+                  <button onClick={handleSave} disabled={noChangeBlock || belowMinQty || aboveMaxQty || hasPastDate || hasZeroQtyRow} className="flex items-center justify-center min-w-[inherit] size-full disabled:cursor-not-allowed">
                     <p className="font-['Public_Sans:Bold',sans-serif] font-bold leading-[24px] shrink-0 text-[#1c252e] text-[14px] text-center whitespace-nowrap px-[12px]">暫存</p>
                   </button>
                 </div>
