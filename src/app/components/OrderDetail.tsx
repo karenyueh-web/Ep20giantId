@@ -55,6 +55,19 @@ interface OrderDetailProps {
   hideRejectAndSplitOrder?: boolean;
   /** 變更生管排程：隱藏聊天室入口 */
   hideChatIcon?: boolean;
+  /** 變更生管排程：隱藏「訂單確認」與「調整單據」狀態操作按鈕 */
+  hideStatusActions?: boolean;
+}
+
+// 日期字串是否早於今日（module-level，供 OrderDetail 使用）
+function isPastDate(dateStr: string): boolean {
+  if (!dateStr) return false;
+  const parts = dateStr.split('/');
+  if (parts.length !== 3) return false;
+  const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return d < today;
 }
 
 // 調整單據表單組件
@@ -628,7 +641,7 @@ function AdjustOrderForm({ onCancel, onConfirm, orderSeq, defaultDate, hideRejec
   );
 }
 
-export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, userRole, orderHistory, hideRejectAndSplitOrder, hideChatIcon }: OrderDetailProps) {
+export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, userRole, orderHistory, hideRejectAndSplitOrder, hideChatIcon, hideStatusActions }: OrderDetailProps) {
   const { orders, updateOrderFields, addOrderHistory, getOrderHistory, correctionOrders } = useOrderStore();
 
   // 從 store 即時查詢當前訂單的 ID（用於直接讀取最新歷程，不依賴外部 prop 快照）
@@ -1366,14 +1379,16 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
                           const diff = calcLineDiff(line.productionScheduleDate, line.vendorDeliveryDate);
                           const diffDisplay = diff === null ? '-' : diff > 0 ? `+${diff}` : `${diff}`;
                           const diffColor = diff === null ? '#919eab' : diff > 0 ? '#b71d18' : diff < 0 ? '#118d57' : '#919eab';
-                          const isFirstRow = rowIdx === 0;
+                          const isSingleRow = editableLines.length === 1;
+                          const isCfn2Missing = !line.productionScheduleDate;
+                          const isCfn2Past = !isCfn2Missing && isPastDate(line.productionScheduleDate);
                           return (
                             <div key={line.uid} className="flex gap-[16px] px-[20px] py-[10px] border-b border-[rgba(145,158,171,0.08)] last:border-b-0 items-center">
                               <div className="w-[40px] shrink-0">
-                                <p className="font-['Public_Sans:Regular',sans-serif] text-[14px] leading-[22px] text-[#919eab]">{line.index}</p>
+                                <p className="font-['Public_Sans:Regular',sans-serif] text-[14px] leading-[22px] text-[#919eab]">{rowIdx + 1}</p>
                               </div>
                               <div className="w-[110px] shrink-0">
-                                <p className="font-['Public_Sans:Regular',sans-serif] text-[14px] leading-[22px] text-[#919eab]">{line.expectedDelivery}</p>
+                                <p className="font-['Public_Sans:Regular',sans-serif] text-[14px] leading-[22px] text-[#919eab]">{line.expectedDelivery || '-'}</p>
                               </div>
                               <div className="w-[150px] shrink-0">
                                 <p className="font-['Public_Sans:Regular',sans-serif] text-[14px] leading-[22px] text-[#919eab]">
@@ -1382,10 +1397,10 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
                               </div>
                               <div className="w-[150px] shrink-0">
                                 <div
-                                  className="border border-[rgba(145,158,171,0.16)] hover:border-[#005eb8] rounded-[8px] px-[12px] py-[6px] flex items-center gap-[6px] cursor-pointer transition-colors"
+                                  className={`border ${isCfn2Past ? 'border-[#ff5630]' : 'border-[rgba(145,158,171,0.16)] hover:border-[#005eb8]'} rounded-[8px] px-[12px] py-[6px] flex items-center gap-[6px] cursor-pointer transition-colors`}
                                   onClick={e => openDp(line.uid, 'prod', e)}
                                 >
-                                  <p className={`font-['Public_Sans:Regular',sans-serif] text-[14px] leading-[22px] flex-1 ${line.productionScheduleDate ? 'text-[#1c252e]' : 'text-[#919eab]'}`}>
+                                  <p className={`font-['Public_Sans:Regular',sans-serif] text-[14px] leading-[22px] flex-1 ${isCfn2Missing ? 'text-[#919eab]' : isCfn2Past ? 'text-[#ff5630]' : 'text-[#1c252e]'}`}>
                                     {line.productionScheduleDate || '請選擇日期'}
                                   </p>
                                   <ChevronDown />
@@ -1406,18 +1421,18 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
                                 <p className="font-['Public_Sans:Regular',sans-serif] text-[14px] leading-[22px]" style={{ color: diffColor }}>{diffDisplay}</p>
                               </div>
                               <div className="w-[72px] shrink-0 flex items-center gap-[8px]">
-                                {line.isOriginal && (
-                                  <button
-                                    onClick={() => { addLineAfter(line.uid); setScheduleError(null); setScheduleSaved(false); }}
-                                    className="w-[32px] h-[32px] rounded-full bg-[#1D7BF5] hover:bg-[#1565d8] flex items-center justify-center transition-colors shrink-0"
-                                    title="新增一行"
-                                  >
-                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                                      <path d="M8 3V13M3 8H13" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-                                    </svg>
-                                  </button>
-                                )}
-                                {(!isFirstRow || !line.isOriginal) && (
+                                {/* + 按鈕：每行都有 */}
+                                <button
+                                  onClick={() => { addLineAfter(line.uid); setScheduleError(null); setScheduleSaved(false); }}
+                                  className="w-[32px] h-[32px] rounded-full bg-[#1D7BF5] hover:bg-[#1565d8] flex items-center justify-center transition-colors shrink-0"
+                                  title="新增一行"
+                                >
+                                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                    <path d="M8 3V13M3 8H13" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+                                  </svg>
+                                </button>
+                                {/* - 按鈕：只有一行時隱藏 */}
+                                {!isSingleRow && (
                                   <button
                                     onClick={() => { removeLineAt(line.uid); setScheduleError(null); setScheduleSaved(false); }}
                                     className="w-[28px] h-[28px] rounded-full bg-[rgba(255,86,48,0.12)] hover:bg-[rgba(255,86,48,0.28)] flex items-center justify-center transition-colors shrink-0"
@@ -1432,6 +1447,24 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
                             </div>
                           );
                         })}
+                        {/* 合計列 */}
+                        {(() => {
+                          const orderQtyVal = orderData?.orderQty ?? 0;
+                          const totalQty = editableLines.reduce((s, l) => s + (l.quantity || 0), 0);
+                          const isMatch = orderQtyVal > 0 && totalQty === orderQtyVal;
+                          return (
+                            <div className={`flex items-center gap-[8px] px-[20px] py-[10px] border-t border-[rgba(145,158,171,0.16)] ${isMatch ? 'bg-[rgba(34,197,94,0.06)]' : 'bg-[rgba(255,86,48,0.06)]'}`}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="shrink-0">
+                                {isMatch
+                                  ? <path d="M20 6L9 17L4 12" stroke="#118d57" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                  : <path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="#ff5630" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>}
+                              </svg>
+                              <p className={`font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] leading-[20px] ${isMatch ? 'text-[#118d57]' : 'text-[#ff5630]'}`}>
+                                交貨量合計：{totalQty}　/　訂貨量：{orderQtyVal}{isMatch ? '　✓ 符合' : '　✗ 不符，須調整至相等'}
+                              </p>
+                            </div>
+                          );
+                        })()}
                       </div>
                     );
                   })()
@@ -1473,10 +1506,8 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
                       const lineDiff = calcDayDiff(line.vendorDeliveryDate || undefined, line.expectedDelivery);
                       const lineDiffDisplay = lineDiff === null ? '-' : lineDiff > 0 ? `+${lineDiff}` : `${lineDiff}`;
                       const lineDiffColor = lineDiff === null ? '#919eab' : lineDiff > 0 ? '#b71d18' : lineDiff < 0 ? '#118d57' : '#919eab';
-                      // 廠商可交貨日期與預計交期不同 → 日期紅字
                       const vendorDateChanged = line.vendorDeliveryDate && line.expectedDelivery &&
                         line.vendorDeliveryDate !== line.expectedDelivery;
-                      // 交貨量與原訂貨量不同（拆單時每筆量必然小於原訂貨量）→ 量紅字
                       const origOrderQty = orderData?.orderQty ?? 0;
                       const qtyChanged = origOrderQty > 0 && line.quantity !== origOrderQty;
                       return (
@@ -1525,7 +1556,21 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
                 {hideChatIcon && (() => {
                   const orderQtyVal = orderData?.orderQty ?? 100;
                   const totalQty = editableLines.reduce((s, l) => s + (l.quantity || 0), 0);
-                  // 實際執行儲存（可由 handleConfirm 或警示 OK 呼叫）
+                  
+                  const hasMissingCfn2 = editableLines.some(l => !l.productionScheduleDate);
+                  const hasPastCfn2 = editableLines.some(l => l.productionScheduleDate && isPastDate(l.productionScheduleDate));
+                  const hasZeroQty = editableLines.some(l => !l.quantity || l.quantity <= 0);
+                  const isQtyMismatch = orderQtyVal > 0 && totalQty !== orderQtyVal;
+                  const validationError = hasMissingCfn2
+                    ? '請填寫所有項次的生管用交貨日期(cfn2)'
+                    : hasPastCfn2
+                    ? '生管用交貨日期(cfn2)不可為過去日期'
+                    : hasZeroQty
+                    ? '每個項次的交貨量須大於 0'
+                    : isQtyMismatch
+                    ? `交貨量合計(${totalQty})須等於訂貨量(${orderQtyVal})`
+                    : null;
+
                   const doSave = () => {
                     const found = orders.find(o => o.orderNo === orderData?.orderNo && o.orderSeq === orderData?.orderSeq);
                     if (found) {
@@ -1555,15 +1600,9 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
                   };
 
                   const handleConfirm = () => {
-                    if (totalQty !== orderQtyVal) {
-                      setScheduleError(`交貨量合計（${totalQty}）須等於訂貨量（${orderQtyVal}），請調整後再確認`);
+                    if (validationError) {
+                      setScheduleError(validationError);
                       setScheduleSaved(false);
-                      return;
-                    }
-                    // 若新增了項次，先顯示警示，由使用者決定是否繼續
-                    const hasNewLines = editableLines.length > initialLinesRef.current.length;
-                    if (hasNewLines) {
-                      setShowAddLineWarning(true);
                       return;
                     }
                     doSave();
@@ -1624,7 +1663,8 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
                       <div className="flex gap-[12px] items-center justify-end">
                         <button
                           onClick={handleConfirm}
-                          className="bg-[#004680] flex-1 h-[36px] min-w-[64px] rounded-[8px] flex items-center justify-center cursor-pointer hover:bg-[#003a6b] transition-colors"
+                          disabled={!!validationError}
+                          className={`flex-1 h-[36px] min-w-[64px] rounded-[8px] flex items-center justify-center transition-colors ${validationError ? 'bg-[rgba(145,158,171,0.24)] cursor-not-allowed' : 'bg-[#004680] cursor-pointer hover:bg-[#003a6b]'}`}
                         >
                           <p className="font-['Public_Sans:Bold',sans-serif] font-bold leading-[24px] text-[14px] text-white whitespace-nowrap">確認修改</p>
                         </button>
@@ -1640,7 +1680,7 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
                 })()}
 
                 {/* 底部按鈕 */}
-                {!isReadOnly && (
+                {!isReadOnly && !hideStatusActions && (
                   <div className="flex gap-[12px] mt-[24px]">
                     <div className="bg-[#004680] flex-1 h-[36px] rounded-[8px] cursor-pointer hover:bg-[#003a6b] transition-colors flex items-center justify-center" onClick={() => {
                       if (onStatusChange) {

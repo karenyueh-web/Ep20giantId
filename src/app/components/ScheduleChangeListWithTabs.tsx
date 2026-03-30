@@ -12,10 +12,12 @@ import { useOrderStore, nowDateStr, operatorByRole, type HistoryEntry } from './
 import { computeRowDayDiff } from './AdvancedOrderTable';
 
 // ── 變更生管排程專用欄位配置（預設顯示 productionScheduleDate / prodSchedDayDiff）──
-const SCHED_CHANGE_STORAGE_KEY_PREFIX = 'orderList_v2_sched_change';
+const SCHED_CHANGE_STORAGE_KEY_PREFIX = 'orderList_v3_sched_change';
 
 function getScheduleChangeColumns(): OrderColumn[] {
   return defaultOrderColumns.map(col => {
+    // docSeqNo 已作為 sticky 單號序號欄顯示，隱藏此欄避免重複
+    if (col.key === 'docSeqNo')               return { ...col, visible: false };
     if (col.key === 'schedLineIndex')         return { ...col, visible: true };
     if (col.key === 'productionScheduleDate') return { ...col, visible: true };
     if (col.key === 'prodSchedDayDiff')        return { ...col, visible: true };
@@ -236,7 +238,6 @@ export function ScheduleChangeListWithTabs({ userRole }: ScheduleChangeListWithT
   // ── Detail overlay ──────────────────────────────────────────────────────────
   const [showOrderDetail, setShowOrderDetail] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<OrderRow | null>(null);
-  const [isReadOnlyMode, setIsReadOnlyMode] = useState(false);
 
   // ── Column / Filter ─────────────────────────────────────────────────────────
   const [showColumnSelector, setShowColumnSelector] = useState(false);
@@ -481,9 +482,9 @@ export function ScheduleChangeListWithTabs({ userRole }: ScheduleChangeListWithT
   };
 
   // ── Order actions ───────────────────────────────────────────────────────────
-  const handleOrderConfirmClick = (order: OrderRow) => { setSelectedOrder(order); setIsReadOnlyMode(false); setShowOrderDetail(true); };
-  const handleMoreOptionsClick  = (order: OrderRow) => { setSelectedOrder(order); setIsReadOnlyMode(true);  setShowOrderDetail(true); };
-  const handleCloseDetail = () => { setShowOrderDetail(false); setSelectedOrder(null); setIsReadOnlyMode(false); };
+  /** 點擊單號序號藍字連結——直接進入可編輯的生管排程明細 */
+  const handleDocNoClick = (order: OrderRow) => { setSelectedOrder(order); setShowOrderDetail(true); };
+  const handleCloseDetail = () => { setShowOrderDetail(false); setSelectedOrder(null); };
 
   const handleStatusChange = (
     newStatus: string,
@@ -565,6 +566,7 @@ export function ScheduleChangeListWithTabs({ userRole }: ScheduleChangeListWithT
             vendor:                 liveSelectedOrder.vendorName,
             status:                 liveSelectedOrder.status,
             vendorDeliveryDate:     liveSelectedOrder.vendorDeliveryDate,
+            expectedDelivery:       liveSelectedOrder.expectedDelivery,
             scheduleLines:          liveSelectedOrder.scheduleLines,
             productionScheduleDate: liveSelectedOrder.productionScheduleDate,
             orderQty:               liveSelectedOrder.orderQty,
@@ -573,10 +575,11 @@ export function ScheduleChangeListWithTabs({ userRole }: ScheduleChangeListWithT
             acceptQty:              liveSelectedOrder.acceptQty,
           } : undefined}
           onStatusChange={handleStatusChange}
-          isReadOnly={isReadOnlyMode}
+          isReadOnly={false}
           userRole={userRole}
           orderHistory={liveSelectedOrder ? getOrderHistory(liveSelectedOrder.id) : []}
           hideChatIcon={true}
+          hideStatusActions={true}
         />
       </div>
     );
@@ -664,8 +667,7 @@ export function ScheduleChangeListWithTabs({ userRole }: ScheduleChangeListWithT
       <AdvancedOrderTable
         activeTab="CK"
         data={filteredOrders}
-        onOrderConfirm={handleOrderConfirmClick}
-        onMoreOptions={handleMoreOptionsClick}
+        onDocNoClick={handleDocNoClick}
         userEmail={currentUserEmail}
         userRole={userRole}
         onColumnsChange={handleColumnsChange}

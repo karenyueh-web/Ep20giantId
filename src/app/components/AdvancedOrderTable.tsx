@@ -126,6 +126,12 @@ interface AdvancedOrderTableProps {
   forceShowCheckbox?: boolean;
   /** 自訂批次選取列右側操作按鈕（取代預設「批次訂單確認」） */
   batchActions?: React.ReactNode;
+  /**
+   * 當提供此 callback 時，在 checkbox 欄右側插入一個 sticky 的「單號序號」欄，
+   * 以藍字底線樣式顯示，點擊後呼叫此 callback 進入明細。
+   * 同時隱藏右側的 ... 操作欄。
+   */
+  onDocNoClick?: (row: OrderRow) => void;
 }
 
 // ===== 差異天數計算工具 =====
@@ -640,6 +646,9 @@ const DraggableColumnHeader = ({
 };
 
 // ===== Main Component =====
+// 單號序號 sticky 欄寬（與 HistoryOrderListWithTabs 對齊）
+const DOC_NO_COL_WIDTH = 160;
+
 export function AdvancedOrderTable({
   activeTab,
   data,
@@ -658,6 +667,7 @@ export function AdvancedOrderTable({
   storageKeyPrefix = 'orderList_v2',
   forceShowCheckbox = false,
   batchActions,
+  onDocNoClick,
 }: AdvancedOrderTableProps) {
   const { scrollContainerRef, handleMouseDown, canDragScroll } = useHorizontalDragScroll();
 
@@ -1041,7 +1051,10 @@ export function AdvancedOrderTable({
 
   // Width calculations
   const columnsWidth = visibleColumns.reduce((sum, col) => sum + col.width, 0);
-  const totalWidth = columnsWidth + (showCheckbox ? CHECKBOX_WIDTH : 0) + ACTION_WIDTH;
+  // onDocNoClick 模式：加上左側 單號序號 欄；否則加上右側 action 欄
+  const totalWidth = columnsWidth
+    + (showCheckbox ? CHECKBOX_WIDTH : 0)
+    + (onDocNoClick ? DOC_NO_COL_WIDTH : ACTION_WIDTH);
   const displayedOrders = paginatedData;
   const isAllSelected = displayedOrders.length > 0 && displayedOrders.every(order => selectedOrderIds.has(order.id));
   const hasSelected = selectedOrderIds.size > 0;
@@ -1054,6 +1067,14 @@ export function AdvancedOrderTable({
     width: CHECKBOX_WIDTH,
     minWidth: CHECKBOX_WIDTH,
     boxShadow: '2px 0 4px -2px rgba(145,158,171,0.16)',
+  };
+  const stickyDocNoStyle: React.CSSProperties = {
+    position: 'sticky',
+    left: showCheckbox ? CHECKBOX_WIDTH : 0,
+    zIndex: 2,
+    width: DOC_NO_COL_WIDTH,
+    minWidth: DOC_NO_COL_WIDTH,
+    boxShadow: '2px 0 4px -2px rgba(145,158,171,0.18)',
   };
   const stickyRightStyle: React.CSSProperties = {
     position: 'sticky',
@@ -1122,6 +1143,29 @@ export function AdvancedOrderTable({
                     <CheckboxIcon checked={isAllSelected} onChange={() => onSelectAll()} />
                   </div>
                 )}
+                {/* 單號序號 sticky 欄 header（onDocNoClick 模式） */}
+                {onDocNoClick && (
+                  <div
+                    className="h-[56px] bg-[#f4f6f8] flex items-center px-[16px] shrink-0 border-r border-[rgba(145,158,171,0.08)] cursor-pointer select-none"
+                    style={stickyDocNoStyle}
+                    onClick={() => {
+                      let direction: 'asc' | 'desc' | null = 'asc';
+                      if (sortConfig.key === 'docSeqNo' && sortConfig.direction === 'asc') direction = 'desc';
+                      setSortConfig({ key: 'docSeqNo', direction });
+                    }}
+                  >
+                    <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[24px] text-[#637381] text-[14px] whitespace-nowrap">
+                      單號序號
+                    </p>
+                    {sortConfig.key === 'docSeqNo' && (
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="ml-[6px] shrink-0">
+                        {sortConfig.direction === 'asc'
+                          ? <path d="M8 3L12 7H4L8 3Z" fill="#637381" />
+                          : <path d="M8 13L4 9H12L8 13Z" fill="#637381" />}
+                      </svg>
+                    )}
+                  </div>
+                )}
                 {visibleColumns.map((column, index) => (
                   <DraggableColumnHeader
                     key={column.key}
@@ -1141,7 +1185,7 @@ export function AdvancedOrderTable({
                   />
                 ))}
                 <div className="flex-1 bg-[#f4f6f8] min-w-0" />
-                {(onOrderConfirm || onMoreOptions) && (
+                {!onDocNoClick && (onOrderConfirm || onMoreOptions) && (
                   <div
                     className="h-[56px] bg-[#f4f6f8] flex items-center justify-center shrink-0"
                     style={stickyRightStyle}
@@ -1166,6 +1210,21 @@ export function AdvancedOrderTable({
                     />
                   </div>
                 )}
+                {/* 單號序號 藍字底線連結（onDocNoClick 模式） */}
+                {onDocNoClick && (
+                  <div
+                    className="flex items-center px-[16px] shrink-0 border-r border-[rgba(145,158,171,0.08)] bg-white group-hover:bg-[#f6f7f8]"
+                    style={stickyDocNoStyle}
+                  >
+                    <button
+                      onClick={() => onDocNoClick(row)}
+                      className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] text-[#1677ff] underline hover:text-[#0958d9] cursor-pointer truncate text-left"
+                      title={`${row.orderNo}${row.orderSeq}`}
+                    >
+                      {row.orderNo}{row.orderSeq}
+                    </button>
+                  </div>
+                )}
                 {visibleColumns.map((column) => (
                   <div
                     key={`${row.id}-${column.key}`}
@@ -1176,7 +1235,7 @@ export function AdvancedOrderTable({
                   </div>
                 ))}
                 <div className="flex-1 min-w-0" />
-                {(onOrderConfirm || onMoreOptions) && (
+                {!onDocNoClick && (onOrderConfirm || onMoreOptions) && (
                   <div
                     className="flex items-center justify-center px-[10px] shrink-0 bg-white group-hover:bg-[#f6f7f8]"
                     style={stickyRightStyle}
