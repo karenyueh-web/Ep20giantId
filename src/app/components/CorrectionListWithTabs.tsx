@@ -1072,9 +1072,9 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
   const handleDetailApprove = () => {
     const row = detailRows[detailIndex];
     if (!row) return;
-    // V → CP（廠商同意）, B → SS（採購確認執行）
+    // V → CP（廠商同意/確認）, B → CP（採購確認修正單）
     const newStatus = row.correctionStatus === 'V' ? 'CP'
-      : row.correctionStatus === 'B' ? 'SS'
+      : row.correctionStatus === 'B' ? 'CP'
       : row.correctionStatus;
     if (newStatus !== row.correctionStatus) {
       updateCorrectionOrder(row.id, row.correctionDocNo, { correctionStatus: newStatus });
@@ -1086,20 +1086,24 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
       remark: '',
     });
 
-    // ── 拆單修正單到達 SS 時，執行原訂單拆單作業 ──
-    if (newStatus === 'SS' && row.correctionType === '拆單' && row.savedDeliveryRows && row.savedDeliveryRows.length > 1) {
+    // ── 拆單修正單：修正確認後若為拆單類型，執行原訂單拆單作業 ──
+    if (newStatus === 'CP' && row.correctionType === '拆單' && row.savedDeliveryRows && row.savedDeliveryRows.length > 1) {
       executeSplitFromCorrection(row);
     }
 
     showToast(`修正確認完成（${row.correctionDocNo}），狀態轉為 ${newStatus}`);
     if (detailRows.length <= 1) setDetailRows([]);
   };
-  const handleDetailDisagree = (reason: string, adjustedRows?: { expectedDelivery: string; vendorOriginalDate: string; newVendorDate: string; originalQty: number; newQty: string; deleted?: boolean }[]) => {
+  const handleDetailDisagree = (reason: string, adjustedRows?: { expectedDelivery: string; vendorOriginalDate: string; newVendorDate: string; originalQty: number; newQty: string; deleted?: boolean; splitNewMaterialNo?: string }[], newMaterialNo?: string) => {
     const row = detailRows[detailIndex];
     if (!row) return;
     // 狀態轉為 B（廠商不同意，待採購處理）
     const newStatus = 'B' as const;
     const updates: Partial<CorrectionOrderRow> = { correctionStatus: newStatus };
+    // 若廠商變更了料號，將新料號寫入 newMaterialNo
+    if (newMaterialNo) {
+      updates.newMaterialNo = newMaterialNo;
+    }
     // 若廠商選擇「調整交貨排程」，將廠商調整後的交貨排程寫入 savedDeliveryRows
     if (adjustedRows && adjustedRows.length > 0) {
       updates.savedDeliveryRows = adjustedRows.map(r => ({
@@ -1109,6 +1113,7 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
         originalQty: r.originalQty,
         newQty: r.newQty,
         deleted: r.deleted,
+        splitNewMaterialNo: r.splitNewMaterialNo,
       }));
       updates.savedPeriodInput = String(adjustedRows.filter(r => !r.deleted).length);
     }
@@ -1120,11 +1125,11 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
     }
     addCorrectionHistory(row.id, {
       date: nowDateStr(),
-      event: `不同意修正 — 狀態 ${row.correctionStatus} → ${newStatus}`,
+      event: `廠商調整修正單 — 狀態 ${row.correctionStatus} → ${newStatus}`,
       operator: operatorByRole(userRole as any),
-      remark: `不同意原因：${reason}`,
+      remark: `調整原因：${reason}`,
     });
-    showToast(`已回覆不同意（${row.correctionDocNo}），狀態轉為 ${newStatus}`);
+    showToast(`已提交調整修正單（${row.correctionDocNo}），狀態轉為 ${newStatus}`);
     if (detailRows.length <= 1) setDetailRows([]);
   };
   const handleDetailReturnToVendor = (reason: string) => {

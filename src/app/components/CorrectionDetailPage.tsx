@@ -71,7 +71,7 @@ interface CorrectionDetailPageProps {
   /** 同一訂單編號下最高的訂單序號（用於拆單新項次序號計算） */
   maxSeqInSameOrderNo?: number;
   onApprove?: () => void;
-  onDisagree?: (reason: string, adjustedRows?: { expectedDelivery: string; vendorOriginalDate: string; newVendorDate: string; originalQty: number; newQty: string; deleted?: boolean }[]) => void;
+  onDisagree?: (reason: string, adjustedRows?: { expectedDelivery: string; vendorOriginalDate: string; newVendorDate: string; originalQty: number; newQty: string; deleted?: boolean; splitNewMaterialNo?: string }[], newMaterialNo?: string) => void;
   onReturnToVendor?: (reason: string) => void;
   /** B 狀態：關閉單據（轉 CL）*/
   onCloseToCL?: () => void;
@@ -556,7 +556,8 @@ export function CorrectionDetailPage({
     if (!latest) return;
     const isReturnEvent =
       latest.event.includes('退回廠商') ||   // B → V：採購退回廠商
-      latest.event.includes('不同意修正');  // V → B：廠商不同意
+      latest.event.includes('廠商調整修正單') ||  // V → B：廠商調整修正單（原不同意）
+      latest.event.includes('不同意修正');  // V → B：舊版歷程相容
     if (isReturnEvent) {
       setShowHistory(true);
     }
@@ -578,7 +579,8 @@ export function CorrectionDetailPage({
   const [disagreeRejectReason, setDisagreeRejectReason] = useState('');
   const [disagreeAdjustPeriod, setDisagreeAdjustPeriod] = useState('');
   const [disagreeAdjustReason, setDisagreeAdjustReason] = useState('');
-  const [disagreeDeliveryRows, setDisagreeDeliveryRows] = useState<{ id: number; expectedDelivery: string; vendorOriginalDate: string; newVendorDate: string; originalQty: number; newQty: string; deleted?: boolean }[]>([]);
+  const [disagreeNewMaterialNo, setDisagreeNewMaterialNo] = useState('');
+  const [disagreeDeliveryRows, setDisagreeDeliveryRows] = useState<{ id: number; expectedDelivery: string; vendorOriginalDate: string; newVendorDate: string; originalQty: number; newQty: string; deleted?: boolean; splitNewMaterialNo?: string; splitOrderSeq?: string }[]>([]);
   // 保存採購方原始修正資料的 ref，供歷程差異比對用
   const purchaserOriginalRowsRef = useRef<{ id: number; newVendorDate: string; originalQty: number; newQty: string; deleted?: boolean }[]>([]);
   const initDisagreeRows = useCallback(() => {
@@ -586,16 +588,17 @@ export function CorrectionDetailPage({
     const rows = form.deliveryRows.map(r => ({
       id: r.id, expectedDelivery: r.expectedDelivery, vendorOriginalDate: r.vendorOriginalDate,
       newVendorDate: r.newVendorDate, originalQty: r.originalQty, newQty: r.newQty,
-      deleted: !!r.deleted,
+      deleted: !!r.deleted, splitNewMaterialNo: r.splitNewMaterialNo, splitOrderSeq: r.splitOrderSeq,
     }));
     setDisagreeDeliveryRows(rows);
     setDisagreeAdjustPeriod(String(rows.length));
+    setDisagreeNewMaterialNo(form.newMaterialNo || '');
     // 保存採購方原始數據快照（含刪除狀態）
     purchaserOriginalRowsRef.current = rows.map(r => ({
       id: r.id, newVendorDate: r.newVendorDate, originalQty: r.originalQty, newQty: r.newQty,
-      deleted: r.deleted,
+      deleted: r.deleted, splitNewMaterialNo: r.splitNewMaterialNo,
     }));
-  }, [form.deliveryRows]);
+  }, [form.deliveryRows, form.newMaterialNo]);
   const showToast = (msg: string) => { setToastMsg(msg); setTimeout(() => setToastMsg(null), 3000); };
 
   // 可編輯判斷：viewMode 不是 edit，或這張已被提交廠商，都應唯讀
@@ -1137,27 +1140,57 @@ export function CorrectionDetailPage({
                           )}
                         </svg>
                       </div>
-                      <p className="font-['Public_Sans:Regular',sans-serif] font-normal leading-[22px] text-[#1c252e] text-[14px] whitespace-nowrap">調整交貨排程</p>
+                      <p className="font-['Public_Sans:Regular',sans-serif] font-normal leading-[22px] text-[#1c252e] text-[14px] whitespace-nowrap">{isSplitMode ? '調整拆單數' : '調整交貨排程'}</p>
                     </label>
                     {/* 期數 */}
                     <div className="relative rounded-[8px] shrink-0 w-[138px] h-full">
                       <div aria-hidden="true" className={`absolute border border-solid inset-0 pointer-events-none rounded-[8px] ${disagreeType === 'adjustSchedule' ? 'border-[rgba(145,158,171,0.16)]' : 'border-[rgba(145,158,171,0.16)]'}`} />
                       <div className="flex items-center size-full px-[12px] py-[6px]">
                         <input
-                          type="number" min="1" max="99"
+                          type="number" min={isSplitMode ? "2" : "1"} max="99"
                           value={disagreeAdjustPeriod}
                           onChange={e => {
                             if (disagreeType !== 'adjustSchedule') return;
                             setDisagreeAdjustPeriod(e.target.value);
                             const count = parseInt(e.target.value) || 0;
-                            if (count > 0 && count <= 99) {
+                            const minCount = isSplitMode ? 2 : 1;
+                            if (count >= minCount && count <= 99) {
+                              const orderQty = order.orderQty ?? 0;
                               setDisagreeDeliveryRows(prev => {
-                                const result = [...prev];
-                                while (result.length < count) {
-                                  const base = prev[0] || form.deliveryRows[0];
-                                  result.push({ id: nextRid(), expectedDelivery: base?.expectedDelivery ?? '', vendorOriginalDate: base?.vendorOriginalDate ?? '', newVendorDate: '', originalQty: 0, newQty: '0' });
+                                let rows = [...prev];
+                                if (isSplitMode) {
+                                  // 拆單：增加直接新增列，減少從後往前截斷
+                                  if (count > rows.length) {
+                                    for (let i = rows.length; i < count; i++) {
+                                      const computedSeq = i === 0 ? parseInt(order.orderSeq, 10) : splitSeqBase + i * 10;
+                                      rows.push({
+                                        id: nextRid(),
+                                        expectedDelivery: rows[0]?.expectedDelivery ?? '',
+                                        vendorOriginalDate: rows[0]?.vendorOriginalDate ?? '',
+                                        newVendorDate: rows[0]?.newVendorDate ?? '',
+                                        originalQty: orderQty,
+                                        newQty: '',
+                                        splitOrderSeq: String(computedSeq),
+                                        splitNewMaterialNo: order.materialNo ?? '',
+                                      });
+                                    }
+                                  } else {
+                                    rows = rows.slice(0, Math.max(count, 2));
+                                  }
+                                  // 重新分配交貨量
+                                  const n = rows.length;
+                                  const base = Math.floor(orderQty / n);
+                                  const rem = orderQty % n;
+                                  rows = rows.map((r, i) => ({ ...r, newQty: String(i < rem ? base + 1 : base) }));
+                                } else {
+                                  // 不拆單：增加/刪減，平均分配
+                                  while (rows.length < count) {
+                                    const base = rows[0] || form.deliveryRows[0];
+                                    rows.push({ id: nextRid(), expectedDelivery: base?.expectedDelivery ?? '', vendorOriginalDate: base?.vendorOriginalDate ?? '', newVendorDate: '', originalQty: 0, newQty: '0' });
+                                  }
+                                  rows = rows.slice(0, count);
                                 }
-                                return result.slice(0, count);
+                                return rows;
                               });
                             }
                           }}
@@ -1188,12 +1221,43 @@ export function CorrectionDetailPage({
                     <div className="flex items-center gap-[10px]">
                       <div className="shrink-0" style={{ width: '152px' }} />
                       <p className="font-['Public_Sans:Regular',sans-serif] font-normal text-[#919eab] text-[12px] leading-[18px] whitespace-nowrap shrink-0">
-                        原單 {form.deliveryRows.filter(r => !r.deleted).length} 期
+                         原單 {isSplitMode ? 1 : form.deliveryRows.filter(r => !r.deleted).length} 期
                       </p>
                     </div>
                   )}
                   </>)}
                 </div>
+
+                {/* ── 不拆單調整：原料號 / 新料號 ── */}
+                {disagreeType === 'adjustSchedule' && !isSplitMode && (
+                  <div className="flex gap-[10px] items-center w-full h-[40px] px-[41px] pb-[10px]">
+                    <div className="flex-[1_0_0] flex items-center h-full gap-[10px]">
+                      <p className="font-['Public_Sans:Regular',sans-serif] font-normal leading-[22px] shrink-0 text-[#1c252e] text-[14px] whitespace-nowrap">原料號</p>
+                      <div className="flex-[1_0_0] h-full min-h-px min-w-px relative rounded-[8px]">
+                        <div aria-hidden="true" className="absolute border border-[#dfe3e8] border-solid inset-0 pointer-events-none rounded-[8px]" />
+                        <div className="flex items-center size-full px-[12px] py-[6px]">
+                          <p className="font-['Public_Sans:Regular',sans-serif] font-normal leading-[22px] text-[#919eab] text-[14px] whitespace-nowrap">{order.materialNo ?? '—'}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex-[1_0_0] flex items-center h-full gap-[10px]">
+                      <p className={`font-['Public_Sans:Regular',sans-serif] font-normal leading-[22px] shrink-0 text-[14px] whitespace-nowrap ${hasAcceptQty ? 'text-[#919eab]' : 'text-[#005eb8]'}`}>新料號</p>
+                      <div className="flex-[1_0_0] h-full min-h-px min-w-px relative rounded-[8px]">
+                        <div aria-hidden="true" className={`absolute border border-solid inset-0 pointer-events-none rounded-[8px] ${disagreeNewMaterialNo && disagreeNewMaterialNo !== (order.materialNo ?? '') ? 'border-[#ff5630]' : 'border-[#dfe3e8]'}`} />
+                        <div className="flex items-center size-full px-[12px] py-[6px]">
+                          <input
+                            type="text"
+                            value={disagreeNewMaterialNo}
+                            onChange={e => !hasAcceptQty && setDisagreeNewMaterialNo(e.target.value)}
+                            disabled={hasAcceptQty}
+                            placeholder={hasAcceptQty ? '已有驗收量不得修改料號' : ''}
+                            className={`flex-1 min-w-0 font-['Public_Sans:Regular',sans-serif] font-normal text-[14px] leading-[22px] bg-transparent outline-none placeholder:text-[#919eab] disabled:cursor-not-allowed ${disagreeNewMaterialNo && disagreeNewMaterialNo !== (order.materialNo ?? '') ? 'text-[#ff5630]' : 'text-[#454f5b]'}`}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* ── 調整交貨排程表格 ── */}
                 {disagreeType === 'adjustSchedule' && disagreeDeliveryRows.length > 0 && (
@@ -1201,10 +1265,18 @@ export function CorrectionDetailPage({
                     {/* 表頭 */}
                     <div className="flex items-center w-full gap-[20px] px-[45px] h-[40px] border-b border-[rgba(145,158,171,0.2)] bg-[rgba(145,158,171,0.04)]">
                       <div className="shrink-0 w-[50px]"><p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[#1c252e] text-[14px] whitespace-nowrap">項次</p></div>
+                      {isSplitMode && (
+                        <div className="shrink-0 w-[70px]"><p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[#1c252e] text-[14px] whitespace-nowrap">訂單序號</p></div>
+                      )}
+                      {isSplitMode && (
+                        <div className="shrink-0 w-[150px]"><p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[#005eb8] text-[14px] whitespace-nowrap">新料號</p></div>
+                      )}
                       <div className="shrink-0 w-[100px]"><p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[#1c252e] text-[14px] whitespace-nowrap">預計交期</p></div>
                       <div className="shrink-0 w-[100px]"><p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[#1c252e] text-[14px] whitespace-nowrap">原廠商交期</p></div>
                       <div className="shrink-0 w-[150px]"><p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[#005eb8] text-[14px] whitespace-nowrap">新廠商交期</p></div>
-                      <div className="shrink-0 w-[100px]"><p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[#1c252e] text-[14px] whitespace-nowrap">原交貨量</p></div>
+                      {!isSplitMode && (
+                        <div className="shrink-0 w-[100px]"><p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[#1c252e] text-[14px] whitespace-nowrap">原交貨量</p></div>
+                      )}
                       <div className="shrink-0 w-[150px]"><p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[#005eb8] text-[14px] whitespace-nowrap">新交貨量</p></div>
                       <div className="shrink-0 size-[24px]" />
                     </div>
@@ -1226,20 +1298,52 @@ export function CorrectionDetailPage({
                           <div className="absolute inset-x-[45px] top-1/2 h-[1.5px] bg-[#ff5630] pointer-events-none z-[1]" />
                         )}
                         <div className="flex items-center shrink-0 w-[50px]"><p className={`font-['Public_Sans:Regular',sans-serif] font-normal leading-[22px] text-[14px] ${isDeleted ? 'text-[rgba(145,158,171,0.5)]' : 'text-[#454f5b]'}`}>{idx + 1}</p></div>
+                        {isSplitMode && (
+                          <div className="flex items-center shrink-0 w-[70px]"><p className={`font-['Public_Sans:Regular',sans-serif] font-normal leading-[22px] text-[14px] whitespace-nowrap ${isDeleted ? 'text-[rgba(145,158,171,0.5)]' : 'text-[#454f5b]'}`}>{row.splitOrderSeq || (idx === 0 ? order.orderSeq : String(splitSeqBase + idx * 10))}</p></div>
+                        )}
+                        {isSplitMode && (
+                          <div className={`flex items-center shrink-0 w-[150px] ${isDeleted ? 'opacity-70 pointer-events-none' : ''}`}>
+                            <div className="flex-1 h-[36px] min-w-0 relative rounded-[8px]">
+                              <div aria-hidden="true" className={`absolute border border-solid inset-0 pointer-events-none rounded-[8px] ${row.splitNewMaterialNo && row.splitNewMaterialNo !== (order.materialNo ?? '') ? 'border-[#ff5630]' : 'border-[rgba(145,158,171,0.2)]'}`} />
+                              <input
+                                type="text"
+                                value={row.splitNewMaterialNo ?? order.materialNo ?? ''}
+                                onChange={e => setDisagreeDeliveryRows(prev => prev.map(r => r.id === row.id ? { ...r, splitNewMaterialNo: e.target.value } : r))}
+                                className={`w-full h-full px-[8px] font-['Public_Sans:Regular',sans-serif] font-normal text-[13px] leading-[22px] bg-transparent outline-none ${row.splitNewMaterialNo && row.splitNewMaterialNo !== (order.materialNo ?? '') ? 'text-[#ff5630]' : 'text-[#454f5b]'}`}
+                              />
+                            </div>
+                          </div>
+                        )}
                         <div className="flex items-center shrink-0 w-[100px]"><p className={`font-['Public_Sans:Regular',sans-serif] font-normal leading-[22px] text-[14px] whitespace-nowrap ${isDeleted ? 'text-[rgba(145,158,171,0.5)]' : 'text-[#454f5b]'}`}>{row.expectedDelivery || '—'}</p></div>
                         <div className="flex items-center shrink-0 w-[100px]"><p className={`font-['Public_Sans:Regular',sans-serif] font-normal leading-[22px] text-[14px] whitespace-nowrap ${isDeleted ? 'text-[rgba(145,158,171,0.5)]' : 'text-[#454f5b]'}`}>{row.vendorOriginalDate || '—'}</p></div>
                         <div className={`flex items-center shrink-0 w-[150px] ${isDeleted ? 'opacity-70 pointer-events-none' : ''}`}>
-                          <DateCell value={row.newVendorDate} rowId={row.id} onSelect={(id, date) => setDisagreeDeliveryRows(prev => prev.map(r => r.id === id ? { ...r, newVendorDate: date } : r))} isChanged={dateChanged} />
+                          <DateCell value={row.newVendorDate} rowId={row.id} onSelect={(id, date) => setDisagreeDeliveryRows(prev => prev.map(r => r.id === id ? { ...r, newVendorDate: date } : r))} isChanged={dateChanged} minDate={todayStr} />
                         </div>
-                        <div className="flex items-center shrink-0 w-[100px]"><p className={`font-['Public_Sans:Regular',sans-serif] font-normal leading-[22px] text-[14px] whitespace-nowrap ${isDeleted ? 'text-[rgba(145,158,171,0.5)]' : 'text-[#454f5b]'}`}>{row.originalQty}</p></div>
+                        {!isSplitMode && (
+                          <div className="flex items-center shrink-0 w-[100px]"><p className={`font-['Public_Sans:Regular',sans-serif] font-normal leading-[22px] text-[14px] whitespace-nowrap ${isDeleted ? 'text-[rgba(145,158,171,0.5)]' : 'text-[#454f5b]'}`}>{row.originalQty}</p></div>
+                        )}
                         <div className={`flex items-center shrink-0 w-[150px] ${isDeleted ? 'opacity-70 pointer-events-none' : ''}`}>
                           <QtyField value={row.newQty} onChange={val => setDisagreeDeliveryRows(prev => prev.map(r => r.id === row.id ? { ...r, newQty: val } : r))} isChanged={qtyChanged} />
                         </div>
                         {/* 操作按鈕：刪除 / 復原 */}
                         <div className="flex items-center justify-center shrink-0 size-[24px] z-[2]">
-                          {idx !== 0 && !isDeleted && (
+                          {(isSplitMode ? idx >= 2 : (idx !== 0 && !isDeleted)) && (
                             <TrashIcon onClick={() => {
-                              setDisagreeDeliveryRows(prev => prev.map(r => r.id === row.id ? { ...r, deleted: true } : r));
+                              if (isSplitMode) {
+                                // 拆單：直接移除並重新分配交貨量
+                                setDisagreeDeliveryRows(prev => {
+                                  const rows = prev.filter(r => r.id !== row.id);
+                                  const orderQty = order.orderQty ?? 0;
+                                  const n = rows.length;
+                                  const base = Math.floor(orderQty / n);
+                                  const rem = orderQty % n;
+                                  return rows.map((r, i) => ({ ...r, newQty: String(i < rem ? base + 1 : base) }));
+                                });
+                                setDisagreeAdjustPeriod(prev => String(parseInt(prev) - 1));
+                              } else {
+                                // 不拆單：軟刪除
+                                setDisagreeDeliveryRows(prev => prev.map(r => r.id === row.id ? { ...r, deleted: true } : r));
+                              }
                             }} />
                           )}
                           {idx !== 0 && isDeleted && (
@@ -1259,6 +1363,66 @@ export function CorrectionDetailPage({
                     })}
                   </div>
                 )}
+
+                {/* ── 不同意調整交貨排程驗證摘要（同修正明細格式，放在表格下方） ── */}
+                {(() => {
+                  if (disagreeType !== 'adjustSchedule' || disagreeDeliveryRows.length === 0) return null;
+                  const dTotalNewQty = disagreeDeliveryRows.filter(r => !r.deleted).reduce((s, r) => s + (parseFloat(r.newQty) || 0), 0);
+                  const dMinRequired = (order.acceptQty ?? 0) + (order.inTransitQty ?? 0);
+                  const dBelowMin = dMinRequired > 0 && dTotalNewQty < dMinRequired;
+                  const dAboveMax = dTotalNewQty > (order.orderQty ?? 0);
+                  const dHasZeroQty = disagreeDeliveryRows.some(r => !r.deleted && (parseFloat(r.newQty) || 0) === 0);
+                  const dHasPastDate = disagreeDeliveryRows.some(r => !r.deleted && !!r.newVendorDate && r.newVendorDate < todayStr);
+                  return (
+                    <>
+                      {dMinRequired > 0 && (
+                        <div className={`px-[45px] py-[9px] border-t border-[rgba(145,158,171,0.1)] flex items-center gap-[16px] flex-wrap ${dBelowMin || dHasZeroQty ? 'bg-[rgba(255,86,48,0.04)]' : 'bg-[rgba(145,158,171,0.03)]'}`}>
+                          <p className="font-['Public_Sans:Regular',sans-serif] font-normal text-[12px] text-[#637381] leading-[18px] shrink-0">
+                            新交貨量合計：
+                            <strong className={dBelowMin ? 'text-[#ff5630]' : 'text-[#118d57]'}>{dTotalNewQty}</strong>
+                            　｜　不得低於（驗收量 {order.acceptQty ?? 0} ＋ 在途量 {order.inTransitQty ?? 0}）= <strong>{dMinRequired}</strong>
+                          </p>
+                          {dBelowMin && (
+                            <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#ff5630] leading-[18px] shrink-0">
+                              ⚠ 新交貨量不足，提交已鎖定
+                            </p>
+                          )}
+                          {dHasZeroQty && (
+                            <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#ff5630] leading-[18px] shrink-0">
+                              ⚠ 新交貨量不可填 0，如需刪除請使用刪單功能
+                            </p>
+                          )}
+                        </div>
+                      )}
+                      {dHasZeroQty && dMinRequired === 0 && (
+                        <div className="px-[45px] py-[9px] border-t border-[rgba(145,158,171,0.1)] flex items-center gap-[16px] bg-[rgba(255,86,48,0.04)]">
+                          <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#ff5630] leading-[18px] shrink-0">
+                            ⚠ 新交貨量不可填 0，如需刪除請使用刪單功能
+                          </p>
+                        </div>
+                      )}
+                      {dAboveMax && (
+                        <div className="px-[45px] py-[9px] border-t border-[rgba(145,158,171,0.1)] flex items-center gap-[16px] bg-[rgba(255,86,48,0.04)]">
+                          <p className="font-['Public_Sans:Regular',sans-serif] font-normal text-[12px] text-[#637381] leading-[18px] shrink-0">
+                            新交貨量合計：<strong className="text-[#ff5630]">{dTotalNewQty}</strong>
+                            　｜　不得超過訂貨量 = <strong>{order.orderQty ?? 0}</strong>
+                          </p>
+                          <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#ff5630] leading-[18px] shrink-0">
+                            ⚠ 新交貨量超過訂貨量，提交已鎖定
+                          </p>
+                        </div>
+                      )}
+
+                      {dHasPastDate && (
+                        <div className="px-[45px] py-[9px] border-t border-[rgba(145,158,171,0.1)] flex items-center gap-[16px] bg-[rgba(255,86,48,0.04)]">
+                          <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#ff5630] leading-[18px] shrink-0">
+                            ⚠ 新廠商交期不可為過去日期，請重新選擇
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             </div>
             {/* ── 底部按鈕：提交採購 / 取消 ── */}
@@ -1272,13 +1436,25 @@ export function CorrectionDetailPage({
                   </button>
                 </div>
               ) : (() => {
+                const hasMaterialNoChange = !!(disagreeNewMaterialNo && disagreeNewMaterialNo !== (order.materialNo ?? ''));
+                // ── 驗證邏輯（同修正明細） ──
+                const dTotalNewQty = disagreeDeliveryRows.filter(r => !r.deleted).reduce((s, r) => s + (parseFloat(r.newQty) || 0), 0);
+                const dMinRequired = (order.acceptQty ?? 0) + (order.inTransitQty ?? 0);
+                const dBelowMin = dMinRequired > 0 && dTotalNewQty < dMinRequired;
+                const dSplitTooFew = isSplitMode && disagreeDeliveryRows.filter(r => !r.deleted).length < 2;
+                const dAboveMax = dTotalNewQty > (order.orderQty ?? 0);
+                const dHasZeroQty = disagreeDeliveryRows.some(r => !r.deleted && (parseFloat(r.newQty) || 0) === 0);
+                const dHasPastDate = disagreeDeliveryRows.some(r => !r.deleted && !!r.newVendorDate && r.newVendorDate < todayStr);
+                const hasAnyChangeInRows = disagreeDeliveryRows.some(r => {
+                  const orig = purchaserOriginalRowsRef.current.find(o => o.id === r.id);
+                  if (!orig) return true;
+                  return r.newVendorDate !== orig.newVendorDate || r.newQty !== orig.newQty || !!r.deleted !== !!orig.deleted || (r.splitNewMaterialNo ?? '') !== (orig as any).splitNewMaterialNo;
+                }) || disagreeDeliveryRows.length !== purchaserOriginalRowsRef.current.length;
                 const canSubmit = disagreeType === 'reject'
                   ? !!disagreeRejectReason.trim()
-                  : (!!disagreeAdjustReason.trim() || disagreeDeliveryRows.some(r => {
-                      const orig = purchaserOriginalRowsRef.current.find(o => o.id === r.id);
-                      if (!orig) return true; // 新增期數
-                      return r.newVendorDate !== orig.newVendorDate || r.newQty !== orig.newQty || !!r.deleted !== !!orig.deleted;
-                    }) || disagreeDeliveryRows.length !== purchaserOriginalRowsRef.current.length);
+                  : (!!disagreeAdjustReason.trim() || hasMaterialNoChange || hasAnyChangeInRows)
+                    && !dBelowMin && !dAboveMax && !dHasZeroQty && !dHasPastDate && !dSplitTooFew;
+
                 return (
                   <>
                     <div className={`flex-[1_0_0] h-[36px] min-h-px min-w-[64px] relative rounded-[8px] transition-opacity ${canSubmit ? 'bg-[#004680]' : 'bg-[#919eab] opacity-50'}`}>
@@ -1290,6 +1466,7 @@ export function CorrectionDetailPage({
                             reason = `不接單：${disagreeRejectReason.trim()}`;
                           } else {
                             const parts: string[] = [];
+                            if (hasMaterialNoChange) parts.push(`料號：${order.materialNo || '—'} → ${disagreeNewMaterialNo}`);
                             if (disagreeAdjustReason.trim()) parts.push(`調整交貨排程：${disagreeAdjustReason.trim()}`);
                             const origRows = purchaserOriginalRowsRef.current;
                             // 逐期比對差異（對比採購方原始修正內容）
@@ -1298,6 +1475,7 @@ export function CorrectionDetailPage({
                               const changes: string[] = [];
                               if (!orig) {
                                 // 新增的期數
+                                if (isSplitMode && r.splitNewMaterialNo && r.splitNewMaterialNo !== (order.materialNo ?? '')) changes.push(`料號 → ${r.splitNewMaterialNo}`);
                                 if (r.newVendorDate) changes.push(`新交貨日 ${r.newVendorDate}`);
                                 if (r.newQty !== '0') changes.push(`新交貨量 ${r.newQty}`);
                                 if (changes.length > 0) parts.push(`第${i + 1}期（新增）：${changes.join('、')}`);
@@ -1307,6 +1485,9 @@ export function CorrectionDetailPage({
                                   parts.push(`第${i + 1}期：${r.deleted ? '廠商刪除此項次' : '廠商復原此項次'}`);
                                 }
                                 if (!r.deleted) {
+                                  const origMat = (orig as any).splitNewMaterialNo ?? '';
+                                  const newMat = r.splitNewMaterialNo ?? '';
+                                  if (isSplitMode && newMat !== origMat) changes.push(`料號 ${origMat || order.materialNo || '—'} → ${newMat || order.materialNo || '—'}`);
                                   if (r.newVendorDate !== orig.newVendorDate) changes.push(`新交貨日 ${orig.newVendorDate || '—'} → ${r.newVendorDate || '—'}`);
                                   if (r.newQty !== orig.newQty) changes.push(`新交貨量 ${orig.newQty} → ${r.newQty}`);
                                   if (changes.length > 0) parts.push(`第${i + 1}期：${changes.join('、')}`);
@@ -1325,12 +1506,13 @@ export function CorrectionDetailPage({
                               originalQty: r.originalQty,
                               newQty: r.newQty,
                               deleted: r.deleted,
+                              splitNewMaterialNo: r.splitNewMaterialNo,
                             }));
-                            onDisagree?.(reason, adjustedRows);
+                            onDisagree?.(reason, adjustedRows, hasMaterialNoChange ? disagreeNewMaterialNo : undefined);
                           } else {
                             onDisagree?.(reason);
                           }
-                          showToast('已回覆不同意');
+                          showToast('已提交調整修正單');
                         }}
                         className="flex items-center justify-center min-w-[inherit] size-full disabled:cursor-not-allowed"
                       >
@@ -1778,10 +1960,10 @@ export function CorrectionDetailPage({
                     <p className="font-['Public_Sans:Bold',sans-serif] font-bold leading-[24px] shrink-0 text-[14px] text-center text-white whitespace-nowrap px-[12px]">修正確認</p>
                   </button>
                 </div>
-                {/* 不同意 */}
+                {/* 調整修正單（原：不同意） */}
                 <div className="flex-[1_0_0] h-[36px] min-h-px min-w-[64px] relative rounded-[8px] bg-white">
                   <button onClick={() => { setDisagreeType('reject'); setDisagreeRejectReason(''); setDisagreeAdjustPeriod(''); setDisagreeAdjustReason(''); initDisagreeRows(); setShowDisagreeForm(true); }} className="flex items-center justify-center min-w-[inherit] size-full">
-                    <p className="font-['Public_Sans:Bold',sans-serif] font-bold leading-[24px] shrink-0 text-[#118d57] text-[14px] text-center whitespace-nowrap px-[12px]">不同意</p>
+                    <p className="font-['Public_Sans:Bold',sans-serif] font-bold leading-[24px] shrink-0 text-[#118d57] text-[14px] text-center whitespace-nowrap px-[12px]">調整修正單</p>
                   </button>
                 </div>
               </>
