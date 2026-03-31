@@ -618,7 +618,7 @@ export function ScheduleChangeListWithTabs({ userRole }: ScheduleChangeListWithT
             acceptQty:              liveSelectedOrder.acceptQty,
           } : undefined}
           onStatusChange={handleStatusChange}
-          isReadOnly={false}
+          isReadOnly={true}
           userRole={userRole}
           orderHistory={liveSelectedOrder ? getOrderHistory(liveSelectedOrder.id) : []}
           hideChatIcon={true}

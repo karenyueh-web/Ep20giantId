@@ -715,6 +715,7 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
   const [scheduleSaved, setScheduleSaved] = useState(false);
   const [showSaveToast, setShowSaveToast] = useState(false);
   const [showAddLineWarning, setShowAddLineWarning] = useState(false);
+  const [pendingAddUid, setPendingAddUid] = useState<number | null>(null);
 
   // 點擊聊天icon
   const handleChatIconClick = () => {
@@ -952,12 +953,20 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
               {/* more row 2: 項目註記(內部)（全寬） */}
               <div className="flex flex-col gap-[2px]">
                 <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[#1c252e]">項目註記(內部)</p>
-                <p className="[text-decoration-skip-ink:none] decoration-solid font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[#005eb8] underline cursor-pointer hover:opacity-70">{liveOrder?.internalNote || '(限GEM採購可改)'}</p>
+                {isReadOnly ? (
+                  <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[#637381]">{liveOrder?.internalNote || '-'}</p>
+                ) : (
+                  <p className="[text-decoration-skip-ink:none] decoration-solid font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[#005eb8] underline cursor-pointer hover:opacity-70">{liveOrder?.internalNote || '(限GEM採購可改)'}</p>
+                )}
               </div>
               {/* more row 3: 物料PO內文（全寬） */}
               <div className="flex flex-col gap-[2px]">
                 <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[#1c252e]">物料PO內文</p>
-                <p className="[text-decoration-skip-ink:none] decoration-solid font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[#005eb8] underline cursor-pointer hover:opacity-70">{liveOrder?.materialPOContent || '(限GEM採購可改)'}</p>
+                {isReadOnly ? (
+                  <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[#637381]">{liveOrder?.materialPOContent || '-'}</p>
+                ) : (
+                  <p className="[text-decoration-skip-ink:none] decoration-solid font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[#005eb8] underline cursor-pointer hover:opacity-70">{liveOrder?.materialPOContent || '(限GEM採購可改)'}</p>
+                )}
               </div>
 
             </div>
@@ -1436,9 +1445,12 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
                                 <p className="font-['Public_Sans:Regular',sans-serif] text-[14px] leading-[22px]" style={{ color: diffColor }}>{diffDisplay}</p>
                               </div>
                               <div className="w-[72px] shrink-0 flex items-center gap-[8px]">
-                                {/* + 按鈕：每行都有 */}
+                                {/* + 按鈕：按後先顯示警示，確認才加行 */}
                                 <button
-                                  onClick={() => { addLineAfter(line.uid); setScheduleError(null); setScheduleSaved(false); }}
+                                  onClick={() => {
+                                    setPendingAddUid(line.uid);
+                                    setShowAddLineWarning(true);
+                                  }}
                                   className="w-[32px] h-[32px] rounded-full bg-[#1D7BF5] hover:bg-[#1565d8] flex items-center justify-center transition-colors shrink-0"
                                   title="新增一行"
                                 >
@@ -1579,6 +1591,7 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
                   // 多筆時，生管用交貨日期不可重複
                   const filledDates = editableLines.map(l => l.productionScheduleDate).filter(Boolean);
                   const hasDuplicateCfn2 = editableLines.length > 1 && filledDates.length !== new Set(filledDates).size;
+                  // validationError: 顯示在錯誤 bar（不含數量不符，合計列已呈現）
                   const validationError = hasMissingCfn2
                     ? '請填寫所有項次的生管用交貨日期(cfn2)'
                     : hasPastCfn2
@@ -1587,9 +1600,9 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
                     ? '各項次的生管用交貨日期(cfn2)不可重複'
                     : hasZeroQty
                     ? '每個項次的交貨量須大於 0'
-                    : isQtyMismatch
-                    ? `交貨量合計(${totalQty})須等於訂貨量(${orderQtyVal})`
                     : null;
+                  // isBlocked: 按鈕 disabled 條件（包含數量不符）
+                  const isBlocked = !!validationError || isQtyMismatch;
 
                   const doSave = () => {
                     const found = orders.find(o => o.orderNo === orderData?.orderNo && o.orderSeq === orderData?.orderSeq);
@@ -1641,7 +1654,7 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
                   };
                   return (
                     <div className="mt-[12px]">
-                      {/* 增加項次警示 bar（Figma 設計：amber） */}
+                      {/* 增加項次警示 bar */}
                       {showAddLineWarning && (
                         <div className="flex items-center gap-[0px] mb-[10px] rounded-[8px] overflow-hidden" style={{ background: '#FFF3CD' }}>
                           {/* 警示 icon */}
@@ -1654,22 +1667,26 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
                           </div>
                           {/* 文字 */}
                           <p className="flex-1 font-['Public_Sans:Regular',sans-serif] font-normal text-[13px] leading-[20px] text-[#7A4100] pr-[8px]">
-                            增加生產交貨排程後將無法開立修正單。
+                            請注意，增加交貨排程後，後續不能開立修正單
                           </p>
                           {/* cancel 按鈕 */}
                           <button
-                            onClick={() => setShowAddLineWarning(false)}
+                            onClick={() => { setShowAddLineWarning(false); setPendingAddUid(null); }}
                             className="shrink-0 h-[28px] px-[14px] rounded-[6px] mr-[6px] flex items-center justify-center cursor-pointer transition-colors"
                             style={{ background: '#FFAB00' }}
                           >
-                            <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#7A4100] whitespace-nowrap">cancel</span>
+                            <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#7A4100] whitespace-nowrap">取消</span>
                           </button>
-                          {/* OK 按鈕 */}
+                          {/* OK 按鈕：確認後才真正加行 */}
                           <button
-                            onClick={doSave}
+                            onClick={() => {
+                              if (pendingAddUid !== null) { addLineAfter(pendingAddUid); setScheduleError(null); setScheduleSaved(false); }
+                              setShowAddLineWarning(false);
+                              setPendingAddUid(null);
+                            }}
                             className="shrink-0 h-[28px] px-[10px] flex items-center justify-center cursor-pointer hover:opacity-70 transition-opacity"
                           >
-                            <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#7A4100] whitespace-nowrap">OK</span>
+                            <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#7A4100] whitespace-nowrap">確認新增</span>
                           </button>
 
                         </div>
@@ -1696,8 +1713,8 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
                       <div className="flex gap-[12px] items-center justify-end">
                         <button
                           onClick={handleConfirm}
-                          disabled={!!validationError}
-                          className={`flex-1 h-[36px] min-w-[64px] rounded-[8px] flex items-center justify-center transition-colors ${validationError ? 'bg-[rgba(145,158,171,0.24)] cursor-not-allowed' : 'bg-[#004680] cursor-pointer hover:bg-[#003a6b]'}`}
+                          disabled={isBlocked}
+                          className={`flex-1 h-[36px] min-w-[64px] rounded-[8px] flex items-center justify-center transition-colors ${isBlocked ? 'bg-[rgba(145,158,171,0.24)] cursor-not-allowed' : 'bg-[#004680] cursor-pointer hover:bg-[#003a6b]'}`}
                         >
                           <p className="font-['Public_Sans:Bold',sans-serif] font-bold leading-[24px] text-[14px] text-white whitespace-nowrap">確認修改</p>
                         </button>
