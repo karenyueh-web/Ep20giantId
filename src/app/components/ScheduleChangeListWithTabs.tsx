@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useMemo } from 'react';
+import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { AdvancedOrderTable, getOrderColumns, defaultOrderColumns } from './AdvancedOrderTable';
 import type { OrderRow, OrderColumn, ScheduleLine } from './AdvancedOrderTable';
 import { OrderDetail } from './OrderDetail';
@@ -7,6 +7,7 @@ import { ColumnSelector } from './ColumnSelector';
 import { FilterDialog, type FilterCondition } from './FilterDialog';
 import { SearchField } from './SearchField';
 import { exportOrdersCsv, exportOrdersExcel } from './OrderCsvManager';
+import { FilePlus2, Download, ChevronDown } from 'lucide-react';
 import { BatchApproveDialog } from './OrderBatchDialogs';
 import { useOrderStore, nowDateStr, operatorByRole, type HistoryEntry } from './OrderStoreContext';
 import { computeRowDayDiff } from './AdvancedOrderTable';
@@ -27,7 +28,7 @@ function getScheduleChangeColumns(): OrderColumn[] {
 
 // ── CSV 欄位定義 ────────────────────────────────────────────────────────────
 // 欄位說明：訂單序號=orderSeq（如100）、項次=排程項次（如1/2/3）
-const CSV_HEADERS = ['訂單號碼', '訂單序號', '項次', '料號', '預計交期', '生管用交貨日期', '交貨量'];
+const CSV_HEADERS = ['訂單號碼', '訂單序號', '項次', '料號', '訂貨量', '未交量', '預計交期', '廠商可交貨日期', '生管用交貨日期'];
 
 // ── 日期正規化：接受 YYYY/M/D、YYYY-M-D、YYYY.M.D，輸出 YYYY/MM/DD ────────
 // 回傳 null 表示非空但格式/值域不合法
@@ -46,6 +47,17 @@ function normalizeDate(raw: string): string | null {
   return `${m[1]}/${String(month).padStart(2, '0')}/${String(day).padStart(2, '0')}`;
 }
 
+// 判斷日期字串是否早於今日
+function isDatePast(dateStr: string): boolean {
+  if (!dateStr) return false;
+  const parts = dateStr.split('/');
+  if (parts.length !== 3) return false;
+  const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return d < today;
+}
+
 interface ParsedCsvRow {
   orderNo: string;
   docSeqNo: string;
@@ -54,145 +66,148 @@ interface ParsedCsvRow {
   expectedDelivery: string;
   productionScheduleDate: string;
   deliveryQty: string;
-  _matchedId?: number; // 匹配到的 OrderRow.id
+  _rowIndex?: number;   // CSV 行號（從 2 開始）
+  _matchedId?: number;  // 匹配到的 OrderRow.id
   _error?: string;
 }
 
-// ── 上傳確認 Modal ──────────────────────────────────────────────────────────
+// ── 上傳確認 Modal（對齊修正單批次上傳風格）─────────────────────────────────────
 interface UploadModalProps {
   rows: ParsedCsvRow[];
+  fileName?: string;
   onConfirm: () => void;
   onClose: () => void;
+  onReselect: () => void;
 }
 
-function UploadPreviewModal({ rows, onConfirm, onClose }: UploadModalProps) {
+function UploadPreviewModal({ rows, fileName, onConfirm, onClose, onReselect }: UploadModalProps) {
   const validRows   = rows.filter(r => !r._error && r._matchedId !== undefined && r.productionScheduleDate.trim() !== '');
   const errorRows   = rows.filter(r => !!r._error);
   const skippedRows = rows.filter(r => !r._error && r.productionScheduleDate.trim() === '');
 
+  const getRowStatus = (r: ParsedCsvRow): 'valid' | 'error' | 'skip' => {
+    if (r._error) return 'error';
+    if (r.productionScheduleDate.trim() === '') return 'skip';
+    return 'valid';
+  };
+
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.4)' }}>
-      <div className="bg-white rounded-[16px] shadow-[0px_24px_48px_-4px_rgba(145,158,171,0.24)] w-[820px] max-w-[96vw] max-h-[90vh] flex flex-col overflow-hidden">
-        
+    <div
+      className="fixed inset-0 z-[200] bg-[rgba(145,158,171,0.4)] flex items-center justify-center p-[20px]"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white w-full rounded-[16px] shadow-[-40px_40px_80px_0px_rgba(145,158,171,0.24)] flex flex-col overflow-hidden"
+        style={{ maxWidth: '820px', maxHeight: '85vh' }}
+        onClick={e => e.stopPropagation()}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between px-[24px] py-[20px] border-b border-[rgba(145,158,171,0.24)]">
+        <div className="flex items-center justify-between px-[24px] py-[16px] border-b border-[rgba(145,158,171,0.12)] shrink-0">
           <div className="flex items-center gap-[10px]">
-            <div className="w-[36px] h-[36px] rounded-[8px] bg-[#e8f4fd] flex items-center justify-center shrink-0">
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <path d="M16.667 10.833V15a1.667 1.667 0 01-1.667 1.667H5a1.667 1.667 0 01-1.667-1.667V5A1.667 1.667 0 015 3.333h4.167M13.333 2.5h4.167v4.167M8.333 11.667l9.167-9.167" stroke="#005eb8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-            <div>
-              <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[16px] text-[#1c252e]">上傳大量變更 — 預覽確認</p>
-              <p className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#637381]">
-                共 {rows.length} 筆資料：{validRows.length} 筆可套用、{skippedRows.length} 筆無日期(略過)、{errorRows.length} 筆無法匹配
-              </p>
-            </div>
+            <FilePlus2 size={22} className="text-[#005eb8]" />
+            <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[18px] text-[#1c252e]">
+              批次變更 — 匯入預覽
+            </p>
           </div>
-          <button onClick={onClose} className="w-[32px] h-[32px] rounded-[8px] hover:bg-[rgba(145,158,171,0.08)] flex items-center justify-center">
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-              <path d="M13.5 4.5L4.5 13.5M4.5 4.5L13.5 13.5" stroke="#637381" strokeWidth="1.5" strokeLinecap="round"/>
+          <div className="cursor-pointer hover:bg-[rgba(145,158,171,0.08)] rounded-full p-[4px]" onClick={onClose}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#637381" strokeWidth="2" strokeLinecap="round">
+              <path d="M18 6L6 18M6 6l12 12" />
             </svg>
-          </button>
+          </div>
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto px-[24px] py-[16px]">
-          {/* 可套用區 */}
-          {validRows.length > 0 && (
-            <div className="mb-[16px]">
-              <div className="flex items-center gap-[6px] mb-[10px]">
-                <div className="w-[6px] h-[6px] rounded-full bg-[#22c55e]" />
-                <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#1c252e]">將套用 {validRows.length} 筆生管用交貨日期</p>
+        <div className="flex flex-col gap-[16px] px-[24px] py-[20px] flex-1 min-h-0">
+          {/* Filename */}
+          {fileName && (
+            <div className="flex items-center gap-[8px] shrink-0">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#637381" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+              </svg>
+              <p className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#637381]">{fileName}</p>
+            </div>
+          )}
+
+          {/* Summary badges */}
+          <div className="flex gap-[8px] flex-wrap shrink-0">
+            <div className="bg-[rgba(145,158,171,0.12)] flex items-center gap-[6px] h-[28px] px-[10px] rounded-[6px]">
+              <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#637381]">共計</p>
+              <p className="font-['Public_Sans:Bold',sans-serif] font-bold text-[13px] text-[#637381]">{rows.length}</p>
+            </div>
+            <div className="bg-[rgba(34,197,94,0.12)] flex items-center gap-[6px] h-[28px] px-[10px] rounded-[6px]">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#118d57" strokeWidth="2" strokeLinecap="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
+              </svg>
+              <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#118d57]">有效</p>
+              <p className="font-['Public_Sans:Bold',sans-serif] font-bold text-[13px] text-[#118d57]">{validRows.length}</p>
+            </div>
+            {errorRows.length > 0 && (
+              <div className="bg-[rgba(255,86,48,0.12)] flex items-center gap-[6px] h-[28px] px-[10px] rounded-[6px]">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b71d18" strokeWidth="2" strokeLinecap="round">
+                  <circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" />
+                </svg>
+                <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#b71d18]">錯誤</p>
+                <p className="font-['Public_Sans:Bold',sans-serif] font-bold text-[13px] text-[#b71d18]">{errorRows.length}</p>
               </div>
-              <div className="rounded-[8px] border border-[rgba(145,158,171,0.24)] overflow-hidden">
-                <table className="w-full text-[12px]">
-                  <thead className="bg-[#f4f6f8]">
-                    <tr>
-                      {['訂單號碼', '訂單序號', '料號', '生管用交貨日期'].map(h => (
-                        <th key={h} className="px-[12px] py-[8px] text-left font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[#637381] whitespace-nowrap">{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {validRows.map((r, i) => (
-                      <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-[rgba(145,158,171,0.04)]'}>
-                        <td className="px-[12px] py-[8px] text-[#1c252e]">{r.orderNo}</td>
-                        <td className="px-[12px] py-[8px] text-[#1c252e] font-mono">{r.orderSeq}</td>
-                        <td className="px-[12px] py-[8px] text-[#1c252e]">{r.materialNo}</td>
-                        <td className="px-[12px] py-[8px]">
-                          <span className="inline-flex items-center gap-[4px] bg-[#e8f4fd] text-[#005eb8] px-[8px] py-[2px] rounded-[4px] font-['Public_Sans:SemiBold',sans-serif] font-semibold">
+            )}
+            {skippedRows.length > 0 && (
+              <div className="bg-[rgba(145,158,171,0.08)] flex items-center gap-[6px] h-[28px] px-[10px] rounded-[6px]">
+                <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#919eab]">不處理</p>
+                <p className="font-['Public_Sans:Bold',sans-serif] font-bold text-[13px] text-[#919eab]">{skippedRows.length}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Unified table */}
+          <div className="flex-1 min-h-0 overflow-auto custom-scrollbar border border-[rgba(145,158,171,0.16)] rounded-[8px]">
+            <table className="w-full min-w-[600px]">
+              <thead className="sticky top-0 z-[1]">
+                <tr className="bg-[#f4f6f8]">
+                  {['行', '訂單號碼', '序號', '料號', '生管用交貨日期', '驗證'].map(h => (
+                    <th key={h} className="px-[10px] py-[8px] text-left font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[11px] text-[#637381] whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r, i) => {
+                  const status = getRowStatus(r);
+                  return (
+                    <tr key={i} className={`border-t border-[rgba(145,158,171,0.08)] ${status === 'error' ? 'bg-[rgba(255,86,48,0.03)]' : ''}`}>
+                      <td className="px-[10px] py-[8px] font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#919eab]">{r._rowIndex ?? i + 2}</td>
+                      <td className="px-[10px] py-[8px] font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#1c252e]">{r.orderNo}</td>
+                      <td className="px-[10px] py-[8px] font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#1c252e]">{r.orderSeq}</td>
+                      <td className="px-[10px] py-[8px] font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#1c252e] max-w-[140px] truncate">{r.materialNo}</td>
+                      <td className="px-[10px] py-[8px]">
+                        {r.productionScheduleDate.trim() ? (
+                          <span className="inline-flex items-center bg-[rgba(0,94,184,0.1)] text-[#005eb8] px-[8px] py-[2px] rounded-[4px] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[11px]">
                             {r.productionScheduleDate}
                           </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* 略過區 */}
-          {skippedRows.length > 0 && (
-            <div className="mb-[16px]">
-              <div className="flex items-center gap-[6px] mb-[10px]">
-                <div className="w-[6px] h-[6px] rounded-full bg-[#ffa726]" />
-                <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#1c252e]">略過 {skippedRows.length} 筆（生管用交貨日期為空）</p>
-              </div>
-              <div className="rounded-[8px] border border-[rgba(145,158,171,0.24)] overflow-hidden">
-                <table className="w-full text-[12px]">
-                  <thead className="bg-[#f4f6f8]">
-                    <tr>
-                      {['訂單號碼', '訂單序號', '料號'].map(h => (
-                        <th key={h} className="px-[12px] py-[8px] text-left font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[#637381]">{h}</th>
-                      ))}
+                        ) : (
+                          <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#919eab]">—</p>
+                        )}
+                      </td>
+                      <td className="px-[10px] py-[8px]">
+                        {status === 'valid' && (
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
+                          </svg>
+                        )}
+                        {status === 'skip' && (
+                          <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#919eab]">— (不處理)</p>
+                        )}
+                        {status === 'error' && (
+                          <p className="font-['Public_Sans:Regular',sans-serif] text-[11px] text-[#b71d18] max-w-[200px]" title={r._error}>{r._error}</p>
+                        )}
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {skippedRows.map((r, i) => (
-                      <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-[rgba(145,158,171,0.04)]'}>
-                        <td className="px-[12px] py-[8px] text-[#637381]">{r.orderNo}</td>
-                        <td className="px-[12px] py-[8px] text-[#637381] font-mono">{(r.orderNo || '') + (r.orderSeq || '')}</td>
-                        <td className="px-[12px] py-[8px] text-[#637381]">{r.materialNo}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
 
-          {/* 錯誤區 */}
-          {errorRows.length > 0 && (
-            <div>
-              <div className="flex items-center gap-[6px] mb-[10px]">
-                <div className="w-[6px] h-[6px] rounded-full bg-[#ff5630]" />
-                <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#1c252e]">{errorRows.length} 筆無法匹配的訂單序號</p>
-              </div>
-              <div className="rounded-[8px] border border-[rgba(255,86,48,0.2)] overflow-hidden">
-                <table className="w-full text-[12px]">
-                  <thead className="bg-[#fff2f0]">
-                    <tr>
-                      {['訂單序號', '錯誤原因'].map(h => (
-                        <th key={h} className="px-[12px] py-[8px] text-left font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[#b71d18]">{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {errorRows.map((r, i) => (
-                      <tr key={i} className="bg-white">
-                        <td className="px-[12px] py-[8px] text-[#b71d18] font-mono">{r.orderSeq}</td>
-                        <td className="px-[12px] py-[8px] text-[#b71d18]">{r._error}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {validRows.length === 0 && (
+          {rows.length === 0 && (
             <div className="flex flex-col items-center justify-center py-[40px] gap-[8px]">
               <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
                 <circle cx="24" cy="24" r="24" fill="#fff7e6"/>
@@ -205,20 +220,28 @@ function UploadPreviewModal({ rows, onConfirm, onClose }: UploadModalProps) {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-[12px] px-[24px] py-[16px] border-t border-[rgba(145,158,171,0.24)]">
+        <div className="flex items-center justify-between px-[24px] py-[16px] border-t border-[rgba(145,158,171,0.12)] shrink-0">
           <button
-            onClick={onClose}
-            className="h-[36px] px-[20px] rounded-[8px] border border-[rgba(145,158,171,0.32)] border-solid bg-white hover:bg-[rgba(145,158,171,0.08)] transition-colors font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#637381]"
+            onClick={onReselect}
+            className="h-[36px] px-[16px] rounded-[8px] border border-[rgba(145,158,171,0.32)] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-[#637381] hover:bg-[rgba(145,158,171,0.08)]"
           >
-            取消
+            重新選擇檔案
           </button>
-          <button
-            onClick={onConfirm}
-            disabled={validRows.length === 0}
-            className="h-[36px] px-[20px] rounded-[8px] bg-[#005eb8] hover:bg-[#004a94] disabled:bg-[rgba(145,158,171,0.24)] disabled:cursor-not-allowed transition-colors font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-white"
-          >
-            確認套用 {validRows.length > 0 ? `(${validRows.length} 筆)` : ''}
-          </button>
+          <div className="flex gap-[12px]">
+            <button
+              onClick={onClose}
+              className="h-[36px] px-[16px] rounded-[8px] border border-[rgba(145,158,171,0.32)] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-[#637381] hover:bg-[rgba(145,158,171,0.08)]"
+            >
+              取消
+            </button>
+            <button
+              onClick={onConfirm}
+              disabled={validRows.length === 0}
+              className="h-[36px] px-[20px] rounded-[8px] bg-[#005eb8] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-white hover:bg-[#004a94] disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              確認套用 ({validRows.length} 筆)
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -264,6 +287,19 @@ export function ScheduleChangeListWithTabs({ userRole }: ScheduleChangeListWithT
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
   };
+
+  // ── Export Dropdown ─────────────────────────────────────────────────────────
+  const [showExportDropdown, setShowExportDropdown] = useState(false);
+  const exportDropdownRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (exportDropdownRef.current && !exportDropdownRef.current.contains(e.target as Node)) {
+        setShowExportDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // ── 匯出 Excel / CSV（透過 TableToolbar 內建 Export 按鈕觸發）──────────────
   const handleExportExcel = () => {
@@ -350,14 +386,17 @@ export function ScheduleChangeListWithTabs({ userRole }: ScheduleChangeListWithT
 
     const lines: string[] = [CSV_HEADERS.map(h => `"${h}"`).join(',')];
     filteredOrders.forEach(o => {
+      const undeliveredQty = (o.orderQty ?? 0) - (o.acceptQty ?? 0);
       lines.push([
         esc(o.orderNo),
         esc(o.orderSeq),                          // 訂單序號（如 100），非 docSeqNo
         esc(getSchedIndex(o)),                    // 項次（如 1 或 1/2/3）
         esc(o.materialNo),
-        esc(o.expectedDelivery),
-        esc(o.productionScheduleDate ?? ''),      // 生管用交貨日期（空白待填）
-        esc(o.deliveryQty),
+        esc(o.orderQty),                          // 訂貨量
+        esc(undeliveredQty),                      // 未交量 = 訂貨量 - 已驗收量
+        esc(o.expectedDelivery),                  // 預計交期
+        esc(o.vendorDeliveryDate ?? ''),          // 廠商可交貨日期（cfn1）
+        esc(o.productionScheduleDate ?? ''),      // 生管用交貨日期（cfn2，空白待填）
       ].join(','));
     });
 
@@ -406,9 +445,11 @@ export function ScheduleChangeListWithTabs({ userRole }: ScheduleChangeListWithT
       // 日期正規化：YYYY/M/D → YYYY/MM/DD，非空但格式錯誤時回傳 null
       const rawDate       = get(iProdDate);
       const normalizedDate = normalizeDate(rawDate);
-      const dateError     = rawDate.trim() !== '' && normalizedDate === null
+      const dateError = rawDate.trim() !== '' && normalizedDate === null
         ? `日期格式不符（輸入: "${rawDate}"），請使用 YYYY/MM/DD`
-        : undefined;
+        : (normalizedDate && isDatePast(normalizedDate))
+          ? `生管用交貨日期不可為過去日期（輸入: "${rawDate}"）`
+          : undefined;
 
       result.push({
         orderNo,
@@ -427,9 +468,12 @@ export function ScheduleChangeListWithTabs({ userRole }: ScheduleChangeListWithT
     return result;
   }, [ckOrders]);
 
+  const [uploadFileName, setUploadFileName] = useState<string | null>(null);
+
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setUploadFileName(file.name);
     const reader = new FileReader();
     reader.onload = (ev) => {
       const text = ev.target?.result as string;
@@ -437,7 +481,6 @@ export function ScheduleChangeListWithTabs({ userRole }: ScheduleChangeListWithT
       setUploadRows(rows);
     };
     reader.readAsText(file, 'utf-8');
-    // 清空 input value，允許重複選同一檔案
     e.target.value = '';
   }, [parseCsv]);
 
@@ -621,35 +664,96 @@ export function ScheduleChangeListWithTabs({ userRole }: ScheduleChangeListWithT
             onApply={handleApplyFilters}
           />
         }
-        onExportExcel={handleExportExcel}
-        onExportCsv={handleExportCsv}
+        onExportExcel={undefined}
+        onExportCsv={undefined}
         actionButton={
-          <div className="flex items-center gap-[8px]">
-            {/* 下載變更檔案 */}
-            <button
-              onClick={handleDownloadCSV}
-              className="flex items-center gap-[6px] h-[36px] px-[14px] rounded-[8px] border border-[#005eb8] border-solid bg-white hover:bg-[rgba(0,94,184,0.04)] transition-colors"
+          <>
+            {/* ── Export + 批次變更：合體外框（同「批次建立修正單」UI）── */}
+            <div
+              ref={exportDropdownRef}
+              className="flex items-center gap-[2px] h-[36px] rounded-[8px] border border-[rgba(145,158,171,0.2)] overflow-visible relative"
             >
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                <path d="M15.75 11.25V13.5C15.75 13.8978 15.592 14.2794 15.3107 14.5607C15.0294 14.842 14.6478 15 14.25 15H3.75C3.35218 15 2.97064 14.842 2.68934 14.5607C2.40804 14.2794 2.25 13.8978 2.25 13.5V11.25M5.25 7.5L9 11.25L12.75 7.5M9 2.25V11.25" stroke="#005eb8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#005eb8] whitespace-nowrap">
-                下載變更檔案
-              </span>
-            </button>
+              {/* Export 下拉按鈕 */}
+              <button
+                className="flex items-center gap-[6px] h-full px-[12px] hover:bg-[rgba(145,158,171,0.08)] transition-colors"
+                onClick={() => setShowExportDropdown(prev => !prev)}
+                title="匯出"
+              >
+                <Download size={16} className="text-[#637381]" />
+                <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#1c252e] whitespace-nowrap">Export</p>
+                <ChevronDown size={14} className={`text-[#637381] transition-transform ${showExportDropdown ? 'rotate-180' : ''}`} />
+              </button>
 
-            {/* 上傳大量變更 */}
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-[6px] h-[36px] px-[14px] rounded-[8px] bg-[#005eb8] hover:bg-[#004a94] transition-colors"
-            >
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                <path d="M15.75 11.25V13.5C15.75 13.8978 15.592 14.2794 15.3107 14.5607C15.0294 14.842 14.6478 15 14.25 15H3.75C3.35218 15 2.97064 14.842 2.68934 14.5607C2.40804 14.2794 2.25 13.8978 2.25 13.5V11.25M12.75 6L9 2.25L5.25 6M9 2.25V11.25" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-white whitespace-nowrap">
-                上傳大量變更
-              </span>
-            </button>
+              {/* Export 下拉選單 */}
+              {showExportDropdown && (
+                <div className="absolute top-[calc(100%+4px)] left-0 w-[300px] bg-white rounded-[10px] shadow-[0px_0px_2px_0px_rgba(145,158,171,0.24),0px_20px_40px_-4px_rgba(145,158,171,0.24)] border border-[rgba(145,158,171,0.12)] py-[6px] z-[100]">
+                  {/* 匯出 Excel */}
+                  <button
+                    className="w-full flex items-start gap-[10px] px-[14px] py-[10px] hover:bg-[rgba(145,158,171,0.06)] transition-colors text-left"
+                    onClick={() => { handleExportExcel(); setShowExportDropdown(false); }}
+                  >
+                    <div className="mt-[2px] shrink-0">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#118d57" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                        <path d="M3 9h18M3 15h18M9 3v18M15 3v18" />
+                      </svg>
+                    </div>
+                    <div className="flex flex-col gap-[2px]">
+                      <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#1c252e]">匯出 Excel</p>
+                      <p className="font-['Public_Sans:Regular',sans-serif] text-[11px] text-[#919eab]">依列表顯示欄位匯出 .xlsx 格式</p>
+                    </div>
+                  </button>
+                  {/* 匯出 CSV */}
+                  <button
+                    className="w-full flex items-start gap-[10px] px-[14px] py-[10px] hover:bg-[rgba(145,158,171,0.06)] transition-colors text-left"
+                    onClick={() => { handleExportCsv(); setShowExportDropdown(false); }}
+                  >
+                    <div className="mt-[2px] shrink-0">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#005eb8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                        <line x1="16" y1="13" x2="8" y2="13" />
+                        <line x1="16" y1="17" x2="8" y2="17" />
+                      </svg>
+                    </div>
+                    <div className="flex flex-col gap-[2px]">
+                      <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#1c252e]">匯出 CSV</p>
+                      <p className="font-['Public_Sans:Regular',sans-serif] text-[11px] text-[#919eab]">依列表顯示欄位匯出 .csv 格式</p>
+                    </div>
+                  </button>
+                  {/* 下載變更檔案 */}
+                  <button
+                    className="w-full flex items-start gap-[10px] px-[14px] py-[10px] hover:bg-[rgba(145,158,171,0.06)] transition-colors text-left"
+                    onClick={() => { handleDownloadCSV(); setShowExportDropdown(false); }}
+                  >
+                    <div className="mt-[2px] shrink-0">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#005eb8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                      </svg>
+                    </div>
+                    <div className="flex flex-col gap-[2px]">
+                      <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#1c252e]">下載變更檔案</p>
+                      <p className="font-['Public_Sans:Regular',sans-serif] text-[11px] text-[#919eab]">匯出生管排程變更用 .csv 檔案</p>
+                    </div>
+                  </button>
+                </div>
+              )}
+
+              {/* 分隔線 */}
+              <div className="w-[1px] h-[20px] bg-[rgba(145,158,171,0.2)]" />
+
+              {/* 批次變更 */}
+              <button
+                className="flex items-center gap-[6px] h-full px-[12px] hover:bg-[rgba(145,158,171,0.08)] transition-colors"
+                onClick={() => fileInputRef.current?.click()}
+                title="批次變更"
+              >
+                <FilePlus2 size={16} className="text-[#637381]" />
+                <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#1c252e] whitespace-nowrap">批次變更</p>
+              </button>
+            </div>
 
             {/* 隱藏 file input */}
             <input
@@ -659,7 +763,7 @@ export function ScheduleChangeListWithTabs({ userRole }: ScheduleChangeListWithT
               className="hidden"
               onChange={handleFileChange}
             />
-          </div>
+          </>
         }
       />
 
@@ -685,8 +789,10 @@ export function ScheduleChangeListWithTabs({ userRole }: ScheduleChangeListWithT
       {uploadRows !== null && (
         <UploadPreviewModal
           rows={uploadRows}
+          fileName={uploadFileName ?? undefined}
           onConfirm={handleUploadConfirm}
-          onClose={() => setUploadRows(null)}
+          onClose={() => { setUploadRows(null); setUploadFileName(null); }}
+          onReselect={() => fileInputRef.current?.click()}
         />
       )}
 

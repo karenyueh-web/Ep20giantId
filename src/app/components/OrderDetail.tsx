@@ -1769,6 +1769,10 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
                 ? editableLines.find(l => l.uid === activeDp.uid)?.vendorDeliveryDate || ''
                 : editableLines.find(l => l.uid === activeDp.uid)?.productionScheduleDate || ''
             }
+            minDate={activeDp.field !== 'vendor' ? (() => {
+              const d = new Date();
+              return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
+            })() : undefined}
             onDateSelect={date => {
               const field = activeDp.field === 'vendor' ? 'vendorDeliveryDate' : 'productionScheduleDate';
               updateEditLine(activeDp.uid, { [field]: date });

@@ -14,6 +14,8 @@ interface TableToolbarProps {
   onExportExcel?: () => void;
   /** 提供此 callback 即自動顯示 Export 下拉選單中的「匯出 CSV」選項 */
   onExportCsv?: () => void;
+  /** 提供此 callback 即在 Export 下拉選單中顯示「下載變更檔案」選項 */
+  onExportScheduleChange?: () => void;
 }
 
 export function TableToolbar({
@@ -27,8 +29,9 @@ export function TableToolbar({
   actionButton,
   onExportExcel,
   onExportCsv,
+  onExportScheduleChange,
 }: TableToolbarProps) {
-  const hasExport = !!(onExportExcel || onExportCsv);
+  const hasExport = !!(onExportExcel || onExportCsv || onExportScheduleChange);
   const [showExportDropdown, setShowExportDropdown] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
 
@@ -165,6 +168,29 @@ export function TableToolbar({
                       </p>
                       <p className="font-['Public_Sans:Regular',sans-serif] text-[11px] text-[#919eab]">
                         依列表顯示欄位匯出 .csv 格式
+                      </p>
+                    </div>
+                  </button>
+                )}
+                {/* 下載變更檔案 */}
+                {onExportScheduleChange && (
+                  <button
+                    className="w-full flex items-start gap-[10px] px-[14px] py-[10px] hover:bg-[rgba(145,158,171,0.06)] transition-colors text-left"
+                    onClick={() => { onExportScheduleChange(); setShowExportDropdown(false); }}
+                  >
+                    <div className="mt-[2px] shrink-0">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#005eb8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                      </svg>
+                    </div>
+                    <div className="flex flex-col gap-[2px] min-w-0">
+                      <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#1c252e]">
+                        下載變更檔案
+                      </p>
+                      <p className="font-['Public_Sans:Regular',sans-serif] text-[11px] text-[#919eab]">
+                        匯出生管排程變更用 .csv 檔案
                       </p>
                     </div>
                   </button>
