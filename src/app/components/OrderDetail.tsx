@@ -713,6 +713,7 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
   const initialLinesRef = useRef<EditableLine[]>([]);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
   const [scheduleSaved, setScheduleSaved] = useState(false);
+  const [showSaveToast, setShowSaveToast] = useState(false);
   const [showAddLineWarning, setShowAddLineWarning] = useState(false);
 
   // 點擊聊天icon
@@ -866,6 +867,20 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
 
   return (
     <>
+      {/* ── 成功 Toast ── */}
+      {showSaveToast && (
+        <div
+          className="fixed top-[24px] left-1/2 z-[9999] -translate-x-1/2 flex items-center gap-[10px] bg-[#1c252e] text-white px-[20px] py-[12px] rounded-[10px] shadow-[0px_8px_24px_rgba(0,0,0,0.24)] animate-[fadeInDown_0.25s_ease]"
+          style={{ pointerEvents: 'none' }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
+          </svg>
+          <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] leading-[22px]">
+            交貨排程已儲存
+          </p>
+        </div>
+      )}
       <div className="relative w-full h-full bg-white flex flex-col" data-name="訂單明細">
         {/* 移除絕對定位關閉按鈕 */}
 
@@ -1431,8 +1446,8 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
                                     <path d="M8 3V13M3 8H13" stroke="white" strokeWidth="2" strokeLinecap="round"/>
                                   </svg>
                                 </button>
-                                {/* - 按鈕：只有一行時隱藏 */}
-                                {!isSingleRow && (
+                                {/* - 按鈕：只有一行時隱藏，且項次 1 不提供刪除 */}
+                                {!isSingleRow && rowIdx !== 0 && (
                                   <button
                                     onClick={() => { removeLineAt(line.uid); setScheduleError(null); setScheduleSaved(false); }}
                                     className="w-[28px] h-[28px] rounded-full bg-[rgba(255,86,48,0.12)] hover:bg-[rgba(255,86,48,0.28)] flex items-center justify-center transition-colors shrink-0"
@@ -1561,10 +1576,15 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
                   const hasPastCfn2 = editableLines.some(l => l.productionScheduleDate && isPastDate(l.productionScheduleDate));
                   const hasZeroQty = editableLines.some(l => !l.quantity || l.quantity <= 0);
                   const isQtyMismatch = orderQtyVal > 0 && totalQty !== orderQtyVal;
+                  // 多筆時，生管用交貨日期不可重複
+                  const filledDates = editableLines.map(l => l.productionScheduleDate).filter(Boolean);
+                  const hasDuplicateCfn2 = editableLines.length > 1 && filledDates.length !== new Set(filledDates).size;
                   const validationError = hasMissingCfn2
                     ? '請填寫所有項次的生管用交貨日期(cfn2)'
                     : hasPastCfn2
                     ? '生管用交貨日期(cfn2)不可為過去日期'
+                    : hasDuplicateCfn2
+                    ? '各項次的生管用交貨日期(cfn2)不可重複'
                     : hasZeroQty
                     ? '每個項次的交貨量須大於 0'
                     : isQtyMismatch
@@ -1574,6 +1594,8 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
                   const doSave = () => {
                     const found = orders.find(o => o.orderNo === orderData?.orderNo && o.orderSeq === orderData?.orderSeq);
                     if (found) {
+                      // 取最後一筆有生管用交貨日期的排程，更新 orderRow 欄位（供列表顯示）
+                      const lastWithDate = [...editableLines].reverse().find(l => l.productionScheduleDate);
                       updateOrderFields(found.id, {
                         scheduleLines: editableLines.map((l, i) => ({
                           index: i + 1,
@@ -1582,6 +1604,7 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
                           productionScheduleDate: l.productionScheduleDate,
                           quantity: l.quantity,
                         })),
+                        productionScheduleDate: lastWithDate?.productionScheduleDate ?? '',
                       });
                       const linesSummary = editableLines
                         .map(l => `生管用交貨日期${l.productionScheduleDate || '(未設)'} x ${l.quantity}`)
@@ -1597,6 +1620,9 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
                     setScheduleError(null);
                     setScheduleSaved(true);
                     setShowAddLineWarning(false);
+                    // 成功 Toast：顯示 3 秒後自動消失
+                    setShowSaveToast(true);
+                    setTimeout(() => setShowSaveToast(false), 3000);
                   };
 
                   const handleConfirm = () => {
@@ -1648,13 +1674,20 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
 
                         </div>
                       )}
-                      {/* 合計提示 */}
-                      {scheduleError && (
-                        <p className="font-['Public_Sans:Regular',sans-serif] text-[13px] leading-[20px] text-[#b71d18] mb-[8px] px-[4px]">
-                          ⚠ {scheduleError}
-                        </p>
+                      {/* 驗證錯誤訊息：沿用警示 bar 格式（同 showAddLineWarning） */}
+                      {(scheduleError || validationError) && (
+                        <div className="flex items-center gap-[0px] mb-[10px] rounded-[8px] overflow-hidden" style={{ background: '#FFEAEA' }}>
+                          <div className="flex items-center pl-[14px] pr-[10px] py-[10px] shrink-0">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                              <path fillRule="evenodd" clipRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm0-11a1 1 0 0 1 1 1v3a1 1 0 1 1-2 0V8a1 1 0 0 1 1-1zm0 6a1 1 0 1 0 0 2 1 1 0 0 0 0-2z" fill="#FF5630"/>
+                            </svg>
+                          </div>
+                          <p className="flex-1 font-['Public_Sans:Regular',sans-serif] font-normal text-[13px] leading-[20px] text-[#B71D18] pr-[8px]">
+                            {scheduleError || validationError}
+                          </p>
+                        </div>
                       )}
-                      {scheduleSaved && !scheduleError && (
+                      {scheduleSaved && !scheduleError && !validationError && (
                         <p className="font-['Public_Sans:Regular',sans-serif] text-[13px] leading-[20px] text-[#118d57] mb-[8px] px-[4px]">
                           ✓ 交貨排程已儲存
                         </p>
