@@ -9,6 +9,8 @@ import { TableToolbar } from './TableToolbar';
 import { ColumnSelector } from './ColumnSelector';
 import { FilterDialog, type FilterCondition } from './FilterDialog';
 import { PaginationControls } from './PaginationControls';
+import { useOrderStore } from './OrderStoreContext';
+import type { OrderRow } from './AdvancedOrderTable';
 
 // ── 型別 ─────────────────────────────────────────────────────────────────────
 type ScheduleTab = 'ALL' | 'CK' | 'CL';
@@ -73,6 +75,70 @@ const DEFAULT_COLS: SchedCol[] = [
 const STORAGE_KEY = 'scheduleInquiry_v5_cols';
 const CHECKBOX_W = 52;
 
+// ── OrderStore → ScheduleRow 展開函式 ────────────────────────────────────────
+// 每筆 OrderRow 按 scheduleLines 展開成多列；若無 scheduleLines 則單列
+function expandOrdersToScheduleRows(orders: OrderRow[]): ScheduleRow[] {
+  const result: ScheduleRow[] = [];
+  let rowId = 1;
+
+  const eligible = orders.filter(
+    (o): o is OrderRow & { status: 'CK' | 'CL' } => o.status === 'CK' || o.status === 'CL'
+  );
+
+  for (const order of eligible) {
+    const base = {
+      vendorCodeName: order.vendorName,
+      orderNo:        order.orderNo,
+      orderSeq:       order.orderSeq,
+      status:         order.status,
+      materialNo:     order.materialNo,
+      longSpec:       order.specification,
+      scheduleReqNo:  order.gbdOrderNo ?? '',
+    };
+
+    const lines = order.scheduleLines;
+
+    if (lines && lines.length > 0) {
+      // 展開每條排程 line → 1 row
+      lines.forEach((line, idx) => {
+        const isFirst = idx === 0;
+        result.push({
+          ...base,
+          id: rowId++,
+          // ── 廠商端（只有第 1 比有對應；其餘生管新增，空白）──
+          itemNo:              isFirst ? '1' : '',
+          expectedDelivery:   isFirst ? (line.expectedDelivery ?? order.expectedDelivery) : '',
+          plannedDeliveryQty: isFirst ? (order.deliveryQty ?? order.orderQty) : 0,
+          vendorCanDeliverDate: isFirst ? line.deliveryDate : '',
+          inTransitQty:       isFirst ? order.inTransitQty : 0,
+          acceptQty:          isFirst ? order.acceptQty    : 0,
+          // ── 生管端（每比都有）──
+          pmItemNo:     String(line.index),
+          pmDeliveryDate: line.productionScheduleDate ?? '',
+          pmDeliveryQty:  line.quantity,
+        });
+      });
+    } else {
+      // 無拆期 → 單列
+      result.push({
+        ...base,
+        id: rowId++,
+        itemNo:              '1',
+        expectedDelivery:   order.expectedDelivery,
+        plannedDeliveryQty: order.deliveryQty ?? order.orderQty,
+        vendorCanDeliverDate: order.vendorDeliveryDate ?? '',
+        inTransitQty:       order.inTransitQty,
+        acceptQty:          order.acceptQty,
+        pmItemNo:     '1',
+        pmDeliveryDate: order.productionScheduleDate ?? '',
+        pmDeliveryQty:  order.deliveryQty ?? order.orderQty,
+      });
+    }
+  }
+
+  return result;
+}
+
 // ── 假資料 ───────────────────────────────────────────────────────────────────
 const MOCK_DATA: ScheduleRow[] = [
   { id: 1,  vendorCodeName: '華銘(0001000641)',        orderNo: '400649723', orderSeq: '10', expectedDelivery: '2025/09/04', status: 'CK', itemNo: '1', plannedDeliveryQty: 500,  vendorCanDeliverDate: '2025/09/04', pmDeliveryDate: '2025/09/01', pmItemNo: '1', pmDeliveryQty: 500,  inTransitQty: 0,   acceptQty: 0,   materialNo: '1129-CSL0075-L01', longSpec: 'CHAIN 12S 126L SHIMANO M8100',                  scheduleReqNo: 'PR2025-001234' },
@@ -86,7 +152,11 @@ const MOCK_DATA: ScheduleRow[] = [
   { id: 9,  vendorCodeName: 'SHIMANO SIC(0001000734)', orderNo: '400649731', orderSeq: '20', expectedDelivery: '2025/06/30', status: 'CL', itemNo: '1', plannedDeliveryQty: 800,  vendorCanDeliverDate: '2025/06/30', pmDeliveryDate: '2025/06/28', pmItemNo: '1', pmDeliveryQty: 800,  inTransitQty: 0,   acceptQty: 800, materialNo: '1135-FD0050-L01',  longSpec: 'FRONT DERAILLEUR SHIMANO DEORE M6100 2x12SPD',  scheduleReqNo: 'PR2025-008901' },
   { id: 10, vendorCodeName: 'GCK(0000002120)',         orderNo: '400649732', orderSeq: '10', expectedDelivery: '2026/02/14', status: 'CK', itemNo: '1', plannedDeliveryQty: 400,  vendorCanDeliverDate: '2026/02/12', pmDeliveryDate: '2026/02/14', pmItemNo: '1', pmDeliveryQty: 400,  inTransitQty: 0,   acceptQty: 0,   materialNo: '1136-STM0060-L01', longSpec: 'STEM GIANT CONTACT SLR OD2 6DEG 80mm',          scheduleReqNo: 'PR2026-000456' },
   { id: 11, vendorCodeName: '台灣SRAM(0001003210)',    orderNo: '400649733', orderSeq: '10', expectedDelivery: '2025/05/20', status: 'CL', itemNo: '1', plannedDeliveryQty: 250,  vendorCanDeliverDate: '2025/05/20', pmDeliveryDate: '2025/05/18', pmItemNo: '1', pmDeliveryQty: 250,  inTransitQty: 0,   acceptQty: 250, materialNo: '1137-HBR0070-L01', longSpec: 'HANDLEBAR GIANT CONNECT OD2 FLAT 680mm',         scheduleReqNo: 'PR2025-002345' },
-  { id: 12, vendorCodeName: '速聯(0001004321)',        orderNo: '400649734', orderSeq: '20', expectedDelivery: '2026/03/28', status: 'CK', itemNo: '1', plannedDeliveryQty: 550,  vendorCanDeliverDate: '2026/03/25', pmDeliveryDate: '2026/03/28', pmItemNo: '1', pmDeliveryQty: 550,  inTransitQty: 0,   acceptQty: 0,   materialNo: '1138-SAR0080-L01', longSpec: 'SADDLE GIANT CONTACT NEUTRAL 143mm',            scheduleReqNo: 'PR2026-000789' },
+  { id: 12, vendorCodeName: '速聯(0001004321)',        orderNo: '400649734', orderSeq: '20',  expectedDelivery: '2026/03/28', status: 'CK', itemNo: '1', plannedDeliveryQty: 550,  vendorCanDeliverDate: '2026/03/25', pmDeliveryDate: '2026/03/28', pmItemNo: '1', pmDeliveryQty: 550,  inTransitQty: 0,   acceptQty: 0,   materialNo: '1138-SAR0080-L01', longSpec: 'SADDLE GIANT CONTACT NEUTRAL 143mm',              scheduleReqNo: 'PR2026-000789' },
+  { id: 13, vendorCodeName: '金盛元工業(00010059)',    orderNo: '400649731', orderSeq: '90',  expectedDelivery: '2026/03/02', status: 'CK', itemNo: '1', plannedDeliveryQty: 300,  vendorCanDeliverDate: '2025/04/20', pmDeliveryDate: '2025/04/18', pmItemNo: '1', pmDeliveryQty: 300,  inTransitQty: 20,  acceptQty: 80,  materialNo: '8801-TIR0077-G01',  longSpec: 'GAVIA COURSE 1 700X25C TUBELESS READY',                        scheduleReqNo: 'GBD-2025-001242' },
+  { id: 14, vendorCodeName: '佳承精密(00010045)',      orderNo: '400649732', orderSeq: '100', expectedDelivery: '2026/03/02', status: 'CK', itemNo: '2', plannedDeliveryQty: 180,  vendorCanDeliverDate: '2025/04/25', pmDeliveryDate: '2025/04/25', pmItemNo: '2', pmDeliveryQty: 180,  inTransitQty: 0,   acceptQty: 180, materialNo: '9901-SPT0012-H01',  longSpec: 'D-FUSE SEATPOST COMPOSITE FOR TCR',                           scheduleReqNo: 'GBD-2025-001243' },
+  { id: 15, vendorCodeName: '久廣精密(00010053)',      orderNo: '400650108', orderSeq: '80',  expectedDelivery: '2026/03/02', status: 'CK', itemNo: '1', plannedDeliveryQty: 400,  vendorCanDeliverDate: '2025/04/15', pmDeliveryDate: '2025/04/14', pmItemNo: '1', pmDeliveryQty: 400,  inTransitQty: 10,  acceptQty: 390, materialNo: '9901-TIR0108-N08',  longSpec: 'SCHWALBE PRO ONE 700X28C TUBELESS EASY V-GUARD',               scheduleReqNo: 'GBD-2025-002108' },
+  { id: 16, vendorCodeName: '金盛元工業(00010059)',    orderNo: '400650109', orderSeq: '90',  expectedDelivery: '2026/03/02', status: 'CK', itemNo: '1', plannedDeliveryQty: 250,  vendorCanDeliverDate: '2025/04/18', pmDeliveryDate: '2025/04/17', pmItemNo: '1', pmDeliveryQty: 250,  inTransitQty: 0,   acceptQty: 250, materialNo: '1101-BRK0109-N09',  longSpec: 'SHIMANO BR-R9270 DURA-ACE DISC BRAKE CALIPER FRONT',           scheduleReqNo: 'GBD-2025-002109' },
 ];
 
 // ── Tab 元件 ──────────────────────────────────────────────────────────────────
@@ -224,6 +294,10 @@ interface OrderScheduleInquiryPageProps { userRole?: string; }
 export function OrderScheduleInquiryPage({ userRole: _userRole }: OrderScheduleInquiryPageProps) {
   const { scrollContainerRef, handleMouseDown, canDragScroll } = useHorizontalDragScroll();
 
+  // ── 從 OrderStore 取得即時訂單資料，展開成排程列 ─────────────────────────
+  const { orders } = useOrderStore();
+  const allScheduleRows = useMemo(() => expandOrdersToScheduleRows(orders), [orders]);
+
   const [activeTab, setActiveTab] = useState<ScheduleTab>('ALL');
 
   // 日期差異 Chip 篩選
@@ -295,7 +369,7 @@ export function OrderScheduleInquiryPage({ userRole: _userRole }: OrderScheduleI
   const matchAny = (v: string, kws: string[]) => kws.some(k => v.toLowerCase().includes(k));
 
   const searchFiltered = useMemo(() => {
-    let r = MOCK_DATA;
+    let r = allScheduleRows;
     if (activeTab !== 'ALL') r = r.filter(x => x.status === activeTab);
     // Chip 日期差異篩選
     if (dateChip === 'ANY_DIFF') {
@@ -320,7 +394,7 @@ export function OrderScheduleInquiryPage({ userRole: _userRole }: OrderScheduleI
     if (deliveryDateFrom.trim()) r = r.filter(x => x.expectedDelivery >= deliveryDateFrom.replace(/-/g, '/'));
     if (deliveryDateTo.trim())   r = r.filter(x => x.expectedDelivery <= deliveryDateTo.replace(/-/g, '/'));
     return r;
-  }, [activeTab, dateChip, docSeqNoSearch, vendorSearch, deliveryDateFrom, deliveryDateTo]);
+  }, [allScheduleRows, activeTab, dateChip, docSeqNoSearch, vendorSearch, deliveryDateFrom, deliveryDateTo]);
 
   // ── 進階篩選 ──────────────────────────────────────────────────────────────
   const filteredData = useMemo(() => {
@@ -359,9 +433,9 @@ export function OrderScheduleInquiryPage({ userRole: _userRole }: OrderScheduleI
 
   // ── Tab 計數 ──────────────────────────────────────────────────────────────
   const counts = useMemo(() => ({
-    CK: MOCK_DATA.filter(r => r.status === 'CK').length,
-    CL: MOCK_DATA.filter(r => r.status === 'CL').length,
-  }), []);
+    CK: allScheduleRows.filter(r => r.status === 'CK').length,
+    CL: allScheduleRows.filter(r => r.status === 'CL').length,
+  }), [allScheduleRows]);
 
   // ── 分頁 ──────────────────────────────────────────────────────────────────
   const paginatedData = useMemo(() => {
