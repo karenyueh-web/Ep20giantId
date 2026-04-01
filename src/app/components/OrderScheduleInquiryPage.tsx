@@ -16,7 +16,8 @@ type ScheduleTab = 'ALL' | 'CK' | 'CL';
 type SchedColKey =
   | 'status' | 'vendorCodeName' | 'orderNo' | 'orderSeq' | 'expectedDelivery'
   | 'itemNo' | 'plannedDeliveryQty' | 'vendorCanDeliverDate'
-  | 'pmDeliveryDate' | 'pmItemNo' | 'pmDeliveryQty'
+  | 'pmDeliveryDate' | 'diffDaysA' | 'diffDaysB'
+  | 'pmItemNo' | 'pmDeliveryQty'
   | 'inTransitQty' | 'acceptQty' | 'materialNo' | 'longSpec' | 'scheduleReqNo';
 
 interface SchedCol {
@@ -58,6 +59,8 @@ const DEFAULT_COLS: SchedCol[] = [
   { key: 'plannedDeliveryQty',   label: '預計交貨量',       width: 110, minWidth: 90  },
   { key: 'vendorCanDeliverDate', label: '廠商可交日期',     width: 130, minWidth: 100 },
   { key: 'pmDeliveryDate',       label: '生管端交貨日期',   width: 130, minWidth: 100 },
+  { key: 'diffDaysA',            label: '差異天數A',         width: 100, minWidth: 80  },
+  { key: 'diffDaysB',            label: '差異天數B',         width: 100, minWidth: 80  },
   { key: 'pmItemNo',             label: '生管端項次',       width: 100, minWidth: 80  },
   { key: 'pmDeliveryQty',        label: '生管端交貨量',     width: 120, minWidth: 90  },
   { key: 'inTransitQty',         label: '在途量',           width: 90,  minWidth: 70  },
@@ -67,7 +70,7 @@ const DEFAULT_COLS: SchedCol[] = [
   { key: 'scheduleReqNo',        label: '交貨排程請購單號', width: 170, minWidth: 130 },
 ];
 
-const STORAGE_KEY = 'scheduleInquiry_v4_cols';
+const STORAGE_KEY = 'scheduleInquiry_v5_cols';
 const CHECKBOX_W = 52;
 
 // ── 假資料 ───────────────────────────────────────────────────────────────────
@@ -183,13 +186,30 @@ function DraggableColHeader({
   );
 }
 
+// ── 日期差異天數計算（dateA - dateB，正數=延後，負數=提前）─────────────────────
+function dateDiffDays(dateA: string, dateB: string): number | null {
+  if (!dateA || !dateB) return null;
+  const p = (s: string) => new Date(s.replace(/\//g, '-')).getTime();
+  return Math.round((p(dateA) - p(dateB)) / 86400000);
+}
+
 // ── 匯出 CSV ──────────────────────────────────────────────────────────────────
 function exportToCsv(data: ScheduleRow[], cols: SchedCol[]) {
   const visible = cols.filter(c => c.visible !== false);
   const header = visible.map(c => `"${c.label}"`).join(',');
   const rows = data.map(r => visible.map(c => {
-    const v = r[c.key as keyof ScheduleRow];
-    return `"${v !== undefined && v !== null ? String(v) : ''}"`;
+    let v: string;
+    if (c.key === 'diffDaysA') {
+      const d = dateDiffDays(r.pmDeliveryDate, r.expectedDelivery);
+      v = d !== null ? (d > 0 ? `+${d}` : String(d)) : '';
+    } else if (c.key === 'diffDaysB') {
+      const d = dateDiffDays(r.pmDeliveryDate, r.vendorCanDeliverDate);
+      v = d !== null ? (d > 0 ? `+${d}` : String(d)) : '';
+    } else {
+      const raw = r[c.key as keyof ScheduleRow];
+      v = raw !== undefined && raw !== null ? String(raw) : '';
+    }
+    return `"${v}"`;
   }).join(','));
   const blob = new Blob(['\uFEFF' + [header, ...rows].join('\n')], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
@@ -365,21 +385,21 @@ export function OrderScheduleInquiryPage({ userRole: _userRole }: OrderScheduleI
 
   const totalWidth = visibleColumns.reduce((s, c) => s + c.width, 0);
 
-  // ── Cell 背景色 helper （chip 性質的日期差異醒目） ────────────────────────
+  // ── Cell 背景色 helper ────────────────────────────────────────────────────
   const getCellHighlight = (colKey: SchedColKey, row: ScheduleRow): string => {
-    // Chip2: 預計交期 ≠ 生管端交貨日期 → 兩欄都標粉色
+    // Chip A: 預計交期 ≠ 生管端 → expectedDelivery + pmDeliveryDate + diffDaysA 標粉色
     if (dateChip === 'CFN2_DIFF') {
       const diff = row.expectedDelivery && row.pmDeliveryDate && row.expectedDelivery !== row.pmDeliveryDate;
-      if (diff && (colKey === 'expectedDelivery' || colKey === 'pmDeliveryDate'))
+      if (diff && (colKey === 'expectedDelivery' || colKey === 'pmDeliveryDate' || colKey === 'diffDaysA'))
         return 'bg-[rgba(255,86,48,0.12)]';
     }
-    // Chip3: 廠商可交日期 ≠ 生管端交貨日期 → 兩欄都標黃色
+    // Chip B: 廠商可交 ≠ 生管端 → vendorCanDeliverDate + pmDeliveryDate + diffDaysB 標黃色
     if (dateChip === 'CFN1_DIFF') {
       const diff = row.vendorCanDeliverDate && row.pmDeliveryDate && row.vendorCanDeliverDate !== row.pmDeliveryDate;
-      if (diff && (colKey === 'vendorCanDeliverDate' || colKey === 'pmDeliveryDate'))
+      if (diff && (colKey === 'vendorCanDeliverDate' || colKey === 'pmDeliveryDate' || colKey === 'diffDaysB'))
         return 'bg-[rgba(255,193,7,0.2)]';
     }
-    // 全部 / 所有日期有差異: 預計交期不標色，其餘照舊
+    // ALL / ANY_DIFF: pmDeliveryDate 粉, vendorCanDeliverDate 黃，不標其餘
     if (dateChip === 'ALL' || dateChip === 'ANY_DIFF') {
       if (colKey === 'pmDeliveryDate' &&
           row.expectedDelivery && row.pmDeliveryDate && row.expectedDelivery !== row.pmDeliveryDate)
@@ -408,8 +428,8 @@ export function OrderScheduleInquiryPage({ userRole: _userRole }: OrderScheduleI
         {([
           { id: 'ALL',      label: '全部' },
           { id: 'ANY_DIFF', label: '所有日期有差異訂單' },
-          { id: 'CFN2_DIFF',label: '預計交期與生管端交期(cfn2)不同' },
-          { id: 'CFN1_DIFF',label: '生管端交期(cfn2)與廠商可交貨日期(cfn1)不同' },
+          { id: 'CFN2_DIFF',label: 'A:預計交期與生管端交期(cfn2)不同' },
+          { id: 'CFN1_DIFF',label: 'B:生管端交期(cfn2)與廠商可交貨日期(cfn1)不同' },
         ] as const).map(chip => (
           <button
             key={chip.id}
@@ -509,7 +529,13 @@ export function OrderScheduleInquiryPage({ userRole: _userRole }: OrderScheduleI
                 {/* 一般欄 */}
                 {visibleColumns.map((col, ci) => {
                   const isLast = ci === visibleColumns.length - 1;
-                  const raw = row[col.key as keyof ScheduleRow];
+                  const isDiffCol = col.key === 'diffDaysA' || col.key === 'diffDaysB';
+                  const diffDays = isDiffCol
+                    ? (col.key === 'diffDaysA'
+                        ? dateDiffDays(row.pmDeliveryDate, row.expectedDelivery)
+                        : dateDiffDays(row.pmDeliveryDate, row.vendorCanDeliverDate))
+                    : null;
+                  const raw = isDiffCol ? undefined : row[col.key as keyof ScheduleRow];
                   const val = raw !== undefined && raw !== null ? String(raw) : '';
                   const highlight = getCellHighlight(col.key, row);
                   return (
@@ -527,6 +553,16 @@ export function OrderScheduleInquiryPage({ userRole: _userRole }: OrderScheduleI
                         ].join(' ')}>
                           {row.status}
                         </span>
+                      ) : isDiffCol ? (
+                        diffDays === null ? (
+                          <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] w-full text-[#919eab]">—</p>
+                        ) : (
+                          <p className={`font-['Public_Sans:SemiBold',sans-serif] font-semibold leading-[22px] text-[14px] w-full ${
+                            diffDays > 0 ? 'text-[#b71d18]' : diffDays < 0 ? 'text-[#118d57]' : 'text-[#1c252e]'
+                          }`}>
+                            {diffDays > 0 ? `+${diffDays}` : String(diffDays)}
+                          </p>
+                        )
                       ) : (
                         <p
                           title={val}
