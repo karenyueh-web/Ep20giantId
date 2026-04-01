@@ -703,7 +703,7 @@ function MiniNavLayout({ currentPage, onPageChange, onLogout }: MiniNavLayoutPro
       <NavItemMini icon={<AnnouncementIcon />} label="公佈欄" isActive={currentPage === 'announcement'} onClick={() => onPageChange('announcement')} />
       <NavItemMini icon={<AnnouncementIcon />} label="Online Chat" isActive={currentPage === 'online-chat'} onClick={() => onPageChange('online-chat')} />
       <NavItemMini icon={<ReceivingIcon />} label="收料查詢" isActive={currentPage === 'receiving-inquiry'} onClick={() => onPageChange('receiving-inquiry')} />
-      <NavItemMini icon={<ScheduleIcon />} label="排程查詢" isActive={currentPage === 'schedule-inquiry'} onClick={() => onPageChange('schedule-inquiry')} />
+      <NavItemMini icon={<ScheduleIcon />} label="排程總表" isActive={currentPage === 'schedule-inquiry'} onClick={() => onPageChange('schedule-inquiry')} />
 
       <div className="w-full h-px bg-[rgba(145,158,171,0.12)] my-[4px]" />
 
@@ -858,10 +858,10 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
         onClick={() => onPageChange('receiving-inquiry')}
       />
       
-      {/* 新增：訂單排程查詢 */}
+      {/* 新增：排程總表查詢 */}
       <NavItem 
         icon={<ScheduleIcon />} 
-        label="訂單排程查詢" 
+        label="排程總表查詢" 
         isActive={currentPage === 'schedule-inquiry'}
         onClick={() => onPageChange('schedule-inquiry')}
       />

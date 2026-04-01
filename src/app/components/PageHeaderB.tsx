@@ -143,9 +143,11 @@ export function PageHeaderB({ title, breadcrumb }: PageHeaderBProps) {
           <p className="font-['Public_Sans:Bold',sans-serif] font-bold leading-[36px] text-[#1c252e] text-[24px]">
             {title}
           </p>
-          <p className="font-['Public_Sans:Regular',sans-serif] font-normal leading-[20px] text-[#637381] text-[13px] mt-[4px] whitespace-nowrap">
-            {breadcrumb}
-          </p>
+          {breadcrumb && (
+            <p className="font-['Public_Sans:Regular',sans-serif] font-normal leading-[20px] text-[#637381] text-[13px] mt-[4px] whitespace-nowrap">
+              {breadcrumb}
+            </p>
+          )}
         </div>
         
         {/* AI Tool - hidden on small screens, flex on larger */}

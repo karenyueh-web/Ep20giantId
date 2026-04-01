@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import IconsSolidIcSolarMultipleForwardLeftBroken from '@/imports/IconsSolidIcSolarMultipleForwardLeftBroken';
 import { chatData, type ChatConversation } from '@/app/data/chatData';
 import svgPaths from '@/imports/svg-gcyyqek0b9';
@@ -825,7 +825,7 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
     );
   };
 
-  // 差異天數 = 生管用交貨日期 − 廠商可交貨日期
+  // 差異天數 = 生管端交貨日期 − 廠商可交貨日期
   const calcLineDiff = (prod: string, vendor: string): number | null => {
     if (!prod || !vendor) return null;
     try {
@@ -1393,7 +1393,7 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
                           <div className="w-[40px] shrink-0"><TH>項次</TH></div>
                           <div className="w-[110px] shrink-0"><TH>預計交期</TH></div>
                           <div className="w-[150px] shrink-0"><TH>廠商可交貨日期(cfn1)</TH></div>
-                          <div className="w-[150px] shrink-0"><TH red>生管用交貨日期(cfn2)</TH></div>
+                          <div className="w-[150px] shrink-0"><TH red>生管端交貨日期(cfn2)</TH></div>
                           <div className="w-[120px] shrink-0"><TH red>交貨量</TH></div>
                           <div className="w-[120px] shrink-0"><TH>差異天數(cfn2-1)</TH></div>
                           <div className="w-[72px] shrink-0" />
@@ -1588,16 +1588,16 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
                   const hasPastCfn2 = editableLines.some(l => l.productionScheduleDate && isPastDate(l.productionScheduleDate));
                   const hasZeroQty = editableLines.some(l => !l.quantity || l.quantity <= 0);
                   const isQtyMismatch = orderQtyVal > 0 && totalQty !== orderQtyVal;
-                  // 多筆時，生管用交貨日期不可重複
+                  // 多筆時，生管端交貨日期不可重複
                   const filledDates = editableLines.map(l => l.productionScheduleDate).filter(Boolean);
                   const hasDuplicateCfn2 = editableLines.length > 1 && filledDates.length !== new Set(filledDates).size;
                   // validationError: 顯示在錯誤 bar（不含數量不符，合計列已呈現）
                   const validationError = hasMissingCfn2
-                    ? '請填寫所有項次的生管用交貨日期(cfn2)'
+                    ? '請填寫所有項次的生管端交貨日期(cfn2)'
                     : hasPastCfn2
-                    ? '生管用交貨日期(cfn2)不可為過去日期'
+                    ? '生管端交貨日期(cfn2)不可為過去日期'
                     : hasDuplicateCfn2
-                    ? '各項次的生管用交貨日期(cfn2)不可重複'
+                    ? '各項次的生管端交貨日期(cfn2)不可重複'
                     : hasZeroQty
                     ? '每個項次的交貨量須大於 0'
                     : null;
@@ -1607,7 +1607,7 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
                   const doSave = () => {
                     const found = orders.find(o => o.orderNo === orderData?.orderNo && o.orderSeq === orderData?.orderSeq);
                     if (found) {
-                      // 取最後一筆有生管用交貨日期的排程，更新 orderRow 欄位（供列表顯示）
+                      // 取最後一筆有生管端交貨日期的排程，更新 orderRow 欄位（供列表顯示）
                       const lastWithDate = [...editableLines].reverse().find(l => l.productionScheduleDate);
                       updateOrderFields(found.id, {
                         scheduleLines: editableLines.map((l, i) => ({
@@ -1620,7 +1620,7 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
                         productionScheduleDate: lastWithDate?.productionScheduleDate ?? '',
                       });
                       const linesSummary = editableLines
-                        .map(l => `生管用交貨日期${l.productionScheduleDate || '(未設)'} x ${l.quantity}`)
+                        .map(l => `生管端交貨日期${l.productionScheduleDate || '(未設)'} x ${l.quantity}`)
                         .join('、');
                       addOrderHistory(found.id, {
                         date: nowDateStr(),

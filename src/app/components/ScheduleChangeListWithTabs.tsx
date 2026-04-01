@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
+﻿import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { AdvancedOrderTable, getOrderColumns, defaultOrderColumns } from './AdvancedOrderTable';
 import type { OrderRow, OrderColumn, ScheduleLine } from './AdvancedOrderTable';
 import { OrderDetail } from './OrderDetail';
@@ -28,7 +28,7 @@ function getScheduleChangeColumns(): OrderColumn[] {
 
 // ── CSV 欄位定義 ────────────────────────────────────────────────────────────
 // 欄位說明：訂單序號=orderSeq（如100）、項次=排程項次（如1/2/3）
-const CSV_HEADERS = ['訂單號碼', '訂單序號', '項次', '料號', '訂貨量', '未交量', '預計交期', '廠商可交貨日期', '生管用交貨日期'];
+const CSV_HEADERS = ['訂單號碼', '訂單序號', '項次', '料號', '訂貨量', '未交量', '預計交期', '廠商可交貨日期', '生管端交貨日期'];
 
 // ── 日期正規化：接受 YYYY/M/D、YYYY-M-D、YYYY.M.D，輸出 YYYY/MM/DD ────────
 // 回傳 null 表示非空但格式/值域不合法
@@ -164,7 +164,7 @@ function UploadPreviewModal({ rows, fileName, onConfirm, onClose, onReselect }: 
             <table className="w-full min-w-[600px]">
               <thead className="sticky top-0 z-[1]">
                 <tr className="bg-[#f4f6f8]">
-                  {['行', '訂單號碼', '序號', '料號', '生管用交貨日期', '驗證'].map(h => (
+                  {['行', '訂單號碼', '序號', '料號', '生管端交貨日期', '驗證'].map(h => (
                     <th key={h} className="px-[10px] py-[8px] text-left font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[11px] text-[#637381] whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -214,7 +214,7 @@ function UploadPreviewModal({ rows, fileName, onConfirm, onClose, onReselect }: 
                 <path d="M24 16v8M24 30v2" stroke="#ffa726" strokeWidth="2.5" strokeLinecap="round"/>
               </svg>
               <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-[#637381]">無可套用的資料</p>
-              <p className="text-[13px] text-[#919eab]">請確認 CSV 中已填寫「生管用交貨日期」欄位</p>
+              <p className="text-[13px] text-[#919eab]">請確認 CSV 中已填寫「生管端交貨日期」欄位</p>
             </div>
           )}
         </div>
@@ -396,7 +396,7 @@ export function ScheduleChangeListWithTabs({ userRole }: ScheduleChangeListWithT
         esc(undeliveredQty),                      // 未交量 = 訂貨量 - 已驗收量
         esc(o.expectedDelivery),                  // 預計交期
         esc(o.vendorDeliveryDate ?? ''),          // 廠商可交貨日期（cfn1）
-        esc(o.productionScheduleDate ?? ''),      // 生管用交貨日期（cfn2，空白待填）
+        esc(o.productionScheduleDate ?? ''),      // 生管端交貨日期（cfn2，空白待填）
       ].join(','));
     });
 
@@ -426,7 +426,7 @@ export function ScheduleChangeListWithTabs({ userRole }: ScheduleChangeListWithT
     const iSchedIdx    = idx('項次');      // 排程項次，僅供參考
     const iMaterialNo  = idx('料號');
     const iExpected    = idx('預計交期');
-    const iProdDate    = idx('生管用交貨日期');
+    const iProdDate    = idx('生管端交貨日期');
     const iDeliveryQty = idx('交貨量');
 
     // 以 orderNo + orderSeq 組合鍵查找 OrderRow.id
@@ -448,7 +448,7 @@ export function ScheduleChangeListWithTabs({ userRole }: ScheduleChangeListWithT
       const dateError = rawDate.trim() !== '' && normalizedDate === null
         ? `日期格式不符（輸入: "${rawDate}"），請使用 YYYY/MM/DD`
         : (normalizedDate && isDatePast(normalizedDate))
-          ? `生管用交貨日期不可為過去日期（輸入: "${rawDate}"）`
+          ? `生管端交貨日期不可為過去日期（輸入: "${rawDate}"）`
           : undefined;
 
       result.push({
@@ -493,13 +493,13 @@ export function ScheduleChangeListWithTabs({ userRole }: ScheduleChangeListWithT
       updateOrderFields(r._matchedId!, { productionScheduleDate: r.productionScheduleDate });
       addOrderHistory(r._matchedId!, {
         date: now,
-        event: '批次匯入生管用交貨日期',
+        event: '批次匯入生管端交貨日期',
         operator,
-        remark: `生管用交貨日期設定為 ${r.productionScheduleDate}`,
+        remark: `生管端交貨日期設定為 ${r.productionScheduleDate}`,
       });
     });
     setUploadRows(null);
-    showToast(`已成功套用 ${validRows.length} 筆生管用交貨日期`);
+    showToast(`已成功套用 ${validRows.length} 筆生管端交貨日期`);
   }, [uploadRows, updateOrderFields, addOrderHistory, userRole]);
 
   // ── Filtered count ──────────────────────────────────────────────────────────

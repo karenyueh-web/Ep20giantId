@@ -9,6 +9,7 @@ import { UnderConstructionPage } from "@/app/components/UnderConstructionPage";
 import { CorrectionCreatePage } from "@/app/components/CorrectionCreatePage";
 import { CorrectionListWithTabs } from "@/app/components/CorrectionListWithTabs";
 import { HistoryCorrectionListPage } from "@/app/components/HistoryCorrectionListPage";
+import { OrderScheduleInquiryPage } from "@/app/components/OrderScheduleInquiryPage";
 import { ResponsivePageLayout } from "@/app/components/ResponsivePageLayout";
 import { LoginPage } from "@/app/components/LoginPage";
 import { RegisterPage } from "@/app/components/RegisterPage";
@@ -163,11 +164,23 @@ export default function App() {
         return <VendorAccountReviewPageNew currentPage={currentPage} onPageChange={handlePageChange} onLogout={handleLogout} userRole={userRole} onApproveVendor={handleVendorApproval} />;
       case 'giant-account-management':
         return <GiantAccountManagementPageNew currentPage={currentPage} onPageChange={handlePageChange} onLogout={handleLogout} userRole={userRole} />;
+      case 'schedule-inquiry':
+        return (
+          <ResponsivePageLayout
+            currentPage={currentPage}
+            onPageChange={handlePageChange}
+            onLogout={handleLogout}
+            userRole={userRole}
+            title="排程總表查詢"
+            breadcrumb=""
+          >
+            <OrderScheduleInquiryPage userRole={userRole} />
+          </ResponsivePageLayout>
+        );
       // ── 尚未建置的功能頁面 → 畫面建置中 ──
       case 'dashboard':
       case 'announcement':
       case 'receiving-inquiry':
-      case 'schedule-inquiry':
       case 'shipping-create':
       case 'shipping-list':
       case 'shipping-packing':

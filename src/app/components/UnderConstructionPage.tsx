@@ -8,7 +8,7 @@ const PAGE_META: Partial<Record<string, { title: string; breadcrumb: string }>> 
   'announcement':           { title: '公佈欄',          breadcrumb: '首頁 • 公佈欄' },
   'personal-settings':      { title: '個人設定',        breadcrumb: '首頁 • 個人設定' },
   'receiving-inquiry':      { title: '收料查詢',        breadcrumb: '管理作業 • 收料查詢' },
-  'schedule-inquiry':       { title: '排程查詢',        breadcrumb: '管理作業 • 排程查詢' },
+  'schedule-inquiry':       { title: '排程總表查詢',    breadcrumb: '' },
   // 訂單管理
   'order-schedule-change':  { title: '變更生管排程',    breadcrumb: '訂單管理 • 變更生管排程' },
   // 修正單管理

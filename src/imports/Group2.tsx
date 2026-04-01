@@ -1,4 +1,4 @@
-import svgPaths from "./svg-g5za5i81de";
+﻿import svgPaths from "./svg-g5za5i81de";
 
 function SmallSelectIconsSolidIcEvaArrowIosDownwardFill({ children }: React.PropsWithChildren<{}>) {
   return (
@@ -107,7 +107,7 @@ export default function Group() {
             <Stack text="預計交期" text1="2025/01/10" />
             <Stack text="廠商可交貨日期" text1="2025/01/10" />
             <div className="content-stretch flex flex-col gap-[4px] h-[60px] items-start relative shrink-0" data-name="stack">
-              <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal h-[22px] leading-[22px] overflow-hidden relative shrink-0 text-[#ff3b30] text-[14px] text-ellipsis w-full whitespace-nowrap">生管用交貨日期</p>
+              <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal h-[22px] leading-[22px] overflow-hidden relative shrink-0 text-[#ff3b30] text-[14px] text-ellipsis w-full whitespace-nowrap">生管端交貨日期</p>
               <SmallSelect className="relative shrink-0" />
             </div>
             <div className="content-stretch flex flex-col gap-[4px] items-start relative shrink-0 w-[150px]" data-name="stack">

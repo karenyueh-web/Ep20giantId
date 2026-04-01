@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+﻿import { useState, useCallback, useEffect, useMemo } from 'react';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { Resizable } from 're-resizable';
@@ -47,7 +47,7 @@ export interface ScheduleLine {
   index: number;
   expectedDelivery?: string; // 預計交期
   deliveryDate: string; // 廠商可交貨日期
-  productionScheduleDate?: string; // 生管用交貨日期
+  productionScheduleDate?: string; // 生管端交貨日期
   quantity: number;
 }
 
@@ -97,7 +97,7 @@ export interface OrderRow {
   gbdOrderNo?: string;
   statisticalDeliveryDate?: string;
   // ── 生管排程欄位 ──
-  productionScheduleDate?: string; // 生管用交貨日期（變更生管排程頁使用）
+  productionScheduleDate?: string; // 生管端交貨日期（變更生管排程頁使用）
   // ── 不接單標記 ──
   isRejectedOrder?: boolean;
   // ── 調整單據類型標記（廠商選擇拆單時記錄） ──
@@ -148,7 +148,7 @@ export function computeRowDayDiff(row: OrderRow): number | null {
   }
 }
 
-// 差異天數(cfn2-1)：生管用交貨日期 − 廠商可交貨日期
+// 差異天數(cfn2-1)：生管端交貨日期 − 廠商可交貨日期
 export function computeProdSchedDayDiff(row: OrderRow): number | null {
   if (!row.productionScheduleDate || !row.vendorDeliveryDate) return null;
   try {
@@ -198,7 +198,7 @@ export const defaultOrderColumns: OrderColumn[] = [
   { key: 'deliveryQty',          label: '交貨量',             width: 100,  minWidth: 80,  visible: false },
   { key: 'schedLineIndex',       label: '項次',               width: 80,   minWidth: 60,  visible: false },
   { key: 'dayDiff',              label: '差異天數',           width: 100,  minWidth: 80  },
-  { key: 'productionScheduleDate', label: '生管用交貨日期',   width: 150,  minWidth: 110, visible: false },
+  { key: 'productionScheduleDate', label: '生管端交貨日期',   width: 150,  minWidth: 110, visible: false },
   { key: 'prodSchedDayDiff',     label: '差異天數(cfn2-1)',   width: 130,  minWidth: 100, visible: false },
   // More
   { key: 'inTransitQty',         label: '在途量',             width: 100,  minWidth: 80  },
@@ -954,7 +954,7 @@ export function AdvancedOrderTable({
       );
     }
 
-    // ── 生管用交貨日期 ──
+    // ── 生管端交貨日期 ──
     if (key === 'productionScheduleDate') {
       const val = row.productionScheduleDate;
       if (!val) {
@@ -967,7 +967,7 @@ export function AdvancedOrderTable({
       );
     }
 
-    // ── 差異天數(cfn2-1)：生管用交貨日期 − 廠商可交貨日期 ──
+    // ── 差異天數(cfn2-1)：生管端交貨日期 − 廠商可交貨日期 ──
     if (key === 'prodSchedDayDiff') {
       const diff = computeProdSchedDayDiff(row);
       if (diff === null) {
