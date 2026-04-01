@@ -34,8 +34,8 @@ const PAGE_META: Partial<Record<string, { title: string; breadcrumb: string }>> 
   'quality-other':          { title: '其他設定',        breadcrumb: '品保作業 • 其他設定' },
   // 產險 / 新零件 / 廠商評價 / ESG / 出貨台灣
   'insurance-maintain':     { title: '產險資料維護',    breadcrumb: '產險資料維護' },
-  'newparts-project':       { title: '新零件專案維護',  breadcrumb: '新零件維護 • 新零件專案維護' },
-  'newparts-settings':      { title: '專案設定',        breadcrumb: '新零件維護 • 專案設定' },
+  'newparts-project':       { title: '新零件專案維護',  breadcrumb: '新零件專案 • 新零件專案維護' },
+  'newparts-settings':      { title: '專案設定',        breadcrumb: '新零件專案 • 專案設定' },
   'vendor-evaluation':      { title: '廠商評價',        breadcrumb: '廠商評價' },
   'esg-material':           { title: '物料成分總檔',    breadcrumb: 'ESG • 物料成分總檔' },
   'esg-maintain':           { title: '材料維護',        breadcrumb: 'ESG • 材料維護' },

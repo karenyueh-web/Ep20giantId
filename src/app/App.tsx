@@ -6,6 +6,7 @@ import VendorAccountManagementPageNew from "@/app/components/VendorAccountManage
 import { VendorAccountReviewPageNew } from "@/app/components/VendorAccountReviewPageNew";
 import { GiantAccountManagementPageNew } from "@/app/components/GiantAccountManagementPageNew";
 import { UnderConstructionPage } from "@/app/components/UnderConstructionPage";
+import { ShippingBasicSettingsPage } from "@/app/components/ShippingBasicSettingsPage";
 import { CorrectionCreatePage } from "@/app/components/CorrectionCreatePage";
 import { CorrectionListWithTabs } from "@/app/components/CorrectionListWithTabs";
 import { HistoryCorrectionListPage } from "@/app/components/HistoryCorrectionListPage";
@@ -178,14 +179,19 @@ export default function App() {
           </ResponsivePageLayout>
         );
       // ── 尚未建置的功能頁面 → 畫面建置中 ──
-      case 'dashboard':
-      case 'announcement':
-      case 'receiving-inquiry':
-      case 'shipping-create':
-      case 'shipping-list':
-      case 'shipping-packing':
-      case 'shipping-print':
       case 'shipping-settings':
+        return (
+          <ResponsivePageLayout
+            currentPage={currentPage}
+            onPageChange={handlePageChange}
+            onLogout={handleLogout}
+            userRole={userRole}
+            title="基本設定"
+            breadcrumb="出貨單管理 • 基本設定"
+          >
+            <ShippingBasicSettingsPage />
+          </ResponsivePageLayout>
+        );
       case 'invoice-create':
       case 'invoice-list':
       case 'invoice-settings':

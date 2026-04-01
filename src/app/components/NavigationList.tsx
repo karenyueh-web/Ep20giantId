@@ -763,11 +763,26 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
     // 根據當前頁面自動展開相應的菜單
     const autoExpanded: string[] = [];
     
-    if (['order-list', 'order-forecast', 'order-exchange', 'order-return'].includes(currentPage)) {
+    if (['order-list', 'order-forecast', 'order-exchange', 'order-return', 'order-history', 'order-schedule-change'].includes(currentPage)) {
       autoExpanded.push('order');
     }
-    if (currentPage === 'quality-abnormal') {
+    if (['correction-create', 'correction-list', 'correction-history'].includes(currentPage)) {
+      autoExpanded.push('correction');
+    }
+    if (['shipping-create', 'shipping-list', 'shipping-packing', 'shipping-print', 'shipping-settings'].includes(currentPage)) {
+      autoExpanded.push('shipping');
+    }
+    if (['quality-abnormal', 'quality-report', 'quality-hazard', 'quality-other'].includes(currentPage)) {
       autoExpanded.push('quality');
+    }
+    if (['invoice-create', 'invoice-list', 'invoice-settings'].includes(currentPage)) {
+      autoExpanded.push('invoice');
+    }
+    if (['parts-maintain', 'parts-quote', 'parts-sample'].includes(currentPage)) {
+      autoExpanded.push('parts');
+    }
+    if (['vendor-account-management', 'giant-account-management'].includes(currentPage)) {
+      autoExpanded.push('account');
     }
     
     return autoExpanded;
@@ -893,11 +908,11 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
         )}
       </div>
 
-      {/* 2. 新零件維護 */}
+      {/* 2. 新零件專案 */}
       <div className="w-full">
         <NavItem 
           icon={<PartsIcon />} 
-          label="新零件維護" 
+          label="新零件專案" 
           hasSubmenu 
           isExpanded={expandedMenus.includes('newparts')}
           onClick={() => toggleMenu('newparts')}
@@ -954,6 +969,7 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
           label="修正單管理" 
           hasSubmenu 
           isExpanded={expandedMenus.includes('correction')}
+          isActive={['correction-create', 'correction-list', 'correction-history'].includes(currentPage) && !expandedMenus.includes('correction')}
           onClick={() => toggleMenu('correction')}
         />
         {expandedMenus.includes('correction') && (
@@ -972,6 +988,7 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
           label="出貨單" 
           hasSubmenu 
           isExpanded={expandedMenus.includes('shipping')}
+          isActive={['shipping-create', 'shipping-list', 'shipping-packing', 'shipping-print', 'shipping-settings'].includes(currentPage) && !expandedMenus.includes('shipping')}
           onClick={() => toggleMenu('shipping')}
         />
         {expandedMenus.includes('shipping') && (

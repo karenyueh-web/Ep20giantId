@@ -39,6 +39,8 @@ export interface StandardColumn<T = Record<string, unknown>> {
   width: number;
   minWidth: number;
   visible?: boolean;
+  /** true → 不展示於欄位選擇器，無法被使用者隱藏 */
+  required?: boolean;
   /** 自訂 cell 渲染（不傳則預設顯示字串） */
   renderCell?: (value: unknown, row: T) => ReactNode;
 }
@@ -183,11 +185,17 @@ export function StandardDataTable<T extends { id: number }>({
         const filtered = parsed.filter(c => validKeys.has(c.key));
         const savedKeys = new Set(filtered.map(c => c.key));
         const newCols = initialColumns.filter(c => !savedKeys.has(c.key));
-        return [...filtered, ...newCols] as StandardColumn<T>[];
+        // 補回函式類型屬性（無法 JSON 序列化）及 required（設計時屬性）
+        const merged = [...filtered, ...newCols].map(c => {
+          const src = initialColumns.find(ic => ic.key === c.key);
+          return src ? { ...c, renderCell: src.renderCell, required: src.required } : c;
+        });
+        return merged as StandardColumn<T>[];
       }
     } catch { /* ignore */ }
     return initialColumns.map(c => ({ ...c }));
   };
+
 
   const [columns, setColumns]         = useState<StandardColumn<T>[]>(() => loadCols());
   const [tempColumns, setTempColumns] = useState<StandardColumn<T>[]>([]);
@@ -227,6 +235,9 @@ export function StandardDataTable<T extends { id: number }>({
   }, []);
 
   const visibleColumns = columns.filter(c => c.visible !== false);
+  // required=true 欄位（操作欄）固定在最右側，其餘欄位正常排列
+  const normalVisibleCols = visibleColumns.filter(c => !c.required);
+  const stickyRightCols   = visibleColumns.filter(c => !!c.required);
 
   // ── 進階篩選 ─────────────────────────────────────────────────────────────────
   const baseData = externalFilteredData ?? data;
@@ -306,7 +317,8 @@ export function StandardDataTable<T extends { id: number }>({
 
   // ── totalWidth ───────────────────────────────────────────────────────────────
   const checkboxW = showCheckbox ? CHECKBOX_COL_W : 0;
-  const totalWidth = checkboxW + visibleColumns.reduce((s, c) => s + c.width, 0);
+  const stickyRightW = stickyRightCols.reduce((s, c) => s + c.width, 0);
+  const totalWidth = checkboxW + normalVisibleCols.reduce((s, c) => s + c.width, 0) + stickyRightW;
 
   // ── 渲染 Cell ────────────────────────────────────────────────────────────────
   const renderCellValue = (col: StandardColumn<T>, row: T): ReactNode => {
@@ -341,12 +353,12 @@ export function StandardDataTable<T extends { id: number }>({
         actionButton={actionButton}
         columnsButton={
           <ColumnSelector
-            columns={tempColumns as Parameters<typeof ColumnSelector>[0]['columns']}
+            columns={tempColumns.filter(c => !c.required) as Parameters<typeof ColumnSelector>[0]['columns']}
             onToggleColumn={key =>
               setTempColumns(tempColumns.map(c => c.key === key ? { ...c, visible: !(c.visible !== false) } : c))
             }
             onToggleAll={all =>
-              setTempColumns(tempColumns.map(c => ({ ...c, visible: all })))
+              setTempColumns(tempColumns.map(c => c.required ? c : { ...c, visible: all }))
             }
             onClose={() => setShowColumnSelector(false)}
             onApply={() => {
@@ -403,8 +415,8 @@ export function StandardDataTable<T extends { id: number }>({
                   <CheckboxIcon checked={isAllSelected} onChange={handleSelectAll} />
                 </div>
               )}
-              {/* 可拖拉欄位 */}
-              {visibleColumns.map((col, idx) => (
+              {/* 可拖拉欄位（一般欄） */}
+              {normalVisibleCols.map((col, idx) => (
                 <DraggableColHeader
                   key={col.key}
                   col={col}
@@ -413,10 +425,18 @@ export function StandardDataTable<T extends { id: number }>({
                   updateWidth={updateWidth}
                   sortConfig={sortConfig}
                   onSort={handleSort}
-                  isLast={idx === visibleColumns.length - 1}
+                  isLast={idx === normalVisibleCols.length - 1}
                 />
               ))}
               <div className="flex-1 bg-[#f4f6f8] min-w-0" />
+              {/* Sticky-right 操作欄表頭 */}
+              {stickyRightCols.map((col) => (
+                <div
+                  key={col.key}
+                  style={{ width: col.width, minWidth: col.minWidth, height: 56, position: 'sticky', right: 0, zIndex: 21, boxShadow: '-2px 0 4px -2px rgba(145,158,171,0.2)' }}
+                  className="bg-[#f4f6f8] flex items-center justify-center shrink-0"
+                />
+              ))}
             </div>
 
             {/* 資料列 */}
@@ -437,19 +457,35 @@ export function StandardDataTable<T extends { id: number }>({
                     <CheckboxIcon checked={selectedIds.has(row.id)} onChange={() => handleToggleRow(row.id)} />
                   </div>
                 )}
-                {/* 資料欄 */}
-                {visibleColumns.map((col, ci) => {
-                  const isLast = ci === visibleColumns.length - 1;
+                {/* 一般資料欄 */}
+                {normalVisibleCols.map((col, ci) => {
+                  const isLastNormal = ci === normalVisibleCols.length - 1;
                   return (
                     <div
                       key={`${row.id}-${col.key}`}
-                      style={isLast ? { minWidth: col.width, flex: 1 } : { width: col.width }}
-                      className={`flex items-center px-[16px] overflow-hidden ${isLast ? '' : 'border-r border-[rgba(145,158,171,0.08)]'}`}
+                      style={{ width: col.width }}
+                      className={`flex items-center px-[16px] overflow-hidden ${isLastNormal ? '' : 'border-r border-[rgba(145,158,171,0.08)]'}`}
                     >
                       {renderCellValue(col, row)}
                     </div>
                   );
                 })}
+                {/* 填充剩餘空間 */}
+                <div className="flex-1 min-w-0" />
+                {/* Sticky-right 操作欄 */}
+                {stickyRightCols.map((col) => (
+                  <div
+                    key={`${row.id}-${col.key}`}
+                    style={{ width: col.width, minWidth: col.minWidth, position: 'sticky', right: 0, zIndex: 4, boxShadow: '-2px 0 4px -2px rgba(145,158,171,0.2)' }}
+                    className={`flex items-center justify-center px-[8px] shrink-0 ${
+                      selectedIds.has(row.id)
+                        ? 'bg-[rgba(0,94,184,0.04)]'
+                        : 'bg-white group-hover:bg-[rgba(145,158,171,0.04)]'
+                    }`}
+                  >
+                    {renderCellValue(col, row)}
+                  </div>
+                ))}
               </div>
             ))}
 
