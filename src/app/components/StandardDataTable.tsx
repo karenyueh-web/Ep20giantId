@@ -318,7 +318,8 @@ export function StandardDataTable<T extends { id: number }>({
   // ── totalWidth ───────────────────────────────────────────────────────────────
   const checkboxW = showCheckbox ? CHECKBOX_COL_W : 0;
   const stickyRightW = stickyRightCols.reduce((s, c) => s + c.width, 0);
-  const totalWidth = checkboxW + normalVisibleCols.reduce((s, c) => s + c.width, 0) + stickyRightW;
+  // sticky-right 欄不佔捲動空間，不計入 minWidth（否則會造成多餘的水平捲動條）
+  const totalWidth = checkboxW + normalVisibleCols.reduce((s, c) => s + c.width, 0);
 
   // ── 渲染 Cell ────────────────────────────────────────────────────────────────
   const renderCellValue = (col: StandardColumn<T>, row: T): ReactNode => {
