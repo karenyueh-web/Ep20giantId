@@ -460,7 +460,7 @@ function StorageLocationTab() {
     { key: 'addressEn',    label: '地址(英)',      width: 220,  minWidth: 140 },
     { key: 'updatedInfo',  label: '更新資訊',     width: 220,  minWidth: 160 },
     {
-      key: 'id', label: '', width: 110, minWidth: 110, required: true,
+      key: 'id', label: '', width: 220, minWidth: 220, required: true,
       renderCell: (_val, row) => (
         <ActionCellButtons onEdit={() => openEdit(row)} onDelete={() => setDeleteTarget(row)} />
       ),
@@ -616,7 +616,7 @@ function GtmStorageConditionTab() {
     { key: 'address',       label: '地址',           width: 300,  minWidth: 180 },
     { key: 'updatedInfo',   label: '更新資訊',      width: 240,  minWidth: 160 },
     {
-      key: 'id', label: '', width: 110, minWidth: 110, required: true,
+      key: 'id', label: '', width: 220, minWidth: 220, required: true,
       renderCell: (_val, row) => (
         <ActionCellButtons onEdit={() => openEdit(row)} onDelete={() => setDeleteTarget(row)} />
       ),
@@ -776,7 +776,7 @@ function GemDestinationTab() {
     { key: 'destination',   label: '目的地',   width: 200, minWidth: 140 },
     { key: 'updatedInfo',   label: '更新資訊', width: 260, minWidth: 180 },
     {
-      key: 'id', label: '', width: 110, minWidth: 110, required: true,
+      key: 'id', label: '', width: 220, minWidth: 220, required: true,
       renderCell: (_val, row) => (
         <ActionCellButtons onEdit={() => openEdit(row)} onDelete={() => setDeleteTarget(row)} />
       ),

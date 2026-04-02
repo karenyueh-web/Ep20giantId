@@ -479,8 +479,8 @@ export function StandardDataTable<T extends { id: number }>({
                     style={{ width: col.width, minWidth: col.minWidth, position: 'sticky', right: 0, zIndex: 4, boxShadow: '-2px 0 4px -2px rgba(145,158,171,0.2)' }}
                     className={`flex items-center justify-center px-[8px] shrink-0 ${
                       selectedIds.has(row.id)
-                        ? 'bg-[rgba(0,94,184,0.04)]'
-                        : 'bg-white group-hover:bg-[rgba(145,158,171,0.04)]'
+                        ? 'bg-[#eef4fb]'
+                        : 'bg-white group-hover:bg-[#f5f6f7]'
                     }`}
                   >
                     {renderCellValue(col, row)}
