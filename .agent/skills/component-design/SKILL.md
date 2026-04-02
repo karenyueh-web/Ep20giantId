@@ -177,6 +177,79 @@ import { ActionCellButtons } from './ActionButtons';
 
 ---
 
+## ⭐ 表單輸入元件規範（Form Input Components）
+
+> 所有表單的下拉選單和文字輸入必須使用 `DropdownSelect` 和 `FloatingInput`，**禁止使用原生 `<select>` 或不帶浮動標籤的 `<input>`**。
+
+### 可用元件
+
+| 元件 | 檔案 | 用途 |
+|------|------|------|
+| `DropdownSelect` | `DropdownSelect.tsx` | 帶浮動標籤的下拉選單（可搜尋） |
+| `FloatingInput` | 目前定義於 `ShippingBasicSettingsPage.tsx`，未來可提取至共用 | 帶浮動標籤的可調大小文字輸入框 |
+
+### 統一樣式規範
+
+| 屬性 | 預設狀態 | 必填未填（Error）狀態 |
+|------|----------|----------------------|
+| 邊框顏色 | `rgba(145,158,171,0.2)` | `#ff5630` |
+| 邊框粗細 | `1px`（`border`） | `1px`（`border`）— **不使用 `border-2`** |
+| 標籤顏色 | `#637381` | `#ff5630` |
+| 標籤位置 | 壓在 border 上方（`top: -5px`） | 同左 |
+| 標籤字重 | `font-semibold`（600） | 同左 |
+| 標籤字體大小 | `12px` | 同左 |
+| 圓角 | `rounded-[8px]` | 同左 |
+| 高度 | `54px`（min-height） | 同左 |
+| Focus 邊框 | `#1890FF` + `box-shadow: 0 0 0 2px rgba(24,144,255,0.15)` | 同左 |
+
+### 標籤結構（Material Outlined 風格）
+
+```tsx
+{/* border overlay */}
+<div
+  aria-hidden="true"
+  className="absolute inset-0 pointer-events-none rounded-[8px] border border-solid"
+  style={{ borderColor: error ? '#ff5630' : 'rgba(145,158,171,0.2)' }}
+/>
+{/* label 壓在 border 線上 */}
+<div className="absolute flex items-center left-[14px] px-[2px] top-[-5px] z-10">
+  <div className="absolute bg-white h-[2px] left-0 right-0 top-[5px]" />
+  <p style={{ fontSize: '12px', fontWeight: 600, color: error ? '#ff5630' : '#637381' }}>
+    {label}
+  </p>
+</div>
+```
+
+### FloatingInput 特性
+
+- 使用 `<textarea>` 取代 `<input>`
+- `resize: vertical` — 使用者可拖拽右下角調整高度
+- `min-height: 54px`
+
+### 使用範例
+
+```tsx
+{/* 下拉選單 */}
+<DropdownSelect
+  label="工廠"
+  value={factory}
+  onChange={setFactory}
+  options={factoryOptions}
+  error={!factory}  // 必填驗證
+/>
+
+{/* 文字輸入 */}
+<FloatingInput
+  label="儲存地點代號"
+  value={code}
+  onChange={setCode}
+  placeholder="如: 2610"
+  required={true}
+/>
+```
+
+---
+
 ## ⭐ 標準表格系統（Standard Table System）
 
 > 當用戶說「**符合表格系統**」或「**按照表格系統製作**」時，必須包含以下所有功能。

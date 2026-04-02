@@ -74,7 +74,7 @@ export function DropdownSelect({
       >
         <div 
           aria-hidden="true" 
-          className={`absolute border ${error ? 'border-red-500 border-2' : 'border-[rgba(145,158,171,0.2)]'} border-solid inset-0 pointer-events-none rounded-[8px]`} 
+          className={`absolute border ${error ? 'border-[#ff5630]' : 'border-[rgba(145,158,171,0.2)]'} border-solid inset-0 pointer-events-none rounded-[8px]`} 
         />
         <div className="flex flex-row items-center size-full">
           <div className="content-stretch flex items-center px-[14px] relative size-full">
@@ -84,7 +84,7 @@ export function DropdownSelect({
             {/* Label */}
             <div className="absolute content-stretch flex items-center left-[14px] px-[2px] top-[-5px]">
               <div className="absolute bg-white h-[2px] left-0 right-0 top-[5px]" />
-              <p className={`font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[12px] relative shrink-0 ${error ? 'text-red-500' : 'text-[#637381]'} text-[12px]`}>
+              <p className={`font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[12px] relative shrink-0 ${error ? 'text-[#ff5630]' : 'text-[#637381]'} text-[12px]`}>
                 {label}
               </p>
             </div>
