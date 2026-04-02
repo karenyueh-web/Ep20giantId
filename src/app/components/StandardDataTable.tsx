@@ -188,7 +188,14 @@ export function StandardDataTable<T extends { id: number }>({
         // 補回函式類型屬性（無法 JSON 序列化）及 required（設計時屬性）
         const merged = [...filtered, ...newCols].map(c => {
           const src = initialColumns.find(ic => ic.key === c.key);
-          return src ? { ...c, renderCell: src.renderCell, required: src.required } : c;
+          return src ? {
+            ...c,
+            renderCell: src.renderCell,
+            required: src.required,
+            label: src.label,
+            // required 欄（操作欄）的寬度永遠以 prop 為準，不使用 localStorage 快取值
+            ...(src.required ? { width: src.width, minWidth: src.minWidth } : {}),
+          } : c;
         });
         return merged as StandardColumn<T>[];
       }
