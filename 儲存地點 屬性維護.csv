@@ -1,0 +1,122 @@
+﻿工廠,儲存地點代號,地點描述(中),地址(中),地址(英),地點描述(英),更新資訊
+GTM1,2065,塗料倉-保稅,台中市大甲區順帆路19號-南倉旁塗料室,"19, ShunFarn Rd, Dajia District",Paint-GB,Allen Zou 鄧芳筆 -2024/03/20
+GTM1,2070,報廢倉-保稅,台中市大甲區順帆路19號-南倉旁報廢區,"19, ShunFarn Rd, Dajia District",Scrapped-GB,Allen Zou 鄧芳筆 -2024/03/21
+GTM1,2080,原料樣品倉-保稅,台中市大甲區順帆路19號-各倉樣品區,"19, ShunFarn Rd, Dajia District",Sample-SB,Allen Zou 鄧芳筆 -2024/03/22
+GTM1,2090,原料客製倉-保稅,台中市大甲區順帆路19號-各倉客製區,"19, ShunFarn Rd, Dajia District",Customized-CB,Allen Zou 鄧芳筆 -2024/03/23
+GTM1,20NG,不良品倉-保稅,台中市大甲區順帆路19號-各倉不良品區,"19, ShunFarn Rd, Dajia District",NG-GB,Allen Zou 鄧芳筆 -2024/03/24
+GTM1,2110,幼獅外倉1(WM),久鼎:台中市大甲區青年路137號,"137, Qingnian Rd., Dajia Dist.",Youshi WH1(WM),Allen Zou 鄧芳筆 -2024/03/25
+GTM1,2120,幼獅外倉2,久鼎:台中市大甲區青年路137號,"137, Qingnian Rd., Dajia Dist.",Youshi WH2,Allen Zou 鄧芳筆 -2024/03/26
+GTM1,2130,幼獅外倉3,北裕:台中市大甲區中山路二段903號,"903, Sec. 2, Zhongshan Rd., Dajia Dist.",Youshi WH3,Allen Zou 鄧芳筆 -2024/03/27
+GTM1,2210,塗架Floor-保稅,台中市大甲區順帆路19號-各塗裝線,"19, ShunFarn Rd, Dajia District",Painted Frame Floor-GB,Allen Zou 鄧芳筆 -2024/03/28
+GTM1,2220,輪組Floor-保稅,台中市大甲區順帆路19號-鋼圈區,"19, ShunFarn Rd, Dajia District",Wheelset Floor-GB,Allen Zou 鄧芳筆 -2024/03/29
+GTM1,2230,車架Floor-保稅,台中市大甲區順帆路19號-AL黑身車架區,"19, ShunFarn Rd, Dajia District",Frame Floor-GB,Allen Zou 鄧芳筆 -2024/03/30
+GTM1,2241,紙箱線邊1-保稅,台中市大甲區順帆路19號-各裝配線紙箱區,"19, ShunFarn Rd, Dajia District",Carton 1-GB,Allen Zou 鄧芳筆 -2024/03/31
+GTM1,2242,紙箱線邊2-保稅,台中市大甲區順帆路19號-各裝配線紙箱區,"19, ShunFarn Rd, Dajia District",Carton 2-GB,Allen Zou 鄧芳筆 -2024/03/32
+GTM1,2243,紙箱線邊3-保稅,台中市大甲區順帆路19號-各裝配線紙箱區,"19, ShunFarn Rd, Dajia District",Carton 3-GB,Allen Zou 鄧芳筆 -2024/03/33
+GTM1,2244,紙箱線邊4-保稅,台中市大甲區順帆路19號-各裝配線紙箱區,"19, ShunFarn Rd, Dajia District",Carton 4-GB,Allen Zou 鄧芳筆 -2024/03/34
+GTM1,2245,紙箱線邊5-保稅,台中市大甲區順帆路19號-各裝配線紙箱區,"19, ShunFarn Rd, Dajia District",Carton 5-GB,Allen Zou 鄧芳筆 -2024/03/35
+GTM1,2246,紙箱線邊6-保稅,台中市大甲區順帆路19號-各裝配線輔材區,"19, ShunFarn Rd, Dajia District",Carton 6-GB,Allen Zou 鄧芳筆 -2024/03/36
+GTM1,2280,半成品樣品倉-保稅,台中市大甲區順帆路19號-各倉樣品區 久鼎:台中市大甲區青年路137號,"19, ShunFarn Rd, Dajia District",Semi Product-SB,Allen Zou 鄧芳筆 -2024/03/37
+GTM1,2281,車架料樣品倉-保稅,台中市大甲區順帆路19號-各倉樣品區 久鼎:台中市大甲區青年路137號,"19, ShunFarn Rd, Dajia District",Frame parts-SB,Allen Zou 鄧芳筆 -2024/03/38
+GTM1,2290,半成品客製倉-保稅,台中市大甲區順帆路19號-各倉客製區,"19, ShunFarn Rd, Dajia District",Semi product-CB,Allen Zou 鄧芳筆 -2024/03/39
+GTM1,2310,成品暫存倉-保稅,台中市大甲區順帆路19號-外銷成品區,"19, ShunFarn Rd, Dajia District",Bike working area-GB,Allen Zou 鄧芳筆 -2024/03/40
+GTM9,2310,成品暫存倉-保稅,,,Bike working area-GB,Allen Zou 鄧芳筆 -2024/03/41
+GTM1,2320,成品自動倉-保稅,台中市大甲區順帆路19號-自動倉,"19, ShunFarn Rd, Dajia District",Bike auto area-GB,Allen Zou 鄧芳筆 -2024/03/42
+GTM1,2330,成品人工倉-保稅,,,Bike artificial area-GB,Allen Zou 鄧芳筆 -2024/03/43
+GTM1,2350,售服倉-保稅,台中市大甲區順帆路19號-外銷售服區,"19, ShunFarn Rd, Dajia District",Afterservice-GB,Allen Zou 鄧芳筆 -2024/03/44
+GTM1,2360,退貨倉-保稅,台中市大甲區順帆路19號-南倉2F退貨區&鋼圈退貨區&內銷退貨區,"19, ShunFarn Rd, Dajia District",,Allen Zou 鄧芳筆 -2024/03/45
+GTM9,2360,退貨倉-保稅,,,Returned-GB,Allen Zou 鄧芳筆 -2024/03/46
+GTM1,2380,成品樣品倉-保稅,台中市大甲區順帆路19號-外銷樣品區,"19, ShunFarn Rd, Dajia District",Sample bike-GB,Allen Zou 鄧芳筆 -2024/03/47
+GTM1,2390,成品客製倉-保稅,台中市大甲區順帆路19號-外銷客製區,"19, ShunFarn Rd, Dajia District",Customized bike-GB,Allen Zou 鄧芳筆 -2024/03/48
+GTM1,2410,GEM P-type倉,北裕:台中市大甲區中山路二段903號,"903, Sec. 2, Zhongshan Rd., Dajia Dist.",GEM P type,Allen Zou 鄧芳筆 -2024/03/49
+GTM1,2420,東倉(1F)-GEM M-type保稅,台中市大甲區順帆路19號-東倉1F,"19, ShunFarn Rd, Dajia District",GEM M-type East WH (1F),Allen Zou 鄧芳筆 -2024/03/50
+GTM1,2430,GCM P-Type倉,北裕:台中市大甲區中山路二段903號,"903, Sec. 2, Zhongshan Rd., Dajia Dist.",GCM P type,Allen Zou 鄧芳筆 -2024/03/51
+GTM1,2431,GCK P-Type倉,北裕:台中市大甲區中山路二段903號,"903, Sec. 2, Zhongshan Rd., Dajia Dist.",GCK P-Type,Allen Zou 鄧芳筆 -2024/03/52
+GTM1,2432,GEV P-Type倉,北裕:台中市大甲區中山路二段903號,"903, Sec. 2, Zhongshan Rd., Dajia Dist.",GEV P-Type,Allen Zou 鄧芳筆 -2024/03/53
+GTM1,2433,GCT P-Type倉,北裕:台中市大甲區中山路二段903號,"903, Sec. 2, Zhongshan Rd., Dajia Dist.",GCT P-Type,Allen Zou 鄧芳筆 -2024/03/54
+GTM1,2440,GCX M-type倉,台中市大甲區順帆路19號-東倉1F,"19, ShunFarn Rd, Dajia District",GCX M-Type,Allen Zou 鄧芳筆 -2024/03/55
+GTM1,2510,GBD 物流內倉-保稅(WM),台中市大甲區中山路2段901號,"901, Sec. 2, Zhongshan Rd., Dajia Dist.",GBD WM-GB,Allen Zou 鄧芳筆 -2024/03/56
+GTM1,2520,GBD 外倉-京揚,台中市梧棲區中橫10路100號,"100, Zhongheng 10th Rd., Wuqi Dist.",GBD- Elite WH,Allen Zou 鄧芳筆 -2024/03/57
+GTM1,2530,GBD 外倉-KY,中國深圳市鹽田區鹽田港保稅區南片區深圳嘉里鹽田港物流中心,,GBD- KY,Allen Zou 鄧芳筆 -2024/03/58
+GTM1,2560,GBD 外倉-京揚 (GTS),台中市梧棲區中橫10路100號,"100, Zhongheng 10th Rd., Wuqi Dist.",GBD- Elite WH (GTS),Allen Zou 鄧芳筆 -2024/03/59
+GTM1,2610,GI 物流內倉-保稅(WM),台中市大甲區中山路2段901號,"901, Sec. 2, Zhongshan Rd., Dajia Dist.",GI (WM)-GB,Allen Zou 鄧芳筆 -2024/03/60
+GTM1,2620,GI 外倉-京揚,台中市梧棲區中橫10路100號,"100, Zhongheng 10th Rd., Wuqi Dist.",GI- Elite WH,Allen Zou 鄧芳筆 -2024/03/61
+GTM1,1932,虛擬客製倉,,,Virtual CN,Allen Zou 鄧芳筆 -2024/03/62
+GTM1,2010,長製程管件倉-保稅,台中市大甲區順帆路19號-南倉旁AL管件區,"19, ShunFarn Rd, Dajia District",Long Process Tube-GB,Allen Zou 鄧芳筆 -2024/03/63
+GTM1,2015,碳布冷凍倉-保稅,台中市大甲區順帆路19號-東倉1F後方冷凍倉庫,"19, ShunFarn Rd, Dajia District",Prepreg-GB,Allen Zou 鄧芳筆 -2024/03/64
+GTM1,2020,南倉-保稅(WM),台中市大甲區順帆路19號-南倉,"19, ShunFarn Rd, Dajia District",South WH-GB,Allen Zou 鄧芳筆 -2024/03/65
+GTM1,2021,南倉-保稅(固定儲格),台中市大甲區順帆路19號-南倉,"19, ShunFarn Rd, Dajia District",South (WM)-GB,Allen Zou 鄧芳筆 -2024/03/66
+GTM1,2025,標紙倉-保稅,台中市大甲區順帆路19號-標紙室,"19, ShunFarn Rd, Dajia District",Decal-GB,Allen Zou 鄧芳筆 -2024/03/67
+GTM1,2030,東倉2F-保稅(WM),台中市大甲區順帆路19號-東倉2F,"19, ShunFarn Rd, Dajia District",East WH 2F-GB,Allen Zou 鄧芳筆 -2024/03/68
+GTM1,2040,鋁管倉-保稅,台中市大甲區順帆路19號-鋁管倉,"19, ShunFarn Rd, Dajia District",AL Tubes-GB,Allen Zou 鄧芳筆 -2024/03/69
+GTM1,2050,輪胎鋼圈倉-保稅,台中市大甲區順帆路19號-鋼圈區,"19, ShunFarn Rd, Dajia District",Tire/Rim-GB,Allen Zou 鄧芳筆 -2024/03/70
+GTM1,2060,原料人工倉-保稅,台中市大甲區順帆路19號-外殼區,"19, ShunFarn Rd, Dajia District",,Allen Zou 鄧芳筆 -2024/03/71
+GTM1,1010,長製程管件倉,台中市大甲區順帆路19號-南倉旁AL管件區,"19, ShunFarn Rd, Dajia District",Long Process Tube,Allen Zou 鄧芳筆 -2024/03/72
+GTM1,1015,碳布冷凍倉,台中市大甲區順帆路19號-東倉1F後方冷凍倉庫,"19, ShunFarn Rd, Dajia District",Prepreg,Allen Zou 鄧芳筆 -2024/03/73
+GTM1,1020,南倉 (WM),台中市大甲區順帆路19號-南倉,"19, ShunFarn Rd, Dajia District",South WH,Allen Zou 鄧芳筆 -2024/03/74
+GTM1,1021,南倉 (固定儲格),台中市大甲區順帆路19號-南倉,"19, ShunFarn Rd, Dajia District",South (WM),Allen Zou 鄧芳筆 -2024/03/75
+GTM1,1025,標紙倉,台中市大甲區順帆路19號-標紙室,"19, ShunFarn Rd, Dajia District",Decal,Allen Zou 鄧芳筆 -2024/03/76
+GTM1,1030,東倉2F(WM),台中市大甲區順帆路19號-東倉2F,"19, ShunFarn Rd, Dajia District",East WH 2F,Allen Zou 鄧芳筆 -2024/03/77
+GTM1,1040,鋁管倉,台中市大甲區順帆路19號-鋁管倉,"19, ShunFarn Rd, Dajia District",AL Tubes,Allen Zou 鄧芳筆 -2024/03/78
+GTM1,1050,輪胎鋼圈倉,台中市大甲區順帆路19號-鋼圈區,"19, ShunFarn Rd, Dajia District",Tire/Rim,Allen Zou 鄧芳筆 -2024/03/79
+GTM1,1060,原料人工倉,台中市大甲區順帆路19號-外殼區,"19, ShunFarn Rd, Dajia District",,Allen Zou 鄧芳筆 -2024/03/80
+GTM1,1065,塗料倉,台中市大甲區順帆路19號-南倉旁塗料室,"19, ShunFarn Rd, Dajia District",Paint,Allen Zou 鄧芳筆 -2024/03/81
+GTM1,1070,報廢倉,台中市大甲區順帆路19號-南倉旁報廢區,"19, ShunFarn Rd, Dajia District",Scrapped,Allen Zou 鄧芳筆 -2024/03/82
+GTM1,1080,原料樣品倉,台中市大甲區順帆路19號-各倉樣品區 久鼎:台中市大甲區青年路137號,"19, ShunFarn Rd, Dajia District",Sample-SN,Allen Zou 鄧芳筆 -2024/03/83
+GTM1,1090,客製倉,台中市大甲區順帆路19號-各倉客製區,"19, ShunFarn Rd, Dajia District",Customized-CN,Allen Zou 鄧芳筆 -2024/03/84
+GTM1,10NG,不良品倉,台中市大甲區順帆路19號-各倉不良品區,"19, ShunFarn Rd, Dajia District",NG,Allen Zou 鄧芳筆 -2024/03/85
+GTM1,1110,幼獅外倉1(WM),久鼎:台中市大甲區青年路137號,"137, Qingnian Rd., Dajia Dist.",Youshi WH1(WM),Allen Zou 鄧芳筆 -2024/03/86
+GTM1,1120,幼獅外倉2,久鼎:台中市大甲區青年路137號,"137, Qingnian Rd., Dajia Dist.",Youshi WH2,Allen Zou 鄧芳筆 -2024/03/87
+GTM1,1130,幼獅外倉2,北裕:台中市大甲區中山路二段903號,"903, Sec. 2, Zhongshan Rd., Dajia Dist.",Youshi WH2,Allen Zou 鄧芳筆 -2024/03/88
+GTM1,1210,塗架Floor-保稅,台中市大甲區順帆路19號-各塗裝線,"19, ShunFarn Rd, Dajia District",Painted Frame Floor,Allen Zou 鄧芳筆 -2024/03/89
+GTM1,1220,輪組Floor,台中市大甲區順帆路19號-鋼圈區,"19, ShunFarn Rd, Dajia District",Wheelset Floor,Allen Zou 鄧芳筆 -2024/03/90
+GTM1,1230,車架Floor,台中市大甲區順帆路19號-AL黑身車架區,"19, ShunFarn Rd, Dajia District",Frame Floor,Allen Zou 鄧芳筆 -2024/03/91
+GTM1,1241,紙箱線邊1,台中市大甲區順帆路19號-各裝配線紙箱區,"19, ShunFarn Rd, Dajia District",Carton 1,Allen Zou 鄧芳筆 -2024/03/92
+GTM1,1242,紙箱線邊2,台中市大甲區順帆路19號-各裝配線紙箱區,"19, ShunFarn Rd, Dajia District",Carton 2,Allen Zou 鄧芳筆 -2024/03/93
+GTM1,1243,紙箱線邊3,台中市大甲區順帆路19號-各裝配線紙箱區,"19, ShunFarn Rd, Dajia District",Carton 3,Allen Zou 鄧芳筆 -2024/03/94
+GTM1,1244,紙箱線邊4,台中市大甲區順帆路19號-各裝配線紙箱區,"19, ShunFarn Rd, Dajia District",Carton 4,Allen Zou 鄧芳筆 -2024/03/95
+GTM1,1245,紙箱線邊5,台中市大甲區順帆路19號-各裝配線紙箱區,"19, ShunFarn Rd, Dajia District",Carton 5,Allen Zou 鄧芳筆 -2024/03/96
+GTM1,1246,紙箱線邊6,台中市大甲區順帆路19號-各裝配線輔材區,"19, ShunFarn Rd, Dajia District",Carton 6,Allen Zou 鄧芳筆 -2024/03/97
+GTM1,1280,半成品樣品倉,台中市大甲區順帆路19號-各倉樣品區 久鼎:台中市大甲區青年路137號,"19, ShunFarn Rd, Dajia District",Semi Product-SN,Allen Zou 鄧芳筆 -2024/03/98
+GTM1,1281,車架料樣品倉,台中市大甲區順帆路19號-各倉樣品區 久鼎:台中市大甲區青年路137號,"19, ShunFarn Rd, Dajia District",Frame parts-SN,Allen Zou 鄧芳筆 -2024/03/99
+GTM1,1290,半成品客製倉,台中市大甲區順帆路19號-各倉客製區,"19, ShunFarn Rd, Dajia District",Semi product-CN,Allen Zou 鄧芳筆 -2024/03/100
+GTM1,1310,成品暫存倉,台中市大甲區順帆路19號-內銷成品區,"19, ShunFarn Rd, Dajia District",Bike working area,Allen Zou 鄧芳筆 -2024/03/101
+GTM9,1310,成品暫存倉,,,Bike working area,Allen Zou 鄧芳筆 -2024/03/102
+GTM1,1320,成品自動倉,,,Bike auto area,Allen Zou 鄧芳筆 -2024/03/103
+GTM1,1330,成品人工倉,,,Bike artificial area,Allen Zou 鄧芳筆 -2024/03/104
+GTM1,1350,售服倉,台中市大甲區順帆路19號-內銷售服區,"19, ShunFarn Rd, Dajia District",Afterservice,Allen Zou 鄧芳筆 -2024/03/105
+GTM1,1360,退貨倉,台中市大甲區順帆路19號-南倉2F退貨區&鋼圈退貨區&內銷退貨區,"19, ShunFarn Rd, Dajia District",Returned,Allen Zou 鄧芳筆 -2024/03/106
+GTM9,1360,退貨倉,,,Returned,Allen Zou 鄧芳筆 -2024/03/107
+GTM1,1380,成品樣品倉,台中市大甲區順帆路19號-內銷樣品區,"19, ShunFarn Rd, Dajia District",Sample bike,Allen Zou 鄧芳筆 -2024/03/108
+GTM1,1390,成品客製倉,台中市大甲區順帆路19號-內銷客製區,"19, ShunFarn Rd, Dajia District",Customized bike,Allen Zou 鄧芳筆 -2024/03/109
+GTM1,1510,GBD 物流內倉(WM),台中市大甲區中山路2段901號,"901, Sec. 2, Zhongshan Rd., Dajia Dist.",GBD (WM),Allen Zou 鄧芳筆 -2024/03/110
+GTM1,1540,GBD 辦公室,台中市西屯區東大路一段999號,"No.999, Sec. 1, Dongda Rd. Xitun Dist., Taichung City 40763 Taiwan (R.O.C.)",GBD office,Allen Zou 鄧芳筆 -2024/03/111
+GTM1,1550,GBD 東倉,台中市大甲區順帆路19號-東倉,"19, ShunFarn Rd, Dajia District",GBD East WH,Allen Zou 鄧芳筆 -2024/03/112
+GTM1,1560,GBD-GTS物流倉,台中市大甲區中山路2段901號,"901, Sec. 2, Zhongshan Rd., Dajia Dist.",GBD-GTS,Allen Zou 鄧芳筆 -2024/03/113
+GTM1,1610,GI 物流內倉(WM),台中市大甲區中山路2段901號,"901, Sec. 2, Zhongshan Rd., Dajia Dist.",GI (WM),Allen Zou 鄧芳筆 -2024/03/114
+GTM1,1710,AIP倉,,,AIP,Allen Zou 鄧芳筆 -2024/03/115
+GTM1,1810,工具室,台中市大甲區順帆路19號-工具室,"19, ShunFarn Rd, Dajia District",Tools Room,Allen Zou 鄧芳筆 -2024/03/116
+GTM1,1910,進口在途,,,Onway,Allen Zou 鄧芳筆 -2024/03/117
+GTM1,1920,三角貿易倉-GBD,,,Tri-trade GBD,Allen Zou 鄧芳筆 -2024/03/118
+GTM1,1921,三角貿易倉-GI,,,Tri-trade GI,Allen Zou 鄧芳筆 -2024/03/119
+GTM1,1930,虛擬量產倉,,,Virtual GN,Allen Zou 鄧芳筆 -2024/03/120
+GTM1,1931,虛擬樣品倉,,,Virtual SN,Allen Zou 鄧芳筆 -2024/03/121
+GTM1,2630,GI 外倉-KY,中國深圳市鹽田區鹽田港保稅區南片區深圳嘉里鹽田港物流中心,,GI- KY,Allen Zou 鄧芳筆 -2024/03/122
+GTM1,2640,GI 外倉-航耀,台中市梧棲區中橫十路147號,"147, Zhongheng 10th Rd., Wuqi Dist.",GI- HANG YAO,Allen Zou 鄧芳筆 -2024/03/123
+GTM1,2710,AIP倉-保稅,台中市大甲區順帆路19號-外銷AIP區,"19, ShunFarn Rd, Dajia District",AIP- GB,Allen Zou 鄧芳筆 -2024/03/124
+GTM1,2910,進口在途-保稅,,,Onway-GB,Allen Zou 鄧芳筆 -2024/03/125
+GTM1,2930,虛擬量產倉-保稅,,,Virtual-GB,Allen Zou 鄧芳筆 -2024/03/126
+GTM1,2931,虛擬樣品倉-保稅,,,Virtual-SB,Allen Zou 鄧芳筆 -2024/03/127
+GTM1,2932,虛擬客製倉-保稅,,,Virtual-CB,Allen Zou 鄧芳筆 -2024/03/128
+GVM1,2000,Raw Material,越南胡志明市永新坊新加坡工業區 II-A  32 號路 19 號,"No. 19, VSIP II-A, Street 32, Vietnam – Singapore Industrial Park II-A, Vinh Tan Ward, Ho Chi Minh City, Vietnam .",Raw Material,Allen Zou 鄧芳筆 -2024/03/129
+GVM1,2001,Shortage,越南胡志明市永新坊新加坡工業區 II-A  32 號路 19 號,"No. 19, VSIP II-A, Street 32, Vietnam – Singapore Industrial Park II-A, Vinh Tan Ward, Ho Chi Minh City, Vietnam .",Shortage,Allen Zou 鄧芳筆 -2024/03/130
+GVM1,2200,Frame,越南胡志明市永新坊新加坡工業區 II-A  32 號路 19 號,"No. 19, VSIP II-A, Street 32, Vietnam – Singapore Industrial Park II-A, Vinh Tan Ward, Ho Chi Minh City, Vietnam .",Frame,Allen Zou 鄧芳筆 -2024/03/131
+GVM1,2201,Painted Frame,越南胡志明市永新坊新加坡工業區 II-A  32 號路 19 號,"No. 19, VSIP II-A, Street 32, Vietnam – Singapore Industrial Park II-A, Vinh Tan Ward, Ho Chi Minh City, Vietnam .",Painted Frame,Allen Zou 鄧芳筆 -2024/03/132
+GVM1,2300,Finished Goods,越南胡志明市永新坊新加坡工業區 II-A  32 號路 19 號,"No. 19, VSIP II-A, Street 32, Vietnam – Singapore Industrial Park II-A, Vinh Tan Ward, Ho Chi Minh City, Vietnam .",Finished Goods,Allen Zou 鄧芳筆 -2024/03/133
+GVM1,2301,Return (Value),越南胡志明市永新坊新加坡工業區 II-A  32 號路 19 號,"No. 19, VSIP II-A, Street 32, Vietnam – Singapore Industrial Park II-A, Vinh Tan Ward, Ho Chi Minh City, Vietnam .",Return (Value),Allen Zou 鄧芳筆 -2024/03/134
+GVM1,2A00,Sample,越南胡志明市永新坊新加坡工業區 II-A  32 號路 19 號,"No. 19, VSIP II-A, Street 32, Vietnam – Singapore Industrial Park II-A, Vinh Tan Ward, Ho Chi Minh City, Vietnam .",Sample,Allen Zou 鄧芳筆 -2024/03/135
+GVM1,2B00,Test Run,越南胡志明市永新坊新加坡工業區 II-A  32 號路 19 號,"No. 19, VSIP II-A, Street 32, Vietnam – Singapore Industrial Park II-A, Vinh Tan Ward, Ho Chi Minh City, Vietnam .",Test Run,Allen Zou 鄧芳筆 -2024/03/136
+GVM1,2C00,IncomingGoods NG,越南胡志明市永新坊新加坡工業區 II-A  32 號路 19 號,"No. 19, VSIP II-A, Street 32, Vietnam – Singapore Industrial Park II-A, Vinh Tan Ward, Ho Chi Minh City, Vietnam .",IncomingGoods NG,Allen Zou 鄧芳筆 -2024/03/137
+GVM1,2C01,Semi-finished NG,越南胡志明市永新坊新加坡工業區 II-A  32 號路 19 號,"No. 19, VSIP II-A, Street 32, Vietnam – Singapore Industrial Park II-A, Vinh Tan Ward, Ho Chi Minh City, Vietnam .",Semi-finished NG,Allen Zou 鄧芳筆 -2024/03/138
+GVM1,2D00,Scrap,越南胡志明市永新坊新加坡工業區 II-A  32 號路 19 號,"No. 19, VSIP II-A, Street 32, Vietnam – Singapore Industrial Park II-A, Vinh Tan Ward, Ho Chi Minh City, Vietnam .",Scrap,Allen Zou 鄧芳筆 -2024/03/139
+GVM1,2C02,FinishedGoods NG,越南胡志明市永新坊新加坡工業區 II-A  32 號路 19 號,"No. 19, VSIP II-A, Street 32, Vietnam – Singapore Industrial Park II-A, Vinh Tan Ward, Ho Chi Minh City, Vietnam .",FinishedGoods NG,Allen Zou 鄧芳筆 -2024/03/140
