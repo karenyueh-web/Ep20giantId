@@ -14,6 +14,7 @@ import { ActionCellButtons } from './ActionButtons';
 import { StandardDataTable, type StandardColumn } from './StandardDataTable';
 import { SearchField } from './SearchField';
 import { Button } from '@/app/components/ui/button';
+import { DropdownSelect } from './DropdownSelect';
 import {
   Dialog,
   DialogContent,
@@ -290,36 +291,43 @@ function DeleteConfirmDialog({ open, description, onConfirm, onClose }: DeleteCo
 // 新增/編輯 Overlay（依示意圖設計）
 // ────────────────────────────────────────────────────────────────────────────────
 
-const inputCls = 'w-full h-[48px] border border-[rgba(145,158,171,0.32)] rounded-[8px] px-[14px] text-[14px] text-[#1c252e] outline-none focus:border-[#1890FF] focus:ring-1 focus:ring-[#1890FF] transition-colors bg-white placeholder:text-[#c4cdd6]';
-const selectCls = 'w-full h-[48px] border border-[rgba(145,158,171,0.32)] rounded-[8px] px-[14px] pr-[40px] text-[14px] text-[#1c252e] outline-none focus:border-[#1890FF] focus:ring-1 focus:ring-[#1890FF] transition-colors bg-white appearance-none cursor-pointer';
-
-function FormRow({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex items-center gap-[16px]">
-      <span className="text-[14px] text-[#637381] shrink-0 w-[90px]">{label}</span>
-      <div className="flex-1">{children}</div>
-    </div>
-  );
-}
-
-function SelectRow({ label, value, onChange, options }: {
+/** 固定標籤文字輸入框 — 標籤永遠固定在 border 內頂部，與 DropdownSelect 視覺一致 */
+function FloatingInput({
+  label, value, onChange, placeholder, required,
+}: {
   label: string;
   value: string;
   onChange: (v: string) => void;
-  options: { value: string; label: string }[];
+  placeholder?: string;
+  required?: boolean;
 }) {
+  const hasValue = value.length > 0;
   return (
-    <FormRow label={label}>
-      <div className="relative">
-        <select className={selectCls} value={value} onChange={e => onChange(e.target.value)}>
-          <option value="">請選擇</option>
-          {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
-        <svg className="absolute right-[14px] top-1/2 -translate-y-1/2 pointer-events-none" width="16" height="16" viewBox="0 0 24 24" fill="none">
-          <path d="M6 9l6 6 6-6" stroke="#637381" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      </div>
-    </FormRow>
+    <div className="relative w-full h-[54px]">
+      <label
+        className="pointer-events-none absolute left-[14px] top-[7px] select-none z-10"
+        style={{
+          fontSize: '11px',
+          lineHeight: '14px',
+          color: required && !hasValue ? '#ff5630' : '#637381',
+        }}
+      >
+        {label}
+      </label>
+      <input
+        className="w-full h-full border rounded-[8px] px-[14px] pb-[4px] text-[14px] text-[#1c252e] outline-none transition-colors bg-white"
+        style={{
+          paddingTop: '22px',
+          borderColor: required && !hasValue ? '#ff5630' : 'rgba(145,158,171,0.32)',
+          boxShadow: 'none',
+        }}
+        onFocus={e => { e.currentTarget.style.borderColor = '#1890FF'; e.currentTarget.style.boxShadow = '0 0 0 2px rgba(24,144,255,0.15)'; }}
+        onBlur={e => { e.currentTarget.style.borderColor = required && !value ? '#ff5630' : 'rgba(145,158,171,0.32)'; e.currentTarget.style.boxShadow = 'none'; }}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder ?? ''}
+      />
+    </div>
   );
 }
 
@@ -491,24 +499,22 @@ function StorageLocationTab() {
         submitLabel={editRow ? '儲存' : '新增'}
         disabled={!form.factory.trim() || !form.locationCode.trim()}
       >
-        <SelectRow label="工廠" value={form.factory} onChange={v => setForm(f => ({ ...f, factory: v }))}
-          options={[{ value: 'GTM1', label: 'GTM1' }, { value: 'GTM2', label: 'GTM2' }, { value: 'GEM1', label: 'GEM1' }, { value: 'GEM2', label: 'GEM2' }]}
+        <DropdownSelect
+          label="工廠"
+          value={form.factory}
+          onChange={v => setForm(f => ({ ...f, factory: v }))}
+          options={[
+            { value: 'GTM1', label: 'GTM1' },
+            { value: 'GTM9', label: 'GTM9' },
+            { value: 'GVM1', label: 'GVM1' },
+          ]}
+          error={!form.factory}
         />
-        <FormRow label="儲存地點代號">
-          <input className={inputCls} value={form.locationCode} onChange={e => setForm(f => ({ ...f, locationCode: e.target.value }))} placeholder="如: 2610" />
-        </FormRow>
-        <FormRow label="地點描述(中)">
-          <input className={inputCls} value={form.descZh} onChange={e => setForm(f => ({ ...f, descZh: e.target.value }))} placeholder="中文描述" />
-        </FormRow>
-        <FormRow label="地點描述(英)">
-          <input className={inputCls} value={form.descEn} onChange={e => setForm(f => ({ ...f, descEn: e.target.value }))} placeholder="English description" />
-        </FormRow>
-        <FormRow label="地址(中)">
-          <input className={inputCls} value={form.addressZh} onChange={e => setForm(f => ({ ...f, addressZh: e.target.value }))} placeholder="中文地址" />
-        </FormRow>
-        <FormRow label="地址(英)">
-          <input className={inputCls} value={form.addressEn} onChange={e => setForm(f => ({ ...f, addressEn: e.target.value }))} placeholder="English address" />
-        </FormRow>
+        <FloatingInput label="儲存地點代號" value={form.locationCode} onChange={v => setForm(f => ({ ...f, locationCode: v }))} placeholder="如: 2610" required />
+        <FloatingInput label="地點描述(中)" value={form.descZh} onChange={v => setForm(f => ({ ...f, descZh: v }))} placeholder="中文描述" />
+        <FloatingInput label="地點描述(英)" value={form.descEn} onChange={v => setForm(f => ({ ...f, descEn: v }))} placeholder="English description" />
+        <FloatingInput label="地址(中)" value={form.addressZh} onChange={v => setForm(f => ({ ...f, addressZh: v }))} placeholder="中文地址" />
+        <FloatingInput label="地址(英)" value={form.addressEn} onChange={v => setForm(f => ({ ...f, addressEn: v }))} placeholder="English address" />
       </AddEditOverlay>
 
       {/* 刪除確認 */}
@@ -646,15 +652,32 @@ function GtmStorageConditionTab() {
         submitLabel={editRow ? '儲存' : '新增'}
         disabled={!form.locationCode.trim() || !form.conditionCode.trim()}
       >
-        <SelectRow label="儲存地點代號" value={form.locationCode} onChange={v => setForm(f => ({ ...f, locationCode: v }))}
-          options={[{ value: '1020', label: '1020' }, { value: '1030', label: '1030' }, { value: '2010', label: '2010' }]}
+        <DropdownSelect
+          label="儲存地點代號"
+          value={form.locationCode}
+          onChange={v => setForm(f => ({ ...f, locationCode: v }))}
+          options={[
+            { value: '1015', label: '1015' },
+            { value: '1020', label: '1020' },
+            { value: '1241', label: '1241' },
+            { value: '2015', label: '2015' },
+            { value: '2020', label: '2020' },
+          ]}
+          error={!form.locationCode}
         />
-        <SelectRow label="儲存條件代號" value={form.conditionCode} onChange={v => setForm(f => ({ ...f, conditionCode: v }))}
-          options={[{ value: 'Z1', label: 'Z1' }, { value: 'Z2', label: 'Z2' }, { value: 'Z3', label: 'Z3' }, { value: 'A', label: 'A' }]}
+        <DropdownSelect
+          label="儲存條件代號"
+          value={form.conditionCode}
+          onChange={v => setForm(f => ({ ...f, conditionCode: v }))}
+          options={[
+            { value: 'Z1', label: 'Z1' },
+            { value: 'Z2', label: 'Z2' },
+            { value: 'Z3', label: 'Z3' },
+            { value: 'Z4', label: 'Z4' },
+          ]}
+          error={!form.conditionCode}
         />
-        <FormRow label="地址">
-          <input className={inputCls} value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="儲存地址" />
-        </FormRow>
+        <FloatingInput label="地址" value={form.address} onChange={v => setForm(f => ({ ...f, address: v }))} placeholder="儲存地址" required />
       </AddEditOverlay>
 
       <DeleteConfirmDialog
@@ -788,15 +811,21 @@ function GemDestinationTab() {
         submitLabel={editRow ? '儲存' : '新增'}
         disabled={!form.purchaseOrg.trim() || !form.transportType.trim() || !form.destination.trim()}
       >
-        <SelectRow label="採購組織" value={form.purchaseOrg} onChange={v => setForm(f => ({ ...f, purchaseOrg: v }))}
+        <DropdownSelect
+          label="採購組織"
+          value={form.purchaseOrg}
+          onChange={v => setForm(f => ({ ...f, purchaseOrg: v }))}
           options={[{ value: '4111', label: '4111' }, { value: '4121', label: '4121' }, { value: '4131', label: '4131' }]}
+          error={!form.purchaseOrg}
         />
-        <SelectRow label="運輸型態" value={form.transportType} onChange={v => setForm(f => ({ ...f, transportType: v }))}
+        <DropdownSelect
+          label="運輸型態"
+          value={form.transportType}
+          onChange={v => setForm(f => ({ ...f, transportType: v }))}
           options={[{ value: 'A', label: 'A' }, { value: 'S', label: 'S' }, { value: 'Z1', label: 'Z1' }, { value: 'Z2', label: 'Z2' }]}
+          error={!form.transportType}
         />
-        <FormRow label="目的地">
-          <input className={inputCls} value={form.destination} onChange={e => setForm(f => ({ ...f, destination: e.target.value }))} placeholder="如: AMSTERDAM" />
-        </FormRow>
+        <FloatingInput label="目的地" value={form.destination} onChange={v => setForm(f => ({ ...f, destination: v }))} placeholder="如: AMSTERDAM" required />
       </AddEditOverlay>
 
       <DeleteConfirmDialog
