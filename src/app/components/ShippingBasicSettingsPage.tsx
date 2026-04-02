@@ -291,7 +291,7 @@ function DeleteConfirmDialog({ open, description, onConfirm, onClose }: DeleteCo
 // 新增/編輯 Overlay（依示意圖設計）
 // ────────────────────────────────────────────────────────────────────────────────
 
-/** 固定標籤文字輸入框 — 標籤永遠固定在 border 內頂部，與 DropdownSelect 視覺一致 */
+/** 標籤壓在 border 上方、可自行調整大小的文字輸入框 */
 function FloatingInput({
   label, value, onChange, placeholder, required,
 }: {
@@ -302,30 +302,44 @@ function FloatingInput({
   required?: boolean;
 }) {
   const hasValue = value.length > 0;
+  const borderColor = required && !hasValue ? '#ff5630' : 'rgba(145,158,171,0.2)';
+  const labelColor = required && !hasValue ? '#ff5630' : '#637381';
   return (
-    <div className="relative w-full h-[54px]">
-      <label
-        className="pointer-events-none absolute left-[14px] top-[7px] select-none z-10"
-        style={{
-          fontSize: '11px',
-          lineHeight: '14px',
-          color: required && !hasValue ? '#ff5630' : '#637381',
-        }}
-      >
-        {label}
-      </label>
-      <input
-        className="w-full h-full border rounded-[8px] px-[14px] pb-[4px] text-[14px] text-[#1c252e] outline-none transition-colors bg-white"
-        style={{
-          paddingTop: '22px',
-          borderColor: required && !hasValue ? '#ff5630' : 'rgba(145,158,171,0.32)',
-          boxShadow: 'none',
-        }}
-        onFocus={e => { e.currentTarget.style.borderColor = '#1890FF'; e.currentTarget.style.boxShadow = '0 0 0 2px rgba(24,144,255,0.15)'; }}
-        onBlur={e => { e.currentTarget.style.borderColor = required && !value ? '#ff5630' : 'rgba(145,158,171,0.32)'; e.currentTarget.style.boxShadow = 'none'; }}
+    <div className="relative w-full" style={{ minHeight: '54px' }}>
+      {/* border overlay — same as DropdownSelect */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 pointer-events-none rounded-[8px] border border-solid"
+        style={{ borderColor }}
+      />
+      {/* label sitting ON the border — same as DropdownSelect */}
+      <div className="absolute flex items-center left-[14px] px-[2px] top-[-5px] z-10">
+        <div className="absolute bg-white h-[2px] left-0 right-0 top-[5px]" />
+        <p
+          className="relative shrink-0 leading-[12px]"
+          style={{ fontSize: '12px', fontWeight: 600, color: labelColor }}
+        >
+          {label}
+        </p>
+      </div>
+      {/* textarea — resizable, no border */}
+      <textarea
+        className="w-full rounded-[8px] px-[14px] pt-[18px] pb-[10px] text-[14px] text-[#1c252e] outline-none bg-transparent border-0 leading-[22px]"
+        style={{ resize: 'vertical', minHeight: '54px', color: '#1c252e' }}
         value={value}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder ?? ''}
+        rows={1}
+        onFocus={e => {
+          const wrapper = e.currentTarget.parentElement;
+          const border = wrapper?.querySelector('[aria-hidden]') as HTMLElement;
+          if (border) { border.style.borderColor = '#1890FF'; border.style.boxShadow = '0 0 0 2px rgba(24,144,255,0.15)'; }
+        }}
+        onBlur={e => {
+          const wrapper = e.currentTarget.parentElement;
+          const border = wrapper?.querySelector('[aria-hidden]') as HTMLElement;
+          if (border) { border.style.borderColor = borderColor; border.style.boxShadow = 'none'; }
+        }}
       />
     </div>
   );
