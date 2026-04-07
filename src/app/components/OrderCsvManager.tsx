@@ -600,7 +600,7 @@ const EXPORT_OPTIONS: ExportOption[] = [
   { type: 'csv',                   label: '匯出 CSV',                       icon: <FileText size={15} className="text-[#005eb8]" />,      description: '依列表顯示欄位匯出 .csv 格式' },
   { type: 'batchReplySchedule',    label: '下載批次回覆 (拆 Schedule Line)', icon: <FileSpreadsheet size={15} className="text-[#8e33ff]" />, description: 'NP/V 訂單，每筆排程一列' },
   { type: 'batchReplySplit',       label: '下載批次回覆 (拆單)',             icon: <FileSpreadsheet size={15} className="text-[#ff5630]" />, description: 'NP/V 訂單，每筆訂單一列' },
-  { type: 'batchCorrectionAdjust', label: '下載批次建立（不拆單調整）',       icon: <FilePlus2 size={15} className="text-[#00a76f]" />,     description: 'CK 訂單，調整交期/料號，支援多期排程' },
+  { type: 'batchCorrectionAdjust', label: '下載批次建立（不拆單）',       icon: <FilePlus2 size={15} className="text-[#00a76f]" />,     description: 'CK 訂單，調整交期/料號，支援多期排程' },
   { type: 'batchCorrectionSplit',  label: '下載批次建立（拆單）',            icon: <FilePlus2 size={15} className="text-[#8e33ff]" />,     description: 'CK 訂單，填寫拆單數與各序號交貨量/料號' },
 ];
 
@@ -1640,7 +1640,7 @@ export function exportBatchCorrectionTemplate(orders: OrderRow[], filename?: str
   const eligible = orders.filter(o => o.status === 'CK' || o.status === 'B');
   const instructionRows: (string | number | null)[][] = [
     ['', '', '', '', '', '', '', '', '', '', '',
-      '修正碼說明：A＝不拆單調整（需填新廠商交期 或/及 新交貨量）；B＝拆單（需填新交貨量，原序號保留該數量，剩餘量自動拆至新序號）', '', '', '', ''],
+      '修正碼說明：A＝不拆單（需填新廠商交期 或/及 新交貨量）；B＝拆單（需填新交貨量，原序號保留該數量，剩餘量自動拆至新序號）', '', '', '', ''],
     ['', '', '', '', '', '', '', '', '', '', '',
       '空白＝不處理。新交貨量規則：訂貨量 ≥ 新交貨量 ≥ 驗收量+在途量。新料號若填寫：A碼覆蓋原料號，B碼套用至拆出的新序號。', '', '', '', ''],
   ];
@@ -1661,7 +1661,7 @@ export function exportBatchCorrectionTemplate(orders: OrderRow[], filename?: str
 }
 
 // ───────────────────────────────────────────────────────────────────────────
-// 7b) 批次建立修正單（不拆單調整）— 獨立範本 + 解析 + Overlay
+// 7b) 批次建立修正單（不拆單）— 獨立範本 + 解析 + Overlay
 // ───────────────────────────────────────────────────────────────────────────
 
 const BATCH_CORRECTION_ADJUST_HEADERS = [
@@ -1706,7 +1706,7 @@ export function exportBatchCorrectionAdjustTemplate(orders: OrderRow[], filename
   // 說明列在前，空白列，標題列在後（對應圖1格式：說明列→空白列→欄名列→資料）
   const emptyRow: (string)[] = [];
   buildXlsx('批次修正單(不拆單)', [...instructionRows, emptyRow, BATCH_CORRECTION_ADJUST_HEADERS, ...rows],
-    filename || `批次建立修正單(不拆單調整)_${datePart}.xlsx`);
+    filename || `批次建立修正單(不拆單)_${datePart}.xlsx`);
   return eligible.length;
 }
 
@@ -2134,7 +2134,7 @@ export function BatchCorrectionAdjustImportOverlay({ allOrders, onConfirm, onClo
     const isXlsx = /\.(xlsx|xls)$/i.test(file.name);
     const parse = (csvContent: string) => {
       const r = parseBatchCorrectionAdjustCsv(csvContent, allOrders);
-      if (r.totalRows === 0) { setParseError('無法辨識檔案格式，請使用「下載批次建立（不拆單調整）」匯出的範本'); return; }
+      if (r.totalRows === 0) { setParseError('無法辨識檔案格式，請使用「下載批次建立（不拆單）」匯出的範本'); return; }
       setResult(r); setStep('preview');
     };
     if (isXlsx) {
@@ -2163,7 +2163,7 @@ export function BatchCorrectionAdjustImportOverlay({ allOrders, onConfirm, onClo
           <div className="flex items-center gap-[10px]">
             <FilePlus2 size={22} className="text-[#00a76f]" />
             <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[18px] text-[#1c252e]">
-              {step === 'upload' ? '批次建立修正單（不拆單調整）' : '不拆單調整 — 匯入預覽'}
+              {step === 'upload' ? '批次建立修正單（不拆單）' : '不拆單 — 匯入預覽'}
             </p>
           </div>
           <div className="cursor-pointer hover:bg-[rgba(145,158,171,0.08)] rounded-full p-[4px]" onClick={onClose}><X size={20} className="text-[#637381]" /></div>
@@ -2173,7 +2173,7 @@ export function BatchCorrectionAdjustImportOverlay({ allOrders, onConfirm, onClo
         {step === 'upload' && (
           <div className="flex flex-col gap-[20px] px-[24px] py-[24px]">
             <div className="flex flex-col gap-[4px] bg-[#f4f6f8] rounded-[8px] px-[16px] py-[12px]">
-              <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#637381]">欄位說明（不拆單調整）：</p>
+              <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#637381]">欄位說明（不拆單）：</p>
               <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381]">• 需調整的單請於【修正碼】填A，要刪單請填D，留白者視同不處理</p>
               <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381]">• 各期合計不可低於驗收量＋在途量，且不可超過訂貨量</p>
               <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381]">• 新廠商交期不可填入過去日期</p>
@@ -2188,7 +2188,7 @@ export function BatchCorrectionAdjustImportOverlay({ allOrders, onConfirm, onClo
             >
               <Upload size={40} className="text-[#919eab]" />
               <p className="font-['Public_Sans:Regular',sans-serif] text-[14px] text-[#637381] text-center">拖曳檔案至此處，或<span className="text-[#00a76f] font-semibold underline">點擊選擇檔案</span></p>
-              <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#919eab]">支援「下載批次建立（不拆單調整）」匯出的 .xlsx 或 .csv</p>
+              <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#919eab]">支援「下載批次建立（不拆單）」匯出的 .xlsx 或 .csv</p>
               <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) processFile(f); }} />
             </div>
           </div>
@@ -2509,9 +2509,9 @@ export function BatchCorrectionCombinedImportOverlay({
 
   // 動態標題（供 header 使用）
   const previewTitle = splitResult && adjustResult
-    ? '拆單 ＋ 不拆單調整 — 匯入預覽'
+    ? '拆單 ＋ 不拆單 — 匯入預覽'
     : splitResult ? '拆單 — 匯入預覽'
-    : '不拆單調整 — 匯入預覽';
+    : '不拆單 — 匯入預覽';
 
   return (
     <div className="fixed inset-0 z-[200] bg-[rgba(145,158,171,0.4)] flex items-center justify-center p-[20px]" onClick={onClose}>
@@ -2542,7 +2542,7 @@ export function BatchCorrectionCombinedImportOverlay({
             </div>
             {/* 不拆單調整說明 */}
             <div className="flex flex-col gap-[4px] bg-[#f4f6f8] rounded-[8px] px-[16px] py-[12px]">
-              <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#637381]">欄位說明（不拆單調整）：</p>
+              <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#637381]">欄位說明（不拆單）：</p>
               <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381]">• 需調整的單請於【修正碼】填A，要刪單請填D，留白者視同不處理</p>
               <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381]">• 各期合計不可低於驗收量＋在途量，且不可超過訂貨量</p>
               <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381]">• 新廠商交期不可填入過去日期</p>
@@ -2557,7 +2557,7 @@ export function BatchCorrectionCombinedImportOverlay({
             >
               <Upload size={40} className="text-[#919eab]" />
               <p className="font-['Public_Sans:Regular',sans-serif] text-[14px] text-[#637381] text-center">拖曳檔案至此處，或<span className="text-[#637381] font-semibold underline">點擊選擇檔案</span></p>
-              <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#919eab]">支援「下載批次建立（拆單）」或「下載批次建立（不拆單調整）」匯出的 .xlsx 或 .csv</p>
+              <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#919eab]">支援「下載批次建立（拆單）」或「下載批次建立（不拆單）」匯出的 .xlsx 或 .csv</p>
               <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls" multiple className="hidden" onChange={e => { const fs = Array.from(e.target.files ?? []); if (fs.length > 0) processFiles(fs); e.target.value = ''; }} />
             </div>
           </div>
@@ -2569,8 +2569,8 @@ export function BatchCorrectionCombinedImportOverlay({
           const hasAdjust = !!adjustResult;
           const totalValid = (splitResult?.validRows.length ?? 0) + (adjustResult?.validRows.length ?? 0) + (adjustResult?.deleteRows.length ?? 0);
           const headerTitle = hasSplit && hasAdjust
-            ? '拆單 ＋ 不拆單調整 — 匯入預覽'
-            : hasSplit ? '拆單 — 匯入預覽' : '不拆單調整 — 匯入預覽';
+            ? '拆單 ＋ 不拆單 — 匯入預覽'
+            : hasSplit ? '拆單 — 匯入預覽' : '不拆單 — 匯入預覽';
           return (
             <>
               {/* Dynamic header update */}
@@ -2582,7 +2582,7 @@ export function BatchCorrectionCombinedImportOverlay({
                     <AlertTriangle size={16} className="text-[#b76e00] shrink-0 mt-[2px]" />
                     <div className="flex flex-col gap-[4px]">
                       <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#b76e00]">
-                        以下單號序號同時存在於拆單與不拆單調整範本，一個單號序號只能擇一類型開單，請確認後再送出：
+                        以下單號序號同時存在於拆單與不拆單範本，一個單號序號只能擇一類型開單，請確認後再送出：
                       </p>
                       <div className="flex flex-wrap gap-[6px] mt-[4px]">
                         {duplicateKeys.map(k => (
@@ -2626,7 +2626,7 @@ export function BatchCorrectionCombinedImportOverlay({
                 {hasAdjust && adjustResult && (
                   <div className="flex flex-col gap-[8px] px-[24px] pb-[16px]">
                     <div className="flex items-center gap-[8px] shrink-0">
-                      <span className="inline-flex items-center gap-[4px] bg-[rgba(0,167,111,0.1)] text-[#00a76f] text-[11px] font-semibold px-[8px] h-[22px] rounded-[4px]">不拆單調整</span>
+                      <span className="inline-flex items-center gap-[4px] bg-[rgba(0,167,111,0.1)] text-[#00a76f] text-[11px] font-semibold px-[8px] h-[22px] rounded-[4px]">不拆單</span>
                       <TotalSummaryBadge total={adjustResult.totalRows} validCount={adjustResult.validRows.length + adjustResult.deleteRows.length} skipCount={adjustResult.skipRows.length} errorCount={adjustResult.errorRows.length} />
                     </div>
                     <div className="overflow-auto custom-scrollbar border border-[rgba(145,158,171,0.16)] rounded-[8px]" style={{ maxHeight: hasSplit ? '300px' : '420px' }}>
@@ -2919,7 +2919,7 @@ export function BatchCorrectionImportOverlay({ allOrders, onConfirm, onClose }: 
             </div>
             <div className="flex gap-[8px] flex-wrap shrink-0">
               <TotalSummaryBadge total={batchResult.totalRows} validCount={actionCount} skipCount={batchResult.skipRows.length} errorCount={batchResult.errorRows.length} />
-              <SummaryBadge label="A 不拆單調整" count={batchResult.adjustRows.length} bgColor="bg-[rgba(0,167,111,0.12)]" textColor="text-[#00a76f]" icon={<FilePlus2 size={14} />} />
+              <SummaryBadge label="A 不拆單" count={batchResult.adjustRows.length} bgColor="bg-[rgba(0,167,111,0.12)]" textColor="text-[#00a76f]" icon={<FilePlus2 size={14} />} />
               <SummaryBadge label="B 拆單" count={batchResult.splitRows.length} bgColor="bg-[rgba(142,51,255,0.12)]" textColor="text-[#8e33ff]" icon={<Truck size={14} />} />
               <SummaryBadge label="D 刪單" count={batchResult.deleteRows.length} bgColor="bg-[rgba(255,86,48,0.12)]" textColor="text-[#ff5630]" icon={<Trash2 size={14} />} />
               <SummaryBadge label="不處理" count={batchResult.skipRows.length} bgColor="bg-[rgba(145,158,171,0.08)]" textColor="text-[#919eab]" />

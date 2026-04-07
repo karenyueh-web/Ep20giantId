@@ -753,7 +753,7 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
       updateCorrectionOrder(row.id, row.correctionDocNo, { correctionStatus: 'V' });
       addCorrectionHistory(row.id, {
         date: nowDateStr(),
-        event: '批次提交廠商 — DR → V',
+        event: '批次提交廠商',
         operator: operatorByRole(userRole as any),
         remark: '',
       });
@@ -805,7 +805,7 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
       updateCorrectionOrder(row.id, row.correctionDocNo, { correctionStatus: 'CP' });
       addCorrectionHistory(row.id, {
         date: nowDateStr(),
-        event: '批次同意修正 — V → CP',
+        event: '批次同意修正',
         operator: operatorByRole(userRole as any),
         remark: '',
       });
@@ -821,7 +821,7 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
       updateCorrectionOrder(row.id, row.correctionDocNo, { correctionStatus: 'CP' });
       addCorrectionHistory(row.id, {
         date: nowDateStr(),
-        event: '批次採購確認 — B → CP',
+        event: '批次採購確認',
         operator: operatorByRole(userRole as any),
         remark: '',
       });
@@ -1081,7 +1081,7 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
     }
     addCorrectionHistory(row.id, {
       date: nowDateStr(),
-      event: `修正確認 — 狀態 ${row.correctionStatus} → ${newStatus}`,
+      event: `修正確認`,
       operator: operatorByRole(userRole as any),
       remark: '',
     });
@@ -1125,7 +1125,7 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
     }
     addCorrectionHistory(row.id, {
       date: nowDateStr(),
-      event: `廠商調整修正單 — 狀態 ${row.correctionStatus} → ${newStatus}`,
+      event: '廠商調整修正單',
       operator: operatorByRole(userRole as any),
       remark: `調整原因：${reason}`,
     });
@@ -1146,7 +1146,7 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
     }
     addCorrectionHistory(row.id, {
       date: nowDateStr(),
-      event: `退回廠商 — 狀態 ${row.correctionStatus} → ${newStatus}`,
+      event: `退回廠商`,
       operator: operatorByRole(userRole as any),
       remark: reason ? `退回原因：${reason}` : '',
     });
@@ -1167,7 +1167,7 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
     }
     addCorrectionHistory(row.id, {
       date: nowDateStr(),
-      event: `單據關閉 — 狀態 ${row.correctionStatus} → CL`,
+      event: `單據關閉`,
       operator: operatorByRole(userRole as any),
       remark: '',
     });
@@ -1450,7 +1450,7 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
                           }
                           addCorrectionHistory(row.id, {
                             date: nowDateStr(),
-                            event: '測試轉 SS — CP → SS',
+                            event: '測試轉 SS',
                             operator: operatorByRole(userRole as any),
                             remark: '手動測試轉換',
                           });

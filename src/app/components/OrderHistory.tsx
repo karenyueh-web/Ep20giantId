@@ -148,7 +148,7 @@ export function OrderHistory({ onClose, entries = [], correctionDocNo, docSeqNo,
                             style={{ color }}
                           >
                             {entry.remark
-                              ? entry.remark.split(/[;；]/).map((seg, i, arr) => (
+                              ? entry.remark.split(/[;；\n]/).map((seg, i, arr) => (
                                   <span key={i}>
                                     {renderWithCorrectionLinks(seg.trim(), onCorrectionDocClick, color)}
                                     {i < arr.length - 1 && <br />}
