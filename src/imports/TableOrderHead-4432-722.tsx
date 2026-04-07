@@ -51,7 +51,7 @@ export default function TableOrderHead() {
           <div className="content-stretch flex items-center justify-end size-full" />
         </div>
       </div>
-      <TableCell text="不拆單調整" />
+      <TableCell text="不拆單" />
       <TableCell text="拆單" />
       <div className="h-[30px] relative shrink-0 w-[5px]" data-name="stack">
         <div aria-hidden="true" className="absolute border-[#919eab] border-r border-solid inset-[0_-0.5px_0_0] pointer-events-none" />

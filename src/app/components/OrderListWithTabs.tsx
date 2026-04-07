@@ -697,32 +697,20 @@ export function OrderListWithTabs({ defaultTab = 'NP', userRole }: OrderListWith
   const handleBatchReplyConfirm = (result: BatchReplyImportResult) => {
     const now = nowDateStr();
     const op = operatorByRole(userRole);
-    const modeText = result.mode === 'split-order' ? '拆單' : '拆 Schedule Line';
+    const modeText = result.mode === 'split-order' ? '拆單 (IT)' : '拆 Schedule Line (SL)';
 
-    // Y — 訂單確認：NP/V → B（等同 OrderDetail 的【訂單確認】按鈕）
+    // Y — 廠商訂單確認：NP/V → CK（直接確認，不需採購二次確認）
     for (const row of result.agreeRows) {
       if (!row.matchedOrder) continue;
       const order = row.matchedOrder;
       const oldStatus = order.status;
 
-      // Build schedule lines from vendor deliveries
-      const validDeliveries = row.deliveries.filter(d => d.date && d.qty > 0);
-      const orderSeqNum = parseInt(order.orderSeq, 10) || 10;
-      const schedLines: ScheduleLine[] = validDeliveries.map((d, i) => ({
-        index: result.mode === 'split-order'
-          ? orderSeqNum + i * 10   // 拆單：新序號 = 原序號 + idx*10
-          : i + 1,                 // 拆 Schedule Line：項次 1,2,3...
-        deliveryDate: d.date,
-        quantity: d.qty,
-      }));
-
-      const vendorDate = validDeliveries.length > 0
-        ? validDeliveries[validDeliveries.length - 1].date
-        : order.expectedDelivery;
+      // Y 不允許填交貨資訊（parser 已驗證），廠商可交貨日期預設帶入預計交期
+      const vendorDate = order.expectedDelivery;
 
       const entry: HistoryEntry = {
         date: now,
-        event: `廠商確認交期OK (${oldStatus}→B)`,
+        event: `廠商訂單確認 (${oldStatus}→CK)`,
         operator: op,
         remark: '批次匯入',
       };
@@ -730,9 +718,7 @@ export function OrderListWithTabs({ defaultTab = 'NP', userRole }: OrderListWith
       const rowUpdate: Partial<Omit<OrderRow, 'id' | 'status'>> = {
         vendorDeliveryDate: vendorDate,
       };
-      if (schedLines.length > 0) rowUpdate.scheduleLines = schedLines;
-
-      updateOrderStatus(order.id, 'B', entry, rowUpdate);
+      updateOrderStatus(order.id, 'CK', entry, rowUpdate);
     }
 
     // N — 調整單據：NP/V → B（等同 OrderDetail 的【調整單據】按鈕）
@@ -767,8 +753,8 @@ export function OrderListWithTabs({ defaultTab = 'NP', userRole }: OrderListWith
           ? `新交期: ${validDeliveries[0].date}×${validDeliveries[0].qty}`
           : '廠商提出調整';
       } else if (result.mode === 'split-order') {
-        // 拆單（N 期）
-        reasonText = `拆單（${validDeliveries.length} 期）`;
+        // 拆單（N 單）
+        reasonText = `拆單（${validDeliveries.length} 單）`;
         remarkText = validDeliveries.map((d) =>
           `序號${d.newOrderSeq || '?'}：${d.date} × ${d.qty}`
         ).join('；');

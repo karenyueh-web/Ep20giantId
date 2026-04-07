@@ -18,7 +18,7 @@ export interface CorrectionOrderRow {
   id: number;
   correctionDocNo: string;       // 修正單號
   correctionStatus: CorrectionStatus;
-  correctionType: string;        // e.g. '不拆單調整'
+  correctionType: string;        // e.g. '不拆單'
   // 原訂單資訊
   orderNo: string;
   orderSeq: string;

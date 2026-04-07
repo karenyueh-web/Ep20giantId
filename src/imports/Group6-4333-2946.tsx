@@ -160,7 +160,7 @@ export default function Group() {
             <div className="flex flex-row items-center justify-center min-w-[inherit] size-full">
               <div className="content-stretch flex gap-[8px] h-full items-center justify-center min-w-[inherit] px-[12px] relative">
                 <div className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[22px] relative shrink-0 text-[#005eb8] text-[16px] text-center whitespace-nowrap">
-                  <p className="mb-0">不拆單調整</p>
+                  <p className="mb-0">不拆單</p>
                   <p>17056357</p>
                 </div>
               </div>

@@ -57,7 +57,7 @@ interface CorrectionDetailPageProps {
   initialSavedDeliveryRows?: SavedDeliveryRow[];
   /** 從查詢頁帶入的已儲存期數輸入（DR 繼續編輯用）*/
   initialSavedPeriodInput?: string;
-  /** 修正單類型，如 '不拆單調整' */
+  /** 修正單類型，如 '不拆單' */
   correctionType?: string;
   /** 修正單狀態碼，如 'DR' | 'V' | 'B' | 'CP' | 'SS' */
   correctionStatusCode?: string;
@@ -930,7 +930,7 @@ export function CorrectionDetailPage({
               <div className="flex flex-row items-center justify-center min-w-[inherit] size-full">
                 <div className="content-stretch flex gap-[8px] h-full items-center justify-center min-w-[inherit] px-[12px] relative">
                   <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[22px] relative shrink-0 text-white text-[16px] text-center whitespace-nowrap">
-                    {isDeleteMode ? '刪單' : (correctionType || '不拆單調整')}
+                    {isDeleteMode ? '刪單' : (correctionType || '不拆單')}
                   </p>
                 </div>
               </div>
@@ -1228,7 +1228,7 @@ export function CorrectionDetailPage({
                   </>)}
                 </div>
 
-                {/* ── 不拆單調整：原料號 / 新料號 ── */}
+                {/* ── 不拆單：原料號 / 新料號 ── */}
                 {disagreeType === 'adjustSchedule' && !isSplitMode && (
                   <div className="flex gap-[10px] items-center w-full h-[40px] px-[41px] pb-[10px]">
                     <div className="flex-[1_0_0] flex items-center h-full gap-[10px]">
@@ -1585,7 +1585,7 @@ export function CorrectionDetailPage({
                 </div>
               </div>
             ) : (
-              /* ── 不拆單調整模式欄位 ── */
+              /* ── 不拆單模式欄位 ── */
               <div className="flex flex-col gap-[10px] px-[41px] pt-[22px] pb-[16px]">
                 {/* Row 1: ��料號 / 新料號 */}
                 <div className="flex gap-[10px] items-center w-full h-[40px]">
@@ -1791,7 +1791,7 @@ export function CorrectionDetailPage({
                 )}
               </div>
             ) : (
-              /* ── 不拆單調整表格 ── */
+              /* ── 不拆單表格 ── */
               <div className="mx-[27px] mb-[22px] rounded-[8px] overflow-hidden border border-[rgba(145,158,171,0.2)]">
               {/* 表頭 */}
               <div className="flex items-center w-full gap-[20px] px-[45px] h-[40px] border-b border-[rgba(145,158,171,0.2)] bg-[rgba(145,158,171,0.04)]">

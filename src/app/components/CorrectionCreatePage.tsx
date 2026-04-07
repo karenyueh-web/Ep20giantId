@@ -135,7 +135,7 @@ export function CorrectionCreatePage({ userRole, onNavigateToList }: CorrectionC
   const getOrderDocNo = (orderId: number): string => correctionDocNoMapRef.current[orderId] ?? '';
 
   // ── 修正型態狀態 ─────────────────────────────────────────────────────────
-  const [selectedCorrectionType, setSelectedCorrectionType] = useState<'不拆單調整' | '拆單'>('不拆單調整');
+  const [selectedCorrectionType, setSelectedCorrectionType] = useState<'不拆單' | '拆單'>('不拆單');
 
   // ── 搜尋欄位狀態 ─────────────────────────────────────────────────────────
   const [docSeqNoSearch, setDocSeqNoSearch]   = useState('');
@@ -249,7 +249,7 @@ export function CorrectionCreatePage({ userRole, onNavigateToList }: CorrectionC
   };
 
   // ── 進入修正單明細 ─────────────────────────────────────────────────────────
-  const enterDetail = (type?: '不拆單調整' | '拆單') => {
+  const enterDetail = (type?: '不拆單' | '拆單') => {
     if (selectedOrderIds.size === 0) { showToast('請先選取訂單'); return; }
     if (type) setSelectedCorrectionType(type);
     const selected = filteredOrders.filter(o => selectedOrderIds.has(o.id));
@@ -364,7 +364,7 @@ export function CorrectionCreatePage({ userRole, onNavigateToList }: CorrectionC
       case 'batchCorrectionAdjust': {
         if (filteredOrders.length === 0) { showToast('目前篩選結果中沒有可下載的訂單'); return; }
         const countAdj = exportBatchCorrectionAdjustTemplate(filteredOrders);
-        showToast(`已下載 ${countAdj} 筆批次建立修正單範本（不拆單調整）`);
+        showToast(`已下載 ${countAdj} 筆批次建立修正單範本（不拆單）`);
         break;
       }
       case 'batchCorrectionSplit': {
@@ -377,7 +377,7 @@ export function CorrectionCreatePage({ userRole, onNavigateToList }: CorrectionC
     }
   };
 
-  // ── 批次建立修正單匯入確認（不拆單調整）────────────────────────────────────
+  // ── 批次建立修正單匯入確認（不拆單）────────────────────────────────────
   const handleBatchAdjustConfirm = (result: CorrectionAdjustImportResult) => {
     const now = nowDateStr();
     const op = operatorByRole(userRole as any);
@@ -414,7 +414,7 @@ export function CorrectionCreatePage({ userRole, onNavigateToList }: CorrectionC
             deleted: false,
           }];
       const corrRow: CorrectionOrderRow = {
-        id: correctionId, correctionDocNo: docNo, correctionStatus: 'V', correctionType: '不拆單調整',
+        id: correctionId, correctionDocNo: docNo, correctionStatus: 'V', correctionType: '不拆單',
         orderNo: order.orderNo, orderSeq: order.orderSeq,
         docSeqNo: (order.orderNo || '') + (order.orderSeq || ''),
         vendorCode: order.vendorCode, vendorName: order.vendorName,
@@ -461,8 +461,8 @@ export function CorrectionCreatePage({ userRole, onNavigateToList }: CorrectionC
       const changeSummary = changeParts.join('；');
       addCorrectionOrder(corrRow);
       addCorrectionHistory(correctionId, {
-        date: now, event: '修正單開立並提交（批次匯入-不拆單調整）', operator: op,
-        remark: `修正單號: ${docNo}，不拆單調整 → V；${changeSummary}`,
+        date: now, event: '修正單開立並提交（批次匯入-不拆單）', operator: op,
+        remark: `修正單號: ${docNo}，不拆單 → V；${changeSummary}`,
       });
       createdCount++;
     }
@@ -506,7 +506,7 @@ export function CorrectionCreatePage({ userRole, onNavigateToList }: CorrectionC
       deleteCount++;
     }
     const parts: string[] = [];
-    if (createdCount > 0) parts.push(`${createdCount} 張不拆單調整`);
+    if (createdCount > 0) parts.push(`${createdCount} 張不拆單`);
     if (deleteCount > 0) parts.push(`${deleteCount} 張刪單`);
     const totalCreated = createdCount + deleteCount;
     const skippedAdj = result.validRows.length - createdCount;
@@ -587,10 +587,10 @@ export function CorrectionCreatePage({ userRole, onNavigateToList }: CorrectionC
     <div className="flex items-center" data-is-checkbox="true">
       <button
         data-is-checkbox="true"
-        onClick={() => enterDetail('不拆單調整')}
+        onClick={() => enterDetail('不拆單')}
         className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] text-[#004680] leading-[24px] whitespace-nowrap cursor-pointer select-none px-[10px] py-[16px] hover:opacity-70 transition-opacity"
       >
-        不拆單調整
+        不拆單
       </button>
       {/* 分隔線 */}
       <div className="h-[30px] w-[1px] bg-[#919eab] mx-[2px] opacity-30" />

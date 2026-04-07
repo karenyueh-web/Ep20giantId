@@ -1103,7 +1103,7 @@ function Component({ className, property1 = "建立修正單/列表" }: Componen
                     <div className="flex flex-row items-center justify-center min-w-[inherit] size-full">
                       <div className={`content-stretch flex gap-[8px] items-center justify-center min-w-[inherit] px-[12px] relative ${is1 ? "size-full" : "h-full"}`}>
                         <div className={`font-semibold leading-[22px] relative shrink-0 whitespace-nowrap ${is1 ? 'font-["Public_Sans:SemiBold",sans-serif] text-[#8e33ff] text-[14px]' : 'font-["Public_Sans:SemiBold","Noto_Sans_JP:Bold",sans-serif] text-[#005eb8] text-[16px] text-center'}`}>
-                          <p className="mb-0">{is1 ? "拆單" : is ? "不拆單調整" : ""}</p>
+                          <p className="mb-0">{is1 ? "拆單" : is ? "不拆單" : ""}</p>
                           <p>17056357</p>
                         </div>
                       </div>

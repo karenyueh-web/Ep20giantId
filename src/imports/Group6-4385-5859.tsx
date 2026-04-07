@@ -350,7 +350,7 @@ export default function Group() {
         <div className="content-stretch flex gap-[17px] items-center relative shrink-0">
           <div className="bg-[#1c252e] h-[48px] min-w-[48px] relative rounded-[8px] shrink-0" data-name="ToggleButton">
             <Frame7Helper>
-              <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold leading-[22px] relative shrink-0 text-[14px] text-center text-white whitespace-nowrap">不拆單調整</p>
+              <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold leading-[22px] relative shrink-0 text-[14px] text-center text-white whitespace-nowrap">不拆單</p>
             </Frame7Helper>
           </div>
           <div className="bg-[rgba(0,94,184,0.08)] h-[48px] min-w-[48px] relative rounded-[8px] shrink-0" data-name="ToggleButton">

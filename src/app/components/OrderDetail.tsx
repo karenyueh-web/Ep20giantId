@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import IconsSolidIcSolarMultipleForwardLeftBroken from '@/imports/IconsSolidIcSolarMultipleForwardLeftBroken';
 import { chatData, type ChatConversation } from '@/app/data/chatData';
 import svgPaths from '@/imports/svg-gcyyqek0b9';
@@ -1505,8 +1505,9 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
                           <path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="#ff5630" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
                         <p className="font-['Public_Sans:Regular',sans-serif] text-[13px] leading-[20px] text-[#ff5630]">
-                          {orderData?.adjustmentType === 'split-order' ? '拆單' : '拆 Schedule Line'}：原本 1 期 →
-                          調整為 {editableLines.length} 期
+                          {orderData?.adjustmentType === 'split-order'
+                            ? `拆單：原本 1 單 → 調整為 ${editableLines.length} 單`
+                            : `拆 Schedule Line：原本 1 期 → 調整為 ${editableLines.length} 期`}
                         </p>
                       </div>
                     )}

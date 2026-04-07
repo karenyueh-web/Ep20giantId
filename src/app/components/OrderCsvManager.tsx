@@ -738,17 +738,10 @@ export function CsvToolbarButtons({ onExportSelect, onImport, importLabel = '批
 }
 
 // ===== Helper: shared batch reply headers & escape =====
-// 拆 Schedule Line 範本標題（無「不接單原因」欄）
-const BATCH_REPLY_HEADERS = [
-  '訂單號碼', '訂單序號', '料號', '比對單價', '幣別',
-  '預計交期', '訂貨量', '單位',
-  '同意碼', '項次1', '廠商可交貨日期1', '交貨量1',
-  '項次2', '廠商可交貨日期2', '交貨量2',
-];
-
-// Headers for 拆單 mode
-const BATCH_REPLY_SPLIT_HEADERS = [
-  '訂單號碼', '訂單序號', '料號', '比對單價', '幣別',
+// 統一格式標題：SL（拆 Schedule Line）與 IT（拆單）採用相同欄位結構
+// 首欄「答交類型」填入 SL 或 IT；移除 SL 原本的「項次」欄，統一為日期+數量 2欄一組
+const BATCH_REPLY_UNIFIED_HEADERS = [
+  '答交類型', '訂單號碼', '訂單序號', '料號', '比對單價', '幣別',
   '預計交期', '訂貨量', '單位',
   '同意碼', '廠商可交貨日期1', '交貨量1',
   '廠商可交貨日期2', '交貨量2',
@@ -968,14 +961,13 @@ export function exportBatchReplyScheduleLine(orders: OrderRow[], filename?: stri
   const npvOrders = orders.filter(o => o.status === 'NP' || o.status === 'V');
   let totalRows = 0;
 
-  // 標題（統一格式，無「不接單原因」）
-  const headers = BATCH_REPLY_HEADERS;
+  // 標題（統一格式，首欄「答交類型」= SL）
+  const headers = BATCH_REPLY_UNIFIED_HEADERS;
 
-  // 說明列（圖2格式）
-  // Row1: 同意碼說明；Row2: 拆更多期提示；Row3: 空列
+  // 說明列
   const instructionRows: string[][] = [
     ['同意碼說明：Y=訂單確認 / N=調整單據（需填新交期）/ X=不接單'],
-    ['若需拆更多期，請在O欄後繼續增加交貨資訊(項次3+廠商可交貨日期3+交貨量3)以此類推'],
+    ['若需拆更多期，請在L欄後繼續增加交貨資訊(廠商可交貨日期3+交貨量3)以此類推'],
     [],
   ];
 
@@ -988,6 +980,7 @@ export function exportBatchReplyScheduleLine(orders: OrderRow[], filename?: stri
     for (let li = 0; li < lines.length; li++) {
       const sl = lines[li];
       const baseRow: (string | number)[] = [
+        'SL',              // 答交類型（拆 Schedule Line）
         order.orderNo,
         order.orderSeq,
         order.materialNo,
@@ -997,10 +990,8 @@ export function exportBatchReplyScheduleLine(orders: OrderRow[], filename?: stri
         sl ? sl.quantity : order.orderQty,
         order.unit || '',
         '', // 同意碼
-        sl ? sl.index : (li + 1), // 項次1
         '', // 廠商可交貨日期1
         '', // 交貨量1
-        '', // 項次2
         '', // 廠商可交貨日期2
         '', // 交貨量2
       ];
@@ -1021,16 +1012,17 @@ export function exportBatchReplyScheduleLine(orders: OrderRow[], filename?: stri
 export function exportBatchReplySplitOrder(orders: OrderRow[], allOrders?: OrderRow[], filename?: string, options?: { hideRejectOption?: boolean }) {
   const npvOrders = orders.filter(o => o.status === 'NP' || o.status === 'V');
 
-  // 說明列（同 Schedule Line 格式：放在 A1/A2）
+  // 說明列
   const instructionRows: string[][] = [
     ['同意碼說明：Y=訂單確認 / N=調整單據（需填新交期）/ X=不接單'],
-    ['若需拆更多單，請在M欄後繼續增加交貨資訊(廠商可交貨日期3+交貨量3)以此類推'],
+    ['若需拆更多單，請在L欄後繼續增加交貨資訊(廠商可交貨日期3+交貨量3)以此類推'],
     [],
   ];
 
-  const headers = BATCH_REPLY_SPLIT_HEADERS;
+  const headers = BATCH_REPLY_UNIFIED_HEADERS;
 
   const rows = npvOrders.map(order => [
+    'IT',              // 答交類型（拆單）
     order.orderNo,
     order.orderSeq,
     order.materialNo,
@@ -1091,6 +1083,8 @@ export interface BatchReplyParsedRow {
   /** 被跳過的原因（例如狀態為 B/CK/CL 不接受批次回覆） */
   skipReason?: string;
   isValid: boolean;
+  /** 答交類型（新格式檔案有此欄）：SL = 拆 Schedule Line，IT = 拆單 */
+  replyType?: 'SL' | 'IT';
 }
 
 export interface BatchReplyImportResult {
@@ -1174,11 +1168,34 @@ export function parseBatchReplyCsv(content: string, allOrders: OrderRow[]): Batc
     }
   }
   if (headerIndex === -1) return empty;
-  const mode = detectBatchReplyMode(lines[headerIndex]);
-  if (mode === 'unknown') return empty;
+
+  // 偵測格式版本：新格式（含「答交類型」欄）或舊格式
+  const headerFields = parseCsvLine(lines[headerIndex]);
+  const isNewFormat = headerFields.includes('答交類型');
+
+  // 舊格式：從標題列結構偵測模式（向後相容）
+  let globalMode: BatchReplyMode = 'unknown';
+  if (!isNewFormat) {
+    globalMode = detectBatchReplyMode(lines[headerIndex]);
+    if (globalMode === 'unknown') return empty;
+  }
+
+  // 欄位索引：新格式所有欄往右移一格（首欄為答交類型）
+  const idxAnswerType = 0;
+  const idxOrderNo   = isNewFormat ? 1 : 0;
+  const idxOrderSeq  = isNewFormat ? 2 : 1;
+  const idxMaterial  = isNewFormat ? 3 : 2;
+  const idxPrice     = isNewFormat ? 4 : 3;
+  const idxCurrency  = isNewFormat ? 5 : 4;
+  const idxExpDel    = isNewFormat ? 6 : 5;
+  const idxOrderQty  = isNewFormat ? 7 : 6;
+  const idxUnit      = isNewFormat ? 8 : 7;
+  const idxAgree     = isNewFormat ? 9 : 8;
+  const idxDelStart  = isNewFormat ? 10 : 9;  // 交貨資訊起始欄
+
   const dataLines = lines.slice(headerIndex + 1);
   const rows: BatchReplyParsedRow[] = [];
-  // 拆單模式：預先計算各 orderNo 的序號 tracker（用於填入新序號預覽）
+  // 拆單模式：預先計算各 orderNo 的序號 tracker
   const splitSeqTracker: Record<string, number> = {};
   const getNextSplitSeq = (orderNo: string, currentSeq: number): string => {
     if (!(orderNo in splitSeqTracker)) {
@@ -1192,14 +1209,31 @@ export function parseBatchReplyCsv(content: string, allOrders: OrderRow[]): Batc
     splitSeqTracker[orderNo] += 10;
     return String(splitSeqTracker[orderNo]);
   };
+
+  // 整個檔案的模式（新格式從第一筆資料列决定；舊格式用 globalMode）
+  let fileMode: BatchReplyMode = globalMode;
+
   for (let i = 0; i < dataLines.length; i++) {
     const f = parseCsvLine(dataLines[i]);
     if (isInstructionRow(f)) continue;
     if (f.every(x => x.trim() === '')) continue;
     const rowIndex = i + 2;
-    const orderNo = (f[0] || '').trim();
-    const orderSeq = (f[1] || '').trim();
-    const agreeCodeRaw = (f[8] || '').trim().toUpperCase();
+
+    // 決定此列模式
+    let mode: BatchReplyMode;
+    let replyType: 'SL' | 'IT' | undefined;
+    if (isNewFormat) {
+      const answerType = (f[idxAnswerType] || '').trim().toUpperCase();
+      replyType = answerType === 'IT' ? 'IT' : 'SL';
+      mode = replyType === 'IT' ? 'split-order' : 'schedule-line';
+      if (fileMode === 'unknown') fileMode = mode;
+    } else {
+      mode = globalMode;
+    }
+
+    const orderNo = (f[idxOrderNo] || '').trim();
+    const orderSeq = (f[idxOrderSeq] || '').trim();
+    const agreeCodeRaw = (f[idxAgree] || '').trim().toUpperCase();
     let agreeCode: BatchAgreeCode = '';
     let error: string | undefined;
     if (agreeCodeRaw === 'Y') agreeCode = 'Y';
@@ -1207,16 +1241,15 @@ export function parseBatchReplyCsv(content: string, allOrders: OrderRow[]): Batc
     else if (agreeCodeRaw === 'X') agreeCode = 'X';
     else if (agreeCodeRaw !== '') error = `同意碼無效: "${agreeCodeRaw}"（僅接受 Y、N 或 X）`;
     if (!orderNo && agreeCode === '') continue;
-    // 不接單原因：僅拆單模式（split-order）有此欄（col 15）; 拆 Schedule Line 無此欄
-    const rejectReason = mode === 'split-order' ? (f[15] || '').trim() : '';
+    // 不接單原因：僅舊格式 split-order 有此欄（col 15）；新格式無
+    const rejectReason = (!isNewFormat && mode === 'split-order') ? (f[15] || '').trim() : '';
     const deliveries: BatchDelivery[] = [];
     let schedLineIndex: string | undefined;
     let newSeq1: string | undefined;
     let newSeq2: string | undefined;
-    if (mode === 'schedule-line') {
+    if (!isNewFormat && mode === 'schedule-line') {
+      // 舊 SL 格式：3欄一組（項次 + 廠商可交貨日期 + 交貨量），從 col 9
       schedLineIndex = (f[9] || '').trim();
-      // 動態解析交貨欄位：從 col 9 開始，每組 3 欄（項次, 廠商可交貨日期, 交貨量）
-      // 支援使用者自行增加 項次3、廠商可交貨日期3、交貨量3 等欄位
       for (let colStart = 9; colStart + 2 < f.length; colStart += 3) {
         const seqVal = (f[colStart] || '').trim();
         const dateVal = normalizeDateStr((f[colStart + 1] || '').trim());
@@ -1226,15 +1259,17 @@ export function parseBatchReplyCsv(content: string, allOrders: OrderRow[]): Batc
         }
       }
     } else {
-      // 新格式：col 9 = 廠商可交貨日期1, col 10 = 交貨量1,
-      //         col 11 = 廠商可交貨日期2, col 12 = 交貨量2,
-      //         col 13 = 廠商可交貨日期3, col 14 = 交貨量3, ... 動態
-      for (let colStart = 9; colStart + 1 < f.length; colStart += 2) {
+      // 新格式（SL 或 IT）及舊格式 IT：2欄一組（廠商可交貨日期 + 交貨量）
+      for (let colStart = idxDelStart; colStart + 1 < f.length; colStart += 2) {
         const dateVal = normalizeDateStr((f[colStart] || '').trim());
         const qtyVal = (f[colStart + 1] || '').trim();
         if (dateVal || qtyVal) {
           deliveries.push({ date: dateVal, qty: parseInt(qtyVal, 10) || 0 });
         }
+      }
+      // 新格式 SL：自動補排程項次（seq）
+      if (isNewFormat && mode === 'schedule-line') {
+        deliveries.forEach((d, idx) => { d.seq = String(idx + 1); });
       }
     }
     const matched = allOrders.find(o => o.orderNo === orderNo && o.orderSeq === orderSeq);
@@ -1245,15 +1280,14 @@ export function parseBatchReplyCsv(content: string, allOrders: OrderRow[]): Batc
       skipReason = `狀態 ${matched.status} 不接受批次回覆（僅限 NP/V）`;
       agreeCode = ''; // 強制清空同意碼，歸入 skipRows
     }
-    // 拆單模式：為每組 delivery 計算新序號
+    // IT 模式：為每組 delivery 計算新序號
     if (mode === 'split-order') {
       const currentSeqNum = parseInt(orderSeq, 10);
-      // 先將已推進的 tracker 備用（同一個 orderNo 的多行批次中序號接續累加）
-      for (let i = 0; i < deliveries.length; i++) {
-        if (i === 0) {
-          deliveries[i].newOrderSeq = orderSeq; // 第1組保留原序號
+      for (let di = 0; di < deliveries.length; di++) {
+        if (di === 0) {
+          deliveries[di].newOrderSeq = orderSeq; // 第1組保留原序號
         } else {
-          deliveries[i].newOrderSeq = getNextSplitSeq(orderNo, currentSeqNum);
+          deliveries[di].newOrderSeq = getNextSplitSeq(orderNo, currentSeqNum);
         }
       }
     }
@@ -1261,20 +1295,20 @@ export function parseBatchReplyCsv(content: string, allOrders: OrderRow[]): Batc
     if (agreeCode === 'Y' && !error && deliveries.some(d => d.date || d.qty)) {
       error = '同意碼 Y 為直接確認，不需填入交貨資訊';
     }
-    // N（拆單模式）：至少需要 2 組有效交貨資料
+    // N（IT/拆單）：至少需要 2 組有效交貨資料
     if (agreeCode === 'N' && !error && mode === 'split-order') {
       const validGroups = deliveries.filter(d => d.date && isValidDateStr(d.date) && d.qty > 0);
       if (validGroups.length < 2) error = '拆單需填入至少 2 組交貨資料（交貨日期+數量）';
     }
-    // N（schedule-line 模式）：至少需要 1 組有效交期
+    // N（SL/拆 Schedule Line）：至少需要 1 組有效交期
     if (agreeCode === 'N' && !error && mode === 'schedule-line') {
       if (!deliveries.some(d => d.date && isValidDateStr(d.date))) error = '同意碼 N 需填入至少一組新交期';
     }
-    // X（不接單）不需要交期，不接單原因為選填
+    // X（不接單）不需要交期
     if ((agreeCode === 'Y' || agreeCode === 'N') && !error) {
       for (const d of deliveries) { if (d.date && !isValidDateStr(d.date)) { error = `日期格式錯誤: "${d.date}"`; break; } }
     }
-    // 過去日期驗證：廠商填入的交貨日期不得早於今天
+    // 過去日期驗證
     if ((agreeCode === 'Y' || agreeCode === 'N') && !error) {
       const today = new Date(); today.setHours(0, 0, 0, 0);
       for (const d of deliveries) {
@@ -1284,7 +1318,7 @@ export function parseBatchReplyCsv(content: string, allOrders: OrderRow[]): Batc
         }
       }
     }
-    // 交貨量加總驗證：Y 或 N 的交貨量加總必須等於訂貨量
+    // 交貨量加總驗證
     if ((agreeCode === 'Y' || agreeCode === 'N') && !error && matched) {
       const validDels = deliveries.filter(d => d.date && d.qty > 0);
       if (validDels.length > 0) {
@@ -1296,15 +1330,18 @@ export function parseBatchReplyCsv(content: string, allOrders: OrderRow[]): Batc
       }
     }
     rows.push({
-      rowIndex, orderNo, orderSeq, materialNo: (f[2] || '').trim(),
-      comparePrice: (f[3] || '').trim(), currency: (f[4] || '').trim(),
-      expectedDelivery: normalizeDateStr((f[5] || '').trim()), orderQty: (f[6] || '').trim(),
-      unit: (f[7] || '').trim(), agreeCode, deliveries, rejectReason,
+      rowIndex, orderNo, orderSeq, materialNo: (f[idxMaterial] || '').trim(),
+      comparePrice: (f[idxPrice] || '').trim(), currency: (f[idxCurrency] || '').trim(),
+      expectedDelivery: normalizeDateStr((f[idxExpDel] || '').trim()), orderQty: (f[idxOrderQty] || '').trim(),
+      unit: (f[idxUnit] || '').trim(), agreeCode, deliveries, rejectReason,
       schedLineIndex, newSeq1, newSeq2, matchedOrder: matched, error, skipReason, isValid: !error,
+      replyType,
     });
   }
+  // 新格式但無資料列時，fileMode 仍為 unknown → 預設 schedule-line
+  if (isNewFormat && fileMode === 'unknown') fileMode = 'schedule-line';
   return {
-    mode, totalRows: rows.length,
+    mode: fileMode, totalRows: rows.length,
     agreeRows: rows.filter(r => r.agreeCode === 'Y' && r.isValid),
     disagreeRows: rows.filter(r => r.agreeCode === 'N' && r.isValid),
     rejectOrderRows: rows.filter(r => r.agreeCode === 'X' && r.isValid),
@@ -1385,7 +1422,7 @@ export function BatchReplyImportOverlay({ allOrders, onConfirm, onClose, hideRej
     )) processFile(f);
   };
   const actionCount = batchResult ? batchResult.agreeRows.length + batchResult.disagreeRows.length + (hideRejectOption ? 0 : batchResult.rejectOrderRows.length) : 0;
-  const modeLabel = batchResult?.mode === 'split-order' ? '拆單' : '拆 Schedule Line';
+  const modeLabel = batchResult?.mode === 'split-order' ? '拆單 (IT)' : '拆 Schedule Line (SL)';
 
   return (
     <div className="fixed inset-0 z-[200] bg-[rgba(145,158,171,0.4)] flex items-center justify-center p-[20px]" onClick={onClose}>
@@ -1533,7 +1570,7 @@ function BRRow({ row, maxDeliveries = 2, isSplitOrder = false }: { row: BatchRep
   const badge = () => {
     if (!row.isValid) return <div className="bg-[rgba(255,171,0,0.12)] flex items-center gap-[4px] px-[8px] h-[22px] rounded-[4px] whitespace-nowrap"><AlertTriangle size={12} className="text-[#b76e00]" /><p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[11px] text-[#b76e00]">錯誤</p></div>;
     if (row.agreeCode === 'Y') return <div className="bg-[rgba(34,197,94,0.12)] flex items-center gap-[4px] px-[8px] h-[22px] rounded-[4px] whitespace-nowrap"><CheckCircle2 size={12} className="text-[#118d57]" /><p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[11px] text-[#118d57]">Y 訂單確認</p></div>;
-    if (row.agreeCode === 'N') return <div className="bg-[rgba(255,86,48,0.12)] flex items-center gap-[4px] px-[8px] h-[22px] rounded-[4px] whitespace-nowrap"><XCircle size={12} className="text-[#b71d18]" /><p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[11px] text-[#b71d18]">N 拆單</p></div>;
+    if (row.agreeCode === 'N') return <div className="bg-[rgba(255,86,48,0.12)] flex items-center gap-[4px] px-[8px] h-[22px] rounded-[4px] whitespace-nowrap"><XCircle size={12} className="text-[#b71d18]" /><p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[11px] text-[#b71d18]">{isSplitOrder ? 'N 拆單' : 'N 拆 SL'}</p></div>;
     if (row.agreeCode === 'X') return <div className="bg-[rgba(99,115,129,0.12)] flex items-center gap-[4px] px-[8px] h-[22px] rounded-[4px] whitespace-nowrap"><Package size={12} className="text-[#454f5b]" /><p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[11px] text-[#454f5b]">X 不接單</p></div>;
     return <p className="text-[12px] text-[#919eab]">—</p>;
   };
