@@ -1248,9 +1248,9 @@ export function CorrectionDetailPage({
                           <input
                             type="text"
                             value={disagreeNewMaterialNo}
-                            onChange={e => !hasAcceptQty && setDisagreeNewMaterialNo(e.target.value)}
-                            disabled={hasAcceptQty}
-                            placeholder={hasAcceptQty ? '已有驗收量不得修改料號' : ''}
+                            onChange={e => !hasAcceptQty && effectiveStatusCode !== 'V' && setDisagreeNewMaterialNo(e.target.value)}
+                            disabled={hasAcceptQty || effectiveStatusCode === 'V'}
+                            placeholder={hasAcceptQty ? '已有驗收量不得修改料號' : effectiveStatusCode === 'V' ? '廠商端不開放修改料號' : ''}
                             className={`flex-1 min-w-0 font-['Public_Sans:Regular',sans-serif] font-normal text-[14px] leading-[22px] bg-transparent outline-none placeholder:text-[#919eab] disabled:cursor-not-allowed ${disagreeNewMaterialNo && disagreeNewMaterialNo !== (order.materialNo ?? '') ? 'text-[#ff5630]' : 'text-[#454f5b]'}`}
                           />
                         </div>
@@ -1308,8 +1308,10 @@ export function CorrectionDetailPage({
                               <input
                                 type="text"
                                 value={row.splitNewMaterialNo ?? order.materialNo ?? ''}
-                                onChange={e => setDisagreeDeliveryRows(prev => prev.map(r => r.id === row.id ? { ...r, splitNewMaterialNo: e.target.value } : r))}
-                                className={`w-full h-full px-[8px] font-['Public_Sans:Regular',sans-serif] font-normal text-[13px] leading-[22px] bg-transparent outline-none ${row.splitNewMaterialNo && row.splitNewMaterialNo !== (order.materialNo ?? '') ? 'text-[#ff5630]' : 'text-[#454f5b]'}`}
+                                onChange={e => effectiveStatusCode !== 'V' && setDisagreeDeliveryRows(prev => prev.map(r => r.id === row.id ? { ...r, splitNewMaterialNo: e.target.value } : r))}
+                                disabled={effectiveStatusCode === 'V'}
+                                placeholder={effectiveStatusCode === 'V' ? '廠商端不開放修改' : ''}
+                                className={`w-full h-full px-[8px] font-['Public_Sans:Regular',sans-serif] font-normal text-[13px] leading-[22px] bg-transparent outline-none disabled:cursor-not-allowed placeholder:text-[#919eab] ${row.splitNewMaterialNo && row.splitNewMaterialNo !== (order.materialNo ?? '') ? 'text-[#ff5630]' : 'text-[#454f5b]'}`}
                               />
                             </div>
                           </div>
