@@ -1315,19 +1315,7 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
                         <p className="font-['Public_Sans:Bold',sans-serif] font-bold leading-[22px] text-[13px] text-white whitespace-nowrap">強制關單</p>
                       </div>
                     )}
-                    {/* 抽單按鈕（V 狀態 + 採購/巨大角色）：把單據從 V 抽回 B，採購再決定後續 */}
-                    {orderData?.status === 'V' && (userRole === 'purchaser' || userRole === 'giant') && !isReadOnly && (
-                      <div
-                        className="bg-[#637381] h-[32px] px-[14px] rounded-[8px] cursor-pointer hover:bg-[#4a555f] transition-colors flex items-center justify-center"
-                        onClick={() => {
-                          if (onStatusChange) {
-                            onStatusChange('B', '抽單 (V→B)');
-                          }
-                        }}
-                      >
-                        <p className="font-['Public_Sans:Bold',sans-serif] font-bold leading-[22px] text-[13px] text-white whitespace-nowrap">抽單</p>
-                      </div>
-                    )}
+
                     {/* 聊天Icon：hideChatIcon=true 時隱藏 */}
                     {!hideChatIcon && (
                       <div
