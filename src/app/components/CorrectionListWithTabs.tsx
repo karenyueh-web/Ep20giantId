@@ -1175,6 +1175,27 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
     if (detailRows.length <= 1) setDetailRows([]);
   };
 
+  // V: 採購抽單（V→B）
+  const handleDetailWithdraw = () => {
+    const row = detailRows[detailIndex];
+    if (!row) return;
+    const newStatus = 'B' as const;
+    const updates: Partial<CorrectionOrderRow> = { correctionStatus: newStatus };
+    if (!correctionOrders.some(o => o.id === row.id)) {
+      addCorrectionOrder({ ...row, ...updates });
+    } else {
+      updateCorrectionOrder(row.id, row.correctionDocNo, updates);
+    }
+    addCorrectionHistory(row.id, {
+      date: nowDateStr(),
+      event: '抽單 (V→B)',
+      operator: operatorByRole(userRole as any),
+      remark: '',
+    });
+    showToast(`已抽單（${row.correctionDocNo}），狀態轉為 B`);
+    if (detailRows.length <= 1) setDetailRows([]);
+  };
+
   // ── 多張編輯時，組建每張訂單各自的初始資料 map ──────────────────────────
   const initialDataByOrderId = useMemo(() => {
     if (detailRows.length <= 1) return undefined;
@@ -1239,6 +1260,7 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
             onDisagree={handleDetailDisagree}
             onReturnToVendor={handleDetailReturnToVendor}
             onCloseToCL={handleDetailCloseToCL}
+            onWithdraw={handleDetailWithdraw}
           />
         </div>
         {toastMsg && (

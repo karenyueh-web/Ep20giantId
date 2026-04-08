@@ -75,6 +75,8 @@ interface CorrectionDetailPageProps {
   onReturnToVendor?: (reason: string) => void;
   /** B 狀態：關閉單據（轉 CL）*/
   onCloseToCL?: () => void;
+  /** V 狀態：採購抽單（V→B）*/
+  onWithdraw?: () => void;
 }
 
 // ── ID counter ─────────────────────────────────────────────────────────────────
@@ -283,7 +285,7 @@ export function CorrectionDetailPage({
   correctionType, correctionStatusCode,
   initialDataByOrderId,
   maxSeqInSameOrderNo,
-  onApprove, onDisagree, onReturnToVendor, onCloseToCL,
+  onApprove, onDisagree, onReturnToVendor, onCloseToCL, onWithdraw,
 }: CorrectionDetailPageProps) {
   const order = orders[currentIndex];
   const total = orders.length;
@@ -992,7 +994,7 @@ export function CorrectionDetailPage({
             </div>
           </div>
 
-          {/* 歷程 + 刪單 + 關閉 */}
+          {/* 歷程 + 刪單 + 關閉 + 抽單 */}
           <div className="ml-auto flex items-center gap-[16px] relative">
             {/* 刪單按鈕：僅 edit 模式、未提交、非拆單時顯示 */}
             {viewMode === 'edit' && !isLocallySubmitted && !isSplitMode && (
@@ -1020,6 +1022,15 @@ export function CorrectionDetailPage({
                   <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" fill="currentColor"/>
                 </svg>
                 關閉
+              </button>
+            )}
+            {/* 抽單按鈕：V 狀態 + 採購/巨大角色 */}
+            {viewMode === 'vendorReview' && (userRole === 'purchaser' || userRole === 'giant') && (
+              <button
+                onClick={e => { e.stopPropagation(); onWithdraw?.(); }}
+                className="flex items-center gap-[6px] h-[36px] px-[14px] rounded-[8px] bg-[#637381] hover:bg-[#4a555f] transition-colors font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-white"
+              >
+                抽單
               </button>
             )}
             <button
