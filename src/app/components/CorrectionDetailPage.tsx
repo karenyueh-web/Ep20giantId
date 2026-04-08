@@ -1581,7 +1581,7 @@ export function CorrectionDetailPage({
                           value={form.correctionNote}
                           onChange={e => !isReadOnly && setForm(p => ({ ...p, correctionNote: e.target.value }))}
                           readOnly={isReadOnly}
-                          placeholder="輸入備註"
+                          placeholder={isReadOnly ? '' : '輸入備註'}
                           className="flex-1 min-w-0 font-['Public_Sans:Regular',sans-serif] font-normal text-[#454f5b] text-[14px] leading-[22px] bg-transparent outline-none placeholder:text-[#919eab] read-only:cursor-default"
                         />
                       </div>
@@ -1652,7 +1652,7 @@ export function CorrectionDetailPage({
                           value={form.correctionNote}
                           onChange={e => !isReadOnly && setForm(p => ({ ...p, correctionNote: e.target.value }))}
                           readOnly={isReadOnly}
-                          placeholder="輸入備註"
+                          placeholder={isReadOnly ? '' : '輸入備註'}
                           className="flex-1 min-w-0 font-['Public_Sans:Regular',sans-serif] font-normal text-[#454f5b] text-[14px] leading-[22px] bg-transparent outline-none placeholder:text-[#919eab] read-only:cursor-default"
                         />
                       </div>
@@ -1819,12 +1819,13 @@ export function CorrectionDetailPage({
               {/* 資料列 */}
               {form.deliveryRows.map((row, idx) => {
                 const isDeleted = !!row.deleted;
+                const isStrikethrough = isDeleted || isDeleteMode || correctionType === '刪單';
                 return (
                   <div
                     key={row.id}
-                    className={`flex items-center w-full gap-[20px] px-[45px] h-[52px] border-t border-[rgba(145,158,171,0.1)] first:border-t-0 relative transition-colors ${isDeleted ? 'bg-[rgba(255,86,48,0.04)]' : ''}`}
+                    className={`flex items-center w-full gap-[20px] px-[45px] h-[52px] border-t border-[rgba(145,158,171,0.1)] first:border-t-0 relative transition-colors ${isStrikethrough ? 'bg-[rgba(255,86,48,0.04)]' : ''}`}
                   >
-                    {isDeleted && <div className="absolute inset-x-[45px] top-1/2 h-[1.5px] bg-[#ff5630] pointer-events-none z-[1]" />}
+                    {isStrikethrough && <div className="absolute inset-x-[45px] top-1/2 h-[1.5px] bg-[#ff5630] pointer-events-none z-[1]" />}
                     <div className="flex items-center shrink-0 w-[50px]">
                       <p className={`font-['Public_Sans:Regular',sans-serif] font-normal leading-[22px] w-full text-[14px] ${isDeleted ? 'text-[rgba(145,158,171,0.5)]' : 'text-[#454f5b]'}`}>{idx + 1}</p>
                     </div>
@@ -1834,7 +1835,7 @@ export function CorrectionDetailPage({
                     <div className="flex items-center shrink-0 w-[100px]">
                       <p className={`font-['Public_Sans:Regular',sans-serif] font-normal leading-[22px] text-[14px] whitespace-nowrap ${isDeleted ? 'text-[rgba(145,158,171,0.5)]' : 'text-[#454f5b]'}`}>{row.vendorOriginalDate || '—'}</p>
                     </div>
-                    <div className={`flex items-center shrink-0 w-[150px] ${isDeleted ? 'opacity-70 pointer-events-none' : (isReadOnly || isDeleteMode) ? 'pointer-events-none' : ''}`}>
+                    <div className={`flex items-center shrink-0 w-[150px] ${isStrikethrough ? 'opacity-70 pointer-events-none' : (isReadOnly || isDeleteMode) ? 'pointer-events-none' : ''}`}>
                       {(correctionType === '刪單' || isDeleteMode) ? (
                         <p className={`font-['Public_Sans:Regular',sans-serif] font-normal leading-[22px] text-[14px] whitespace-nowrap text-[#454f5b]`}>{row.newVendorDate || '—'}</p>
                       ) : (
@@ -1844,12 +1845,12 @@ export function CorrectionDetailPage({
                     <div className="flex items-center shrink-0 w-[100px]">
                       <p className={`font-['Public_Sans:Regular',sans-serif] font-normal leading-[22px] text-[14px] whitespace-nowrap ${isDeleted ? 'text-[rgba(145,158,171,0.5)]' : 'text-[#454f5b]'}`}>{row.originalQty}</p>
                     </div>
-                    <div className={`flex items-center shrink-0 w-[150px] ${isDeleted ? 'opacity-70 pointer-events-none' : (isReadOnly || isDeleteMode) ? 'pointer-events-none' : ''}`}>
+                    <div className={`flex items-center shrink-0 w-[150px] ${isStrikethrough ? 'opacity-70 pointer-events-none' : (isReadOnly || isDeleteMode) ? 'pointer-events-none' : ''}`}>
                       <QtyField
                         value={row.newQty}
                         onChange={val => !isReadOnly && !isDeleteMode && updateRow(row.id, 'newQty', val)}
-                        highlight={!isDeleted && (parseFloat(row.newQty) || 0) === 0}
-                        isChanged={!isDeleted && row.newQty !== String(row.originalQty)}
+                        highlight={!isStrikethrough && !isDeleted && (parseFloat(row.newQty) || 0) === 0}
+                        isChanged={!isStrikethrough && !isDeleted && row.newQty !== String(row.originalQty)}
                       />
                     </div>
                     <div className="flex items-center justify-center shrink-0 size-[24px] z-[2]">
@@ -1866,23 +1867,23 @@ export function CorrectionDetailPage({
                 );
               })}
 
-              {/* 刪單警示 */}
-              {isDeleteMode ? (
+              {/* 刪單警示（刪單類型不顯示） */}
+              {correctionType !== '刪單' && (isDeleteMode ? (
                 <div className="px-[45px] py-[8px] border-t border-[rgba(145,158,171,0.1)] bg-[rgba(255,86,48,0.04)]">
                   <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#ff5630] leading-[18px]">
                     ⚠ 刪單：交貨排程已依驗收量＋在途量（{minRequiredQty}）自動調整，不開放人工修改
                   </p>
                 </div>
-              ) : isDeleteOrder && (
+              ) : isDeleteOrder ? (
                 <div className="px-[45px] py-[8px] border-t border-[rgba(145,158,171,0.1)]">
                   <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#ff5630] leading-[18px]">
                     ⚠ 新交貨量總計為 0，提交後將執行刪單
                   </p>
                 </div>
-              )}
+              ) : null)}
 
               {/* 最低需求提示列（驗收量＋在途量 > 0 時顯示） */}
-              {minRequiredQty > 0 && (
+              {correctionType !== '刪單' && minRequiredQty > 0 && (
                 <div className={`px-[45px] py-[9px] border-t border-[rgba(145,158,171,0.1)] flex items-center gap-[16px] flex-wrap ${belowMinQty || hasZeroQtyRow ? 'bg-[rgba(255,86,48,0.04)]' : 'bg-[rgba(145,158,171,0.03)]'}`}>
                   <p className="font-['Public_Sans:Regular',sans-serif] font-normal text-[12px] text-[#637381] leading-[18px] shrink-0">
                     新交貨量合計：
@@ -1903,7 +1904,7 @@ export function CorrectionDetailPage({
               )}
 
               {/* 新交貨量為0提示列（當 minRequiredQty 為 0 時獨立顯示） */}
-              {hasZeroQtyRow && minRequiredQty === 0 && (
+              {correctionType !== '刪單' && hasZeroQtyRow && minRequiredQty === 0 && (
                 <div className="px-[45px] py-[9px] border-t border-[rgba(145,158,171,0.1)] flex items-center gap-[16px] bg-[rgba(255,86,48,0.04)]">
                   <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#ff5630] leading-[18px] shrink-0">
                     ⚠ 新交貨量不可填 0，如需刪除請使用刪單功能
@@ -1912,7 +1913,7 @@ export function CorrectionDetailPage({
               )}
 
               {/* 超過訂貨量提示列 */}
-              {aboveMaxQty && (
+              {correctionType !== '刪單' && aboveMaxQty && (
                 <div className="px-[45px] py-[9px] border-t border-[rgba(145,158,171,0.1)] flex items-center gap-[16px] bg-[rgba(255,86,48,0.04)]">
                   <p className="font-['Public_Sans:Regular',sans-serif] font-normal text-[12px] text-[#637381] leading-[18px] shrink-0">
                     新交貨量合計：<strong className="text-[#ff5630]">{totalNewQty}</strong>
@@ -1934,7 +1935,7 @@ export function CorrectionDetailPage({
               )}
 
               {/* 無異動提示列（edit 模式下，無任何欄位變更時顯示） */}
-              {noChangeBlock && (
+              {correctionType !== '刪單' && noChangeBlock && (
                 <div className="px-[45px] py-[9px] border-t border-[rgba(145,158,171,0.1)] flex items-center gap-[16px] bg-[rgba(255,171,0,0.06)]">
                   <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#b76e00] leading-[18px] shrink-0">
                     ⚠ 尚無異動項目，請至少修改新料號、新廠商交貨日、新交貨量或刪除項次其中之一，方可開立修正單

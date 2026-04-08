@@ -1436,33 +1436,38 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
                       {row.correctionDocNo || '—'}
                     </button>
                     {/* CP 頁籤：轉 SS 測試按鈕 */}
-                    {activeTab === 'CP' && row.correctionStatus === 'CP' && (
-                      <button
-                        className="ml-[6px] shrink-0 px-[6px] py-[1px] rounded-[4px] bg-[#005eb8] text-white text-[11px] leading-[18px] hover:bg-[#004a93] cursor-pointer whitespace-nowrap"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const isMock = !correctionOrders.some(o => o.id === row.id);
-                          if (isMock) {
-                            addCorrectionOrder({ ...row, correctionStatus: 'SS' });
-                            setDeletedMockIds(prev => new Set([...prev, row.id]));
-                          } else {
-                            updateCorrectionOrder(row.id, row.correctionDocNo, { correctionStatus: 'SS' });
-                          }
-                          addCorrectionHistory(row.id, {
-                            date: nowDateStr(),
-                            event: '測試轉 SS',
-                            operator: operatorByRole(userRole as any),
-                            remark: '手動測試轉換',
-                          });
-                          if (row.correctionType === '拆單' && row.savedDeliveryRows && row.savedDeliveryRows.length > 1) {
-                            executeSplitFromCorrection({ ...row, correctionStatus: 'SS' });
-                          }
-                          showToast(`${row.correctionDocNo} 已轉為 SS 狀態`);
-                        }}
-                      >
-                        轉SS
-                      </button>
-                    )}
+                    {activeTab === 'CP' && row.correctionStatus === 'CP' && (() => {
+                      const isDeleteOrder = row.correctionType === '刪單';
+                      const targetStatus = isDeleteOrder ? 'CL' : 'SS';
+                      const targetLabel = isDeleteOrder ? '轉CL' : '轉SS';
+                      return (
+                        <button
+                          className="ml-[6px] shrink-0 px-[6px] py-[1px] rounded-[4px] bg-[#005eb8] text-white text-[11px] leading-[18px] hover:bg-[#004a93] cursor-pointer whitespace-nowrap"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const isMock = !correctionOrders.some(o => o.id === row.id);
+                            if (isMock) {
+                              addCorrectionOrder({ ...row, correctionStatus: targetStatus });
+                              setDeletedMockIds(prev => new Set([...prev, row.id]));
+                            } else {
+                              updateCorrectionOrder(row.id, row.correctionDocNo, { correctionStatus: targetStatus });
+                            }
+                            addCorrectionHistory(row.id, {
+                              date: nowDateStr(),
+                              event: `測試轉 ${targetStatus}`,
+                              operator: operatorByRole(userRole as any),
+                              remark: '手動測試轉換',
+                            });
+                            if (!isDeleteOrder && row.correctionType === '拆單' && row.savedDeliveryRows && row.savedDeliveryRows.length > 1) {
+                              executeSplitFromCorrection({ ...row, correctionStatus: 'SS' });
+                            }
+                            showToast(`${row.correctionDocNo} 已轉為 ${targetStatus} 狀態`);
+                          }}
+                        >
+                          {targetLabel}
+                        </button>
+                      );
+                    })()}
                   </div>
                   {visibleColumns.map((col, colIdx) => {
                     const isLastCol = colIdx === visibleColumns.length - 1;
