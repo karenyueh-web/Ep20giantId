@@ -57,6 +57,12 @@ interface OrderDetailProps {
   hideChatIcon?: boolean;
   /** 變更生管排程：隱藏「訂單確認」與「調整單據」狀態操作按鈕 */
   hideStatusActions?: boolean;
+  /** 批次頁面導覽：當前張數（從 0 開始），與 totalCount 配合顯示 X/N */
+  currentIndex?: number;
+  /** 批次頁面導覽：全部張數 */
+  totalCount?: number;
+  /** 批次頁面導覽：切換訂單的回調 */
+  onNavigate?: (idx: number) => void;
 }
 
 // 日期字串是否早於今日（module-level，供 OrderDetail 使用）
@@ -641,7 +647,7 @@ function AdjustOrderForm({ onCancel, onConfirm, orderSeq, defaultDate, hideRejec
   );
 }
 
-export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, userRole, orderHistory, hideRejectAndSplitOrder, hideChatIcon, hideStatusActions }: OrderDetailProps) {
+export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, userRole, orderHistory, hideRejectAndSplitOrder, hideChatIcon, hideStatusActions, currentIndex, totalCount, onNavigate }: OrderDetailProps) {
   const { orders, updateOrderFields, addOrderHistory, getOrderHistory, correctionOrders } = useOrderStore();
 
   // 從 store 即時查詢當前訂單的 ID（用於直接讀取最新歷程，不依賴外部 prop 快照）
@@ -920,6 +926,7 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
                 </div>
               );
             })()}
+
             <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[28px] text-[#1c252e] text-[18px]">訂單明細</p>
             <p
               className="[text-decoration-skip-ink:none] decoration-solid font-['Roboto:Regular',sans-serif] font-normal leading-[32px] text-[#005eb8] text-[16px] underline cursor-pointer hover:opacity-70 select-none"
@@ -1302,9 +1309,41 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
               <>
                 {/* 標題列 */}
                 <div className="flex justify-between items-center mb-[16px]">
-                  <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[28px] text-[#1c252e] text-[18px]">
-                    {(orderData?.status === 'CK' || orderData?.status === 'CL') ? '交貨排程' : '請確認交貨排程是否OK'}
-                  </p>
+                  {/* 左側：標題 + 批次導覽算號 */}
+                  <div className="flex items-center gap-[8px]">
+                    <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[28px] text-[#1c252e] text-[18px]">
+                      {(orderData?.status === 'CK' || orderData?.status === 'CL') ? '交貨排程' : '請確認交貨排程是否OK'}
+                    </p>
+                    {/* 批次導覽：絺接在標題右側 */}
+                    {totalCount !== undefined && totalCount > 1 && currentIndex !== undefined && onNavigate && (
+                      <div className="content-stretch flex gap-[6px] items-center justify-center relative shrink-0">
+                        <div
+                          className="relative rounded-[500px] shrink-0 size-[40px] cursor-pointer"
+                          style={{ opacity: currentIndex === 0 ? 0.3 : 0.48 }}
+                          onClick={() => currentIndex > 0 && onNavigate(currentIndex - 1)}
+                        >
+                          <div aria-hidden="true" className="absolute border border-black border-solid inset-0 pointer-events-none rounded-[500px]" />
+                          <div className="flex items-center justify-center size-full">
+                            <svg width="6" height="12" viewBox="0 0 6 12" fill="none">
+                              <path d="M5 1L1 6L5 11" stroke="#637381" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          </div>
+                        </div>
+                        <div className="flex flex-col font-['Public_Sans:Regular',sans-serif] font-normal justify-center leading-[0] relative shrink-0 size-[40px] text-[#1c252e] text-[14px] text-center">
+                          <p className="leading-[22px]">{currentIndex + 1}/{totalCount}</p>
+                        </div>
+                        <div
+                          className="bg-[#005eb8] relative rounded-[500px] shrink-0 size-[40px] cursor-pointer hover:bg-[#004a99] transition-colors flex items-center justify-center"
+                          style={{ opacity: currentIndex === totalCount - 1 ? 0.3 : 1 }}
+                          onClick={() => currentIndex < totalCount - 1 && onNavigate(currentIndex + 1)}
+                        >
+                          <svg width="6" height="12" viewBox="0 0 6 12" fill="none">
+                            <path d="M1 1L5 6L1 11" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                   <div className="flex gap-[12px] items-center">
                     {/* 強制關單按鈕（B 狀態 + 採購/巨大角色）*/}
                     {orderData?.status === 'B' && (userRole === 'purchaser' || userRole === 'giant') && !isReadOnly && (

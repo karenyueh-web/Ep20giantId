@@ -562,10 +562,13 @@ export function CorrectionDetailPage({
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  // ► 單據在「提交採購(V→B)」或「退回廠商(B→V)」後開啟，自動展开歷程面板
-  // 開啟條件: viewMode 為 vendorReview 或 purchaserReview，且最新一筆歷程含有「不同意」或「退回」字樣
+  // ► V 狀態一律自動展開歷程面板；B 狀態僅在退回/不同意事件時展開
   useEffect(() => {
-    if (viewMode !== 'vendorReview' && viewMode !== 'purchaserReview') return;
+    if (viewMode === 'vendorReview') {
+      setShowHistory(true);
+      return;
+    }
+    if (viewMode !== 'purchaserReview') return;
     const latest = orderHistory[0]; // addCorrectionHistory 是從前插入，[0] 為最新
     if (!latest) return;
     const isReturnEvent =
@@ -733,7 +736,13 @@ export function CorrectionDetailPage({
 
     // 拆單摘要
     if (isSplitMode) {
-      changes.push(`【拆單】拆單數：${form.deliveryRows.length}；採購目標量：${totalNewQty}`);
+      // 拆單數量減少時才願示採購修正量
+      const splitQtyReduced = totalNewQty < (order.orderQty ?? 0);
+      changes.push(
+        splitQtyReduced
+          ? `【拆單】拆單數：${form.deliveryRows.length}；採購修正量：${totalNewQty}`
+          : `【拆單】拆單數：${form.deliveryRows.length}`
+      );
       form.deliveryRows.forEach((row, idx) => {
         const label = `第${idx + 1}筆`;
         const parts: string[] = [];
@@ -784,9 +793,9 @@ export function CorrectionDetailPage({
       }
     });
 
-    // 不拆單：第一行加入採購目標量
-    if (changes.length > 0) {
-      changes.unshift(`採購目標量：${totalNewQty}`);
+    // 不拆單：新交貨量小於原訂貨量時才加入採購修正量
+    if (changes.length > 0 && totalNewQty < (order.orderQty ?? 0)) {
+      changes.unshift(`採購修正量：${totalNewQty}`);
     }
     return changes.length > 0 ? changes.join('\n') : '（無欄位變更）';
   };
@@ -1221,7 +1230,7 @@ export function CorrectionDetailPage({
                                     rows.push({ id: nextRid(), expectedDelivery: base?.expectedDelivery ?? '', vendorOriginalDate: base?.vendorOriginalDate ?? '', newVendorDate: '', originalQty: 0, newQty: '0' });
                                   }
                                   rows = rows.slice(0, count);
-                                  // 均分採購目標量
+                                  // 均分採購修正量
                                   const n = rows.length;
                                   const pBase = Math.floor(purchaserAdjustedTotal / n);
                                   const pRem = purchaserAdjustedTotal % n;
@@ -1472,7 +1481,7 @@ export function CorrectionDetailPage({
                   </button>
                 </div>
               ) : (() => {
-                const hasMaterialNoChange = !!(disagreeNewMaterialNo && disagreeNewMaterialNo !== (order.materialNo ?? ''));
+                // 廠商在 V 狀態不可修改料號，此處永遠不視為有異動
                 // ── 驗證邏輯（同修正明細） ──
                 const dTotalNewQty = disagreeDeliveryRows.filter(r => !r.deleted).reduce((s, r) => s + (parseFloat(r.newQty) || 0), 0);
                 const dNotMatchPurchaser = dTotalNewQty !== purchaserAdjustedTotal;
@@ -1486,7 +1495,7 @@ export function CorrectionDetailPage({
                 }) || disagreeDeliveryRows.length !== purchaserOriginalRowsRef.current.length;
                 const canSubmit = disagreeType === 'reject'
                   ? !!disagreeRejectReason.trim()
-                  : (!!disagreeAdjustReason.trim() || hasMaterialNoChange || hasAnyChangeInRows)
+                  : (!!disagreeAdjustReason.trim() || hasAnyChangeInRows)
                     && !dNotMatchPurchaser && !dHasZeroQty && !dHasPastDate && !dSplitTooFew;
 
                 return (
@@ -1500,7 +1509,6 @@ export function CorrectionDetailPage({
                             reason = `不接單：${disagreeRejectReason.trim()}`;
                           } else {
                             const parts: string[] = [];
-                            if (hasMaterialNoChange) parts.push(`料號：${order.materialNo || '—'} → ${disagreeNewMaterialNo}`);
                             if (disagreeAdjustReason.trim()) parts.push(`調整交貨排程：${disagreeAdjustReason.trim()}`);
                             const origRows = purchaserOriginalRowsRef.current;
                             // 逐期比對差異（對比採購方原始修正內容）
@@ -1542,7 +1550,7 @@ export function CorrectionDetailPage({
                               deleted: r.deleted,
                               splitNewMaterialNo: r.splitNewMaterialNo,
                             }));
-                            onDisagree?.(reason, adjustedRows, hasMaterialNoChange ? disagreeNewMaterialNo : undefined);
+                            onDisagree?.(reason, adjustedRows, undefined);
                           } else {
                             onDisagree?.(reason);
                           }

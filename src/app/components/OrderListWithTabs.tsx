@@ -70,6 +70,9 @@ export function OrderListWithTabs({ defaultTab = 'NP', userRole }: OrderListWith
   const [selectedOrder, setSelectedOrder] = useState<OrderRow | null>(null);
   const [isReadOnlyMode, setIsReadOnlyMode] = useState(false);
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<number>>(new Set());
+  // 批次編輯：多張訂單導覽
+  const [detailRows, setDetailRows] = useState<OrderRow[]>([]);
+  const [detailIndex, setDetailIndex] = useState(0);
 
   // ── Order Store（共享狀態 & 歷程）──────────────────────────────────────────
   const { orders, updateOrderStatus, updateOrderFields, addOrder, addOrderHistory, getOrderHistory, addCorrectionOrder, addCorrectionHistory, generateCorrectionDocNo } = useOrderStore();
@@ -269,6 +272,30 @@ export function OrderListWithTabs({ defaultTab = 'NP', userRole }: OrderListWith
     setShowOrderDetail(false);
     setSelectedOrder(null);
     setIsReadOnlyMode(false);
+    setDetailRows([]);
+    setDetailIndex(0);
+  };
+
+  // 批次編輯：開啟多張訂單導覽請求
+  const handleBatchEdit = () => {
+    const selected = getSelectedOrders().filter(o =>
+      o.status === 'NP' || o.status === 'V' || o.status === 'B'
+    );
+    if (selected.length === 0) return;
+    setDetailRows(selected);
+    setDetailIndex(0);
+    setSelectedOrder(selected[0]);
+    setIsReadOnlyMode(false);
+    setShowOrderDetail(true);
+    setSelectedOrderIds(new Set());
+  };
+
+  // 批次導覽：切換到指定索引
+  const handleNavigateDetail = (idx: number) => {
+    const rows = detailRows.length > 0 ? detailRows : (selectedOrder ? [selectedOrder] : []);
+    if (idx < 0 || idx >= rows.length) return;
+    setDetailIndex(idx);
+    setSelectedOrder(rows[idx]);
   };
 
   const handleOrderConfirm = () => {
@@ -814,28 +841,33 @@ export function OrderListWithTabs({ defaultTab = 'NP', userRole }: OrderListWith
 
   // OrderDetail view
   if (showOrderDetail) {
+    const isBatch = detailRows.length > 1;
+    const activeOrder = isBatch ? detailRows[detailIndex] : selectedOrder;
     return (
       <div className="bg-white flex flex-col h-full relative rounded-[16px] shadow-[0px_0px_2px_0px_rgba(145,158,171,0.2),0px_12px_24px_-4px_rgba(145,158,171,0.12)] w-full overflow-hidden">
         <OrderDetail
           onClose={handleCloseDetail}
-          orderData={selectedOrder ? {
-            orderNo: selectedOrder.orderNo,
-            orderSeq: selectedOrder.orderSeq,
-            vendor: selectedOrder.vendorName,
-            status: selectedOrder.status,
-            vendorDeliveryDate: selectedOrder.vendorDeliveryDate,
-            scheduleLines: selectedOrder.scheduleLines,
-            orderQty: selectedOrder.orderQty,
-            comparePrice: selectedOrder.comparePrice,
-            unit: selectedOrder.unit,
-            acceptQty: selectedOrder.acceptQty,
-            adjustmentType: selectedOrder.adjustmentType,
-            expectedDelivery: selectedOrder.expectedDelivery,
+          orderData={activeOrder ? {
+            orderNo: activeOrder.orderNo,
+            orderSeq: activeOrder.orderSeq,
+            vendor: activeOrder.vendorName,
+            status: activeOrder.status,
+            vendorDeliveryDate: activeOrder.vendorDeliveryDate,
+            scheduleLines: activeOrder.scheduleLines,
+            orderQty: activeOrder.orderQty,
+            comparePrice: activeOrder.comparePrice,
+            unit: activeOrder.unit,
+            acceptQty: activeOrder.acceptQty,
+            adjustmentType: activeOrder.adjustmentType,
+            expectedDelivery: activeOrder.expectedDelivery,
           } : undefined}
           onStatusChange={handleStatusChange}
           isReadOnly={isReadOnlyMode}
           userRole={userRole}
-          orderHistory={selectedOrder ? getOrderHistory(selectedOrder.id) : []}
+          orderHistory={activeOrder ? getOrderHistory(activeOrder.id) : []}
+          currentIndex={isBatch ? detailIndex : undefined}
+          totalCount={isBatch ? detailRows.length : undefined}
+          onNavigate={isBatch ? handleNavigateDetail : undefined}
         />
       </div>
     );
@@ -960,6 +992,21 @@ export function OrderListWithTabs({ defaultTab = 'NP', userRole }: OrderListWith
         onToggleOrder={handleToggleOrder}
         onSelectAll={handleSelectAll}
         onBatchAction={handleBatchAction}
+        batchActions={
+          (activeTab === 'NP' || activeTab === 'V' || activeTab === 'B') ? (
+            <div className="flex items-center gap-[4px]">
+              <span
+                onClick={() => handleBatchAction('approve')}
+                className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] text-[#004680] leading-[24px] whitespace-nowrap cursor-pointer select-none px-[10px] py-[16px] hover:opacity-70 transition-opacity"
+              >批次訂單確認</span>
+              <span className="text-[rgba(145,158,171,0.4)] select-none">|</span>
+              <span
+                onClick={handleBatchEdit}
+                className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] text-[#004680] leading-[24px] whitespace-nowrap cursor-pointer select-none px-[10px] py-[16px] hover:opacity-70 transition-opacity"
+              >編輯</span>
+            </div>
+          ) : undefined
+        }
       />
 
       {/* ===== 批次回覆匯入 Overlay ===== */}
