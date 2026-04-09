@@ -656,6 +656,7 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
   );
   const liveOrderId = liveOrder?.id;
   const isRejectedOrder = liveOrder?.isRejectedOrder === true;
+  const isDeletedOrder = !!(liveOrder?.deletionCode);
 
   // ── 查找與此訂單關聯的修正單 ──
   const relatedCorrectionOrders = correctionOrders.filter(
@@ -1566,12 +1567,19 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
                       const origOrderQty = orderData?.orderQty ?? 0;
                       const qtyChanged = origOrderQty > 0 && line.quantity !== origOrderQty;
                       return (
-                        <div key={line.uid} className="flex gap-[16px] px-[20px] py-[10px] border-b border-[rgba(145,158,171,0.08)] last:border-b-0 items-center">
+                        <div
+                          key={line.uid}
+                          className={`relative flex gap-[16px] px-[20px] py-[10px] border-b border-[rgba(145,158,171,0.08)] last:border-b-0 items-center${isDeletedOrder ? ' bg-[rgba(255,86,48,0.04)]' : ''}`}
+                        >
+                          {/* 刪單：絕對定位橘色橫線（與 CorrectionDetailPage 一致） */}
+                          {isDeletedOrder && (
+                            <div className="absolute inset-x-[20px] top-1/2 h-[1.5px] bg-[#ff5630] pointer-events-none z-[1]" />
+                          )}
                           <div className="w-[60px] shrink-0">
-                            <p className="font-['Public_Sans:Regular',sans-serif] text-[14px] leading-[22px] text-[#919eab]">{line.index}</p>
+                            <p className={`font-['Public_Sans:Regular',sans-serif] text-[14px] leading-[22px] ${isDeletedOrder ? 'text-[rgba(145,158,171,0.5)]' : 'text-[#919eab]'}`}>{line.index}</p>
                           </div>
                           <div className="w-[140px] shrink-0">
-                            <p className="font-['Public_Sans:Regular',sans-serif] text-[14px] leading-[22px] text-[#919eab]">{line.expectedDelivery || '-'}</p>
+                            <p className={`font-['Public_Sans:Regular',sans-serif] text-[14px] leading-[22px] ${isDeletedOrder ? 'text-[rgba(145,158,171,0.5)]' : 'text-[#919eab]'}`}>{line.expectedDelivery || '-'}</p>
                           </div>
                           <div className="w-[180px] shrink-0">
                             {isRejectedOrder ? (
@@ -1584,7 +1592,7 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
                             ) : (
                               <p
                                 className="font-['Public_Sans:Regular',sans-serif] text-[14px] leading-[22px]"
-                                style={{ color: vendorDateChanged ? '#ff5630' : '#919eab' }}
+                                style={{ color: isDeletedOrder ? 'rgba(145,158,171,0.5)' : vendorDateChanged ? '#ff5630' : '#919eab' }}
                               >
                                 {line.vendorDeliveryDate || '-'}
                               </p>
@@ -1593,13 +1601,18 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
                           <div className="w-[120px] shrink-0">
                             <p
                               className="font-['Public_Sans:Regular',sans-serif] text-[14px] leading-[22px]"
-                              style={{ color: qtyChanged ? '#ff5630' : '#919eab' }}
+                              style={{ color: isDeletedOrder ? 'rgba(145,158,171,0.5)' : qtyChanged ? '#ff5630' : '#919eab' }}
                             >
                               {line.quantity}
                             </p>
                           </div>
                           <div className="w-[140px] shrink-0">
-                            <p className="font-['Public_Sans:Regular',sans-serif] text-[14px] leading-[22px]" style={{ color: lineDiffColor }}>{lineDiffDisplay}</p>
+                            <p
+                              className="font-['Public_Sans:Regular',sans-serif] text-[14px] leading-[22px]"
+                              style={{ color: isDeletedOrder ? 'rgba(145,158,171,0.5)' : lineDiffColor }}
+                            >
+                              {isDeletedOrder ? '-' : lineDiffDisplay}
+                            </p>
                           </div>
                         </div>
                       );

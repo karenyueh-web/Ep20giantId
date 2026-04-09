@@ -1,4 +1,4 @@
-﻿import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { Resizable } from 're-resizable';
@@ -32,7 +32,9 @@ export type OrderColumnKey =
   | 'productionScheduleDate' | 'prodSchedDayDiff'
   // ── More 區域 ──
   | 'inTransitQty' | 'undeliveredQty' | 'lineItemNote'
-  | 'internalNote' | 'materialPOContent';
+  | 'internalNote' | 'materialPOContent'
+  // ── 刪單標記 ──
+  | 'deletionCode';
 
 export interface OrderColumn {
   key: OrderColumnKey;
@@ -102,6 +104,8 @@ export interface OrderRow {
   isRejectedOrder?: boolean;
   // ── 調整單據類型標記（廠商選擇拆單時記錄） ──
   adjustmentType?: 'modify' | 'reject' | 'split' | 'split-order';
+  // ── 刪單標記（刪單修正單完成 CL 時寫入修正單號） ──
+  deletionCode?: string;
 }
 
 interface AdvancedOrderTableProps {
@@ -206,6 +210,8 @@ export const defaultOrderColumns: OrderColumn[] = [
   { key: 'lineItemNote',         label: '單項小記',           width: 110,  minWidth: 90,  visible: false },
   { key: 'internalNote',         label: '項目註記(內部)',      width: 280,  minWidth: 150, visible: false },
   { key: 'materialPOContent',    label: '物料PO內文',         width: 280,  minWidth: 150, visible: false },
+  // 刪單標記（預設隱藏，CL Tab 可開啟查看）
+  { key: 'deletionCode',         label: '刪除碼',             width: 160,  minWidth: 120, visible: false },
 ];
 
 export function getOrderColumns(): OrderColumn[] {
@@ -1032,6 +1038,26 @@ export function AdvancedOrderTable({
         <p className="font-['Public_Sans:Regular',sans-serif] font-normal leading-[22px] text-[#1c252e] text-[14px] truncate" title={display}>
           {display}
         </p>
+      );
+    }
+
+    // ── 刪除碼（有值時顯示紅色 badge 樣式）──
+    if (key === 'deletionCode') {
+      const val = row.deletionCode;
+      if (!val) {
+        return <p className="font-['Public_Sans:Regular',sans-serif] font-normal leading-[22px] text-[14px] text-[#919eab]">—</p>;
+      }
+      return (
+        <div className="flex items-center gap-[6px]">
+          <div className="bg-[rgba(255,86,48,0.10)] rounded-[4px] px-[6px] py-[1px] flex items-center">
+            <p
+              className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#b71d18] leading-[20px] truncate"
+              title={`刪除碼: ${val}`}
+            >
+              {val}
+            </p>
+          </div>
+        </div>
       );
     }
 
