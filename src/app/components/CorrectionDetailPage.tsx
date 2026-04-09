@@ -1444,11 +1444,11 @@ export function CorrectionDetailPage({
                           <p className="font-['Public_Sans:Regular',sans-serif] font-normal text-[12px] text-[#637381] leading-[18px] shrink-0">
                             新交貨量合計：
                             <strong className={dNotMatchPurchaser ? 'text-[#ff5630]' : 'text-[#118d57]'}>{dTotalNewQty}</strong>
-                            　｜　採購設定目標量：<strong>{purchaserAdjustedTotal}</strong>
+                            　｜　採購修正量：<strong>{purchaserAdjustedTotal}</strong>
                           </p>
                           {dNotMatchPurchaser && (
                             <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#ff5630] leading-[18px] shrink-0">
-                              ⚠ 新交貨量合計須等於採購設定目標量（{purchaserAdjustedTotal}），提交已鎖定
+                              ⚠ 新交貨量合計須等於採購修正量（{purchaserAdjustedTotal}），提交已鎖定
                             </p>
                           )}
                           {dHasZeroQty && (

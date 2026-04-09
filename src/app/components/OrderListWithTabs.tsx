@@ -894,10 +894,9 @@ export function OrderListWithTabs({ defaultTab = 'NP', userRole }: OrderListWith
       <div className="relative shrink-0 w-full" style={{ borderBottom: 'none' }}>
         {activeTab === 'ALL' ? (
           <div className="flex flex-col gap-[12px] px-[20px] pt-[20px] pb-[16px]" style={{ borderBottom: 'none' }}>
-            {/* Row 1: 單號序號 + 訂單號碼 + 訂單狀態 */}
+            {/* Row 1: 單號序號 + 訂單狀態 */}
             <div className="flex gap-[16px] items-start">
               <SearchField label="單號序號" value={docSeqNoSearch} onChange={setDocSeqNoSearch} />
-              <SearchField label="訂單號碼" value={orderNoSearch} onChange={setOrderNoSearch} />
               <StatusMultiSelect label="訂單狀態" selected={statusFilter} onChange={setStatusFilter} />
             </div>
             {/* Row 2: 訂單日期起迄 */}
@@ -912,7 +911,6 @@ export function OrderListWithTabs({ defaultTab = 'NP', userRole }: OrderListWith
             <SearchField label="單號序號" value={docSeqNoSearch} onChange={setDocSeqNoSearch} />
             <SearchField label="訂單日期(起)" value={orderDateFrom} onChange={setOrderDateFrom} type="date" />
             <SearchField label="訂單日期(迄)" value={orderDateTo} onChange={setOrderDateTo} type="date" />
-            <SearchField label="訂單號碼" value={orderNoSearch} onChange={setOrderNoSearch} />
           </div>
         )}
       </div>
@@ -971,18 +969,26 @@ export function OrderListWithTabs({ defaultTab = 'NP', userRole }: OrderListWith
       />
 
       {/* Advanced Table */}
+      {/* docNoMode: 啟用 onDocNoClick 時左側已有 sticky 單號序號欄，動態欄位中的 docSeqNo 應隱藏 */}
+      {(() => {
+        const docNoMode = activeTab === 'CK' || activeTab === 'CL' || activeTab === 'ALL';
+        const tableInitialColumns = docNoMode
+          ? defaultOrderColumns.map(col =>
+              col.key === 'docSeqNo' ? { ...col, visible: false } : { ...col }
+            )
+          : undefined;
+        const docNoClick = (activeTab === 'CK' || activeTab === 'CL')
+          ? handleMoreOptionsClick
+          : activeTab === 'ALL'
+            ? (row: typeof searchFilteredOrders[0]) => { if (row.status === 'CK' || row.status === 'CL') handleMoreOptionsClick(row); else handleOrderConfirmClick(row); }
+            : undefined;
+        return (
       <AdvancedOrderTable
         activeTab={activeTab}
         data={searchFilteredOrders}
         onOrderConfirm={handleOrderConfirmClick}
         onMoreOptions={(activeTab === 'ALL' || activeTab === 'CK' || activeTab === 'CL') ? undefined : handleMoreOptionsClick}
-        onDocNoClick={
-          (activeTab === 'CK' || activeTab === 'CL')
-            ? handleMoreOptionsClick
-            : activeTab === 'ALL'
-              ? (row) => { if (row.status === 'CK' || row.status === 'CL') handleMoreOptionsClick(row); else handleOrderConfirmClick(row); }
-              : undefined
-        }
+        onDocNoClick={docNoClick}
         userEmail={currentUserEmail}
         userRole={userRole}
         onColumnsChange={handleColumnsChange}
@@ -1007,7 +1013,10 @@ export function OrderListWithTabs({ defaultTab = 'NP', userRole }: OrderListWith
             </div>
           ) : undefined
         }
+        initialColumns={tableInitialColumns}
       />
+        );
+      })()}
 
       {/* ===== 批次回覆匯入 Overlay ===== */}
       {showCsvImport && (

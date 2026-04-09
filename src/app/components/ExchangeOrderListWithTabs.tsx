@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import svgPaths from "@/imports/svg-imw9bns98t";
 import { OrderDetail } from './OrderDetail';
-import { AdvancedOrderTable, getOrderColumns } from './AdvancedOrderTable';
+import { AdvancedOrderTable, getOrderColumns, defaultOrderColumns } from './AdvancedOrderTable';
 import type { OrderRow, OrderColumn, ScheduleLine } from './AdvancedOrderTable';
 import { TableToolbar } from './TableToolbar';
 import { ColumnSelector } from './ColumnSelector';
@@ -552,10 +552,9 @@ export function ExchangeOrderListWithTabs({ userRole }: { userRole?: string }) {
       <div className="relative shrink-0 w-full" style={{ borderBottom: 'none' }}>
         {activeTab === 'ALL' ? (
           <div className="flex flex-col gap-[12px] px-[20px] pt-[20px] pb-[16px]" style={{ borderBottom: 'none' }}>
-            {/* Row 1: 單號序號 + 訂單號碼 + 訂單狀態 */}
+            {/* Row 1: 單號序號 + 訂單狀態 */}
             <div className="flex gap-[16px] items-start">
               <SearchField label="單號序號" value={docSeqNoSearch} onChange={setDocSeqNoSearch} />
-              <SearchField label="訂單號碼" value={orderNoSearch}  onChange={setOrderNoSearch} />
               <StatusMultiSelect label="訂單狀態" selected={statusFilter} onChange={setStatusFilter} options={EXCHANGE_STATUS_OPTIONS} />
             </div>
             {/* Row 2: 訂單日期起迄 */}
@@ -570,7 +569,6 @@ export function ExchangeOrderListWithTabs({ userRole }: { userRole?: string }) {
             <SearchField label="單號序號"     value={docSeqNoSearch} onChange={setDocSeqNoSearch} />
             <SearchField label="訂單日期(起)" value={orderDateFrom}  onChange={setOrderDateFrom} type="date" />
             <SearchField label="訂單日期(迄)" value={orderDateTo}    onChange={setOrderDateTo}   type="date" />
-            <SearchField label="訂單號碼"     value={orderNoSearch}  onChange={setOrderNoSearch} />
           </div>
         )}
       </div>
@@ -630,21 +628,33 @@ export function ExchangeOrderListWithTabs({ userRole }: { userRole?: string }) {
       />
 
       {/* ── Table ────────────────────────────────────────────────────────── */}
-      <AdvancedOrderTable
-        activeTab={activeTab}
-        data={searchFilteredData}
-        onOrderConfirm={handleOrderConfirmClick}
-        onMoreOptions={handleMoreOptionsClick}
-        userEmail={currentUserEmail}
-        userRole={userRole}
-        onColumnsChange={handleColumnsChange}
-        columnsVersion={columnsVersion}
-        appliedFilters={appliedFilters}
-        selectedOrderIds={selectedOrderIds}
-        onToggleOrder={handleToggleOrder}
-        onSelectAll={handleSelectAll}
-        onBatchAction={handleBatchAction}
-      />
+      {/* docNoMode: CK/CL/ALL 用藍字連結取代 ⋮，NP/V/B 保留黃色訂單確認按鈕 */}
+      {(() => {
+        const docNoMode = activeTab === 'CK' || activeTab === 'CL' || activeTab === 'ALL';
+        const tableInitialColumns = docNoMode
+          ? defaultOrderColumns.map(col =>
+              col.key === 'docSeqNo' ? { ...col, visible: false } : { ...col }
+            )
+          : undefined;
+        return (
+          <AdvancedOrderTable
+            activeTab={activeTab}
+            data={searchFilteredData}
+            onOrderConfirm={!docNoMode ? handleOrderConfirmClick : undefined}
+            onDocNoClick={docNoMode ? handleMoreOptionsClick : undefined}
+            userEmail={currentUserEmail}
+            userRole={userRole}
+            onColumnsChange={handleColumnsChange}
+            columnsVersion={columnsVersion}
+            appliedFilters={appliedFilters}
+            selectedOrderIds={selectedOrderIds}
+            onToggleOrder={handleToggleOrder}
+            onSelectAll={handleSelectAll}
+            onBatchAction={handleBatchAction}
+            initialColumns={tableInitialColumns}
+          />
+        );
+      })()}
 
       {/* ── 批次回覆匯入 Overlay ─────────────────────────────────────────── */}
       {showCsvImport && (
