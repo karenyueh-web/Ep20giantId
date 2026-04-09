@@ -119,7 +119,7 @@ interface CorrectionCreatePageProps {
 }
 
 export function CorrectionCreatePage({ userRole, onNavigateToList }: CorrectionCreatePageProps) {
-  const { orders, addCorrectionOrder, updateCorrectionOrder, correctionOrders, generateCorrectionDocNo, addCorrectionHistory } = useOrderStore();
+  const { orders, addCorrectionOrder, updateCorrectionOrder, correctionOrders, generateCorrectionDocNo, addCorrectionHistory, addOrderHistory } = useOrderStore();
 
   // ── 視圖狀態：'list' = 訂單列表，'detail' = 修正單明細 ──────────────────
   const [view, setView] = useState<'list' | 'detail'>('list');
@@ -464,6 +464,13 @@ export function CorrectionCreatePage({ userRole, onNavigateToList }: CorrectionC
         date: now, event: '修正單開立並提交（批次匯入-不拆單）', operator: op,
         remark: `修正單號: ${docNo}，不拆單 → V；${changeSummary}`,
       });
+      // ── 在原訂單歷程中記錄開立修正單事件（修正單號會自動顯示為連結）──
+      addOrderHistory(order.id, {
+        date: now,
+        event: '開立修正單',
+        operator: op,
+        remark: `修正單號: ${docNo}，修正類型：不拆單`,
+      });
       createdCount++;
     }
     // ── 刪單（D碼）──
@@ -502,6 +509,13 @@ export function CorrectionCreatePage({ userRole, onNavigateToList }: CorrectionC
       addCorrectionHistory(correctionId, {
         date: now, event: '修正單開立並提交（批次匯入-刪單）', operator: op,
         remark: `修正單號: ${docNo}，刪單 → V`,
+      });
+      // ── 在原訂單歷程中記錄開立修正單事件 ──
+      addOrderHistory(order.id, {
+        date: now,
+        event: '開立修正單',
+        operator: op,
+        remark: `修正單號: ${docNo}，修正類型：刪單`,
       });
       deleteCount++;
     }
@@ -574,6 +588,13 @@ export function CorrectionCreatePage({ userRole, onNavigateToList }: CorrectionC
       addCorrectionHistory(correctionId, {
         date: now, event: '修正單開立並提交（批次匯入-拆單）', operator: op,
         remark: `修正單號: ${docNo}，拆單 → V；${splitSummaryParts.join('；')}`,
+      });
+      // ── 在原訂單歷程中記錄開立修正單事件 ──
+      addOrderHistory(order.id, {
+        date: now,
+        event: '開立修正單',
+        operator: op,
+        remark: `修正單號: ${docNo}，修正類型：拆單`,
       });
     }
     showToast(`批次建立拆單修正單完成：${result.validRows.length} 張已提交廠商 (V)`);
@@ -697,26 +718,42 @@ export function CorrectionCreatePage({ userRole, onNavigateToList }: CorrectionC
           onIndexChange={setDetailIndex}
           onSubmit={(idx: number, data: CorrectionFormData, isDelete?: boolean) => {
             const order = detailOrders[idx];
+            const docNo = getOrderDocNo(order.id);
             const corrRow = buildCorrectionOrder(order, 'V', data, isDelete);
             saveOrderToStore(corrRow);
+            // ── 在原訂單歷程中記錄開立修正單事件（修正單號自動顯示為連結）──
+            addOrderHistory(order.id, {
+              date: nowDateStr(),
+              event: '開立修正單',
+              operator: operatorByRole(userRole as any),
+              remark: `修正單號: ${docNo}，修正類型：${isDelete ? '刪單' : selectedCorrectionType}`,
+            });
             if (detailOrders.length === 1) {
               // ── 單筆：維持原有導航行為 ──────────────────────────────────
               setSelectedOrderIds(new Set());
               setView('list');
-              showToast(`修正單 ${getOrderDocNo(order.id)} 號已提交廠商，狀態轉為待廠商確認(V)`);
+              showToast(`修正單 ${docNo} 號已提交廠商，狀態轉為待廠商確認(V)`);
               setTimeout(() => onNavigateToList?.(), 2200);
             }
             // 批次模式：各單各有獨立單號，不再 autoSaveRemainingAsDR
           }}
           onSave={(idx: number, data: CorrectionFormData, isDelete?: boolean) => {
             const order = detailOrders[idx];
+            const docNo = getOrderDocNo(order.id);
             const corrRow = buildCorrectionOrder(order, 'DR', data, isDelete);
             saveOrderToStore(corrRow);
+            // ── 在原訂單歷程中記錄開立修正單草稿事件 ──
+            addOrderHistory(order.id, {
+              date: nowDateStr(),
+              event: '開立修正單（草稿）',
+              operator: operatorByRole(userRole as any),
+              remark: `修正單號: ${docNo}，修正類型：${isDelete ? '刪單' : selectedCorrectionType}（DR暫存）`,
+            });
             if (detailOrders.length === 1) {
               // ── 單筆：維持原有導航行為 ──────────────────────────────────
               setSelectedOrderIds(new Set());
               setView('list');
-              showToast(`修正單 ${getOrderDocNo(order.id)} 號已暫存為草稿(DR)`);
+              showToast(`修正單 ${docNo} 號已暫存為草稿(DR)`);
               setTimeout(() => onNavigateToList?.(), 2200);
             }
             // 批次模式：各單各有獨立單號，不再 autoSaveRemainingAsDR

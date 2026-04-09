@@ -798,36 +798,50 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
     }
   };
 
-  // V: 全部同意（→ CP）
+  // V: 全部同意（→ SS，並回寫原訂單）
   const handleBulkAgree = () => {
     const rows = getSelectedRows().filter(r => r.correctionStatus === 'V');
     rows.forEach(row => {
-      updateCorrectionOrder(row.id, row.correctionDocNo, { correctionStatus: 'CP' });
+      // 執行訂單回寫
+      if (row.correctionType === '拆單' && row.savedDeliveryRows && row.savedDeliveryRows.length > 1) {
+        executeSplitFromCorrection(row);
+      } else if (row.correctionType === '不拆單') {
+        applyNonSplitCorrectionToOrder(row);
+      }
+      // 修正單推進 SS
+      updateCorrectionOrder(row.id, row.correctionDocNo, { correctionStatus: 'SS' });
       addCorrectionHistory(row.id, {
         date: nowDateStr(),
-        event: '批次同意修正',
+        event: '批次同意修正，資料已回寫原訂單 (→SS)',
         operator: operatorByRole(userRole as any),
-        remark: '',
+        remark: `修正類型：${row.correctionType}`,
       });
     });
     setSelectedIds(new Set());
-    showToast(`已批次同意 ${rows.length} 張修正單，狀態轉為 CP`);
+    showToast(`已批次同意 ${rows.length} 張修正單，訂單已更新，狀態轉為 SS`);
   };
 
-  // B: 全部確認（→ CP）
+  // B: 全部確認（→ SS，並回寫原訂單）
   const handleBulkConfirm = () => {
     const rows = getSelectedRows().filter(r => r.correctionStatus === 'B');
     rows.forEach(row => {
-      updateCorrectionOrder(row.id, row.correctionDocNo, { correctionStatus: 'CP' });
+      // 執行訂單回寫
+      if (row.correctionType === '拆單' && row.savedDeliveryRows && row.savedDeliveryRows.length > 1) {
+        executeSplitFromCorrection(row);
+      } else if (row.correctionType === '不拆單') {
+        applyNonSplitCorrectionToOrder(row);
+      }
+      // 修正單推進 SS
+      updateCorrectionOrder(row.id, row.correctionDocNo, { correctionStatus: 'SS' });
       addCorrectionHistory(row.id, {
         date: nowDateStr(),
-        event: '批次採購確認',
+        event: '批次採購確認，資料已回寫原訂單 (→SS)',
         operator: operatorByRole(userRole as any),
-        remark: '',
+        remark: `修正類型：${row.correctionType}`,
       });
     });
     setSelectedIds(new Set());
-    showToast(`已批次確認 ${rows.length} 張修正單，狀態轉為 CP`);
+    showToast(`已批次確認 ${rows.length} 張修正單，訂單已更新，狀態轉為 SS`);
   };
 
   // 通用：檢視（支援多張，任意狀態）
@@ -1069,29 +1083,160 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
     }
   };
 
+  // ── 不拆單修正單到達 CP 時，回寫原訂單欄位 ─────────────────────────────
+  // 欄位對應（依圖說明）：
+  //   新料號 (newMaterialNo)                → materialNo
+  //   項次N-新廠商交期 (newVendorDate)      → scheduleLines[N].deliveryDate
+  //   項次N-新交貨量 (newQty)              → scheduleLines[N].quantity
+  //   訂貨量 (orderQty)                    → 所有有效項次 newQty 加總
+  //   廠商可交貨日期 (vendorDeliveryDate)   → 最後一筆(最晚)項次的 newVendorDate
+  const applyNonSplitCorrectionToOrder = (corrRow: CorrectionOrderRow) => {
+    const now = nowDateStr();
+    const rows = corrRow.savedDeliveryRows;
+
+    // 找到原訂單
+    let origOrder = storeOrders.find(
+      o => o.orderNo === corrRow.orderNo && o.orderSeq === corrRow.orderSeq
+    );
+    if (!origOrder) {
+      // 找不到時從修正單資料還原基本訂單並加入 store
+      const extraSource = extraCkOrders.find(
+        o => o.orderNo === corrRow.orderNo && o.orderSeq === corrRow.orderSeq
+      );
+      const siblingOrder = !extraSource
+        ? storeOrders.find(o => o.orderNo === corrRow.orderNo)
+        : undefined;
+      const reconstructedId = Date.now() + Math.floor(Math.random() * 100000);
+      const reconstructed: OrderRow = {
+        ...(extraSource ? { ...extraSource } : {}),
+        ...(siblingOrder && !extraSource ? {
+          orderType: siblingOrder.orderType,
+          purchaser: siblingOrder.purchaser,
+          comparePrice: siblingOrder.comparePrice,
+          unit: siblingOrder.unit,
+          currency: siblingOrder.currency,
+          leadtime: siblingOrder.leadtime,
+          customerBrand: siblingOrder.customerBrand,
+          vendorMaterialNo: siblingOrder.vendorMaterialNo,
+          specification: siblingOrder.specification,
+          lineItemNote: siblingOrder.lineItemNote,
+          internalNote: siblingOrder.internalNote,
+          materialPOContent: siblingOrder.materialPOContent,
+        } : {}),
+        id: reconstructedId,
+        status: 'CK' as const,
+        orderNo: corrRow.orderNo,
+        orderDate: corrRow.orderDate,
+        orderType: extraSource?.orderType || siblingOrder?.orderType || 'Z2QB',
+        company: corrRow.company,
+        purchaseOrg: corrRow.purchaseOrg,
+        orderSeq: corrRow.orderSeq,
+        docSeqNo: corrRow.orderNo + corrRow.orderSeq,
+        orderQty: corrRow.orderQty ?? 0,
+        acceptQty: corrRow.acceptQty ?? 0,
+        vendorCode: corrRow.vendorCode,
+        vendorName: corrRow.vendorName,
+        materialNo: corrRow.materialNo ?? '',
+        productName: corrRow.productName ?? '',
+        specification: extraSource?.specification || siblingOrder?.specification || '',
+        expectedDelivery: corrRow.expectedDelivery ?? corrRow.vendorDeliveryDate ?? '',
+        vendorDeliveryDate: corrRow.vendorDeliveryDate ?? '',
+        inTransitQty: corrRow.inTransitQty ?? 0,
+        undeliveredQty: Math.max(0, (corrRow.orderQty ?? 0) - (corrRow.acceptQty ?? 0) - (corrRow.inTransitQty ?? 0)),
+        deliveryQty: corrRow.deliveryQty ?? corrRow.orderQty ?? 0,
+        agreedDate: corrRow.agreedDate ?? '',
+      };
+      addStoreOrder(reconstructed);
+      addStoreOrderHistory(reconstructedId, {
+        date: now,
+        event: '訂單建立（由不拆單修正單還原）',
+        operator: '系統',
+        remark: `原訂單 ${corrRow.orderNo}-${corrRow.orderSeq} 由修正單 ${corrRow.correctionDocNo} 自動建立`,
+      });
+      origOrder = reconstructed;
+    }
+
+    // 建構新 scheduleLines（過濾已刪除的項次）
+    const validRows = rows ? rows.filter(r => !r.deleted) : [];
+
+    const updates: Record<string, any> = {};
+
+    if (validRows.length > 0) {
+      // scheduleLines：以修正單每筆項次的新廠商交期與新交貨量覆蓋
+      const newScheduleLines = validRows.map((r, idx) => ({
+        index: idx + 1,
+        expectedDelivery: r.expectedDelivery || origOrder!.expectedDelivery,
+        deliveryDate: r.newVendorDate,
+        quantity: parseFloat(r.newQty) || 0,
+      }));
+
+      // orderQty = 所有有效項次 newQty 加總
+      const totalQty = newScheduleLines.reduce((sum, l) => sum + l.quantity, 0);
+
+      // vendorDeliveryDate = 最後一筆(最晚)項次的廠商交期
+      const lastVendorDate = newScheduleLines[newScheduleLines.length - 1].deliveryDate;
+
+      updates.scheduleLines = newScheduleLines;
+      updates.orderQty = totalQty;
+      updates.vendorDeliveryDate = lastVendorDate;
+    }
+
+    // 若修正單有新料號，覆蓋原訂單的料號
+    if (corrRow.newMaterialNo && corrRow.newMaterialNo !== origOrder.materialNo) {
+      updates.materialNo = corrRow.newMaterialNo;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      updateStoreOrderFields(origOrder.id, updates);
+    }
+
+    addStoreOrderHistory(origOrder.id, {
+      date: now,
+      event: '修正單回寫完成（不拆單）',
+      operator: '系統',
+      remark: '',
+    });
+  };
+
   const handleDetailApprove = () => {
     const row = detailRows[detailIndex];
     if (!row) return;
-    // V → CP（廠商同意/確認）, B → CP（採購確認修正單）
+    // V → CP，B → CP（採購確認修正單）
     const newStatus = row.correctionStatus === 'V' ? 'CP'
       : row.correctionStatus === 'B' ? 'CP'
       : row.correctionStatus;
-    if (newStatus !== row.correctionStatus) {
-      updateCorrectionOrder(row.id, row.correctionDocNo, { correctionStatus: newStatus });
-    }
-    addCorrectionHistory(row.id, {
-      date: nowDateStr(),
-      event: `修正確認`,
-      operator: operatorByRole(userRole as any),
-      remark: '',
-    });
 
-    // ── 拆單修正單：修正確認後若為拆單類型，執行原訂單拆單作業 ──
-    if (newStatus === 'CP' && row.correctionType === '拆單' && row.savedDeliveryRows && row.savedDeliveryRows.length > 1) {
-      executeSplitFromCorrection(row);
+    if (newStatus === 'CP') {
+      // 執行訂單回寫，然後直接推進 SS
+      if (row.correctionType === '拆單' && row.savedDeliveryRows && row.savedDeliveryRows.length > 1) {
+        // 拆單：執行拆單作業
+        executeSplitFromCorrection(row);
+      } else if (row.correctionType === '不拆單') {
+        // 不拆單：回寫料號、scheduleLines、訂貨量、廠商可交貨日期
+        applyNonSplitCorrectionToOrder(row);
+      }
+      // 訂單回寫後，修正單直接推進 SS（修正通過）
+      updateCorrectionOrder(row.id, row.correctionDocNo, { correctionStatus: 'SS' });
+      addCorrectionHistory(row.id, {
+        date: nowDateStr(),
+        event: '修正確認，資料已回寫原訂單 (→SS)',
+        operator: operatorByRole(userRole as any),
+        remark: `修正類型：${row.correctionType}`,
+      });
+      showToast(`修正確認完成（${row.correctionDocNo}），訂單已更新，狀態轉為 SS`);
+    } else {
+      if (newStatus !== row.correctionStatus) {
+        updateCorrectionOrder(row.id, row.correctionDocNo, { correctionStatus: newStatus });
+      }
+      addCorrectionHistory(row.id, {
+        date: nowDateStr(),
+        event: `修正確認`,
+        operator: operatorByRole(userRole as any),
+        remark: '',
+      });
+      showToast(`修正確認完成（${row.correctionDocNo}），狀態轉為 ${newStatus}`);
     }
 
-    showToast(`修正確認完成（${row.correctionDocNo}），狀態轉為 ${newStatus}`);
     if (detailRows.length <= 1) setDetailRows([]);
   };
   const handleDetailDisagree = (reason: string, adjustedRows?: { expectedDelivery: string; vendorOriginalDate: string; newVendorDate: string; originalQty: number; newQty: string; deleted?: boolean; splitNewMaterialNo?: string }[], newMaterialNo?: string) => {
