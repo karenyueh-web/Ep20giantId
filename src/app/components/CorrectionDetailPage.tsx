@@ -642,8 +642,10 @@ export function CorrectionDetailPage({
 
   // ── 最低需求：新交貨量合計不可少於 驗收量＋在途量 ──────────────────────────
   const minRequiredQty = (order.acceptQty ?? 0) + (order.inTransitQty ?? 0);
+  // belowMinQty：拆單與不拆單皆適用（加總 < 驗收量+在途量 → 不合法）
   const belowMinQty = !isDeleteMode && minRequiredQty > 0 && totalNewQty < minRequiredQty;
-  const aboveMaxQty = !isDeleteMode && !isSplitMode && totalNewQty > (order.orderQty ?? 0);
+  // aboveMaxQty：拆單與不拆單皆不可超過原訂貨量
+  const aboveMaxQty = !isDeleteMode && totalNewQty > (order.orderQty ?? 0);
   // 交期不可為過去日期
   const todayStr = (() => { const t = new Date(); return `${t.getFullYear()}/${String(t.getMonth()+1).padStart(2,'0')}/${String(t.getDate()).padStart(2,'0')}`; })();
   const hasPastDate = !isReadOnly && !isDeleteMode && form.deliveryRows.some(r => !r.deleted && !!r.newVendorDate && r.newVendorDate < todayStr);
