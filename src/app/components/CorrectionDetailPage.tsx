@@ -85,6 +85,18 @@ const nextRid = () => ++_rid;
 
 // ── Generate initial delivery rows from order ──────────────────────────────────
 function makeInitialRows(order: OrderRow): DeliveryRow[] {
+  // 若原訂單已有多筆拆期排程（scheduleLines），展開為各自獨立的行
+  if (order.scheduleLines && order.scheduleLines.length > 1) {
+    return order.scheduleLines.map(sl => ({
+      id: nextRid(),
+      expectedDelivery: sl.expectedDelivery ?? order.expectedDelivery ?? '',
+      vendorOriginalDate: sl.deliveryDate ?? order.vendorDeliveryDate ?? '',
+      newVendorDate: sl.deliveryDate ?? order.vendorDeliveryDate ?? '',
+      originalQty: sl.quantity,
+      newQty: String(sl.quantity),
+    }));
+  }
+  // 單筆排程（或尚無 scheduleLines）：維持原邏輯
   const total = order.deliveryQty ?? order.orderQty ?? 0;
   return [
     { id: nextRid(), expectedDelivery: order.expectedDelivery ?? order.vendorDeliveryDate ?? '', vendorOriginalDate: order.vendorDeliveryDate ?? '', newVendorDate: order.vendorDeliveryDate ?? '', originalQty: total, newQty: String(total) },

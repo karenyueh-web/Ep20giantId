@@ -943,7 +943,14 @@ export function OrderListWithTabs({ defaultTab = 'NP', userRole }: OrderListWith
         activeTab={activeTab}
         data={searchFilteredOrders}
         onOrderConfirm={handleOrderConfirmClick}
-        onMoreOptions={handleMoreOptionsClick}
+        onMoreOptions={(activeTab === 'ALL' || activeTab === 'CK' || activeTab === 'CL') ? undefined : handleMoreOptionsClick}
+        onDocNoClick={
+          (activeTab === 'CK' || activeTab === 'CL')
+            ? handleMoreOptionsClick
+            : activeTab === 'ALL'
+              ? (row) => { if (row.status === 'CK' || row.status === 'CL') handleMoreOptionsClick(row); else handleOrderConfirmClick(row); }
+              : undefined
+        }
         userEmail={currentUserEmail}
         userRole={userRole}
         onColumnsChange={handleColumnsChange}
