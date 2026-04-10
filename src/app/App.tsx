@@ -7,6 +7,7 @@ import { VendorAccountReviewPageNew } from "@/app/components/VendorAccountReview
 import { GiantAccountManagementPageNew } from "@/app/components/GiantAccountManagementPageNew";
 import { UnderConstructionPage } from "@/app/components/UnderConstructionPage";
 import { ShippingBasicSettingsPage } from "@/app/components/ShippingBasicSettingsPage";
+import { ShipmentCreatePage } from "@/app/components/ShipmentCreatePage";
 import { CorrectionCreatePage } from "@/app/components/CorrectionCreatePage";
 import { CorrectionListWithTabs } from "@/app/components/CorrectionListWithTabs";
 import { HistoryCorrectionListPage } from "@/app/components/HistoryCorrectionListPage";
@@ -176,6 +177,20 @@ export default function App() {
             breadcrumb=""
           >
             <OrderScheduleInquiryPage userRole={userRole} />
+          </ResponsivePageLayout>
+        );
+      // ── 出貨單管理：建立出貨單 ──
+      case 'shipping-create':
+        return (
+          <ResponsivePageLayout
+            currentPage={currentPage}
+            onPageChange={handlePageChange}
+            onLogout={handleLogout}
+            userRole={userRole}
+            title="建立出貨單"
+            breadcrumb="出貨單管理 • 建立出貨單"
+          >
+            <ShipmentCreatePage userRole={userRole} />
           </ResponsivePageLayout>
         );
       // ── 尚未建置的功能頁面 → 畫面建置中 ──

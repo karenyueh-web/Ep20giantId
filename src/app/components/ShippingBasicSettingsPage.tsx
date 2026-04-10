@@ -1,4 +1,4 @@
-﻿/**
+/**
  * ShippingBasicSettingsPage — 出貨單 • 基本設定
  *
  * 三個 Tab 分頁：
@@ -237,8 +237,8 @@ const GEM_DESTINATION_DATA: GemDestinationRow[] = [
   { id: 4, purchaseOrg: '4111', transportType: 'Z2', destination: 'AMSTERDAM', updatedInfo: 'Allen Zou 鄧芳筆 -2024/03/20' },
   { id: 5, purchaseOrg: '4121', transportType: 'A', destination: 'AMSTERDAM', updatedInfo: 'Allen Zou 鄧芳筆 -2024/03/20' },
   { id: 6, purchaseOrg: '4121', transportType: 'S', destination: 'ROTTERDAM', updatedInfo: 'Allen Zou 鄧芳筆 -2024/03/20' },
-  { id: 7, purchaseOrg: '4131', transportType: 'A', destination: 'HAMBURG', updatedInfo: 'Allen Zou 鄧芳筆 -2024/03/20' },
-  { id: 8, purchaseOrg: '4131', transportType: 'Z1', destination: 'HAMBURG', updatedInfo: 'Allen Zou 鄧芳筆 -2024/03/20' },
+  { id: 7, purchaseOrg: '4121', transportType: 'A', destination: 'HAMBURG', updatedInfo: 'Allen Zou 鄧芳筆 -2024/03/20' },
+  { id: 8, purchaseOrg: '4121', transportType: 'Z1', destination: 'HAMBURG', updatedInfo: 'Allen Zou 鄧芳筆 -2024/03/20' },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -445,7 +445,7 @@ function StorageLocationTab() {
   // 搜尋過濾
   const filteredData = useMemo(() => {
     let result = data;
-    if (searchFactory.trim())       result = result.filter(r => r.factory.toLowerCase().includes(searchFactory.trim().toLowerCase()));
+    if (searchFactory)              result = result.filter(r => r.factory === searchFactory);
     if (searchLocationCode.trim())  result = result.filter(r => r.locationCode.toLowerCase().includes(searchLocationCode.trim().toLowerCase()));
     if (searchAddress.trim())       result = result.filter(r => (r.addressZh + r.addressEn).toLowerCase().includes(searchAddress.trim().toLowerCase()));
     return result;
@@ -471,7 +471,19 @@ function StorageLocationTab() {
     <div className="flex flex-col h-full overflow-hidden">
       {/* 搜尋列 */}
       <div className="shrink-0 flex gap-[16px] items-center px-[20px] py-[16px]">
-        <SearchField label="工廠"         value={searchFactory}      onChange={setSearchFactory} />
+        <div style={{ minWidth: '200px' }}>
+          <DropdownSelect
+            label="工廠"
+            value={searchFactory}
+            onChange={setSearchFactory}
+            options={[
+              { value: '', label: '全部' },
+              { value: 'GTM1', label: 'GTM1' },
+              { value: 'GTM9', label: 'GTM9' },
+              { value: 'GVM1', label: 'GVM1' },
+            ]}
+          />
+        </div>
         <SearchField label="儲存地點代號" value={searchLocationCode} onChange={setSearchLocationCode} />
         <SearchField label="地址"         value={searchAddress}      onChange={setSearchAddress} />
       </div>
@@ -829,7 +841,7 @@ function GemDestinationTab() {
           label="採購組織"
           value={form.purchaseOrg}
           onChange={v => setForm(f => ({ ...f, purchaseOrg: v }))}
-          options={[{ value: '4111', label: '4111' }, { value: '4121', label: '4121' }, { value: '4131', label: '4131' }]}
+          options={[{ value: '4111', label: '4111' }, { value: '4121', label: '4121' }]}
           error={!form.purchaseOrg}
         />
         <DropdownSelect

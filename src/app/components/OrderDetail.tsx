@@ -1356,8 +1356,8 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
                       </div>
                     )}
 
-                    {/* 聊天Icon：hideChatIcon=true 時隱藏 */}
-                    {!hideChatIcon && (
+                    {/* 聊天Icon：hideChatIcon=true 或 isReadOnly=true 時隱藏 */}
+                    {!hideChatIcon && !isReadOnly && (
                       <div
                         ref={chatIconRef}
                         className="relative size-[36px] cursor-pointer hover:opacity-70 transition-opacity"
