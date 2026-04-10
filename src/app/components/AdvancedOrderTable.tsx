@@ -32,9 +32,7 @@ export type OrderColumnKey =
   | 'productionScheduleDate' | 'prodSchedDayDiff'
   // ── More 區域 ──
   | 'inTransitQty' | 'undeliveredQty' | 'lineItemNote'
-  | 'internalNote' | 'materialPOContent'
-  // ── 刪單標記 ──
-  | 'deletionCode';
+  | 'internalNote' | 'materialPOContent';
 
 export interface OrderColumn {
   key: OrderColumnKey;
@@ -210,8 +208,6 @@ export const defaultOrderColumns: OrderColumn[] = [
   { key: 'lineItemNote',         label: '單項小記',           width: 110,  minWidth: 90,  visible: false },
   { key: 'internalNote',         label: '項目註記(內部)',      width: 280,  minWidth: 150, visible: false },
   { key: 'materialPOContent',    label: '物料PO內文',         width: 280,  minWidth: 150, visible: false },
-  // 刪單標記（預設隱藏，CL Tab 可開啟查看）
-  { key: 'deletionCode',         label: '刪除碼',             width: 160,  minWidth: 120, visible: false },
 ];
 
 export function getOrderColumns(): OrderColumn[] {
@@ -1041,26 +1037,6 @@ export function AdvancedOrderTable({
       );
     }
 
-    // ── 刪除碼（有值時顯示紅色 badge 樣式）──
-    if (key === 'deletionCode') {
-      const val = row.deletionCode;
-      if (!val) {
-        return <p className="font-['Public_Sans:Regular',sans-serif] font-normal leading-[22px] text-[14px] text-[#919eab]">—</p>;
-      }
-      return (
-        <div className="flex items-center gap-[6px]">
-          <div className="bg-[rgba(255,86,48,0.10)] rounded-[4px] px-[6px] py-[1px] flex items-center">
-            <p
-              className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#b71d18] leading-[20px] truncate"
-              title={`刪除碼: ${val}`}
-            >
-              {val}
-            </p>
-          </div>
-        </div>
-      );
-    }
-
     // ── 一般文字欄位 ──
     const value = row[key as keyof OrderRow];
     const displayValue = value !== undefined && value !== null && String(value).trim() !== '' ? String(value) : '-';
@@ -1236,7 +1212,7 @@ export function AdvancedOrderTable({
                     />
                   </div>
                 )}
-                {/* 單號序號 藍字底線連結（onDocNoClick 模式） */}
+                {/* 單號序號 藍字底線連結（onDocNoClick 模式）；刪單加上刪除線 */}
                 {onDocNoClick && (
                   <div
                     className="flex items-center px-[16px] shrink-0 border-r border-[rgba(145,158,171,0.08)] bg-white group-hover:bg-[#f6f7f8]"
@@ -1245,7 +1221,8 @@ export function AdvancedOrderTable({
                     <button
                       onClick={() => onDocNoClick(row)}
                       className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] text-[#1677ff] underline hover:text-[#0958d9] cursor-pointer truncate text-left"
-                      title={`${row.orderNo}${row.orderSeq}`}
+                      style={row.deletionCode ? { textDecoration: 'line-through underline', textDecorationColor: '#1677ff' } : undefined}
+                      title={row.deletionCode ? `${row.orderNo}${row.orderSeq}（刪單）` : `${row.orderNo}${row.orderSeq}`}
                     >
                       {row.orderNo}{row.orderSeq}
                     </button>

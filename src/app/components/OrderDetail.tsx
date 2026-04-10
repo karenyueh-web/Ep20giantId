@@ -1576,10 +1576,16 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
                             <div className="absolute inset-x-[20px] top-1/2 h-[1.5px] bg-[#ff5630] pointer-events-none z-[1]" />
                           )}
                           <div className="w-[60px] shrink-0">
-                            <p className={`font-['Public_Sans:Regular',sans-serif] text-[14px] leading-[22px] ${isDeletedOrder ? 'text-[rgba(145,158,171,0.5)]' : 'text-[#919eab]'}`}>{line.index}</p>
+                            <p
+                              className="font-['Public_Sans:Regular',sans-serif] text-[14px] leading-[22px]"
+                              style={{ color: isDeletedOrder ? '#919eab' : '#1c252e' }}
+                            >{line.index}</p>
                           </div>
                           <div className="w-[140px] shrink-0">
-                            <p className={`font-['Public_Sans:Regular',sans-serif] text-[14px] leading-[22px] ${isDeletedOrder ? 'text-[rgba(145,158,171,0.5)]' : 'text-[#919eab]'}`}>{line.expectedDelivery || '-'}</p>
+                            <p
+                              className="font-['Public_Sans:Regular',sans-serif] text-[14px] leading-[22px]"
+                              style={{ color: isDeletedOrder ? '#919eab' : '#1c252e' }}
+                            >{line.expectedDelivery || '-'}</p>
                           </div>
                           <div className="w-[180px] shrink-0">
                             {isRejectedOrder ? (
@@ -1592,7 +1598,7 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
                             ) : (
                               <p
                                 className="font-['Public_Sans:Regular',sans-serif] text-[14px] leading-[22px]"
-                                style={{ color: isDeletedOrder ? 'rgba(145,158,171,0.5)' : vendorDateChanged ? '#ff5630' : '#919eab' }}
+                                style={{ color: isDeletedOrder ? '#919eab' : vendorDateChanged ? '#ff5630' : '#1c252e' }}
                               >
                                 {line.vendorDeliveryDate || '-'}
                               </p>
@@ -1601,7 +1607,7 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
                           <div className="w-[120px] shrink-0">
                             <p
                               className="font-['Public_Sans:Regular',sans-serif] text-[14px] leading-[22px]"
-                              style={{ color: isDeletedOrder ? 'rgba(145,158,171,0.5)' : qtyChanged ? '#ff5630' : '#919eab' }}
+                              style={{ color: isDeletedOrder ? '#919eab' : qtyChanged ? '#ff5630' : '#1c252e' }}
                             >
                               {line.quantity}
                             </p>
@@ -1609,7 +1615,7 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
                           <div className="w-[140px] shrink-0">
                             <p
                               className="font-['Public_Sans:Regular',sans-serif] text-[14px] leading-[22px]"
-                              style={{ color: isDeletedOrder ? 'rgba(145,158,171,0.5)' : lineDiffColor }}
+                              style={{ color: isDeletedOrder ? '#919eab' : lineDiffColor }}
                             >
                               {isDeletedOrder ? '-' : lineDiffDisplay}
                             </p>

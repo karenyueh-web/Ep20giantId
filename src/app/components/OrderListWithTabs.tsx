@@ -9,6 +9,7 @@ import { FilterDialog, type FilterCondition } from './FilterDialog';
 import { BatchReplyImportOverlay, CsvToolbarButtons, exportOrdersCsv, exportOrdersExcel, exportBatchReplyScheduleLine, exportBatchReplySplitOrder, type BatchReplyImportResult, type ExportType } from './OrderCsvManager';
 import { SearchField } from './SearchField';
 import { StatusMultiSelect } from './StatusMultiSelect';
+import { DropdownSelect } from './DropdownSelect';
 import { useOrderStore, nowDateStr, operatorByRole, type HistoryEntry, type CorrectionOrderRow } from './OrderStoreContext';
 
 type OrderStatus = 'ALL' | 'NP' | 'V' | 'B' | 'CK' | 'CL';
@@ -96,8 +97,10 @@ export function OrderListWithTabs({ defaultTab = 'NP', userRole }: OrderListWith
     orderDateTo: string;
     orderNo: string;
     statusFilter: string[];
+    /** CL 頁籤專用：'' = 全部，'normal' = 正常單，'deleted' = 刪單 */
+    deletionFilter: '' | 'normal' | 'deleted';
   }
-  const emptySearch: TabSearchState = { docSeqNo: '', orderDateFrom: '', orderDateTo: '', orderNo: '', statusFilter: [] };
+  const emptySearch: TabSearchState = { docSeqNo: '', orderDateFrom: '', orderDateTo: '', orderNo: '', statusFilter: [], deletionFilter: '' };
   const [tabSearchMap, setTabSearchMap] = useState<Record<string, TabSearchState>>({});
 
   const getTabSearch = (tab: string): TabSearchState => tabSearchMap[tab] ?? emptySearch;
@@ -112,11 +115,13 @@ export function OrderListWithTabs({ defaultTab = 'NP', userRole }: OrderListWith
   const orderDateTo = currentSearch.orderDateTo;
   const orderNoSearch = currentSearch.orderNo;
   const statusFilter = currentSearch.statusFilter;
+  const deletionFilter = currentSearch.deletionFilter;
   const setDocSeqNoSearch = (v: string) => updateTabSearch(activeTab, { docSeqNo: v });
   const setOrderDateFrom = (v: string) => updateTabSearch(activeTab, { orderDateFrom: v });
   const setOrderDateTo = (v: string) => updateTabSearch(activeTab, { orderDateTo: v });
   const setOrderNoSearch = (v: string) => updateTabSearch(activeTab, { orderNo: v });
   const setStatusFilter = (v: string[]) => updateTabSearch(activeTab, { statusFilter: v });
+  const setDeletionFilter = (v: '' | 'normal' | 'deleted') => updateTabSearch(activeTab, { deletionFilter: v });
 
   // Success toast state
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -159,6 +164,12 @@ export function OrderListWithTabs({ defaultTab = 'NP', userRole }: OrderListWith
     if (statusFilter.length > 0) {
       result = result.filter(o => statusFilter.includes(o.status));
     }
+    // 正常單/刪單篩選（CL 頁籤專用）
+    if (deletionFilter === 'normal') {
+      result = result.filter(o => !o.deletionCode);
+    } else if (deletionFilter === 'deleted') {
+      result = result.filter(o => !!o.deletionCode);
+    }
     return result;
   })();
 
@@ -183,6 +194,11 @@ export function OrderListWithTabs({ defaultTab = 'NP', userRole }: OrderListWith
     }
     if (search.statusFilter.length > 0) {
       result = result.filter(o => search.statusFilter.includes(o.status));
+    }
+    if (search.deletionFilter === 'normal') {
+      result = result.filter(o => !o.deletionCode);
+    } else if (search.deletionFilter === 'deleted') {
+      result = result.filter(o => !!o.deletionCode);
     }
     return result;
   };
@@ -911,6 +927,21 @@ export function OrderListWithTabs({ defaultTab = 'NP', userRole }: OrderListWith
             <SearchField label="單號序號" value={docSeqNoSearch} onChange={setDocSeqNoSearch} />
             <SearchField label="訂單日期(起)" value={orderDateFrom} onChange={setOrderDateFrom} type="date" />
             <SearchField label="訂單日期(迄)" value={orderDateTo} onChange={setOrderDateTo} type="date" />
+            {/* CL 頁籤：正常單 / 刪單 篩選下拉 */}
+            {activeTab === 'CL' && (
+              <div className="w-[150px] shrink-0">
+                <DropdownSelect
+                  label="單據類型"
+                  value={deletionFilter}
+                  onChange={(val) => setDeletionFilter(val as '' | 'normal' | 'deleted')}
+                  options={[
+                    { value: '', label: '全部' },
+                    { value: 'normal', label: '正常單' },
+                    { value: 'deleted', label: '刪單' },
+                  ]}
+                />
+              </div>
+            )}
           </div>
         )}
       </div>
