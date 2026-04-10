@@ -156,6 +156,9 @@ export function CorrectionCreatePage({ userRole, onNavigateToList }: CorrectionC
   // ── Batch correction import overlay (合併) ──────────────────────────────────
   const [showBatchCorrectionImport, setShowBatchCorrectionImport] = useState(false);
 
+  // ── 快速刪單確認對話框 ──────────────────────────────────────────────────────
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [pendingDeleteOrders, setPendingDeleteOrders] = useState<OrderRow[]>([]);
 
   // ── Toast ──────────────────────────────────────────────────────────────────
   const [toastMsg, setToastMsg] = useState<string | null>(null);
@@ -602,6 +605,80 @@ export function CorrectionCreatePage({ userRole, onNavigateToList }: CorrectionC
     setTimeout(() => onNavigateToList?.(), 2200);
   };
 
+  // ── 快速刪單（捷徑）──────────────────────────────────────────────────────
+  // Step 1: 顯示確認對話框
+  const handleQuickDelete = () => {
+    if (selectedOrderIds.size === 0) { showToast('請先選取訂單'); return; }
+    const selected = filteredOrders.filter(o => selectedOrderIds.has(o.id));
+    setPendingDeleteOrders(selected);
+    setShowDeleteConfirm(true);
+  };
+
+  // Step 2: 用戶確認後才真正建立修正單
+  const handleConfirmQuickDelete = () => {
+    const now = nowDateStr();
+    const op = operatorByRole(userRole as any);
+    let deleteCount = 0;
+    pendingDeleteOrders.forEach((order, idx) => {
+      const docNo = generateCorrectionDocNo();
+      const correctionId = Date.now() + Math.floor(Math.random() * 10000) + idx;
+      const aQ = order.acceptQty ?? 0;
+      const iQ = order.inTransitQty ?? 0;
+      const calcNewQty = aQ + iQ;
+      const corrRow: CorrectionOrderRow = {
+        id: correctionId,
+        correctionDocNo: docNo,
+        correctionStatus: 'V',
+        correctionType: '刪單',
+        orderNo: order.orderNo,
+        orderSeq: order.orderSeq,
+        docSeqNo: (order.orderNo || '') + (order.orderSeq || ''),
+        vendorCode: order.vendorCode,
+        vendorName: order.vendorName,
+        purchaseOrg: order.purchaseOrg ?? '',
+        materialNo: order.materialNo ?? '',
+        productName: order.productName ?? '',
+        orderDate: order.orderDate,
+        orderQty: order.orderQty ?? 0,
+        acceptQty: order.acceptQty ?? 0,
+        company: order.company ?? '',
+        createdAt: now,
+        expectedDelivery: order.expectedDelivery ?? '',
+        vendorDeliveryDate: order.vendorDeliveryDate ?? '',
+        agreedDate: order.agreedDate ?? '',
+        inTransitQty: order.inTransitQty ?? 0,
+        deliveryQty: order.deliveryQty ?? order.orderQty ?? 0,
+        newMaterialNo: '',
+        correctionNote: '刪單',
+        savedDeliveryRows: [{
+          expectedDelivery: order.expectedDelivery ?? '',
+          vendorOriginalDate: order.vendorDeliveryDate || order.expectedDelivery || '',
+          newVendorDate: order.vendorDeliveryDate || order.expectedDelivery || '',
+          originalQty: order.deliveryQty ?? order.orderQty ?? 0,
+          newQty: String(calcNewQty),
+          deleted: false,
+        }],
+      };
+      addCorrectionOrder(corrRow);
+      addCorrectionHistory(correctionId, {
+        date: now, event: '修正單開立並提交（快速刪單）', operator: op,
+        remark: `修正單號: ${docNo}，刪單 → V`,
+      });
+      addOrderHistory(order.id, {
+        date: now,
+        event: '開立修正單',
+        operator: op,
+        remark: `修正單號: ${docNo}，修正類型：刪單`,
+      });
+      deleteCount++;
+    });
+    setShowDeleteConfirm(false);
+    setPendingDeleteOrders([]);
+    setSelectedOrderIds(new Set());
+    showToast(`${deleteCount} 張刪單修正單已提交廠商 (V)`);
+    setTimeout(() => onNavigateToList?.(), 2200);
+  };
+
   // ── Batch action bar ──
 
   const batchActions = (
@@ -620,6 +697,13 @@ export function CorrectionCreatePage({ userRole, onNavigateToList }: CorrectionC
         onClick={() => enterDetail('拆單')}
         className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] text-[#004680] leading-[24px] whitespace-nowrap cursor-pointer select-none px-[10px] py-[16px] hover:opacity-70 transition-opacity"
       >拆單</button>
+      {/* 分隔線 */}
+      <div className="h-[30px] w-[1px] bg-[#919eab] mx-[2px] opacity-30" />
+      <button
+        data-is-checkbox="true"
+        onClick={handleQuickDelete}
+        className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] text-[#ff5630] leading-[24px] whitespace-nowrap cursor-pointer select-none px-[10px] py-[16px] hover:opacity-70 transition-opacity"
+      >刪單</button>
     </div>
   );
 
@@ -879,6 +963,63 @@ export function CorrectionCreatePage({ userRole, onNavigateToList }: CorrectionC
         />
       )}
 
+
+      {/* ── 快速刪單確認對話框 ──────────────────────────────────────────────── */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-[rgba(0,0,0,0.5)] z-[200] flex items-center justify-center p-[20px]">
+          <div className="bg-white rounded-[16px] shadow-[0px_24px_48px_rgba(0,0,0,0.2)] w-full max-w-[560px] flex flex-col overflow-hidden">
+            {/* 標題區 */}
+            <div className="flex items-center gap-[12px] px-[24px] py-[20px] border-b border-[rgba(145,158,171,0.16)]">
+              <div className="shrink-0 w-[40px] h-[40px] rounded-full bg-[rgba(255,86,48,0.12)] flex items-center justify-center">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="#ff5630" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <div>
+                <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[#1c252e] text-[16px] leading-[24px]">確認刪單</p>
+                <p className="font-['Public_Sans:Regular',sans-serif] font-normal text-[#637381] text-[13px] leading-[20px]">
+                  以下 {pendingDeleteOrders.length} 筆訂單將提交刪單修正單，請確認是否繼續。
+                </p>
+              </div>
+            </div>
+            {/* 訂單清單 */}
+            <div className="px-[24px] py-[16px] flex flex-col gap-0 max-h-[320px] overflow-y-auto">
+              <div className="flex gap-[12px] px-[12px] py-[8px] bg-[#f4f6f8] rounded-[6px] mb-[4px]">
+                <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#637381] w-[160px] shrink-0">單號序號</p>
+                <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#637381] flex-1">廠商名稱</p>
+                <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#637381] w-[60px] shrink-0 text-right">訂貨量</p>
+              </div>
+              {pendingDeleteOrders.map((order, i) => (
+                <div
+                  key={order.id}
+                  className={`flex gap-[12px] px-[12px] py-[10px] ${i < pendingDeleteOrders.length - 1 ? 'border-b border-[rgba(145,158,171,0.12)]' : ''}`}
+                >
+                  <p className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#1c252e] w-[160px] shrink-0">
+                    {(order.orderNo || '') + (order.orderSeq || '')}
+                  </p>
+                  <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] text-[13px] text-[#1c252e] flex-1 truncate">
+                    {order.vendorName || '-'}
+                  </p>
+                  <p className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#1c252e] w-[60px] shrink-0 text-right">
+                    {order.orderQty ?? '-'}
+                  </p>
+                </div>
+              ))}
+            </div>
+            {/* 按鈕區 */}
+            <div className="flex gap-[12px] px-[24px] py-[16px] border-t border-[rgba(145,158,171,0.16)] justify-end">
+              <button
+                onClick={() => { setShowDeleteConfirm(false); setPendingDeleteOrders([]); }}
+                className="h-[36px] px-[20px] rounded-[8px] border border-[rgba(145,158,171,0.32)] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-[#637381] bg-white hover:bg-[rgba(145,158,171,0.08)] transition-colors cursor-pointer"
+              >取消</button>
+              <button
+                onClick={handleConfirmQuickDelete}
+                className="h-[36px] px-[20px] rounded-[8px] bg-[#ff5630] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-white hover:bg-[#b71d18] transition-colors cursor-pointer"
+              >確認刪單</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Toast ──────────────────────────────────────────────────────────── */}
       {toastMsg && (
