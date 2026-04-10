@@ -359,8 +359,7 @@ export function ReturnOrderListWithTabs({ userRole }: ReturnOrderListWithTabsPro
       <AdvancedOrderTable
         activeTab="CK"
         data={searchFilteredOrders}
-        onOrderConfirm={handleViewOrder}
-        onMoreOptions={handleViewOrder}
+        onDocNoClick={handleViewOrder}
         userEmail={currentUserEmail}
         userRole={userRole}
         onColumnsChange={handleColumnsChange}
