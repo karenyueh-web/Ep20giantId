@@ -8,41 +8,29 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { DeleteButton } from './ActionButtons';
+import { CurrencySelect } from './CurrencySelect';
+import { CountrySelect } from './CountrySelect';
 import { DropdownSelect } from './DropdownSelect';
 import { SimpleDatePicker } from './SimpleDatePicker';
 import IconsSolidIcSolarMultipleForwardLeftBroken from '@/imports/IconsSolidIcSolarMultipleForwardLeftBroken';
 import type { OrderRow } from './AdvancedOrderTable';
 
 // ── 選項定義 ─────────────────────────────────────────────────────────────────
-const CURRENCY_OPTIONS = [
-  { value: 'TWD', label: 'TWD' },
-  { value: 'USD', label: 'USD' },
-  { value: 'EUR', label: 'EUR' },
-  { value: 'JPY', label: 'JPY' },
-  { value: 'RMB', label: 'RMB' },
-];
+// CURRENCY_OPTIONS 已移除，改用 CurrencySelect（帶搜尋的 SAP 幣別表）
 
 const TRANSPORT_OPTIONS = [
   { value: 'S', label: 'S 海運' },
   { value: 'A', label: 'A 空運' },
   { value: 'T', label: 'T 陸運' },
-  { value: 'R', label: 'R 鐵路' },
 ];
 
-const COUNTRY_OPTIONS = [
-  { value: 'TW', label: 'TW' },
-  { value: 'CN', label: 'CN' },
-  { value: 'VN', label: 'VN' },
-  { value: 'TH', label: 'TH' },
-  { value: 'IN', label: 'IN' },
-  { value: 'DE', label: 'DE' },
-  { value: 'US', label: 'US' },
-];
+// COUNTRY_OPTIONS 已移除，改用 CountrySelect（帶搜尋的國家代碼表）
 
 const WEIGHT_UNIT_OPTIONS = [
-  { value: 'kg', label: 'kg' },
-  { value: 'lb', label: 'lb' },
-  { value: 'g',  label: 'g'  },
+  { value: 'G',   label: 'G' },
+  { value: 'KG',  label: 'KG / KGM' },
+  { value: 'EA',  label: 'EA / EAC' },
+  { value: 'GL',  label: 'GL / GLI' },
 ];
 
 // ── 型別定義 ─────────────────────────────────────────────────────────────────
@@ -223,6 +211,83 @@ function InlineNumberInput({
   );
 }
 
+// ── TableSelect（表格列中自定義下拉，使用 fixed 定位解決 overflow 截切問題）─────────────
+function TableSelect({
+  value, onChange, options,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; label: string }[];
+}) {
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState({ top: 0, left: 0, width: 0 });
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  const openDropdown = () => {
+    if (btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      setPos({ top: r.bottom + 4, left: r.left, width: r.width });
+    }
+    setOpen(true);
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    const h = (e: MouseEvent) => {
+      if (
+        btnRef.current && !btnRef.current.contains(e.target as Node) &&
+        panelRef.current && !panelRef.current.contains(e.target as Node)
+      ) setOpen(false);
+    };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, [open]);
+
+  const selected = options.find(o => o.value === value);
+  return (
+    <div className="relative w-full">
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={() => open ? setOpen(false) : openDropdown()}
+        className="w-full h-[32px] px-[6px] border border-[rgba(145,158,171,0.32)] rounded-[6px] font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#1c252e] outline-none hover:border-[#1c252e] focus:border-[#1c252e] bg-white cursor-pointer transition-colors flex items-center justify-between gap-[2px]"
+      >
+        <span className="truncate">{selected?.label ?? value}</span>
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" className="shrink-0">
+          <path d="M6 9l6 6 6-6" stroke="#637381" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </button>
+      {open && (
+        <div
+          ref={panelRef}
+          className="bg-white border border-[rgba(145,158,171,0.2)] rounded-[8px] shadow-lg py-[4px]"
+          style={{ position: 'fixed', top: pos.top, left: pos.left, minWidth: Math.max(pos.width, 120), zIndex: 9999 }}
+        >
+          {options.map(o => (
+            <div
+              key={o.value}
+              className={`px-[10px] py-[7px] cursor-pointer text-[12px] font-['Public_Sans:Regular',sans-serif] transition-colors flex items-center justify-between ${
+                o.value === value
+                  ? 'bg-[rgba(28,37,46,0.06)] text-[#1c252e] font-semibold'
+                  : 'text-[#1c252e] hover:bg-[rgba(145,158,171,0.06)]'
+              }`}
+              onClick={() => { onChange(o.value); setOpen(false); }}
+            >
+              <span>{o.label}</span>
+              {o.value === value && (
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                  <path d="M20 6 9 17l-5-5" stroke="#1c252e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── 主元件 ───────────────────────────────────────────────────────────────────
 export function ShipmentDetailPage({ selectedOrders, onClose, userRole }: ShipmentDetailPageProps) {
   // ── 基本資訊 ──────────────────────────────────────────────────────────────
@@ -249,7 +314,7 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole }: Shipme
       totalBoxesOverridden: false,
       netWeight: '0',
       grossWeight: '0',
-      weightUnit: 'kg',
+      weightUnit: 'KG',
       countryOfOrigin: 'TW',
     }))
   );
@@ -320,21 +385,17 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole }: Shipme
           <div className="flex items-center gap-[12px]">
             <button
               onClick={handleConfirm}
-              className="h-[36px] bg-[#1c252e] hover:bg-[#374151] text-white rounded-[8px] px-[20px] text-[14px] font-semibold font-['Public_Sans:SemiBold',sans-serif] transition-colors whitespace-nowrap"
+              className="h-[36px] bg-[#005eb8] hover:bg-[#004a94] text-white rounded-[8px] px-[20px] text-[14px] font-semibold font-['Public_Sans:SemiBold',sans-serif] transition-colors whitespace-nowrap"
             >
               確認出貨
             </button>
-            <button
-              className="h-[36px] border border-[rgba(145,158,171,0.32)] rounded-[8px] px-[16px] text-[14px] font-semibold font-['Public_Sans:SemiBold',sans-serif] text-[#1c252e] hover:bg-[rgba(145,158,171,0.08)] transition-colors whitespace-nowrap"
-            >
-              暫存
-            </button>
-            <button
+            <p
               onClick={() => setShowHistory(v => !v)}
-              className="h-[36px] text-[#005eb8] hover:text-[#004a94] text-[14px] font-semibold font-['Public_Sans:SemiBold',sans-serif] transition-colors"
+              className="[text-decoration-skip-ink:none] decoration-solid font-['Roboto:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[32px] text-[#005eb8] text-[16px] underline cursor-pointer hover:opacity-70"
+              style={{ fontVariationSettings: "'wdth' 100" }}
             >
               歷程
-            </button>
+            </p>
           </div>
         </div>
 
@@ -349,12 +410,10 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole }: Shipme
               noResize
             />
           </div>
-          <div style={{ flex: '1 1 120px', maxWidth: '160px' }}>
-            <DropdownSelect
-              label="幣別"
+          <div style={{ flex: '1 1 280px', minWidth: '280px' }}>
+            <CurrencySelect
               value={currency}
               onChange={setCurrency}
-              options={CURRENCY_OPTIONS}
             />
           </div>
           <div style={{ flex: '1 1 140px', maxWidth: '180px' }}>
@@ -435,8 +494,8 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole }: Shipme
                   { label: '總箱數', w: 80, align: 'right', blue: true },
                   { label: '淨重(個)', w: 90, align: 'right' },
                   { label: '毛重(個)', w: 90, align: 'right' },
-                  { label: '重量單位', w: 80, align: 'center' },
-                  { label: '原產國家', w: 90, align: 'center' },
+                  { label: '重量單位', w: 100, align: 'center' },
+                  { label: '原產國家', w: 110, align: 'center' },
                   { label: '', w: 44, align: 'center' },
                 ].map((col, i) => (
                   <div
@@ -564,29 +623,20 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole }: Shipme
                   </div>
 
                   {/* 重量單位 */}
-                  <div style={{ width: 80, minWidth: 80 }} className="px-[4px] shrink-0">
-                    <select
+                  <div style={{ width: 100, minWidth: 100 }} className="px-[4px] shrink-0">
+                    <TableSelect
                       value={row.weightUnit}
-                      onChange={e => updateRow(row.id, { weightUnit: e.target.value })}
-                      className="w-full h-[32px] px-[4px] border border-[rgba(145,158,171,0.32)] rounded-[6px] font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#1c252e] outline-none focus:border-[#1c252e] bg-white cursor-pointer"
-                    >
-                      {WEIGHT_UNIT_OPTIONS.map(o => (
-                        <option key={o.value} value={o.value}>{o.label}</option>
-                      ))}
-                    </select>
+                      onChange={v => updateRow(row.id, { weightUnit: v })}
+                      options={WEIGHT_UNIT_OPTIONS}
+                    />
                   </div>
 
                   {/* 原產國家 */}
-                  <div style={{ width: 90, minWidth: 90 }} className="px-[4px] shrink-0">
-                    <select
+                  <div style={{ width: 110, minWidth: 110 }} className="px-[4px] shrink-0">
+                    <CountrySelect
                       value={row.countryOfOrigin}
-                      onChange={e => updateRow(row.id, { countryOfOrigin: e.target.value })}
-                      className="w-full h-[32px] px-[4px] border border-[rgba(145,158,171,0.32)] rounded-[6px] font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#1c252e] outline-none focus:border-[#1c252e] bg-white cursor-pointer"
-                    >
-                      {COUNTRY_OPTIONS.map(o => (
-                        <option key={o.value} value={o.value}>{o.label}</option>
-                      ))}
-                    </select>
+                      onChange={(code) => updateRow(row.id, { countryOfOrigin: code })}
+                    />
                   </div>
 
                   {/* 刪除 */}

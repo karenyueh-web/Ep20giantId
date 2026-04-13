@@ -1,0 +1,1257 @@
+[
+ {
+  "LAND1": "TW",
+  "LANDX": "Taiwan",
+  "LANDX_M": "台灣"
+ },
+ {
+  "LAND1": "CN",
+  "LANDX": "China",
+  "LANDX_M": "中國"
+ },
+ {
+  "LAND1": "JP",
+  "LANDX": "Japan",
+  "LANDX_M": "日本"
+ },
+ {
+  "LAND1": "US",
+  "LANDX": "USA",
+  "LANDX_M": "美國"
+ },
+ {
+  "LAND1": "NL",
+  "LANDX": "Netherlands",
+  "LANDX_M": "荷蘭"
+ },
+ {
+  "LAND1": "HU",
+  "LANDX": "Hungary",
+  "LANDX_M": "匈牙利"
+ },
+ {
+  "LAND1": "EU",
+  "LANDX": "European Union",
+  "LANDX_M": "歐盟"
+ },
+ {
+  "LAND1": "DE",
+  "LANDX": "Germany",
+  "LANDX_M": "德國"
+ },
+ {
+  "LAND1": "FR",
+  "LANDX": "France",
+  "LANDX_M": "法國"
+ },
+ {
+  "LAND1": "GB",
+  "LANDX": "United Kingdom",
+  "LANDX_M": "英國"
+ },
+ {
+  "LAND1": "PL",
+  "LANDX": "Poland",
+  "LANDX_M": "波蘭"
+ },
+ {
+  "LAND1": "IT",
+  "LANDX": "Italy",
+  "LANDX_M": "義大利"
+ },
+ {
+  "LAND1": "BE",
+  "LANDX": "Belgium",
+  "LANDX_M": "比利時"
+ },
+ {
+  "LAND1": "BG",
+  "LANDX": "Bulgaria",
+  "LANDX_M": "保加利亞"
+ },
+ {
+  "LAND1": "CH",
+  "LANDX": "Switzerland",
+  "LANDX_M": "瑞士"
+ },
+ {
+  "LAND1": "CZ",
+  "LANDX": "Czech Republic",
+  "LANDX_M": "捷克共和國"
+ },
+ {
+  "LAND1": "DK",
+  "LANDX": "Denmark",
+  "LANDX_M": "丹麥"
+ },
+ {
+  "LAND1": "ES",
+  "LANDX": "Spain",
+  "LANDX_M": "西班牙"
+ },
+ {
+  "LAND1": "FI",
+  "LANDX": "Finland",
+  "LANDX_M": "芬蘭"
+ },
+ {
+  "LAND1": "ID",
+  "LANDX": "Indonesia",
+  "LANDX_M": "印尼"
+ },
+ {
+  "LAND1": "IL",
+  "LANDX": "Israel",
+  "LANDX_M": "以色列"
+ },
+ {
+  "LAND1": "IN",
+  "LANDX": "India",
+  "LANDX_M": "印度"
+ },
+ {
+  "LAND1": "KR",
+  "LANDX": "South Korea",
+  "LANDX_M": "南韓"
+ },
+ {
+  "LAND1": "MA",
+  "LANDX": "Morocco",
+  "LANDX_M": "摩洛哥"
+ },
+ {
+  "LAND1": "MX",
+  "LANDX": "Mexico",
+  "LANDX_M": "墨西哥"
+ },
+ {
+  "LAND1": "MY",
+  "LANDX": "Malaysia",
+  "LANDX_M": "馬來西亞"
+ },
+ {
+  "LAND1": "PH",
+  "LANDX": "Philippines",
+  "LANDX_M": "菲律賓"
+ },
+ {
+  "LAND1": "PK",
+  "LANDX": "Pakistan",
+  "LANDX_M": "巴基斯坦"
+ },
+ {
+  "LAND1": "PT",
+  "LANDX": "Portugal",
+  "LANDX_M": "葡萄牙"
+ },
+ {
+  "LAND1": "RO",
+  "LANDX": "Romania",
+  "LANDX_M": "羅馬尼亞"
+ },
+ {
+  "LAND1": "SE",
+  "LANDX": "Sweden",
+  "LANDX_M": "瑞典"
+ },
+ {
+  "LAND1": "SG",
+  "LANDX": "Singapore",
+  "LANDX_M": "新加坡"
+ },
+ {
+  "LAND1": "SK",
+  "LANDX": "Slovakia",
+  "LANDX_M": "斯洛伐克"
+ },
+ {
+  "LAND1": "TH",
+  "LANDX": "Thailand",
+  "LANDX_M": "泰國"
+ },
+ {
+  "LAND1": "VG",
+  "LANDX": "Brit.Virgin Is.",
+  "LANDX_M": "英屬維京群島"
+ },
+ {
+  "LAND1": "VN",
+  "LANDX": "Vietnam",
+  "LANDX_M": "越南"
+ },
+ {
+  "LAND1": "AD",
+  "LANDX": "Andorra",
+  "LANDX_M": "安道爾"
+ },
+ {
+  "LAND1": "AE",
+  "LANDX": "Utd.Arab Emir.",
+  "LANDX_M": "阿聯大公國"
+ },
+ {
+  "LAND1": "AF",
+  "LANDX": "Afghanistan",
+  "LANDX_M": "阿富汗"
+ },
+ {
+  "LAND1": "AG",
+  "LANDX": "Antigua\/Barbuda",
+  "LANDX_M": "安地卡\/巴布達"
+ },
+ {
+  "LAND1": "AI",
+  "LANDX": "Anguilla",
+  "LANDX_M": "安圭拉島"
+ },
+ {
+  "LAND1": "AL",
+  "LANDX": "Albania",
+  "LANDX_M": "阿爾巴尼亞"
+ },
+ {
+  "LAND1": "AM",
+  "LANDX": "Armenia",
+  "LANDX_M": "亞美尼亞"
+ },
+ {
+  "LAND1": "AO",
+  "LANDX": "Angola",
+  "LANDX_M": "安哥拉"
+ },
+ {
+  "LAND1": "AQ",
+  "LANDX": "Antarctica",
+  "LANDX_M": "南極洲"
+ },
+ {
+  "LAND1": "AR",
+  "LANDX": "Argentina",
+  "LANDX_M": "阿根廷"
+ },
+ {
+  "LAND1": "AS",
+  "LANDX": "Samoa, America",
+  "LANDX_M": "美屬薩摩亞"
+ },
+ {
+  "LAND1": "AT",
+  "LANDX": "Austria",
+  "LANDX_M": "奧地利"
+ },
+ {
+  "LAND1": "AU",
+  "LANDX": "Australia",
+  "LANDX_M": "澳大利亞"
+ },
+ {
+  "LAND1": "AW",
+  "LANDX": "Aruba",
+  "LANDX_M": "阿盧巴島"
+ },
+ {
+  "LAND1": "AZ",
+  "LANDX": "Azerbaijan",
+  "LANDX_M": "亞塞拜然"
+ },
+ {
+  "LAND1": "BA",
+  "LANDX": "Bosnia-Herz.",
+  "LANDX_M": "波士尼亞"
+ },
+ {
+  "LAND1": "BB",
+  "LANDX": "Barbados",
+  "LANDX_M": "巴貝多"
+ },
+ {
+  "LAND1": "BD",
+  "LANDX": "Bangladesh",
+  "LANDX_M": "孟加拉"
+ },
+ {
+  "LAND1": "BF",
+  "LANDX": "Burkina Faso",
+  "LANDX_M": "布吉納法索"
+ },
+ {
+  "LAND1": "BH",
+  "LANDX": "Bahrain",
+  "LANDX_M": "巴林"
+ },
+ {
+  "LAND1": "BI",
+  "LANDX": "Burundi",
+  "LANDX_M": "蒲隆地"
+ },
+ {
+  "LAND1": "BJ",
+  "LANDX": "Benin",
+  "LANDX_M": "貝南"
+ },
+ {
+  "LAND1": "BL",
+  "LANDX": "Blue",
+  "LANDX_M": "藍色"
+ },
+ {
+  "LAND1": "BM",
+  "LANDX": "Bermuda",
+  "LANDX_M": "百慕達"
+ },
+ {
+  "LAND1": "BN",
+  "LANDX": "Brunei Daruss.",
+  "LANDX_M": "汶萊"
+ },
+ {
+  "LAND1": "BO",
+  "LANDX": "Bolivia",
+  "LANDX_M": "玻利維亞"
+ },
+ {
+  "LAND1": "BQ",
+  "LANDX": "Bonaire, Saba",
+  "LANDX_M": "波奈，沙巴"
+ },
+ {
+  "LAND1": "BR",
+  "LANDX": "Brazil",
+  "LANDX_M": "巴西"
+ },
+ {
+  "LAND1": "BS",
+  "LANDX": "Bahamas",
+  "LANDX_M": "巴哈馬"
+ },
+ {
+  "LAND1": "BT",
+  "LANDX": "Bhutan",
+  "LANDX_M": "不丹"
+ },
+ {
+  "LAND1": "BV",
+  "LANDX": "Bouvet Islands",
+  "LANDX_M": "波霧群島"
+ },
+ {
+  "LAND1": "BW",
+  "LANDX": "Botswana",
+  "LANDX_M": "波扎那共和國"
+ },
+ {
+  "LAND1": "BY",
+  "LANDX": "Belarus",
+  "LANDX_M": "白俄羅斯"
+ },
+ {
+  "LAND1": "BZ",
+  "LANDX": "Belize",
+  "LANDX_M": "貝里斯"
+ },
+ {
+  "LAND1": "CA",
+  "LANDX": "Canada",
+  "LANDX_M": "加拿大"
+ },
+ {
+  "LAND1": "CC",
+  "LANDX": "Keeling Islands",
+  "LANDX_M": "可可斯群島"
+ },
+ {
+  "LAND1": "CD",
+  "LANDX": "Dem. Rep. Congo",
+  "LANDX_M": "剛果民主共和國"
+ },
+ {
+  "LAND1": "CF",
+  "LANDX": "CAR",
+  "LANDX_M": "中非共和國"
+ },
+ {
+  "LAND1": "CG",
+  "LANDX": "Rep.of Congo",
+  "LANDX_M": "剛果共和國"
+ },
+ {
+  "LAND1": "CI",
+  "LANDX": "Cote d'Ivoire",
+  "LANDX_M": "象牙海岸"
+ },
+ {
+  "LAND1": "CK",
+  "LANDX": "Cook Islands",
+  "LANDX_M": "庫克群島"
+ },
+ {
+  "LAND1": "CL",
+  "LANDX": "Chile",
+  "LANDX_M": "智利"
+ },
+ {
+  "LAND1": "CM",
+  "LANDX": "Cameroon",
+  "LANDX_M": "喀麥隆"
+ },
+ {
+  "LAND1": "CO",
+  "LANDX": "Colombia",
+  "LANDX_M": "哥倫比亞"
+ },
+ {
+  "LAND1": "CR",
+  "LANDX": "Costa Rica",
+  "LANDX_M": "哥斯大黎加"
+ },
+ {
+  "LAND1": "CS",
+  "LANDX": "Serbia\/Monten.",
+  "LANDX_M": "Serbia\/Monten."
+ },
+ {
+  "LAND1": "CU",
+  "LANDX": "Cuba",
+  "LANDX_M": "古巴"
+ },
+ {
+  "LAND1": "CV",
+  "LANDX": "Cape Verde",
+  "LANDX_M": "維德角共和國"
+ },
+ {
+  "LAND1": "CW",
+  "LANDX": "Curacao",
+  "LANDX_M": "古拉索"
+ },
+ {
+  "LAND1": "CX",
+  "LANDX": "Christmas Islnd",
+  "LANDX_M": "耶誕島"
+ },
+ {
+  "LAND1": "CY",
+  "LANDX": "Cyprus",
+  "LANDX_M": "塞浦路斯"
+ },
+ {
+  "LAND1": "DJ",
+  "LANDX": "Djibouti",
+  "LANDX_M": "吉布地共和國"
+ },
+ {
+  "LAND1": "DM",
+  "LANDX": "Dominica",
+  "LANDX_M": "多米尼克"
+ },
+ {
+  "LAND1": "DO",
+  "LANDX": "Dominican Rep.",
+  "LANDX_M": "多明尼加共和國"
+ },
+ {
+  "LAND1": "DZ",
+  "LANDX": "Algeria",
+  "LANDX_M": "阿爾及利亞"
+ },
+ {
+  "LAND1": "EC",
+  "LANDX": "Ecuador",
+  "LANDX_M": "厄瓜多"
+ },
+ {
+  "LAND1": "EE",
+  "LANDX": "Estonia",
+  "LANDX_M": "愛沙尼亞"
+ },
+ {
+  "LAND1": "EG",
+  "LANDX": "Egypt",
+  "LANDX_M": "埃及"
+ },
+ {
+  "LAND1": "EH",
+  "LANDX": "West Sahara",
+  "LANDX_M": "西薩哈拉"
+ },
+ {
+  "LAND1": "ER",
+  "LANDX": "Eritrea",
+  "LANDX_M": "埃立特里亞"
+ },
+ {
+  "LAND1": "ET",
+  "LANDX": "Ethiopia",
+  "LANDX_M": "衣索比亞"
+ },
+ {
+  "LAND1": "FJ",
+  "LANDX": "Fiji",
+  "LANDX_M": "斐濟"
+ },
+ {
+  "LAND1": "FK",
+  "LANDX": "Falkland Islnds",
+  "LANDX_M": "福克蘭群島"
+ },
+ {
+  "LAND1": "FM",
+  "LANDX": "Micronesia",
+  "LANDX_M": "密克羅尼西亞"
+ },
+ {
+  "LAND1": "FO",
+  "LANDX": "Faroe Islands",
+  "LANDX_M": "法羅群島"
+ },
+ {
+  "LAND1": "GA",
+  "LANDX": "Gabon",
+  "LANDX_M": "加彭"
+ },
+ {
+  "LAND1": "GD",
+  "LANDX": "Grenada",
+  "LANDX_M": "格瑞那達"
+ },
+ {
+  "LAND1": "GE",
+  "LANDX": "Georgia",
+  "LANDX_M": "喬治亞"
+ },
+ {
+  "LAND1": "GF",
+  "LANDX": "French Guayana",
+  "LANDX_M": "法屬瓜亞納"
+ },
+ {
+  "LAND1": "GG",
+  "LANDX": "Guernsey",
+  "LANDX_M": "耿西島"
+ },
+ {
+  "LAND1": "GH",
+  "LANDX": "Ghana",
+  "LANDX_M": "迦納"
+ },
+ {
+  "LAND1": "GI",
+  "LANDX": "Gibraltar",
+  "LANDX_M": "直布羅陀"
+ },
+ {
+  "LAND1": "GL",
+  "LANDX": "Greenland",
+  "LANDX_M": "格陵蘭島"
+ },
+ {
+  "LAND1": "GM",
+  "LANDX": "Gambia",
+  "LANDX_M": "甘比亞"
+ },
+ {
+  "LAND1": "GN",
+  "LANDX": "Guinea",
+  "LANDX_M": "幾內亞"
+ },
+ {
+  "LAND1": "GP",
+  "LANDX": "Guadeloupe",
+  "LANDX_M": "哥德洛普島"
+ },
+ {
+  "LAND1": "GQ",
+  "LANDX": "Equatorial Guin",
+  "LANDX_M": "赤道幾內亞"
+ },
+ {
+  "LAND1": "GR",
+  "LANDX": "Greece",
+  "LANDX_M": "希臘"
+ },
+ {
+  "LAND1": "GS",
+  "LANDX": "S. Sandwich Ins",
+  "LANDX_M": "三文治島"
+ },
+ {
+  "LAND1": "GT",
+  "LANDX": "Guatemala",
+  "LANDX_M": "瓜地馬拉"
+ },
+ {
+  "LAND1": "GU",
+  "LANDX": "Guam",
+  "LANDX_M": "關島"
+ },
+ {
+  "LAND1": "GW",
+  "LANDX": "Guinea-Bissau",
+  "LANDX_M": "幾內亞比索"
+ },
+ {
+  "LAND1": "GY",
+  "LANDX": "Guyana",
+  "LANDX_M": "蓋亞那"
+ },
+ {
+  "LAND1": "HK",
+  "LANDX": "Hong Kong",
+  "LANDX_M": "香港"
+ },
+ {
+  "LAND1": "HM",
+  "LANDX": "Heard\/McDon.Isl",
+  "LANDX_M": "赫特\/麥唐納島"
+ },
+ {
+  "LAND1": "HN",
+  "LANDX": "Honduras",
+  "LANDX_M": "宏都拉斯"
+ },
+ {
+  "LAND1": "HR",
+  "LANDX": "Croatia",
+  "LANDX_M": "克羅埃西亞"
+ },
+ {
+  "LAND1": "HT",
+  "LANDX": "Haiti",
+  "LANDX_M": "海地"
+ },
+ {
+  "LAND1": "IE",
+  "LANDX": "Ireland",
+  "LANDX_M": "愛爾蘭"
+ },
+ {
+  "LAND1": "IM",
+  "LANDX": "Isle of Man",
+  "LANDX_M": "男人島"
+ },
+ {
+  "LAND1": "IO",
+  "LANDX": "Brit.Ind.Oc.Ter",
+  "LANDX_M": "英屬印度洋領地"
+ },
+ {
+  "LAND1": "IQ",
+  "LANDX": "Iraq",
+  "LANDX_M": "伊拉克"
+ },
+ {
+  "LAND1": "IR",
+  "LANDX": "Iran",
+  "LANDX_M": "伊朗"
+ },
+ {
+  "LAND1": "IS",
+  "LANDX": "Iceland",
+  "LANDX_M": "冰島"
+ },
+ {
+  "LAND1": "JE",
+  "LANDX": "Jersey",
+  "LANDX_M": "澤西島"
+ },
+ {
+  "LAND1": "JM",
+  "LANDX": "Jamaica",
+  "LANDX_M": "牙買加"
+ },
+ {
+  "LAND1": "JO",
+  "LANDX": "Jordan",
+  "LANDX_M": "約旦"
+ },
+ {
+  "LAND1": "KE",
+  "LANDX": "Kenya",
+  "LANDX_M": "肯亞"
+ },
+ {
+  "LAND1": "KG",
+  "LANDX": "Kyrgyzstan",
+  "LANDX_M": "吉爾吉斯"
+ },
+ {
+  "LAND1": "KH",
+  "LANDX": "Cambodia",
+  "LANDX_M": "柬埔寨"
+ },
+ {
+  "LAND1": "KI",
+  "LANDX": "Kiribati",
+  "LANDX_M": "基里巴提"
+ },
+ {
+  "LAND1": "KM",
+  "LANDX": "Comoros",
+  "LANDX_M": "柯摩羅"
+ },
+ {
+  "LAND1": "KN",
+  "LANDX": "St Kitts&Nevis",
+  "LANDX_M": "聖克里斯島"
+ },
+ {
+  "LAND1": "KP",
+  "LANDX": "North Korea",
+  "LANDX_M": "北韓"
+ },
+ {
+  "LAND1": "KW",
+  "LANDX": "Kuwait",
+  "LANDX_M": "科威特"
+ },
+ {
+  "LAND1": "KY",
+  "LANDX": "Cayman Islands",
+  "LANDX_M": "開曼群島"
+ },
+ {
+  "LAND1": "KZ",
+  "LANDX": "Kazakhstan",
+  "LANDX_M": "哈薩克"
+ },
+ {
+  "LAND1": "LA",
+  "LANDX": "Laos",
+  "LANDX_M": "寮國"
+ },
+ {
+  "LAND1": "LB",
+  "LANDX": "Lebanon",
+  "LANDX_M": "黎巴嫩"
+ },
+ {
+  "LAND1": "LC",
+  "LANDX": "St. Lucia",
+  "LANDX_M": "聖露西亞"
+ },
+ {
+  "LAND1": "LI",
+  "LANDX": "Liechtenstein",
+  "LANDX_M": "列支敦士登"
+ },
+ {
+  "LAND1": "LK",
+  "LANDX": "Sri Lanka",
+  "LANDX_M": "斯里蘭卡"
+ },
+ {
+  "LAND1": "LR",
+  "LANDX": "Liberia",
+  "LANDX_M": "賴比瑞亞"
+ },
+ {
+  "LAND1": "LS",
+  "LANDX": "Lesotho",
+  "LANDX_M": "賴索托"
+ },
+ {
+  "LAND1": "LT",
+  "LANDX": "Lithuania",
+  "LANDX_M": "立陶宛"
+ },
+ {
+  "LAND1": "LU",
+  "LANDX": "Luxembourg",
+  "LANDX_M": "盧森堡"
+ },
+ {
+  "LAND1": "LV",
+  "LANDX": "Latvia",
+  "LANDX_M": "拉脫維亞"
+ },
+ {
+  "LAND1": "LY",
+  "LANDX": "Libya",
+  "LANDX_M": "利比亞"
+ },
+ {
+  "LAND1": "MC",
+  "LANDX": "Monaco",
+  "LANDX_M": "摩納哥"
+ },
+ {
+  "LAND1": "MD",
+  "LANDX": "Moldova",
+  "LANDX_M": "摩爾多瓦"
+ },
+ {
+  "LAND1": "MG",
+  "LANDX": "Madagascar",
+  "LANDX_M": "馬達加斯加"
+ },
+ {
+  "LAND1": "MH",
+  "LANDX": "Marshall Islnds",
+  "LANDX_M": "馬紹爾群島"
+ },
+ {
+  "LAND1": "MK",
+  "LANDX": "Macedonia",
+  "LANDX_M": "馬其頓"
+ },
+ {
+  "LAND1": "ML",
+  "LANDX": "Mali",
+  "LANDX_M": "馬利"
+ },
+ {
+  "LAND1": "MM",
+  "LANDX": "Burma",
+  "LANDX_M": "緬甸"
+ },
+ {
+  "LAND1": "MN",
+  "LANDX": "Mongolia",
+  "LANDX_M": "蒙古"
+ },
+ {
+  "LAND1": "MO",
+  "LANDX": "Macau",
+  "LANDX_M": "澳門"
+ },
+ {
+  "LAND1": "MP",
+  "LANDX": "N.Mariana Islnd",
+  "LANDX_M": "北馬里亞納"
+ },
+ {
+  "LAND1": "MQ",
+  "LANDX": "Martinique",
+  "LANDX_M": "馬汀尼克"
+ },
+ {
+  "LAND1": "MR",
+  "LANDX": "Mauritania",
+  "LANDX_M": "茅利塔尼亞"
+ },
+ {
+  "LAND1": "MS",
+  "LANDX": "Montserrat",
+  "LANDX_M": "蒙哲臘島"
+ },
+ {
+  "LAND1": "MT",
+  "LANDX": "Malta",
+  "LANDX_M": "馬爾他"
+ },
+ {
+  "LAND1": "MU",
+  "LANDX": "Mauritius",
+  "LANDX_M": "模里西斯"
+ },
+ {
+  "LAND1": "MV",
+  "LANDX": "Maldives",
+  "LANDX_M": "馬爾地夫"
+ },
+ {
+  "LAND1": "MW",
+  "LANDX": "Malawi",
+  "LANDX_M": "馬拉威"
+ },
+ {
+  "LAND1": "MZ",
+  "LANDX": "Mozambique",
+  "LANDX_M": "莫三鼻克"
+ },
+ {
+  "LAND1": "NA",
+  "LANDX": "Namibia",
+  "LANDX_M": "納米比亞"
+ },
+ {
+  "LAND1": "NC",
+  "LANDX": "New Caledonia",
+  "LANDX_M": "新喀里多尼亞"
+ },
+ {
+  "LAND1": "NE",
+  "LANDX": "Niger",
+  "LANDX_M": "尼日"
+ },
+ {
+  "LAND1": "NF",
+  "LANDX": "Norfolk Islands",
+  "LANDX_M": "諾福克群島"
+ },
+ {
+  "LAND1": "NG",
+  "LANDX": "Nigeria",
+  "LANDX_M": "奈及利亞"
+ },
+ {
+  "LAND1": "NI",
+  "LANDX": "Nicaragua",
+  "LANDX_M": "尼加拉瓜"
+ },
+ {
+  "LAND1": "NO",
+  "LANDX": "Norway",
+  "LANDX_M": "挪威"
+ },
+ {
+  "LAND1": "NP",
+  "LANDX": "Nepal",
+  "LANDX_M": "尼泊爾"
+ },
+ {
+  "LAND1": "NR",
+  "LANDX": "Nauru",
+  "LANDX_M": "諾魯共和國"
+ },
+ {
+  "LAND1": "NT",
+  "LANDX": "NATO",
+  "LANDX_M": "NATO"
+ },
+ {
+  "LAND1": "NU",
+  "LANDX": "Niue",
+  "LANDX_M": "紐埃"
+ },
+ {
+  "LAND1": "NZ",
+  "LANDX": "New Zealand",
+  "LANDX_M": "紐西蘭"
+ },
+ {
+  "LAND1": "OM",
+  "LANDX": "Oman",
+  "LANDX_M": "阿曼"
+ },
+ {
+  "LAND1": "OR",
+  "LANDX": "Orange",
+  "LANDX_M": "Orange"
+ },
+ {
+  "LAND1": "PA",
+  "LANDX": "Panama",
+  "LANDX_M": "巴拿馬"
+ },
+ {
+  "LAND1": "PE",
+  "LANDX": "Peru",
+  "LANDX_M": "秘魯"
+ },
+ {
+  "LAND1": "PF",
+  "LANDX": "Frenc.Polynesia",
+  "LANDX_M": "法屬波利尼西亞"
+ },
+ {
+  "LAND1": "PG",
+  "LANDX": "Pap. New Guinea",
+  "LANDX_M": "巴布亞紐幾內亞"
+ },
+ {
+  "LAND1": "PM",
+  "LANDX": "St.Pier,Miquel.",
+  "LANDX_M": "聖米克島"
+ },
+ {
+  "LAND1": "PN",
+  "LANDX": "Pitcairn Islnds",
+  "LANDX_M": "皮特肯島"
+ },
+ {
+  "LAND1": "PR",
+  "LANDX": "Puerto Rico",
+  "LANDX_M": "波多黎各"
+ },
+ {
+  "LAND1": "PS",
+  "LANDX": "Palestine",
+  "LANDX_M": "巴勒斯坦"
+ },
+ {
+  "LAND1": "PW",
+  "LANDX": "Palau",
+  "LANDX_M": "帛琉"
+ },
+ {
+  "LAND1": "PY",
+  "LANDX": "Paraguay",
+  "LANDX_M": "巴拉圭"
+ },
+ {
+  "LAND1": "QA",
+  "LANDX": "Qatar",
+  "LANDX_M": "卡達"
+ },
+ {
+  "LAND1": "RE",
+  "LANDX": "Reunion",
+  "LANDX_M": "留尼旺島"
+ },
+ {
+  "LAND1": "RU",
+  "LANDX": "Russian Fed.",
+  "LANDX_M": "俄羅斯聯邦"
+ },
+ {
+  "LAND1": "RW",
+  "LANDX": "Rwanda",
+  "LANDX_M": "盧安達"
+ },
+ {
+  "LAND1": "SA",
+  "LANDX": "Saudi Arabia",
+  "LANDX_M": "沙烏地阿拉伯"
+ },
+ {
+  "LAND1": "SB",
+  "LANDX": "Solomon Islands",
+  "LANDX_M": "所羅門群島"
+ },
+ {
+  "LAND1": "SC",
+  "LANDX": "Seychelles",
+  "LANDX_M": "塞席爾共和國"
+ },
+ {
+  "LAND1": "SD",
+  "LANDX": "Sudan",
+  "LANDX_M": "蘇丹"
+ },
+ {
+  "LAND1": "SH",
+  "LANDX": "Saint Helena",
+  "LANDX_M": "聖赫勒那島"
+ },
+ {
+  "LAND1": "SI",
+  "LANDX": "Slovenia",
+  "LANDX_M": "斯洛維尼亞"
+ },
+ {
+  "LAND1": "SJ",
+  "LANDX": "Svalbard",
+  "LANDX_M": "Svalbard"
+ },
+ {
+  "LAND1": "SL",
+  "LANDX": "Sierra Leone",
+  "LANDX_M": "獅子山共和國"
+ },
+ {
+  "LAND1": "SM",
+  "LANDX": "San Marino",
+  "LANDX_M": "聖馬利諾共和國"
+ },
+ {
+  "LAND1": "SN",
+  "LANDX": "Senegal",
+  "LANDX_M": "塞內加爾"
+ },
+ {
+  "LAND1": "SO",
+  "LANDX": "Somalia",
+  "LANDX_M": "索馬利亞"
+ },
+ {
+  "LAND1": "SR",
+  "LANDX": "Suriname",
+  "LANDX_M": "蘇利南"
+ },
+ {
+  "LAND1": "SS",
+  "LANDX": "South Sudan",
+  "LANDX_M": "南蘇丹"
+ },
+ {
+  "LAND1": "ST",
+  "LANDX": "S.Tome,Principe",
+  "LANDX_M": "聖多馬\/普林西比"
+ },
+ {
+  "LAND1": "SV",
+  "LANDX": "El Salvador",
+  "LANDX_M": "薩爾瓦多"
+ },
+ {
+  "LAND1": "SX",
+  "LANDX": "Sint Maarten",
+  "LANDX_M": "聖馬丁"
+ },
+ {
+  "LAND1": "SY",
+  "LANDX": "Syria",
+  "LANDX_M": "敘利亞"
+ },
+ {
+  "LAND1": "SZ",
+  "LANDX": "Swaziland",
+  "LANDX_M": "史瓦濟蘭"
+ },
+ {
+  "LAND1": "TC",
+  "LANDX": "Turksh Caicosin",
+  "LANDX_M": "土克群島"
+ },
+ {
+  "LAND1": "TD",
+  "LANDX": "Chad",
+  "LANDX_M": "查德"
+ },
+ {
+  "LAND1": "TF",
+  "LANDX": "French S.Territ",
+  "LANDX_M": "法國南部"
+ },
+ {
+  "LAND1": "TG",
+  "LANDX": "Togo",
+  "LANDX_M": "多哥共和國"
+ },
+ {
+  "LAND1": "TJ",
+  "LANDX": "Tajikistan",
+  "LANDX_M": "塔吉克"
+ },
+ {
+  "LAND1": "TK",
+  "LANDX": "Tokelau Islands",
+  "LANDX_M": "托克勞群島"
+ },
+ {
+  "LAND1": "TL",
+  "LANDX": "East Timor",
+  "LANDX_M": "東帝汶"
+ },
+ {
+  "LAND1": "TM",
+  "LANDX": "Turkmenistan",
+  "LANDX_M": "土庫曼"
+ },
+ {
+  "LAND1": "TN",
+  "LANDX": "Tunisia",
+  "LANDX_M": "突尼西亞"
+ },
+ {
+  "LAND1": "TO",
+  "LANDX": "Tonga",
+  "LANDX_M": "東加"
+ },
+ {
+  "LAND1": "TP",
+  "LANDX": "East Timor",
+  "LANDX_M": "東帝汶"
+ },
+ {
+  "LAND1": "TR",
+  "LANDX": "Turkey",
+  "LANDX_M": "土耳其"
+ },
+ {
+  "LAND1": "TT",
+  "LANDX": "Trinidad,Tobago",
+  "LANDX_M": "千里達，扥貝哥"
+ },
+ {
+  "LAND1": "TV",
+  "LANDX": "Tuvalu",
+  "LANDX_M": "土瓦魯"
+ },
+ {
+  "LAND1": "TZ",
+  "LANDX": "Tanzania",
+  "LANDX_M": "坦尚尼亞"
+ },
+ {
+  "LAND1": "UA",
+  "LANDX": "Ukraine",
+  "LANDX_M": "烏克蘭"
+ },
+ {
+  "LAND1": "UG",
+  "LANDX": "Uganda",
+  "LANDX_M": "烏干達"
+ },
+ {
+  "LAND1": "UM",
+  "LANDX": "Minor Outl.Isl.",
+  "LANDX_M": "米諾外島"
+ },
+ {
+  "LAND1": "UN",
+  "LANDX": "United Nations",
+  "LANDX_M": "聯合國"
+ },
+ {
+  "LAND1": "UY",
+  "LANDX": "Uruguay",
+  "LANDX_M": "烏拉圭"
+ },
+ {
+  "LAND1": "UZ",
+  "LANDX": "Uzbekistan",
+  "LANDX_M": "烏茲別克"
+ },
+ {
+  "LAND1": "VA",
+  "LANDX": "Vatican City",
+  "LANDX_M": "梵蒂岡城"
+ },
+ {
+  "LAND1": "VC",
+  "LANDX": "St. Vincent",
+  "LANDX_M": "聖文森"
+ },
+ {
+  "LAND1": "VE",
+  "LANDX": "Venezuela",
+  "LANDX_M": "委內瑞拉"
+ },
+ {
+  "LAND1": "VI",
+  "LANDX": "US Virgin Isl.",
+  "LANDX_M": "美屬維京群島"
+ },
+ {
+  "LAND1": "VU",
+  "LANDX": "Vanuatu",
+  "LANDX_M": "萬那杜共和國"
+ },
+ {
+  "LAND1": "WF",
+  "LANDX": "Wallis,Futuna",
+  "LANDX_M": "衛里斯"
+ },
+ {
+  "LAND1": "WS",
+  "LANDX": "Samoa",
+  "LANDX_M": "薩摩亞"
+ },
+ {
+  "LAND1": "YE",
+  "LANDX": "Yemen",
+  "LANDX_M": "葉門"
+ },
+ {
+  "LAND1": "YT",
+  "LANDX": "Mayotte",
+  "LANDX_M": "梅約特"
+ },
+ {
+  "LAND1": "ZA",
+  "LANDX": "South Africa",
+  "LANDX_M": "南非"
+ },
+ {
+  "LAND1": "ZM",
+  "LANDX": "Zambia",
+  "LANDX_M": "尚比亞"
+ },
+ {
+  "LAND1": "ZW",
+  "LANDX": "Zimbabwe",
+  "LANDX_M": "辛巴威"
+ }
+]

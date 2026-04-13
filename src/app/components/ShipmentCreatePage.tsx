@@ -354,7 +354,7 @@ export function ShipmentCreatePage({ userRole }: ShipmentCreatePageProps) {
             onClick={handleCreateShipment}
             className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] text-[#004680] leading-[24px] whitespace-nowrap cursor-pointer select-none px-[10px] py-[16px] hover:opacity-70 transition-opacity"
           >
-            開立出貨單
+            建立出貨單
           </span>
         }
       />
