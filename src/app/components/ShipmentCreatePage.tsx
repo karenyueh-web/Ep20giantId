@@ -168,12 +168,15 @@ export function ShipmentCreatePage({ userRole }: ShipmentCreatePageProps) {
   // ── Column Selector ────────────────────────────────────────────────────────
   const handleColumnsChange = (cols: OrderColumn[]) => setAvailableColumns(cols);
 
+  // 與 AdvancedOrderTable 內部使用相同的 key 格式
+  // storageKeyPrefix="shipmentCreate_v1"，activeTab="CK" → key = shipmentCreate_v1_${email}_CK_columns
+  const tableStorageKey = `shipmentCreate_v1_${currentUserEmail}_CK_columns`;
+
   const handleColumnsClick = () => {
     let cols = availableColumns;
     if (cols.length === 0) {
-      const key = `shipmentCreate_${currentUserEmail}_columns`;
       try {
-        const saved = localStorage.getItem(key);
+        const saved = localStorage.getItem(tableStorageKey);
         cols = saved ? JSON.parse(saved) : getOrderColumns();
       } catch { cols = getOrderColumns(); }
     }
@@ -182,8 +185,7 @@ export function ShipmentCreatePage({ userRole }: ShipmentCreatePageProps) {
   };
 
   const handleApplyColumns = () => {
-    const key = `shipmentCreate_${currentUserEmail}_columns`;
-    try { localStorage.setItem(key, JSON.stringify(tempColumns)); } catch { /**/ }
+    try { localStorage.setItem(tableStorageKey, JSON.stringify(tempColumns)); } catch { /**/ }
     setAvailableColumns(tempColumns);
     setColumnsVersion(v => v + 1);
     setShowColumnSelector(false);
