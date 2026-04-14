@@ -343,7 +343,6 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole }: Shipme
   const [vendorShipmentNo, setVendorShipmentNo] = useState('');
   const [currency, setCurrency]         = useState('TWD');
   const [transportType, setTransportType] = useState('S');
-  const [invoiceDate, setInvoiceDate]   = useState('');
   const [deliveryDate, setDeliveryDate] = useState('');
   const [arrivalDate, setArrivalDate]   = useState('');
   const [deliveryAddress, setDeliveryAddress] = useState<string>(() => {
@@ -533,13 +532,7 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole }: Shipme
               hasError={submitted && !deliveryDate}
             />
           </div>
-          <div style={{ flex: '1 1 140px', maxWidth: '180px' }}>
-            <FloatingDateField
-              label="發票日期"
-              value={invoiceDate}
-              onChange={setInvoiceDate}
-            />
-          </div>
+
           <div style={{ flex: '1 1 140px', maxWidth: '180px' }}>
             <FloatingDateField
               label="到貨日期"
