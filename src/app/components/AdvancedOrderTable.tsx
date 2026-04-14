@@ -32,7 +32,8 @@ export type OrderColumnKey =
   | 'productionScheduleDate' | 'prodSchedDayDiff'
   // ── More 區域 ──
   | 'inTransitQty' | 'undeliveredQty' | 'lineItemNote'
-  | 'internalNote' | 'materialPOContent';
+  | 'internalNote' | 'materialPOContent'
+  | 'storageLocationCode';
 
 export interface OrderColumn {
   key: OrderColumnKey;
@@ -104,6 +105,8 @@ export interface OrderRow {
   adjustmentType?: 'modify' | 'reject' | 'split' | 'split-order';
   // ── 刪單標記（刪單修正單完成 CL 時寫入修正單號） ──
   deletionCode?: string;
+  // ── 儲存地點代碼（SAP 開單時設定） ──
+  storageLocationCode?: string;
 }
 
 interface AdvancedOrderTableProps {
@@ -220,6 +223,7 @@ export const defaultOrderColumns: OrderColumn[] = [
   { key: 'lineItemNote',         label: '單項小記',           width: 110,  minWidth: 90,  visible: false },
   { key: 'internalNote',         label: '項目註記(內部)',      width: 280,  minWidth: 150, visible: false },
   { key: 'materialPOContent',    label: '物料PO內文',         width: 280,  minWidth: 150, visible: false },
+  { key: 'storageLocationCode',  label: '儲存地點代碼',       width: 130,  minWidth: 100, visible: false },
 ];
 
 export function getOrderColumns(): OrderColumn[] {
@@ -239,7 +243,7 @@ export const orderMockData: OrderRow[] = [
     expectedDelivery: '2026/03/02', deliveryQty: 100,
     inTransitQty: 0, undeliveredQty: 100, lineItemNote: '3334', agreedDate: '/',
     internalNote: '2305,24SU_COSPEED_G_ER(限GEM採購可改)', materialPOContent: 'DISCONTINUED, CHANGE TO 1560-CROSSC-0008',
-    gbdOrderNo: 'GBD-2025-001234', statisticalDeliveryDate: '2025/05/20',
+    gbdOrderNo: 'GBD-2025-001234', statisticalDeliveryDate: '2025/05/20', storageLocationCode: '2020',
   },
   {
     id: 2, status: 'NP',
@@ -252,7 +256,7 @@ export const orderMockData: OrderRow[] = [
     expectedDelivery: '2026/03/02', deliveryQty: 50,
     inTransitQty: 10, undeliveredQty: 40, lineItemNote: '24000', agreedDate: '/',
     internalNote: '', materialPOContent: '',
-    gbdOrderNo: 'GBD-2025-001235', statisticalDeliveryDate: '2025/05/22',
+    gbdOrderNo: 'GBD-2025-001235', statisticalDeliveryDate: '2025/05/22', storageLocationCode: '2110',
   },
   {
     id: 3, status: 'NP',
@@ -265,7 +269,7 @@ export const orderMockData: OrderRow[] = [
     expectedDelivery: '2026/03/02', deliveryQty: 80,
     inTransitQty: 0, undeliveredQty: 80, lineItemNote: '231200', agreedDate: '/',
     internalNote: '', materialPOContent: 'LIMITED QTY - PRIORITY ORDER',
-    gbdOrderNo: 'GBD-2025-001236', statisticalDeliveryDate: '2025/05/25',
+    gbdOrderNo: 'GBD-2025-001236', statisticalDeliveryDate: '2025/05/25', storageLocationCode: '2020',
   },
   {
     id: 4, status: 'V', vendorDeliveryDate: '2025/05/14',
@@ -579,7 +583,7 @@ export const orderMockData: OrderRow[] = [
     expectedDelivery: '2026/05/10', deliveryQty: 200,
     inTransitQty: 30, undeliveredQty: 120, lineItemNote: '116000', agreedDate: '2026/04/20',
     internalNote: '量大，注意包裝', materialPOContent: 'PRIORITY ORDER',
-    gbdOrderNo: 'GBD-2026-003001', statisticalDeliveryDate: '2026/05/10',
+    gbdOrderNo: 'GBD-2026-003001', statisticalDeliveryDate: '2026/05/10', storageLocationCode: '2020',
   },
   {
     id: 28, status: 'CK', vendorDeliveryDate: '2026/05/15',
@@ -592,7 +596,7 @@ export const orderMockData: OrderRow[] = [
     expectedDelivery: '2026/05/15', deliveryQty: 150,
     inTransitQty: 20, undeliveredQty: 130, lineItemNote: '1470000', agreedDate: '2026/04/25',
     internalNote: '', materialPOContent: 'HIGH VALUE',
-    gbdOrderNo: 'GBD-2026-003002', statisticalDeliveryDate: '2026/05/15',
+    gbdOrderNo: 'GBD-2026-003002', statisticalDeliveryDate: '2026/05/15', storageLocationCode: '2110',
   },
   {
     id: 29, status: 'CK', vendorDeliveryDate: '2026/05/20',
@@ -605,7 +609,7 @@ export const orderMockData: OrderRow[] = [
     expectedDelivery: '2026/05/20', deliveryQty: 300,
     inTransitQty: 0, undeliveredQty: 200, lineItemNote: '9600', agreedDate: '2026/04/28',
     internalNote: '', materialPOContent: '',
-    gbdOrderNo: 'GBD-2026-003003', statisticalDeliveryDate: '2026/05/20',
+    gbdOrderNo: 'GBD-2026-003003', statisticalDeliveryDate: '2026/05/20', storageLocationCode: '2020',
   },
   {
     id: 30, status: 'CK', vendorDeliveryDate: '2026/05/25',
@@ -618,7 +622,7 @@ export const orderMockData: OrderRow[] = [
     expectedDelivery: '2026/05/25', deliveryQty: 80,
     inTransitQty: 10, undeliveredQty: 40, lineItemNote: '260000', agreedDate: '2026/05/02',
     internalNote: '電子組件，注意靜電', materialPOContent: 'HANDLE WITH CARE',
-    gbdOrderNo: 'GBD-2026-003004', statisticalDeliveryDate: '2026/05/25',
+    gbdOrderNo: 'GBD-2026-003004', statisticalDeliveryDate: '2026/05/25', storageLocationCode: '2130',
   },
   {
     id: 31, status: 'CK', vendorDeliveryDate: '2026/06/01',
@@ -631,7 +635,7 @@ export const orderMockData: OrderRow[] = [
     expectedDelivery: '2026/06/01', deliveryQty: 500,
     inTransitQty: 50, undeliveredQty: 250, lineItemNote: '7000', agreedDate: '2026/05/10',
     internalNote: '', materialPOContent: 'CONTRACT ORDER',
-    gbdOrderNo: 'GBD-2026-003005', statisticalDeliveryDate: '2026/06/01',
+    gbdOrderNo: 'GBD-2026-003005', statisticalDeliveryDate: '2026/06/01', storageLocationCode: '2320',
   },
 ];
 

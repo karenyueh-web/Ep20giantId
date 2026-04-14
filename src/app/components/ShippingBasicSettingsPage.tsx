@@ -85,7 +85,7 @@ type ActiveTab = 'storage-location' | 'gtm-storage-condition' | 'gem-destination
 // Mock 資料
 // ─────────────────────────────────────────────────────────────────────────────
 
-const STORAGE_LOCATION_DATA: StorageLocationRow[] = [
+export const STORAGE_LOCATION_DATA: StorageLocationRow[] = [
   { id: 1, factory: 'GTM1', locationCode: '2065', descZh: '塗料倉-保稅', descEn: 'Paint-GB', addressZh: '台中市大甲區順帆路19號-南倉旁塗料室', addressEn: '19, ShunFarn Rd, Dajia District', updatedInfo: 'Allen Zou 鄧芳筆 -2024/03/20' },
   { id: 2, factory: 'GTM1', locationCode: '2070', descZh: '報廢倉-保稅', descEn: 'Scrapped-GB', addressZh: '台中市大甲區順帆路19號-南倉旁報廢區', addressEn: '19, ShunFarn Rd, Dajia District', updatedInfo: 'Allen Zou 鄧芳筆 -2024/03/21' },
   { id: 3, factory: 'GTM1', locationCode: '2080', descZh: '原料樣品倉-保稅', descEn: 'Sample-SB', addressZh: '台中市大甲區順帆路19號-各倉樣品區', addressEn: '19, ShunFarn Rd, Dajia District', updatedInfo: 'Allen Zou 鄧芳筆 -2024/03/22' },

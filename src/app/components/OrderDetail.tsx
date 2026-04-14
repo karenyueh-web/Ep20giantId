@@ -945,12 +945,13 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
           {/* more 展開面板 */}
           {showMore && (
             <div className="bg-[rgba(0,94,184,0.04)] border border-[rgba(0,94,184,0.16)] rounded-[8px] p-[16px] flex flex-col gap-[10px] text-[14px] leading-[22px]">
-              {/* more row 1: 在途量 / 未交量 / 單項小記 */}
+              {/* more row 1: 在途量 / 未交量 / 儲存地點代號 / 單項小記 */}
               <div className="flex gap-[20px]">
                 {[
-                  { label: '在途量',   value: String(liveOrder?.inTransitQty ?? 0) },
-                  { label: '未交量',   value: String(liveOrder?.undeliveredQty ?? 0) },
-                  { label: '單項小記', value: liveOrder?.lineItemNote || '-' },
+                  { label: '在途量',       value: String(liveOrder?.inTransitQty ?? 0) },
+                  { label: '未交量',       value: String(liveOrder?.undeliveredQty ?? 0) },
+                  { label: '儲存地點代號', value: liveOrder?.storageLocationCode || '-' },
+                  { label: '單項小記',     value: liveOrder?.lineItemNote || '-' },
                 ].map(({ label, value }) => (
                   <div key={label} className="flex flex-col gap-[2px] flex-1">
                     <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[#1c252e]">{label}</p>

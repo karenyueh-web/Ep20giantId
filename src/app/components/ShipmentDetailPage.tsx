@@ -15,6 +15,7 @@ import { SimpleDatePicker } from './SimpleDatePicker';
 import IconsSolidIcSolarMultipleForwardLeftBroken from '@/imports/IconsSolidIcSolarMultipleForwardLeftBroken';
 import type { OrderRow } from './AdvancedOrderTable';
 import { calcUndeliveredQty } from './AdvancedOrderTable';
+import { STORAGE_LOCATION_DATA } from './ShippingBasicSettingsPage';
 
 // ── 選項定義 ─────────────────────────────────────────────────────────────────
 // CURRENCY_OPTIONS 已移除，改用 CurrencySelect（帶搜尋的 SAP 幣別表）
@@ -345,7 +346,13 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole }: Shipme
   const [invoiceDate, setInvoiceDate]   = useState('');
   const [deliveryDate, setDeliveryDate] = useState('');
   const [arrivalDate, setArrivalDate]   = useState('');
-  const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [deliveryAddress, setDeliveryAddress] = useState<string>(() => {
+    // 依第一張訂單的儲存地點代號，從主檔查詢中文地址自動帶出
+    const sloc = selectedOrders[0]?.storageLocationCode;
+    if (!sloc) return '';
+    const found = STORAGE_LOCATION_DATA.find(r => r.locationCode === sloc && r.addressZh);
+    return found?.addressZh ?? '';
+  });
 
   // ── 出貨明細 rows（由已選訂單初始化）─────────────────────────────────────
   const [rows, setRows] = useState<ShipmentDetailRow[]>(() =>
@@ -858,7 +865,7 @@ function BoxDetailModal({
     >
       <div
         className="bg-white rounded-[16px] shadow-[0px_24px_48px_rgba(0,0,0,0.20)] flex flex-col overflow-hidden"
-        style={{ width: 420, maxHeight: '90vh' }}
+        style={{ width: 560, maxHeight: '90vh' }}
       >
         {/* ── 頂部返回按鈕 ── */}
         <div className="px-[20px] pt-[16px] pb-[8px] flex items-center">
@@ -885,8 +892,8 @@ function BoxDetailModal({
               { label: '總箱數',   value: localBoxes.length },
             ].map(item => (
               <div key={item.label} className="flex gap-[6px] items-baseline">
-                <span className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#637381] whitespace-nowrap">{item.label}</span>
-                <span className="font-['Public_Sans:SemiBold',sans-serif] text-[13px] text-[#1c252e]">{item.value}</span>
+                <span className="font-['Public_Sans:Regular',sans-serif] text-[16px] text-[#637381] whitespace-nowrap">{item.label}</span>
+                <span className="font-['Public_Sans:SemiBold',sans-serif] text-[16px] text-[#1c252e]">{item.value}</span>
               </div>
             ))}
           </div>
@@ -915,16 +922,16 @@ function BoxDetailModal({
         <div className="border-t border-[rgba(145,158,171,0.16)] flex-1 overflow-hidden flex flex-col">
           {/* header */}
           <div className="flex items-center px-[24px] py-[10px] bg-[rgba(145,158,171,0.04)]">
-            <span style={{ width: 60 }} className="font-['Public_Sans:SemiBold',sans-serif] text-[12px] text-[#637381]">箱數</span>
-            <span style={{ flex: 1 }} className="font-['Public_Sans:SemiBold',sans-serif] text-[12px] text-[#637381]">數量</span>
-            <span style={{ width: 48 }} className="font-['Public_Sans:SemiBold',sans-serif] text-[12px] text-[#637381] text-center">刪除</span>
+            <span style={{ width: 60 }} className="font-['Public_Sans:SemiBold',sans-serif] text-[17px] text-[#637381]">箱數</span>
+            <span style={{ flex: 1 }} className="font-['Public_Sans:SemiBold',sans-serif] text-[17px] text-[#637381]">數量</span>
+            <span style={{ width: 48 }} className="font-['Public_Sans:SemiBold',sans-serif] text-[17px] text-[#637381] text-center">刪除</span>
           </div>
           {/* list */}
           <div className="overflow-y-auto flex-1 custom-scrollbar px-[24px]">
             {localBoxes.map((box, idx) => (
               <div key={box.boxNo} className="flex items-center py-[10px] border-b border-[rgba(145,158,171,0.08)] last:border-0">
                 {/* 箱號 */}
-                <span style={{ width: 60 }} className="font-['Public_Sans:Regular',sans-serif] text-[14px] text-[#1c252e]">{box.boxNo}</span>
+                <span style={{ width: 60 }} className="font-['Public_Sans:Regular',sans-serif] text-[19px] text-[#1c252e]">{box.boxNo}</span>
                 {/* 數量（可編輯） */}
                 <div style={{ flex: 1 }}>
                   <input
@@ -935,7 +942,7 @@ function BoxDetailModal({
                       const val = Number(e.target.value);
                       setLocalBoxes(prev => prev.map((b, i) => i === idx ? { ...b, qty: val } : b));
                     }}
-                    className="w-[80px] h-[32px] border border-[rgba(145,158,171,0.32)] rounded-[6px] px-[8px] text-right font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#1c252e] outline-none focus:border-[#1890FF] transition-colors bg-white"
+                    className="w-[140px] h-[32px] border border-[rgba(145,158,171,0.32)] rounded-[6px] px-[8px] text-right font-['Public_Sans:Regular',sans-serif] text-[18px] text-[#1c252e] outline-none focus:border-[#1890FF] transition-colors bg-white"
                   />
                 </div>
                 {/* 刪除（第 1 箱不可刪） */}
@@ -948,7 +955,7 @@ function BoxDetailModal({
                       className="w-[32px] h-[32px] flex items-center justify-center rounded-[6px] hover:bg-[rgba(255,86,48,0.08)] transition-colors"
                       title="刪除此箱"
                     >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#005eb8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ff5630" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="3 6 5 6 21 6" />
                         <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
                         <path d="M10 11v6M14 11v6" />
