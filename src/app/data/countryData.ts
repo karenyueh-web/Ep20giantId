@@ -229,6 +229,7 @@ export const SAP_COUNTRIES: CountryOption[] = [
   { code: "TN", zhName: "突尼斯", enName: "Tunisia", label: "TN 突尼斯" },
   { code: "TO", zhName: "汤加", enName: "Tonga", label: "TO 汤加" },
   { code: "TR", zhName: "土耳其", enName: "Turkey", label: "TR 土耳其" },
+  { code: "TW", zhName: "台灣", enName: "Taiwan", label: "TW 台灣" },
   { code: "TT", zhName: "特立尼达和多巴哥", enName: "Trinidad and Tobago", label: "TT 特立尼达和多巴哥" },
   { code: "TV", zhName: "图瓦卢", enName: "Tuvalu", label: "TV 图瓦卢" },
   { code: "TZ", zhName: "坦桑尼亚", enName: "Tanzania", label: "TZ 坦桑尼亚" },

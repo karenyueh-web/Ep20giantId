@@ -77,14 +77,14 @@ export function CountrySelect({ value, onChange }: CountrySelectProps) {
     return [...recent, ...rest];
   }, [isOpen]);
 
-  // 搜尋篩選
+  // 搜尋篩選（startsWith：從頭比對，避免 "US" 配到 Austria/Russia 等）
   const filtered = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return sortedOptions;
     return sortedOptions.filter(c =>
-      c.code.toLowerCase().includes(q) ||
-      c.zhName.toLowerCase().includes(q) ||
-      c.enName.toLowerCase().includes(q)
+      c.code.toLowerCase().startsWith(q) ||
+      c.zhName.toLowerCase().startsWith(q) ||
+      c.enName.toLowerCase().startsWith(q)
     );
   }, [sortedOptions, searchQuery]);
 
@@ -95,7 +95,7 @@ export function CountrySelect({ value, onChange }: CountrySelectProps) {
         ref={btnRef}
         type="button"
         onClick={() => isOpen ? (setIsOpen(false), setSearchQuery('')) : openDropdown()}
-        className="w-full h-[32px] px-[6px] border border-[rgba(145,158,171,0.32)] rounded-[6px] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#005eb8] outline-none hover:border-[#005eb8] focus:border-[#005eb8] bg-white cursor-pointer transition-colors flex items-center justify-between gap-[2px]"
+        className="w-full h-[32px] px-[6px] border border-[rgba(145,158,171,0.32)] rounded-[6px] font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#1c252e] outline-none hover:border-[#1c252e] focus:border-[#1c252e] bg-white cursor-pointer transition-colors flex items-center justify-between gap-[2px]"
       >
         <span className="truncate">{value || '—'}</span>
         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" className="shrink-0">

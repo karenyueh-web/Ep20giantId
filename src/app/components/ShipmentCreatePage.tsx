@@ -4,14 +4,14 @@
  * 出貨資格條件（兩種訂單來源均適用）：
  *   1. 訂單狀態 = CK（一般訂單 or 換貨(J)單）
  *   2. 無進行中修正單（correctionStatus 為 DR / V / B）
- *   3. 未交量 ≠ 訂貨量（undeliveredQty !== orderQty）
+ *   3. 未交量 > 0（訂單量 - 在途量 - 驗收量 > 0）
  *
  * 搜尋條件：公司(下拉)、採購組織(下拉)、單號序號(關鍵字)、料號(關鍵字)
  * 表格：沿用 AdvancedOrderTable（與一般訂單查詢相同欄位）+ forceShowCheckbox
  */
 
 import { useState, useMemo } from 'react';
-import { AdvancedOrderTable, defaultOrderColumns, getOrderColumns } from './AdvancedOrderTable';
+import { AdvancedOrderTable, defaultOrderColumns, getOrderColumns, calcUndeliveredQty } from './AdvancedOrderTable';
 import type { OrderRow, OrderColumn } from './AdvancedOrderTable';
 import { TableToolbar } from './TableToolbar';
 import { ColumnSelector } from './ColumnSelector';
@@ -78,7 +78,7 @@ export function ShipmentCreatePage({ userRole }: ShipmentCreatePageProps) {
     const isEligible = (o: OrderRow) =>
       o.status === 'CK' &&
       !blockedByCorrection.has(o.id) &&
-      o.undeliveredQty !== o.orderQty;
+      calcUndeliveredQty(o.orderQty ?? 0, o.acceptQty ?? 0, o.inTransitQty ?? 0) > 0;
 
     return [
       ...orders.filter(isEligible),

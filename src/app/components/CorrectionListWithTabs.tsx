@@ -6,6 +6,7 @@ import { Resizable } from 're-resizable';
 import { useOrderStore, nowDateStr, operatorByRole } from './OrderStoreContext';
 import type { CorrectionOrderRow, CorrectionStatus, HistoryEntry } from './OrderStoreContext';
 import type { OrderRow } from './AdvancedOrderTable';
+import { calcUndeliveredQty } from './AdvancedOrderTable';
 import { extraCkOrders } from './CorrectionCreatePage';
 import { CorrectionDetailPage } from './CorrectionDetailPage';
 import type { CorrectionFormData } from './CorrectionDetailPage';
@@ -1006,7 +1007,7 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
         expectedDelivery: corrRow.expectedDelivery ?? corrRow.vendorDeliveryDate ?? '',
         vendorDeliveryDate: corrRow.vendorDeliveryDate ?? '',
         inTransitQty: corrRow.inTransitQty ?? 0,
-        undeliveredQty: Math.max(0, (corrRow.orderQty ?? 0) - (corrRow.acceptQty ?? 0) - (corrRow.inTransitQty ?? 0)),
+        undeliveredQty: calcUndeliveredQty(corrRow.orderQty ?? 0, corrRow.acceptQty ?? 0, corrRow.inTransitQty ?? 0),
         deliveryQty: corrRow.deliveryQty ?? corrRow.orderQty ?? 0,
         agreedDate: corrRow.agreedDate ?? '',
       };
@@ -1140,7 +1141,7 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
         expectedDelivery: corrRow.expectedDelivery ?? corrRow.vendorDeliveryDate ?? '',
         vendorDeliveryDate: corrRow.vendorDeliveryDate ?? '',
         inTransitQty: corrRow.inTransitQty ?? 0,
-        undeliveredQty: Math.max(0, (corrRow.orderQty ?? 0) - (corrRow.acceptQty ?? 0) - (corrRow.inTransitQty ?? 0)),
+        undeliveredQty: calcUndeliveredQty(corrRow.orderQty ?? 0, corrRow.acceptQty ?? 0, corrRow.inTransitQty ?? 0),
         deliveryQty: corrRow.deliveryQty ?? corrRow.orderQty ?? 0,
         agreedDate: corrRow.agreedDate ?? '',
         deletionCode: corrRow.correctionDocNo,
@@ -1227,7 +1228,7 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
         expectedDelivery: corrRow.expectedDelivery ?? corrRow.vendorDeliveryDate ?? '',
         vendorDeliveryDate: corrRow.vendorDeliveryDate ?? '',
         inTransitQty: corrRow.inTransitQty ?? 0,
-        undeliveredQty: Math.max(0, (corrRow.orderQty ?? 0) - (corrRow.acceptQty ?? 0) - (corrRow.inTransitQty ?? 0)),
+        undeliveredQty: calcUndeliveredQty(corrRow.orderQty ?? 0, corrRow.acceptQty ?? 0, corrRow.inTransitQty ?? 0),
         deliveryQty: corrRow.deliveryQty ?? corrRow.orderQty ?? 0,
         agreedDate: corrRow.agreedDate ?? '',
       };

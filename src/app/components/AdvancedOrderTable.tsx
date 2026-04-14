@@ -164,6 +164,18 @@ export function computeProdSchedDayDiff(row: OrderRow): number | null {
   }
 }
 
+/**
+ * 未交量 = 訂單量 - (在途量 + 驗收量)，最小為 0。
+ * 全系統統一使用此函式，不依賴 undeliveredQty 存儲欄位。
+ */
+export function calcUndeliveredQty(
+  orderQty: number,
+  acceptQty: number,
+  inTransitQty: number,
+): number {
+  return Math.max(0, orderQty - acceptQty - inTransitQty);
+}
+
 // ===== Default Columns =====
 // ── 預設顯示的欄位（維持原有的主要欄位）──
 // ── 新增欄位 visible:false 預設隱藏，可透過欄位選擇器開啟 ──
@@ -554,6 +566,72 @@ export const orderMockData: OrderRow[] = [
     inTransitQty: 0, undeliveredQty: 0, lineItemNote: '684000', agreedDate: '2025/03/05',
     internalNote: '', materialPOContent: 'CONTRACT ORDER',
     gbdOrderNo: 'GBD-2025-002111', statisticalDeliveryDate: '2025/03/05',
+  },
+  // ── CK 出貨測試資料（未交量 > 0，可在「建立出貨單」頁面看到）──────────────
+  {
+    id: 27, status: 'CK', vendorDeliveryDate: '2026/05/10',
+    orderNo: '400651001', orderDate: '2026/04/01', orderType: 'Z2QB',
+    company: '巨大機械', purchaseOrg: '台灣廠生產採購組織', orderSeq: '10', docSeqNo: '400651001010',
+    purchaser: '王大明', orderQty: 200, acceptQty: 50, comparePrice: '580', unit: 'SET', currency: 'TWD',
+    leadtime: 14, vendorCode: '00010046', vendorName: '速聯國際(00010046)',
+    materialNo: '2201-FRM0201-P01', customerBrand: 'G01', vendorMaterialNo: 'PROPEL-ASL-DISC-M',
+    productName: '氣動公路車架', specification: 'PROPEL ADVANCED SL DISC FRAME M CARBON/WHITE',
+    expectedDelivery: '2026/05/10', deliveryQty: 200,
+    inTransitQty: 30, undeliveredQty: 120, lineItemNote: '116000', agreedDate: '2026/04/20',
+    internalNote: '量大，注意包裝', materialPOContent: 'PRIORITY ORDER',
+    gbdOrderNo: 'GBD-2026-003001', statisticalDeliveryDate: '2026/05/10',
+  },
+  {
+    id: 28, status: 'CK', vendorDeliveryDate: '2026/05/15',
+    orderNo: '400651002', orderDate: '2026/04/03', orderType: 'Z2QB',
+    company: '巨大機械', purchaseOrg: '台灣廠生產採購組織', orderSeq: '20', docSeqNo: '400651002020',
+    purchaser: '李玉霞', orderQty: 150, acceptQty: 0, comparePrice: '9800', unit: 'SET', currency: 'USD',
+    leadtime: 21, vendorCode: '00010045', vendorName: '佳承精密(00010045)',
+    materialNo: '3301-WHL0202-P02', customerBrand: 'G02', vendorMaterialNo: 'SLR0-C50-DISC-F',
+    productName: '碳纖輪組前輪', specification: 'SLR 0 CARBON 50 DISC WHEELSYSTEM FRONT 12X100',
+    expectedDelivery: '2026/05/15', deliveryQty: 150,
+    inTransitQty: 20, undeliveredQty: 130, lineItemNote: '1470000', agreedDate: '2026/04/25',
+    internalNote: '', materialPOContent: 'HIGH VALUE',
+    gbdOrderNo: 'GBD-2026-003002', statisticalDeliveryDate: '2026/05/15',
+  },
+  {
+    id: 29, status: 'CK', vendorDeliveryDate: '2026/05/20',
+    orderNo: '400651003', orderDate: '2026/04/05', orderType: 'Z2QB',
+    company: '巨大機械', purchaseOrg: '台灣廠生產採購組織', orderSeq: '30', docSeqNo: '400651003030',
+    purchaser: '陳俊宏', orderQty: 300, acceptQty: 100, comparePrice: '48', unit: 'PCS', currency: 'TWD',
+    leadtime: 7, vendorCode: '00010059', vendorName: '金盛元工業(00010059)',
+    materialNo: '8801-TIR0203-P03', customerBrand: 'G03', vendorMaterialNo: 'GAVIA-CRS2-700X28C',
+    productName: '公路車外胎', specification: 'GAVIA COURSE 2 700X28C TUBELESS READY BLACK',
+    expectedDelivery: '2026/05/20', deliveryQty: 300,
+    inTransitQty: 0, undeliveredQty: 200, lineItemNote: '9600', agreedDate: '2026/04/28',
+    internalNote: '', materialPOContent: '',
+    gbdOrderNo: 'GBD-2026-003003', statisticalDeliveryDate: '2026/05/20',
+  },
+  {
+    id: 30, status: 'CK', vendorDeliveryDate: '2026/05/25',
+    orderNo: '400651004', orderDate: '2026/04/07', orderType: 'Z2QB',
+    company: '巨大機械', purchaseOrg: '台灣廠生產採購組織', orderSeq: '40', docSeqNo: '400651004040',
+    purchaser: '吳佳慧', orderQty: 80, acceptQty: 30, comparePrice: '6500', unit: 'PCS', currency: 'TWD',
+    leadtime: 10, vendorCode: '00010053', vendorName: '久廣精密(00010053)',
+    materialNo: '8801-SFT0204-P04', customerBrand: 'G04', vendorMaterialNo: 'ST-R9270-DA-DI2-L',
+    productName: '電子變速把手(左)', specification: 'SHIMANO ST-R9270 DURA-ACE DI2 STI LEVER LEFT',
+    expectedDelivery: '2026/05/25', deliveryQty: 80,
+    inTransitQty: 10, undeliveredQty: 40, lineItemNote: '260000', agreedDate: '2026/05/02',
+    internalNote: '電子組件，注意靜電', materialPOContent: 'HANDLE WITH CARE',
+    gbdOrderNo: 'GBD-2026-003004', statisticalDeliveryDate: '2026/05/25',
+  },
+  {
+    id: 31, status: 'CK', vendorDeliveryDate: '2026/06/01',
+    orderNo: '400651005', orderDate: '2026/04/10', orderType: 'Z2HB',
+    company: '巨大機械', purchaseOrg: '台灣廠生產採購組織', orderSeq: '50', docSeqNo: '400651005050',
+    purchaser: '張建國', orderQty: 500, acceptQty: 200, comparePrice: '28', unit: 'PCS', currency: 'TWD',
+    leadtime: 5, vendorCode: '00010012', vendorName: '台灣製造(00010012)',
+    materialNo: '1101-PED0205-P05', customerBrand: 'G05', vendorMaterialNo: 'PLAT-PED-AL-BODY',
+    productName: '鋁合金踏板', specification: 'PLATFORM PEDAL ALUMINUM ALLOY BODY CR-MO AXLE 9/16"',
+    expectedDelivery: '2026/06/01', deliveryQty: 500,
+    inTransitQty: 50, undeliveredQty: 250, lineItemNote: '7000', agreedDate: '2026/05/10',
+    internalNote: '', materialPOContent: 'CONTRACT ORDER',
+    gbdOrderNo: 'GBD-2026-003005', statisticalDeliveryDate: '2026/06/01',
   },
 ];
 
@@ -1027,12 +1105,25 @@ export function AdvancedOrderTable({
     }
 
     // ── 數值欄位 ──
-    if (['orderQty', 'acceptQty', 'inTransitQty', 'undeliveredQty', 'deliveryQty', 'leadtime'].includes(key)) {
+    if (['orderQty', 'acceptQty', 'inTransitQty', 'deliveryQty', 'leadtime'].includes(key)) {
       const val = row[key as keyof OrderRow];
       const display = val !== undefined && val !== null ? String(val) : '-';
       return (
         <p className="font-['Public_Sans:Regular',sans-serif] font-normal leading-[22px] text-[#1c252e] text-[14px] truncate" title={display}>
           {display}
+        </p>
+      );
+    }
+    // ── 未交量：永遠由公式計算，不用存儲欄位 ──
+    if (key === 'undeliveredQty') {
+      const computed = calcUndeliveredQty(
+        row.orderQty ?? 0,
+        row.acceptQty ?? 0,
+        row.inTransitQty ?? 0,
+      );
+      return (
+        <p className="font-['Public_Sans:Regular',sans-serif] font-normal leading-[22px] text-[#1c252e] text-[14px] truncate" title={String(computed)}>
+          {computed}
         </p>
       );
     }
