@@ -54,6 +54,7 @@ export function ShipmentCreatePage({ userRole }: ShipmentCreatePageProps) {
   const [showDetail, setShowDetail]   = useState(false);
   const [detailOrders, setDetailOrders] = useState<OrderRow[]>([]);
 
+
   // ── 訂單明細彈窗狀態 ──────────────────────────────────────────────────
   const [previewOrder, setPreviewOrder] = useState<OrderRow | null>(null);
 
@@ -75,10 +76,25 @@ export function ShipmentCreatePage({ userRole }: ShipmentCreatePageProps) {
   // ── 合併符合出貨資格的訂單（一般 + 換貨J）────────────────────────────────
   // Exchange order IDs 從 2001 起，與一般訂單 1-26 無衝突，可直接合併
   const eligibleOrders = useMemo<OrderRow[]>(() => {
+    // 最早可開立日 = 廠商可交貨日期 − 7 天；今日需 >= 最早可開立日才可出貨
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const parseVDate = (s: string) => {
+      const [y, m, d] = s.replace(/\//g, '-').split('-').map(Number);
+      return new Date(y, m - 1, d);
+    };
+    const canShipToday = (o: OrderRow) => {
+      if (!o.vendorDeliveryDate) return true; // 無廠商答交日 → 不限制
+      const earliest = parseVDate(o.vendorDeliveryDate);
+      earliest.setDate(earliest.getDate() - 7);
+      return today >= earliest;
+    };
+
     const isEligible = (o: OrderRow) =>
       o.status === 'CK' &&
       !blockedByCorrection.has(o.id) &&
-      calcUndeliveredQty(o.orderQty ?? 0, o.acceptQty ?? 0, o.inTransitQty ?? 0) > 0;
+      calcUndeliveredQty(o.orderQty ?? 0, o.acceptQty ?? 0, o.inTransitQty ?? 0) > 0 &&
+      canShipToday(o);
 
     return [
       ...orders.filter(isEligible),
@@ -401,7 +417,7 @@ export function ShipmentCreatePage({ userRole }: ShipmentCreatePageProps) {
         </div>
       )}
 
-      {/* ── Toast ───────────────────────────────────────────────────────── */}
+            {/* ── Toast ───────────────────────────────────────────────────────── */}
       {toastMessage && (
         <div className="fixed bottom-[24px] left-1/2 -translate-x-1/2 z-[250] bg-[#1c252e] text-white px-[24px] py-[12px] rounded-[8px] shadow-[0px_8px_16px_rgba(0,0,0,0.16)] flex items-center gap-[8px]">
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
