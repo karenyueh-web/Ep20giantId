@@ -441,9 +441,12 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole }: Shipme
 
     // 明細逐筆檢查
     rows.forEach(r => {
+      if (!r.shipQty || r.shipQty <= 0) {
+        errors.push(`出貨項次 ${r.itemNo}（${r.materialNo}）：出貨量 必須大於 0`);
+      }
       const v = parseFloat(r.qtyPerBox);
       if (!r.qtyPerBox || isNaN(v) || v <= 0) {
-        errors.push(`出貨項次 ${r.itemNo}（${r.materialNo}）：每箱數量 為必填`);
+        errors.push(`出貨項次 ${r.itemNo}（${r.materialNo}）：每箱數量 必須大於 0`);
       }
     });
 
@@ -655,27 +658,53 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole }: Shipme
                       <input
                         type="number"
                         value={row.shipQty}
-                        min={0}
+                        min={1}
                         max={row.orderPendingQty}
-                        onChange={e => updateRow(row.id, { shipQty: Number(e.target.value) })}
-                        className="w-[60px] h-[32px] px-[6px] border border-[rgba(145,158,171,0.32)] rounded-[6px] font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#1c252e] outline-none focus:border-[#1890FF] transition-colors bg-white text-right"
+                        onChange={e => {
+                          const val = Number(e.target.value);
+                          if (val <= 0) return;
+                          updateRow(row.id, { shipQty: val });
+                        }}
+                        className={`w-[60px] h-[32px] px-[6px] border rounded-[6px] font-['Public_Sans:Regular',sans-serif] text-[13px] outline-none transition-colors bg-white text-right ${
+                          submitted && (!row.shipQty || row.shipQty <= 0)
+                            ? 'border-[rgba(255,86,48,0.5)] text-[#ff5630] focus:border-[#ff5630]'
+                            : 'border-[rgba(145,158,171,0.32)] text-[#1c252e] focus:border-[#1890FF]'
+                        }`}
                       />
                     </div>
                   </div>
 
-                  {/* 每箱數量：直接綁定 row.qtyPerBox，更新時自動同步 boxes */}
+                  {/* 每砑數量：直接綁定 row.qtyPerBox，更新時自動同步 boxes */}
                   {(() => {
                     const perBox = parseFloat(row.qtyPerBox) || 0;
                     const hasPlus = row.qtyPerBox.includes('+');
                     const notDivisible = perBox > 0 && row.shipQty > 0 && row.shipQty % perBox !== 0;
-                    const isYellow = (hasPlus || notDivisible) && !(!row.qtyPerBox || perBox <= 0);
-                    const isRed    = submitted && (!row.qtyPerBox || perBox <= 0);
+                    // 紅框：有值但 <=0（即時顯示，不需要 submitted）
+                    const isRed    = !!row.qtyPerBox && (perBox <= 0);
+                    // 黃框：無法整除（正常警示）
+                    const isYellow = !isRed && (hasPlus || notDivisible) && perBox > 0;
                     return (
                       <div style={{ width: 90, minWidth: 90 }} className="px-[8px] shrink-0">
                         <input
-                          type="text"
+                          type="number"
                           value={row.qtyPerBox}
-                          onChange={e => updateRow(row.id, { qtyPerBox: e.target.value })}
+                          min={1}
+                          max={row.shipQty || undefined}
+                          onChange={e => {
+                            const raw = e.target.value;
+                            // 輸入清空時允許（讓用戶可以删除重新輸入）
+                            if (raw === '') {
+                              updateRow(row.id, { qtyPerBox: '' });
+                              return;
+                            }
+                            const num = parseFloat(raw);
+                            if (isNaN(num)) return;
+                            // 正向放行 0 以下
+                            if (num <= 0) return;
+                            // 正向放行大於出貨量
+                            if (row.shipQty > 0 && num > row.shipQty) return;
+                            updateRow(row.id, { qtyPerBox: raw });
+                          }}
                           onKeyDown={e => {
                             if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
                           }}

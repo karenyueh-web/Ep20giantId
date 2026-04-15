@@ -83,8 +83,7 @@ export function CountrySelect({ value, onChange }: CountrySelectProps) {
     if (!q) return sortedOptions;
     return sortedOptions.filter(c =>
       c.code.toLowerCase().startsWith(q) ||
-      c.zhName.toLowerCase().startsWith(q) ||
-      c.enName.toLowerCase().startsWith(q)
+      c.zhName.toLowerCase().startsWith(q)
     );
   }, [sortedOptions, searchQuery]);
 
