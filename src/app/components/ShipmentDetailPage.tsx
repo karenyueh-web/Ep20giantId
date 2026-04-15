@@ -373,7 +373,7 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole }: Shipme
       netWeight: '0',
       grossWeight: '0',
       weightUnit: 'KG',
-      countryOfOrigin: 'TW',
+      countryOfOrigin: '',
     }))
   );
 
@@ -762,10 +762,27 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole }: Shipme
 
                   {/* 原產國家 */}
                   <div style={{ width: 110, minWidth: 110 }} className="px-[4px] shrink-0">
-                    <CountrySelect
-                      value={row.countryOfOrigin}
-                      onChange={(code) => updateRow(row.id, { countryOfOrigin: code })}
-                    />
+                    <div className="flex flex-col gap-[4px]">
+                      <CountrySelect
+                        value={row.countryOfOrigin}
+                        onChange={(code) => updateRow(row.id, { countryOfOrigin: code })}
+                      />
+                      {/* 下方同步：只在第一筆、多筆時、且有填値才顯示 */}
+                      {idx === 0 && rows.length > 1 && row.countryOfOrigin && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const first = rows[0].countryOfOrigin;
+                            setRows(prev => prev.map((r, i) =>
+                              i === 0 ? r : { ...r, countryOfOrigin: first }
+                            ));
+                          }}
+                          className="text-[#1D7BF5] hover:text-[#0055cc] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] leading-[16px] text-left transition-colors whitespace-nowrap"
+                        >
+                          下方同步
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* 刪除 */}
