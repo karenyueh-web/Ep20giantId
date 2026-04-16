@@ -16,6 +16,8 @@ interface TableToolbarProps {
   onExportCsv?: () => void;
   /** 提供此 callback 即在 Export 下拉選單中顯示「下載變更檔案」選項 */
   onExportScheduleChange?: () => void;
+  /** 提供此 callback 即在 Export 下拉選單中顯示「下載出貨單範本」選項 */
+  onDownloadShipmentTemplate?: () => void;
 }
 
 export function TableToolbar({
@@ -30,8 +32,9 @@ export function TableToolbar({
   onExportExcel,
   onExportCsv,
   onExportScheduleChange,
+  onDownloadShipmentTemplate,
 }: TableToolbarProps) {
-  const hasExport = !!(onExportExcel || onExportCsv || onExportScheduleChange);
+  const hasExport = !!(onExportExcel || onExportCsv || onExportScheduleChange || onDownloadShipmentTemplate);
   const [showExportDropdown, setShowExportDropdown] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
 
@@ -191,6 +194,32 @@ export function TableToolbar({
                       </p>
                       <p className="font-['Public_Sans:Regular',sans-serif] text-[11px] text-[#919eab]">
                         匯出生管排程變更用 .csv 檔案
+                      </p>
+                    </div>
+                  </button>
+                )}
+                {/* 下載出貨單範本 */}
+                {onDownloadShipmentTemplate && (
+                  <button
+                    className="w-full flex items-start gap-[10px] px-[14px] py-[10px] hover:bg-[rgba(145,158,171,0.06)] transition-colors text-left"
+                    onClick={() => { onDownloadShipmentTemplate(); setShowExportDropdown(false); }}
+                  >
+                    <div className="mt-[2px] shrink-0">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#b76e00" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                        <line x1="16" y1="13" x2="8" y2="13"/>
+                        <line x1="16" y1="17" x2="8" y2="17"/>
+                        <polyline points="10 9 9 9 8 9"/>
+                        <polyline points="8 17 12 21 16 17"/>
+                      </svg>
+                    </div>
+                    <div className="flex flex-col gap-[2px] min-w-0">
+                      <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#1c252e]">
+                        下載出貨單範本
+                      </p>
+                      <p className="font-['Public_Sans:Regular',sans-serif] text-[11px] text-[#919eab]">
+                        依目前列表匯出可填寫的出貨單 .csv 範本
                       </p>
                     </div>
                   </button>
