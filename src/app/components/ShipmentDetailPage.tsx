@@ -762,7 +762,7 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole }: Shipme
 
                   {/* 原產國家 */}
                   <div style={{ width: 110, minWidth: 110 }} className="px-[4px] shrink-0">
-                    <div className="flex flex-col gap-[4px]">
+                    <div className="flex flex-row items-center gap-[4px]">
                       <CountrySelect
                         value={row.countryOfOrigin}
                         onChange={(code) => updateRow(row.id, { countryOfOrigin: code })}
