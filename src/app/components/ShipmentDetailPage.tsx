@@ -6,7 +6,7 @@
  *   2. 出貨明細表格（可編輯出貨量、每箱數量、總箱數自動計算、淨重/毛重、原產國家）
  */
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { DeleteButton } from './ActionButtons';
 import { CurrencySelect } from './CurrencySelect';
 import { CountrySelect } from './CountrySelect';
@@ -461,6 +461,35 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole }: Shipme
   // ── 歷程 panel（stub）────────────────────────────────────────────────────
   const [showHistory, setShowHistory] = useState(false);
 
+  // ── 七天原則驗證（交貨日期選定時，逐筆比對廠商答交日）───────────────────
+  const vendorDateWarnings = useMemo(() => {
+    if (!deliveryDate) return [];
+    const parseD = (s: string) => {
+      const [y, m, d] = s.replace(/\//g, '-').split('-').map(Number);
+      return new Date(y, m - 1, d);
+    };
+    const formatDate = (d: Date) => `${d.getMonth() + 1}/${d.getDate()}`;
+    const selected = parseD(deliveryDate);
+    const result: { itemNo: number; orderNo: string; orderSeq: string; materialNo: string; vendorDeliveryDate: string; earliestDate: string }[] = [];
+    rows.forEach(row => {
+      const order = selectedOrders.find(o => o.id === row.id);
+      if (!order?.vendorDeliveryDate) return;
+      const earliest = parseD(order.vendorDeliveryDate);
+      earliest.setDate(earliest.getDate() - 7);
+      if (selected < earliest) {
+        result.push({
+          itemNo: row.itemNo,
+          orderNo: row.orderNo,
+          orderSeq: row.orderSeq,
+          materialNo: row.materialNo,
+          vendorDeliveryDate: order.vendorDeliveryDate,
+          earliestDate: formatDate(earliest),
+        });
+      }
+    });
+    return result;
+  }, [deliveryDate, rows, selectedOrders]);
+
   // ─────────────────────────────────────────────────────────────────────────
   return (
     <div className="bg-white flex flex-col h-full relative rounded-[16px] shadow-[0px_0px_2px_0px_rgba(145,158,171,0.2),0px_12px_24px_0px_rgba(145,158,171,0.12)] w-full overflow-hidden">
@@ -486,7 +515,9 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole }: Shipme
           <div className="flex items-center gap-[12px]">
             <button
               onClick={handleConfirm}
-              className="h-[36px] bg-[#005eb8] hover:bg-[#004a94] text-white rounded-[8px] px-[20px] text-[14px] font-semibold font-['Public_Sans:SemiBold',sans-serif] transition-colors whitespace-nowrap"
+              disabled={vendorDateWarnings.length > 0}
+              title={vendorDateWarnings.length > 0 ? '有出貨明細尚未符合七天原則，無法確認出貨' : undefined}
+              className="h-[36px] bg-[#005eb8] hover:bg-[#004a94] disabled:bg-[#919eab] disabled:cursor-not-allowed text-white rounded-[8px] px-[20px] text-[14px] font-semibold font-['Public_Sans:SemiBold',sans-serif] transition-colors whitespace-nowrap"
             >
               確認出貨
             </button>
@@ -552,6 +583,28 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole }: Shipme
           onChange={setDeliveryAddress}
           placeholder="帶出地址後尚可更改"
         />
+
+        {/* 七天原則警告橫幅（交貨日期選定後若有不符規則的明細則顯示） */}
+        {vendorDateWarnings.length > 0 && (
+          <div className="mt-[12px] px-[14px] py-[10px] bg-[rgba(255,171,0,0.08)] border border-[rgba(255,171,0,0.4)] rounded-[8px] flex flex-col gap-[6px]">
+            <div className="flex items-center gap-[6px]">
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="none" className="shrink-0">
+                <path d="M10 2L2 17h16L10 2z" stroke="#B76E00" strokeWidth="1.8" strokeLinejoin="round"/>
+                <path d="M10 8v4M10 14.5h.01" stroke="#B76E00" strokeWidth="1.8" strokeLinecap="round"/>
+              </svg>
+              <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#B76E00]">
+                以下明細的廠商答交日尚不符合七天原則，無法確認出貨：
+              </span>
+            </div>
+            <ul className="flex flex-col gap-[4px] pl-[22px]">
+              {vendorDateWarnings.map(w => (
+                <li key={w.itemNo} className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#B76E00] leading-[18px]">
+                  出貨項次 {w.itemNo}（{w.materialNo}）— 廠商答交日 {w.vendorDeliveryDate}，最早可出貨日為 {w.earliestDate}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
 
       {/* ── 下半：灰色區 — 出貨明細（table 用白底卡片） ────────────────────── */}
@@ -663,6 +716,7 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole }: Shipme
                         onChange={e => {
                           const val = Number(e.target.value);
                           if (val <= 0) return;
+                          if (row.orderPendingQty > 0 && val > row.orderPendingQty) return;
                           updateRow(row.id, { shipQty: val });
                         }}
                         className={`w-[60px] h-[32px] px-[6px] border rounded-[6px] font-['Public_Sans:Regular',sans-serif] text-[13px] outline-none transition-colors bg-white text-right ${
