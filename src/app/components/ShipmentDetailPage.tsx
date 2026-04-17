@@ -88,6 +88,11 @@ export interface ShipmentDetailPageProps {
   onClose: () => void;
   userRole?: string;
   csvData?: CsvPrefillData;  // 若為 CSV 匯入則傳入，預填所有欄位
+  // ─ 查詢模式（readOnly）──────────────────────
+  readOnly?: boolean;         // 出貨單查詢明細（唯讀）
+  sapDeliveryNo?: string;     // SAP送貨單號（查詢模式顯示）
+  createdAt?: string;         // 出貨單開立時間（YYYYMMDD HH:mm）
+  onDelete?: () => void;      // 整單刪除 callback
 }
 
 // ── 箱數工具函式 ─────────────────────────────────────────────────────────────
@@ -122,7 +127,7 @@ function calcQtyPerBoxLabel(boxes: BoxItem[]): string {
 
 // ── FloatingInput（與 ShippingBasicSettingsPage 一致：label 壓在 border 上） ──
 function FloatingInput({
-  label, value, onChange, placeholder, required, noResize, hasError,
+  label, value, onChange, placeholder, required, noResize, hasError, disabled,
 }: {
   label: string;
   value: string;
@@ -131,9 +136,11 @@ function FloatingInput({
   required?: boolean;
   noResize?: boolean;
   hasError?: boolean;
+  disabled?: boolean;
 }) {
   const defaultBorder = hasError ? '#ff5630' : 'rgba(145,158,171,0.2)';
   const handleFocus = (el: HTMLElement) => {
+    if (disabled) return;
     const b = el.parentElement?.querySelector('[aria-hidden]') as HTMLElement;
     if (b) { b.style.borderColor = hasError ? '#ff5630' : '#1890FF'; b.style.boxShadow = hasError ? '0 0 0 2px rgba(255,86,48,0.12)' : '0 0 0 2px rgba(24,144,255,0.15)'; }
   };
@@ -150,6 +157,7 @@ function FloatingInput({
       </p>
     </div>
   );
+  const disabledStyle = disabled ? { backgroundColor: 'rgba(145,158,171,0.06)', cursor: 'not-allowed', color: '#919eab' } : {};
   if (noResize) {
     return (
       <div className="relative w-full h-[54px]">
@@ -157,27 +165,31 @@ function FloatingInput({
         {labelNode}
         <input
           type="text"
-          className="w-full h-full rounded-[8px] px-[14px] pt-[14px] pb-[8px] text-[14px] text-[#1c252e] outline-none bg-transparent border-0"
+          className="w-full h-full rounded-[8px] px-[14px] pt-[14px] pb-[8px] text-[14px] outline-none bg-transparent border-0"
+          style={{ color: disabled ? '#919eab' : '#1c252e' }}
           value={value}
-          onChange={e => onChange(e.target.value)}
+          onChange={e => { if (!disabled) onChange(e.target.value); }}
           placeholder={placeholder ?? ''}
+          readOnly={disabled}
           onFocus={e => handleFocus(e.currentTarget)}
           onBlur={e => handleBlur(e.currentTarget)}
         />
+        {disabled && <div className="absolute inset-0 rounded-[8px] bg-[rgba(145,158,171,0.06)] pointer-events-none" />}
       </div>
     );
   }
   return (
-    <div className="relative w-full" style={{ minHeight: '54px' }}>
+    <div className="relative w-full" style={{ minHeight: '54px', ...disabledStyle }}>
       <div aria-hidden="true" className="absolute inset-0 pointer-events-none rounded-[8px] border border-solid" style={{ borderColor: defaultBorder }} />
       {labelNode}
       <textarea
-        className="w-full rounded-[8px] px-[14px] pt-[18px] pb-[10px] text-[14px] text-[#1c252e] outline-none bg-transparent border-0 leading-[22px]"
-        style={{ resize: 'vertical', minHeight: '54px', color: '#1c252e' }}
+        className="w-full rounded-[8px] px-[14px] pt-[18px] pb-[10px] text-[14px] outline-none bg-transparent border-0 leading-[22px]"
+        style={{ resize: disabled ? 'none' : 'vertical', minHeight: '54px', color: disabled ? '#919eab' : '#1c252e' }}
         value={value}
-        onChange={e => onChange(e.target.value)}
+        onChange={e => { if (!disabled) onChange(e.target.value); }}
         placeholder={placeholder ?? ''}
         rows={1}
+        readOnly={disabled}
         onFocus={e => handleFocus(e.currentTarget)}
         onBlur={e => handleBlur(e.currentTarget)}
       />
@@ -363,7 +375,7 @@ function TableSelect({
 }
 
 // ── 主元件 ───────────────────────────────────────────────────────────────────
-export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData }: ShipmentDetailPageProps) {
+export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData, readOnly, sapDeliveryNo, createdAt, onDelete }: ShipmentDetailPageProps) {
   // ── 基本資訊（若為 CSV 匯入則優先使用 csvData 預填值）───────────────────
   const [vendorShipmentNo, setVendorShipmentNo] = useState(csvData?.vendorShipmentNo ?? '');
   const [currency, setCurrency]         = useState(csvData?.currency ?? 'TWD');
@@ -379,9 +391,48 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData 
     return found?.addressZh ?? '';
   });
 
-  // ── 出貨明細 rows（CSV 匯入時用 csvData.rows 覆蓋各欄位）────────────────
-  const [rows, setRows] = useState<ShipmentDetailRow[]>(() =>
-    selectedOrders.map((o, idx) => {
+  // ── 出貨明細 rows（readOnly 模式直接從 csvData.rows 建立；edit 模式走 selectedOrders）────
+  const [rows, setRows] = useState<ShipmentDetailRow[]>(() => {
+    // readOnly 查詢模式：直接從 csvData.rows 建立（selectedOrders 為空陣列）
+    if (readOnly && csvData?.rows && csvData.rows.length > 0) {
+      return csvData.rows.map((csvRow, idx) => {
+        const shipQty = csvRow.shipQty;
+        let boxes: BoxItem[] = [];
+        let totalBoxes = 0;
+        if (csvRow.customBoxes) {
+          const parts = csvRow.customBoxes.split('/').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n) && n > 0);
+          boxes = parts.map((qty, i) => ({ boxNo: i + 1, qty }));
+          totalBoxes = boxes.length;
+        } else if (csvRow.qtyPerBox) {
+          const perBox = parseFloat(csvRow.qtyPerBox);
+          if (!isNaN(perBox) && perBox > 0) {
+            boxes = initBoxes(shipQty, perBox);
+            totalBoxes = boxes.length;
+          }
+        }
+        const qtyPerBoxLabel = boxes.length > 0
+          ? (csvRow.customBoxes ? calcQtyPerBoxLabel(boxes) : (csvRow.qtyPerBox ?? ''))
+          : (csvRow.qtyPerBox ?? '');
+        return {
+          id: idx + 1,
+          itemNo: csvRow.itemNo,
+          orderNo: csvRow.orderNo,
+          orderSeq: csvRow.orderSeq,
+          materialNo: '',
+          orderPendingQty: 0,
+          shipQty,
+          qtyPerBox: qtyPerBoxLabel,
+          totalBoxes,
+          boxes,
+          netWeight: csvRow.netWeight ?? '0',
+          grossWeight: csvRow.grossWeight ?? '0',
+          weightUnit: csvRow.weightUnit ?? 'KG',
+          countryOfOrigin: csvRow.countryOfOrigin ?? '',
+        };
+      });
+    }
+    // edit 模式（建立出貨單）：從 selectedOrders + csvData 合併
+    return selectedOrders.map((o, idx) => {
       // 找對應的 CSV 明細列（以訂單號碼 + 序號比對）
       const csvRow = csvData?.rows.find(
         r => r.orderNo === (o.orderNo || '') && r.orderSeq === (o.orderSeq || '')
@@ -427,8 +478,8 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData 
         weightUnit:      csvRow?.weightUnit      ?? 'KG',
         countryOfOrigin: csvRow?.countryOfOrigin ?? '',
       };
-    })
-  );
+    });
+  });
 
   // ── 箱數明細彈窗 ──────────────────────────────────────────────────────────
   const [boxModalRowId, setBoxModalRowId] = useState<number | null>(null);
@@ -441,6 +492,35 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData 
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  // ── 查詢模式下的編輯狀態 ───────────────────────────────────────────────────
+  const [isEditing, setIsEditing] = useState(false);
+  // 進入編輯前的快照（用於「取消」還原）
+  const [editSnapshot, setEditSnapshot] = useState<{
+    deliveryDate: string; arrivalDate: string; invoiceDate: string; deliveryAddress: string;
+    rows: typeof rows;
+  } | null>(null);
+
+  const handleStartEdit = () => {
+    setEditSnapshot({ deliveryDate, arrivalDate, invoiceDate, deliveryAddress, rows: rows.map(r => ({ ...r })) });
+    setIsEditing(true);
+  };
+  const handleCancelEdit = () => {
+    if (editSnapshot) {
+      setDeliveryDate(editSnapshot.deliveryDate);
+      setArrivalDate(editSnapshot.arrivalDate);
+      setInvoiceDate(editSnapshot.invoiceDate);
+      setDeliveryAddress(editSnapshot.deliveryAddress);
+      setRows(editSnapshot.rows);
+    }
+    setIsEditing(false);
+    setEditSnapshot(null);
+  };
+  const handleSaveEdit = () => {
+    setIsEditing(false);
+    setEditSnapshot(null);
+    showToast('已儲存變更');
   };
 
   // ── 更新 row 欄位 ────────────────────────────────────────────────────────
@@ -552,35 +632,50 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData 
 
         {/* 標題列：← + 基本資訊 | 確認出貨 | 暫存 | 歷程 */}
         <div className="flex items-center justify-between mb-[20px]">
-          <div className="content-stretch flex gap-[10px] items-center relative shrink-0">
-            <div onClick={onClose} className="overflow-clip relative shrink-0 size-[29px] cursor-pointer hover:opacity-70 transition-opacity" aria-label="返回">
-              <IconsSolidIcSolarMultipleForwardLeftBroken />
-            </div>
-            <div className="h-[48px] min-h-[48px] relative shrink-0">
-              <div aria-hidden="true" className="absolute border-[#1c252e] border-b-2 border-solid inset-0 pointer-events-none" />
-              <div className="flex flex-row items-center justify-center min-h-[inherit] size-full">
-                <div className="content-stretch flex gap-[8px] h-full items-center justify-center min-h-[inherit] relative px-[4px]">
-                  <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[28px] relative shrink-0 text-[#1c252e] text-[18px] whitespace-nowrap">基本資訊</p>
+          {/* 左側：← + 基本資訊 Tab + SAP送貨單號 + 開立時間（readOnly時顯示） */}
+          <div className="flex items-center gap-[10px] flex-wrap">
+            <div className="content-stretch flex gap-[10px] items-center relative shrink-0">
+              <div onClick={onClose} className="overflow-clip relative shrink-0 size-[29px] cursor-pointer hover:opacity-70 transition-opacity" aria-label="返回">
+                <IconsSolidIcSolarMultipleForwardLeftBroken />
+              </div>
+              <div className="h-[48px] min-h-[48px] relative shrink-0">
+                <div aria-hidden="true" className="absolute border-[#1c252e] border-b-2 border-solid inset-0 pointer-events-none" />
+                <div className="flex flex-row items-center justify-center min-h-[inherit] size-full">
+                  <div className="content-stretch flex gap-[8px] h-full items-center justify-center min-h-[inherit] relative px-[4px]">
+                    <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[28px] relative shrink-0 text-[#1c252e] text-[18px] whitespace-nowrap">基本資訊</p>
+                  </div>
                 </div>
               </div>
             </div>
+            {/* SAP送貨單號 + 開立時間 */}
+            {readOnly && sapDeliveryNo && (
+              <div className="flex items-center gap-[16px]">
+                <div className="flex items-center gap-[4px]">
+                  <span className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#919eab]">SAP送貨單號:</span>
+                  <span className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#919eab]">{sapDeliveryNo}</span>
+                </div>
+                {createdAt && (
+                  <>
+                    <div className="w-[1px] h-[14px] bg-[rgba(145,158,171,0.4)] shrink-0" />
+                    <span className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#919eab]">{createdAt}</span>
+                  </>
+                )}
+              </div>
+            )}
           </div>
+          {/* 右側按鈕 */}
           <div className="flex items-center gap-[12px]">
             <button
               onClick={handleConfirm}
               disabled={vendorDateWarnings.length > 0}
               title={vendorDateWarnings.length > 0 ? '有出貨明細尚未符合七天原則，無法確認出貨' : undefined}
               className="h-[36px] bg-[#005eb8] hover:bg-[#004a94] disabled:bg-[#919eab] disabled:cursor-not-allowed text-white rounded-[8px] px-[20px] text-[14px] font-semibold font-['Public_Sans:SemiBold',sans-serif] transition-colors whitespace-nowrap"
-            >
-              確認出貨
-            </button>
+            >確認出貨</button>
             <p
               onClick={() => setShowHistory(v => !v)}
               className="[text-decoration-skip-ink:none] decoration-solid font-['Roboto:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[32px] text-[#005eb8] text-[16px] underline cursor-pointer hover:opacity-70"
               style={{ fontVariationSettings: "'wdth' 100" }}
-            >
-              歷程
-            </p>
+            >歷程</p>
           </div>
         </div>
 
@@ -597,48 +692,30 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData 
             />
           </div>
           <div style={{ flex: '1 1 280px', minWidth: '280px' }}>
-            <CurrencySelect
-              value={currency}
-              onChange={setCurrency}
-            />
+            <CurrencySelect value={currency} onChange={setCurrency} />
           </div>
           <div style={{ flex: '1 1 140px', maxWidth: '180px' }}>
-            <DropdownSelect
-              label="運輸型態"
-              value={transportType}
-              onChange={setTransportType}
-              options={TRANSPORT_OPTIONS}
-            />
+            <DropdownSelect label="運輸型態" value={transportType} onChange={setTransportType} options={TRANSPORT_OPTIONS} />
           </div>
           <div style={{ flex: '1 1 140px', maxWidth: '180px' }}>
-            <FloatingDateField
-              label="交貨日期"
-              value={deliveryDate}
-              onChange={setDeliveryDate}
-              required
-              hasError={submitted && !deliveryDate}
-            />
+            <FloatingDateField label="發票日期" value={invoiceDate} onChange={setInvoiceDate} />
           </div>
-
           <div style={{ flex: '1 1 140px', maxWidth: '180px' }}>
-            <FloatingDateField
-              label="到貨日期"
-              value={arrivalDate}
-              onChange={setArrivalDate}
-            />
+            <FloatingDateField label="交貨日期" value={deliveryDate} onChange={setDeliveryDate}
+              required hasError={submitted && !deliveryDate} />
+          </div>
+          <div style={{ flex: '1 1 140px', maxWidth: '180px' }}>
+            <FloatingDateField label="到貨日期" value={arrivalDate} onChange={setArrivalDate} />
           </div>
         </div>
 
         {/* Row 2：交貨地址（全寬） */}
-        <FloatingInput
-          label="交貨地址"
-          value={deliveryAddress}
-          onChange={setDeliveryAddress}
-          placeholder="帶出地址後尚可更改"
-        />
+        <FloatingInput label="交貨地址" value={deliveryAddress} onChange={setDeliveryAddress}
+          placeholder="帶出地址後尚可更改" />
 
-        {/* 七天原則警告橫幅（交貨日期選定後若有不符規則的明細則顯示） */}
-        {vendorDateWarnings.length > 0 && (
+
+        {/* 七天原則警告橫幅（查詢模式不顯示） */}
+        {!readOnly && vendorDateWarnings.length > 0 && (
           <div className="mt-[12px] px-[14px] py-[10px] bg-[rgba(255,171,0,0.08)] border border-[rgba(255,171,0,0.4)] rounded-[8px] flex flex-col gap-[6px]">
             <div className="flex items-center gap-[6px]">
               <svg width="16" height="16" viewBox="0 0 20 20" fill="none" className="shrink-0">
@@ -663,7 +740,7 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData 
       {/* ── 下半：灰色區 — 出貨明細（table 用白底卡片） ────────────────────── */}
       <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar bg-[#f4f6f8] px-[24px] py-[20px]">
 
-        {/* 標題 + 說明 */}
+        {/* 標題列 */}
         <div className="flex items-center gap-[16px] mb-[12px]">
           <div className="content-stretch flex gap-[17px] items-center relative shrink-0">
             <div className="h-[48px] min-h-[48px] relative shrink-0">
@@ -675,9 +752,11 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData 
               </div>
             </div>
           </div>
-          <p className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#FF5630] leading-[20px]">
-            * 系統會自動計算出貨總箱數，您依然可點擊總箱數進行調整
-          </p>
+          {!readOnly && (
+            <p className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#FF5630] leading-[20px]">
+              * 系統會自動計算出貨總箱數，您依然可點擊總箱數進行調整
+            </p>
+          )}
         </div>
 
         {/* 白底 table 卡片 */}
@@ -758,7 +837,7 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData 
                     </span>
                   </div>
 
-                  {/* 出貨量（可編輯） */}
+                  {/* 出貨量 */}
                   <div style={{ width: 80, minWidth: 80 }} className="px-[8px] shrink-0">
                     <div className="flex justify-end">
                       <input
@@ -781,14 +860,12 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData 
                     </div>
                   </div>
 
-                  {/* 每砑數量：直接綁定 row.qtyPerBox，更新時自動同步 boxes */}
+                  {/* 每箱數量 */}
                   {(() => {
                     const perBox = parseFloat(row.qtyPerBox) || 0;
                     const hasPlus = row.qtyPerBox.includes('+');
                     const notDivisible = perBox > 0 && row.shipQty > 0 && row.shipQty % perBox !== 0;
-                    // 紅框：有值但 <=0（即時顯示，不需要 submitted）
                     const isRed    = !!row.qtyPerBox && (perBox <= 0);
-                    // 黃框：無法整除（正常警示）
                     const isYellow = !isRed && (hasPlus || notDivisible) && perBox > 0;
                     return (
                       <div style={{ width: 90, minWidth: 90 }} className="px-[8px] shrink-0">
@@ -798,20 +875,14 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData 
                           value={row.qtyPerBox}
                           onChange={e => {
                             const raw = e.target.value;
-                            // 輸入清空時允許（讓用戶可以删除重新輸入）
-                            if (raw === '') {
-                              updateRow(row.id, { qtyPerBox: '' });
-                              return;
-                            }
+                            if (raw === '') { updateRow(row.id, { qtyPerBox: '' }); return; }
                             const num = parseFloat(raw);
                             if (isNaN(num)) return;
                             if (num <= 0) return;
                             if (row.shipQty > 0 && num > row.shipQty) return;
                             updateRow(row.id, { qtyPerBox: raw });
                           }}
-                          onKeyDown={e => {
-                            if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
-                          }}
+                          onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
                           className={`w-full h-[32px] px-[8px] border rounded-[6px] font-['Public_Sans:Regular',sans-serif] text-[13px] outline-none transition-colors text-right ${
                             isRed
                               ? 'bg-white text-[#ff5630] border-[rgba(255,86,48,0.5)] focus:border-[#ff5630]'
@@ -824,67 +895,47 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData 
                     );
                   })()}
 
-                  {/* 總箱數（連結樣式，點擊開啟箱數明細） */}
+                  {/* 總箱數 */}
                   <div style={{ width: 80, minWidth: 80 }} className="px-[8px] flex justify-center shrink-0">
                     {row.totalBoxes > 0 ? (
                       <button
                         onClick={() => setBoxModalRowId(row.id)}
                         className="font-['Public_Sans:SemiBold',sans-serif] text-[17px] text-[#005eb8] underline cursor-pointer hover:opacity-70 transition-opacity"
                         title="點擊查看箱數明細"
-                      >
-                        {row.totalBoxes}
-                      </button>
+                      >{row.totalBoxes}</button>
                     ) : (
                       <span className="font-['Public_Sans:Regular',sans-serif] text-[17px] text-[#c4cdd6]">—</span>
                     )}
                   </div>
 
-                  {/* 淨重(個) */}
+                  {/* 淨重 */}
                   <div style={{ width: 90, minWidth: 90 }} className="px-[8px] shrink-0">
-                    <InlineNumberInput
-                      value={row.netWeight}
-                      onChange={v => updateRow(row.id, { netWeight: v })}
-                    />
+                    <InlineNumberInput value={row.netWeight} onChange={v => updateRow(row.id, { netWeight: v })} />
                   </div>
 
-                  {/* 毛重(個) */}
+                  {/* 毛重 */}
                   <div style={{ width: 90, minWidth: 90 }} className="px-[8px] shrink-0">
-                    <InlineNumberInput
-                      value={row.grossWeight}
-                      onChange={v => updateRow(row.id, { grossWeight: v })}
-                    />
+                    <InlineNumberInput value={row.grossWeight} onChange={v => updateRow(row.id, { grossWeight: v })} />
                   </div>
 
                   {/* 重量單位 */}
                   <div style={{ width: 100, minWidth: 100 }} className="px-[4px] shrink-0">
-                    <TableSelect
-                      value={row.weightUnit}
-                      onChange={v => updateRow(row.id, { weightUnit: v })}
-                      options={WEIGHT_UNIT_OPTIONS}
-                    />
+                    <TableSelect value={row.weightUnit} onChange={v => updateRow(row.id, { weightUnit: v })} options={WEIGHT_UNIT_OPTIONS} />
                   </div>
 
                   {/* 原產國家 */}
                   <div style={{ width: 110, minWidth: 110 }} className="px-[4px] shrink-0">
                     <div className="flex flex-row items-center gap-[4px]">
-                      <CountrySelect
-                        value={row.countryOfOrigin}
-                        onChange={(code) => updateRow(row.id, { countryOfOrigin: code })}
-                      />
-                      {/* 下方同步：只在第一筆、多筆時、且有填値才顯示 */}
+                      <CountrySelect value={row.countryOfOrigin} onChange={(code) => updateRow(row.id, { countryOfOrigin: code })} />
                       {idx === 0 && rows.length > 1 && row.countryOfOrigin && (
                         <button
                           type="button"
                           onClick={() => {
                             const first = rows[0].countryOfOrigin;
-                            setRows(prev => prev.map((r, i) =>
-                              i === 0 ? r : { ...r, countryOfOrigin: first }
-                            ));
+                            setRows(prev => prev.map((r, i) => i === 0 ? r : { ...r, countryOfOrigin: first }));
                           }}
                           className="text-[#1D7BF5] hover:text-[#0055cc] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] leading-[16px] text-left transition-colors whitespace-nowrap"
-                        >
-                          下方同步
-                        </button>
+                        >下方同步</button>
                       )}
                     </div>
                   </div>
@@ -894,6 +945,7 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData 
                     <DeleteButton onClick={() => deleteRow(row.id)} />
                   </div>
                 </div>
+
               ))}
             </div>
           </div>

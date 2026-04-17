@@ -451,7 +451,67 @@ const isSomeSelected = selectedIds.size > 0 && !isAllSelected;
 
 ---
 
-## Step 4：設計決策流程
+## ⭐ 明細頁大 TAG 規範（Detail Page Document Number TAG）
+
+> 在明細頁的操作列（Header bar）中，用於顯示單據號碼（如廠商出貨單號、修正單號）的大型 TAG 元件。
+
+### 視覺規格
+
+| 項目 | 規格 |
+|------|------|
+| 高度 | `h-[48px]` |
+| 圓角 | `rounded-[8px]` |
+| 最小寬度 | `min-w-[48px]`（自動依內容撐開） |
+| padding | `px-[12px]` |
+| 上方標籤文字 | `text-[10px]`、`font-normal`、`opacity-70`、`leading-[14px]` |
+| 下方值文字 | `text-[16px]`、`font-semibold`、`leading-[22px]`、`whitespace-nowrap` |
+| 文字對齊 | 置中（`text-center`） |
+| 參考來源 | `CorrectionDetailPage.tsx` Header bar 區塊（Tag 1 & Tag 2） |
+
+### 色票
+
+| 用途 | 背景色 | 邊框色 | 文字色 |
+|------|--------|--------|--------|
+| 藍色（廠商出貨單號、修正單號） | `#005eb8` | `#003d82` | `white` |
+| 深色（修正類型，不拆單/拆單） | `#1c252e` | 無 | `white` |
+| 紅色（刪單模式） | `#ff5630` | 無 | `white` |
+| 綠色（訂單狀態 CK） | `#d3f4e0` | `#118d57` | `#118d57` |
+
+### 結構模板
+
+```tsx
+{/* 大 TAG：單據號碼（藍色） */}
+<div
+  className="h-[48px] min-w-[48px] relative rounded-[8px] shrink-0"
+  style={{ backgroundColor: '#005eb8' }}
+>
+  {/* 邊框 overlay */}
+  <div
+    aria-hidden="true"
+    className="absolute border border-solid inset-0 pointer-events-none rounded-[8px]"
+    style={{ borderColor: '#003d82' }}
+  />
+  <div className="flex flex-row items-center justify-center min-w-[inherit] size-full">
+    <div className="content-stretch flex gap-[8px] h-full items-center justify-center min-w-[inherit] px-[12px] relative">
+      <div className="font-['Public_Sans:SemiBold',sans-serif] font-semibold leading-[22px] relative shrink-0 text-[16px] text-center whitespace-nowrap text-white">
+        {/* 上方小標籤 */}
+        <p className="text-[10px] font-normal opacity-70 mb-0 leading-[14px]">標籤文字</p>
+        {/* 下方主值 */}
+        <p>單據號碼</p>
+      </div>
+    </div>
+  </div>
+</div>
+```
+
+### 使用時機
+
+- 明細頁 Header bar 中顯示**當前單據號碼**（如廠商出貨單號、修正單號）
+- 同一列可並排多個 TAG（如修正類型 TAG + 修正單號 TAG）
+- **不適用於**：列表表格、搜尋結果、小型狀態標籤（那些應用 Badge 元件）
+
+---
+
 
 建立新元件時，依序遵循此決策樹：
 

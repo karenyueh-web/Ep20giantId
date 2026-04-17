@@ -21,7 +21,8 @@ import { FilterDialog, type FilterCondition } from './FilterDialog';
 import { SearchField } from './SearchField';
 import { DropdownSelect } from './DropdownSelect';
 import { PaginationControls } from './PaginationControls';
-import { ShipmentInquiryDetailPage, type ShipmentRowFull } from './ShipmentInquiryDetailPage';
+import { ShipmentInquiryDetailPage } from './ShipmentInquiryDetailPage';
+import type { OrderRow } from './AdvancedOrderTable';
 
 // ── 型別定義 ─────────────────────────────────────────────────────────────────
 
@@ -55,6 +56,7 @@ export interface ShipmentRow {
   invoiceDate: string;
   deliveryAddress: string;
   sapDeliveryNo: string;
+  createdAt?: string;        // 開立時間 YYYYMMDD HH:mm
   details: ShipmentDetailItem[];
   status: 'open' | 'sap_sent' | 'closed';
 }
@@ -84,6 +86,7 @@ const MOCK_SHIPMENTS: ShipmentRow[] = [
     invoiceDate: '2025/06/18',
     deliveryAddress: '桃園市龜山區文化二路29號',
     sapDeliveryNo: '1720580792',
+    createdAt: '20250610 09:30',
     details: [
       { itemNo: 10, orderNo: '4500100001', orderSeq: '10', materialNo: '2201-FRM0641-A01', orderPendingQty: 50, shipQty: 50, qtyPerBox: 25, totalBoxes: 2, boxes: mkBoxes(50,25), netWeight: '2.5', grossWeight: '3.0', weightUnit: 'KG', countryOfOrigin: 'TW' },
       { itemNo: 20, orderNo: '4500100001', orderSeq: '20', materialNo: '3301-WHL0641-A02', orderPendingQty: 32, shipQty: 30, qtyPerBox: 10, totalBoxes: 3, boxes: mkBoxes(30,10), netWeight: '1.8', grossWeight: '2.2', weightUnit: 'KG', countryOfOrigin: 'TW' },
@@ -534,7 +537,8 @@ export function ShipmentListPage() {
   const { scrollContainerRef, handleMouseDown, canDragScroll } = useHorizontalDragScroll();
 
   // ── 明細頁導覽 ────────────────────────────────────────────────────────────
-  const [detailShipment, setDetailShipment] = useState<ShipmentRowFull | null>(null);
+  const [detailShipment, setDetailShipment] = useState<ShipmentRow | null>(null);
+  const [detailOrders, setDetailOrders] = useState<OrderRow[]>([]);
 
   // ── 欄位管理 ──────────────────────────────────────────────────────────────
   const loadCols = (): ShipCol[] => {
@@ -714,13 +718,14 @@ export function ShipmentListPage() {
 
   // ── 明細頁 handlers ─────────────────────────────────────────────────────────
   const handleOpenDetail = (row: ShipmentRow) => {
-    const full = { ...row, detailsFull: row.details } as ShipmentRowFull;
-    setDetailShipment(full);
+    setDetailOrders([]);
+    setDetailShipment(row);
   };
 
   const handleDetailDeleted = (id: number) => {
     setShipments(prev => prev.filter(r => r.id !== id));
     setDetailShipment(null);
+    setDetailOrders([]);
   };
 
   // 所有 hooks 已完整宣告，此處 early return 安全
@@ -728,8 +733,9 @@ export function ShipmentListPage() {
     return (
       <ShipmentInquiryDetailPage
         shipment={detailShipment}
-        onClose={() => setDetailShipment(null)}
-        onDeleted={handleDetailDeleted}
+        onClose={() => { setDetailShipment(null); setDetailOrders([]); }}
+        onDelete={() => handleDetailDeleted(detailShipment.id)}
+        onEdit={() => { /* 編輯功能後續加入 */ }}
       />
     );
   }

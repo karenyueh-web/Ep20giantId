@@ -9,7 +9,8 @@ interface DropdownSelectProps {
   placeholder?: string;
   error?: boolean;
   className?: string;
-  searchable?: boolean; // 新增：是否可搜尋
+  searchable?: boolean;
+  disabled?: boolean;
 }
 
 export function DropdownSelect({
@@ -20,7 +21,8 @@ export function DropdownSelect({
   placeholder = '',
   error = false,
   className = '',
-  searchable = false
+  searchable = false,
+  disabled = false,
 }: DropdownSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState(''); // 搜尋關鍵字
@@ -69,8 +71,8 @@ export function DropdownSelect({
     <div className={`relative w-full ${className}`} ref={dropdownRef}>
       {/* 下拉選單按鈕 */}
       <div 
-        className="h-[54px] relative rounded-[8px] shrink-0 w-full cursor-pointer"
-        onClick={() => setIsOpen(!isOpen)}
+        className={`h-[54px] relative rounded-[8px] shrink-0 w-full ${disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+        onClick={() => { if (!disabled) setIsOpen(!isOpen); }}
       >
         <div 
           aria-hidden="true" 

@@ -33,6 +33,7 @@ interface CurrencySelectProps {
   value: string;
   onChange: (code: string) => void;
   error?: boolean;
+  disabled?: boolean;
 }
 
 export function CurrencySelect({
@@ -40,6 +41,7 @@ export function CurrencySelect({
   value,
   onChange,
   error = false,
+  disabled = false,
 }: CurrencySelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -99,8 +101,8 @@ export function CurrencySelect({
     <div className="relative w-full" ref={dropdownRef}>
       {/* Trigger */}
       <div
-        className="h-[54px] relative rounded-[8px] shrink-0 w-full cursor-pointer"
-        onClick={() => setIsOpen(v => !v)}
+        className={`h-[54px] relative rounded-[8px] shrink-0 w-full ${disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+        onClick={() => { if (!disabled) setIsOpen(v => !v); }}
       >
         <div
           aria-hidden="true"
