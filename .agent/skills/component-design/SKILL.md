@@ -356,9 +356,98 @@ const COLUMNS: StandardColumn<MyRow>[] = [
 | `TableToolbar.tsx` | Toolbar（Columns/Filters/Export 按鈕） |
 | `ColumnSelector.tsx` | 欄位顯示/隱藏選擇器 |
 | `FilterDialog.tsx` | 進階篩選對話框 |
-| `CheckboxIcon.tsx` | Checkbox 圖示元件 |
+| `CheckboxIcon.tsx` | Checkbox 圖示元件：使用 Figma 原始 SVG（`svg-jk6epzc9me` p2dde97c0）。三態：空框（灰）/ 藍底白勾（selected）/ 藍底橫線（indeterminate）。**全系統唯一標準，禁止自行繪製 checkbox** |
 | `useHorizontalDragScroll.ts` | 橫向拖拉捲動 hook |
 | `PaginationControls.tsx` | 分頁控制元件 |
+
+---
+
+## ⭐ 選取後操作列規範（Selection Toolbar）
+
+> 表格勾選列後，在 `TableToolbar` 下方浮現選取工具列，供使用者對已選資料執行批次操作。
+
+### 視覺規格
+
+| 項目 | 規格 |
+|------|------|
+| 背景色 | `bg-[#d9e8f5]`（淺藍） |
+| 高度 | `h-[48px]` |
+| 位置 | TableToolbar 下方、表頭上方（`border-b border-[rgba(145,158,171,0.08)]`） |
+| **一般操作文字色** | `text-[#004680]`（深藍，**非 #005eb8**）|
+| **危險操作文字色** | `text-[#ff5630]`（紅色，如「刪除單」）|
+| Hover 狀態 | `hover:opacity-70 transition-opacity` |
+| 操作 padding | `px-[10px] py-[16px]` |
+| 操作間分隔線 | 垂直線 `1px`，高度 `30px`，色 `bg-[#919eab]`，`opacity-30`，左右各 `mx-[2px]` |
+| 字重 | `font-semibold`（600） |
+| 字體大小 | `text-[14px]` |
+| 參考來源 | `CorrectionCreatePage.tsx` `batchActions` 區塊 |
+
+### 結構模板
+
+```tsx
+{selectedIds.size > 0 && (
+  <div className="shrink-0 flex items-center h-[48px] border-b border-[rgba(145,158,171,0.08)] bg-[#d9e8f5]">
+
+    {/* ① Checkbox：全選/取消全選（與表頭 Checkbox 對齊） */}
+    <div className="flex items-center justify-center shrink-0" style={{ width: CHECKBOX_W }}>
+      <button onClick={handleSelectAll} className="flex items-center justify-center w-[36px] h-[36px] rounded-full hover:bg-[rgba(0,85,156,0.12)] transition-colors">
+        <CheckboxIcon checked={isAllSelected} indeterminate={isSomeSelected} onChange={handleSelectAll} />
+      </button>
+    </div>
+
+    {/* ② X selected 數量文字（深色，非藍色） */}
+    <span className="font-semibold text-[14px] text-[#1c252e] leading-[24px] mr-[4px] whitespace-nowrap">
+      {selectedIds.size} selected
+    </span>
+
+    {/* ③ 分隔線 */}
+    <div className="w-[1px] h-[16px] bg-[rgba(0,94,184,0.24)] mx-[12px] shrink-0" />
+
+    {/* ④ 操作一（藍色文字） */}
+    <button
+      onClick={handleActionA}
+      className="font-semibold text-[14px] text-[#005eb8] hover:text-[#004a94] hover:underline transition-colors shrink-0 whitespace-nowrap"
+    >
+      操作一
+    </button>
+
+    {/* ⑤ 分隔線（多個操作時加） */}
+    <div className="w-[1px] h-[16px] bg-[rgba(0,94,184,0.24)] mx-[12px] shrink-0" />
+
+    {/* ⑥ 操作二（藍色文字） */}
+    <button
+      onClick={handleActionB}
+      className="font-semibold text-[14px] text-[#005eb8] hover:text-[#004a94] hover:underline transition-colors shrink-0 whitespace-nowrap"
+    >
+      操作二
+    </button>
+
+  </div>
+)}
+```
+
+### CheckboxIcon 狀態說明
+
+`CheckboxIcon` 支援三種視覺狀態，選取列時使用 `indeterminate`：
+
+```tsx
+<CheckboxIcon
+  checked={isAllSelected}       // 全部選取 → 藍底白勾
+  indeterminate={isSomeSelected} // 部分選取 → 藍底白橫線
+  onChange={handleSelectAll}
+/>
+
+// 判斷邏輯（放在 hooks 宣告後）：
+const isAllSelected  = paginatedData.length > 0 && paginatedData.every(r => selectedIds.has(r.id));
+const isSomeSelected = selectedIds.size > 0 && !isAllSelected;
+```
+
+### 實作範例（出貨單查詢）
+
+```
+✅ 選取多筆 → 顯示: [☑] 3 selected  |  刪除單  |  重拋SAP
+                                    ↑ 垂直分隔線（1px, rgba(0,94,184,0.24)）
+```
 
 ---
 

@@ -8,6 +8,7 @@ import { GiantAccountManagementPageNew } from "@/app/components/GiantAccountMana
 import { UnderConstructionPage } from "@/app/components/UnderConstructionPage";
 import { ShippingBasicSettingsPage } from "@/app/components/ShippingBasicSettingsPage";
 import { ShipmentCreatePage } from "@/app/components/ShipmentCreatePage";
+import { ShipmentListPage } from "@/app/components/ShipmentListPage";
 import { CorrectionCreatePage } from "@/app/components/CorrectionCreatePage";
 import { CorrectionListWithTabs } from "@/app/components/CorrectionListWithTabs";
 import { HistoryCorrectionListPage } from "@/app/components/HistoryCorrectionListPage";
@@ -191,6 +192,20 @@ export default function App() {
             breadcrumb="出貨單管理 • 建立出貨單"
           >
             <ShipmentCreatePage userRole={userRole} />
+          </ResponsivePageLayout>
+        );
+      // ── 出貨單管理：出貨單查詢 ──
+      case 'shipping-list':
+        return (
+          <ResponsivePageLayout
+            currentPage={currentPage}
+            onPageChange={handlePageChange}
+            onLogout={handleLogout}
+            userRole={userRole}
+            title="出貨單查詢"
+            breadcrumb="出貨單管理 • 出貨單查詢"
+          >
+            <ShipmentListPage />
           </ResponsivePageLayout>
         );
       // ── 尚未建置的功能頁面 → 畫面建置中 ──
