@@ -1005,7 +1005,7 @@ export function ShipmentCreatePage({ userRole }: ShipmentCreatePageProps) {
               <polyline points="17 8 12 3 7 8"/>
               <line x1="12" y1="3" x2="12" y2="15"/>
             </svg>
-            上傳 CSV 出貨單
+            上傳出貨明細
           </button>
         }
       />
