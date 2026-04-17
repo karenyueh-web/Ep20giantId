@@ -59,10 +59,35 @@ export interface ShipmentDetailRow {
   countryOfOrigin: string;
 }
 
+/** CSV 匯入時的預填資料（由 ShipmentCreatePage 的 handleConfirmUpload 傳入） */
+export interface CsvPrefillRow {
+  orderNo: string;
+  orderSeq: string;
+  itemNo: number;
+  shipQty: number;
+  qtyPerBox: string;
+  customBoxes: string;   // 「50/30/50」格式，空字串表示依 qtyPerBox 均分
+  netWeight: string;
+  grossWeight: string;
+  weightUnit: string;
+  countryOfOrigin: string;
+}
+
+export interface CsvPrefillData {
+  vendorShipmentNo: string;
+  currency: string;
+  transportType: string;
+  deliveryDate: string;    // YYYY/MM/DD
+  arrivalDate: string;
+  deliveryAddress: string;
+  rows: CsvPrefillRow[];
+}
+
 export interface ShipmentDetailPageProps {
   selectedOrders: OrderRow[];
   onClose: () => void;
   userRole?: string;
+  csvData?: CsvPrefillData;  // 若為 CSV 匯入則傳入，預填所有欄位
 }
 
 // ── 箱數工具函式 ─────────────────────────────────────────────────────────────
@@ -338,14 +363,15 @@ function TableSelect({
 }
 
 // ── 主元件 ───────────────────────────────────────────────────────────────────
-export function ShipmentDetailPage({ selectedOrders, onClose, userRole }: ShipmentDetailPageProps) {
-  // ── 基本資訊 ──────────────────────────────────────────────────────────────
-  const [vendorShipmentNo, setVendorShipmentNo] = useState('');
-  const [currency, setCurrency]         = useState('TWD');
-  const [transportType, setTransportType] = useState('S');
-  const [deliveryDate, setDeliveryDate] = useState('');
-  const [arrivalDate, setArrivalDate]   = useState('');
+export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData }: ShipmentDetailPageProps) {
+  // ── 基本資訊（若為 CSV 匯入則優先使用 csvData 預填值）───────────────────
+  const [vendorShipmentNo, setVendorShipmentNo] = useState(csvData?.vendorShipmentNo ?? '');
+  const [currency, setCurrency]         = useState(csvData?.currency ?? 'TWD');
+  const [transportType, setTransportType] = useState(csvData?.transportType ?? 'S');
+  const [deliveryDate, setDeliveryDate] = useState(csvData?.deliveryDate ?? '');
+  const [arrivalDate, setArrivalDate]   = useState(csvData?.arrivalDate ?? '');
   const [deliveryAddress, setDeliveryAddress] = useState<string>(() => {
+    if (csvData?.deliveryAddress) return csvData.deliveryAddress;
     // 依第一張訂單的儲存地點代號，從主檔查詢中文地址自動帶出
     const sloc = selectedOrders[0]?.storageLocationCode;
     if (!sloc) return '';
@@ -353,28 +379,55 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole }: Shipme
     return found?.addressZh ?? '';
   });
 
-  // ── 出貨明細 rows（由已選訂單初始化）─────────────────────────────────────
+  // ── 出貨明細 rows（CSV 匯入時用 csvData.rows 覆蓋各欄位）────────────────
   const [rows, setRows] = useState<ShipmentDetailRow[]>(() =>
-    selectedOrders.map((o, idx) => ({
-      id: o.id,
-      itemNo: (idx + 1) * 10,
-      orderNo: o.orderNo || '',
-      orderSeq: o.orderSeq || '',
-      materialNo: o.materialNo || '',
-      orderPendingQty: calcUndeliveredQty(
-        o.orderQty ?? 0,
-        o.acceptQty ?? 0,
-        o.inTransitQty ?? 0,
-      ),
-      shipQty: o.undeliveredQty ?? 0,
-      qtyPerBox: '',
-      totalBoxes: 0,
-      boxes: [],
-      netWeight: '0',
-      grossWeight: '0',
-      weightUnit: 'KG',
-      countryOfOrigin: '',
-    }))
+    selectedOrders.map((o, idx) => {
+      // 找對應的 CSV 明細列（以訂單號碼 + 序號比對）
+      const csvRow = csvData?.rows.find(
+        r => r.orderNo === (o.orderNo || '') && r.orderSeq === (o.orderSeq || '')
+      );
+
+      // 計算 boxes：自訂箱數優先，次選每箱數量均分，最後留空
+      let boxes: BoxItem[] = [];
+      let totalBoxes = 0;
+      const shipQty = csvRow ? csvRow.shipQty : (o.undeliveredQty ?? 0);
+      if (csvRow?.customBoxes) {
+        const parts = csvRow.customBoxes.split('/').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n) && n > 0);
+        boxes = parts.map((qty, i) => ({ boxNo: i + 1, qty }));
+        totalBoxes = boxes.length;
+      } else if (csvRow?.qtyPerBox) {
+        const perBox = parseFloat(csvRow.qtyPerBox);
+        if (!isNaN(perBox) && perBox > 0) {
+          boxes = initBoxes(shipQty, perBox);
+          totalBoxes = boxes.length;
+        }
+      }
+
+      // 決定 qtyPerBox 顯示標籤：
+      //   - customBoxes 路徑 → calcQtyPerBoxLabel(boxes)（如 "30+"）
+      //   - qtyPerBox 路徑  → CSV 原始值（如 "60"）
+      //   - 無 CSV 資料     → 空字串
+      const qtyPerBoxLabel = boxes.length > 0
+        ? (csvRow?.customBoxes ? calcQtyPerBoxLabel(boxes) : (csvRow?.qtyPerBox ?? ''))
+        : (csvRow?.qtyPerBox ?? '');
+
+      return {
+        id: o.id,
+        itemNo: csvRow?.itemNo ?? (idx + 1) * 10,
+        orderNo: o.orderNo || '',
+        orderSeq: o.orderSeq || '',
+        materialNo: o.materialNo || '',
+        orderPendingQty: calcUndeliveredQty(o.orderQty ?? 0, o.acceptQty ?? 0, o.inTransitQty ?? 0),
+        shipQty,
+        qtyPerBox: qtyPerBoxLabel,
+        totalBoxes,
+        boxes,
+        netWeight:       csvRow?.netWeight       ?? '0',
+        grossWeight:     csvRow?.grossWeight     ?? '0',
+        weightUnit:      csvRow?.weightUnit      ?? 'KG',
+        countryOfOrigin: csvRow?.countryOfOrigin ?? '',
+      };
+    })
   );
 
   // ── 箱數明細彈窗 ──────────────────────────────────────────────────────────
@@ -740,10 +793,9 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole }: Shipme
                     return (
                       <div style={{ width: 90, minWidth: 90 }} className="px-[8px] shrink-0">
                         <input
-                          type="number"
+                          type="text"
+                          inputMode="decimal"
                           value={row.qtyPerBox}
-                          min={1}
-                          max={row.shipQty || undefined}
                           onChange={e => {
                             const raw = e.target.value;
                             // 輸入清空時允許（讓用戶可以删除重新輸入）
@@ -753,9 +805,7 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole }: Shipme
                             }
                             const num = parseFloat(raw);
                             if (isNaN(num)) return;
-                            // 正向放行 0 以下
                             if (num <= 0) return;
-                            // 正向放行大於出貨量
                             if (row.shipQty > 0 && num > row.shipQty) return;
                             updateRow(row.id, { qtyPerBox: raw });
                           }}
