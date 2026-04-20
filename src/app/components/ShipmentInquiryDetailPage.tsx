@@ -106,6 +106,7 @@ const TABLE_COLS = [
   { key: 'grossWeight',    label: '毛重(個)', width: 90,  align: 'right' },
   { key: 'weightUnit',     label: '重量單位', width: 100, align: 'center' },
   { key: 'countryOfOrigin',label: '原產國家', width: 110, align: 'center' },
+  { key: 'receivedQty',    label: '累計收料量', width: 100, align: 'right' },
 ];
 
 // ── 主元件 ────────────────────────────────────────────────────────────────────
@@ -114,6 +115,9 @@ export function ShipmentInquiryDetailPage({ shipment, onClose, onDelete, onEdit 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [boxDetailIdx, setBoxDetailIdx] = useState<number | null>(null);
   const boxDetailRow = boxDetailIdx !== null ? shipment.details[boxDetailIdx] : null;
+
+  // 判斷是否有任一項次已有累計收料量
+  const hasReceived = useMemo(() => shipment.details.some(d => (d.receivedQty ?? 0) > 0), [shipment]);
 
   // 組裝歷程記錄
   const historyEntries = useMemo<HistoryEntry[]>(() => {
@@ -180,8 +184,17 @@ export function ShipmentInquiryDetailPage({ shipment, onClose, onDelete, onEdit 
               編輯
             </button>
             <button
-              onClick={() => setShowDeleteConfirm(true)}
-              className="h-[36px] min-w-[88px] px-[16px] rounded-[8px] bg-[#ff5630] hover:bg-[#b71d18] text-white font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
+              onClick={() => {
+                if (hasReceived) return;
+                setShowDeleteConfirm(true);
+              }}
+              disabled={hasReceived}
+              title={hasReceived ? '出貨項次中有累計收料量，不可整單刪除' : undefined}
+              className={`h-[36px] min-w-[88px] px-[16px] rounded-[8px] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap ${
+                hasReceived
+                  ? 'bg-[#919eab] text-white cursor-not-allowed'
+                  : 'bg-[#ff5630] hover:bg-[#b71d18] text-white'
+              }`}
             >
               整單刪除
             </button>
@@ -229,12 +242,6 @@ export function ShipmentInquiryDetailPage({ shipment, onClose, onDelete, onEdit 
               </p>
               <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#1c252e]" />
             </div>
-            {shipment.sapDeliveryNo ? (
-              <div className="flex items-center gap-[4px]">
-                <span className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#919eab]">SAP送貨單號:</span>
-                <span className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#919eab]">{shipment.sapDeliveryNo}</span>
-              </div>
-            ) : null}
           </div>
 
           {/* 表格容器 */}
@@ -304,6 +311,13 @@ export function ShipmentInquiryDetailPage({ shipment, onClose, onDelete, onEdit 
                   </div>
                   <div style={{ width: 110, minWidth: 110 }} className="px-[8px] text-center shrink-0">
                     <span className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#1c252e]">{row.countryOfOrigin}</span>
+                  </div>
+                  <div style={{ width: 100, minWidth: 100 }} className="px-[8px] text-right shrink-0">
+                    <span className={`font-['Public_Sans:Regular',sans-serif] text-[13px] ${
+                      (row.receivedQty ?? 0) > 0 ? 'text-[#118d57] font-medium' : 'text-[#c4cdd6]'
+                    }`}>
+                      {row.receivedQty ?? 0}
+                    </span>
                   </div>
                 </div>
               ))}

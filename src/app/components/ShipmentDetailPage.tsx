@@ -574,6 +574,7 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
   // ── 確認出貨（一次收集所有錯誤）────────────────────────────────────────
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [submitted, setSubmitted] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   const handleConfirm = () => {
     const errors: string[] = [];
@@ -607,10 +608,24 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
       }
     });
 
+    // 總箱數卡控：全部出貨項次的總箱數相加不能大於 10,000 箱
+    const grandTotalBoxes = rows.reduce((sum, r) => sum + r.totalBoxes, 0);
+    if (grandTotalBoxes > 10000) {
+      errors.push(`出貨項次總箱數合計為 ${grandTotalBoxes.toLocaleString()} 箱，不可超過 10,000 箱`);
+    }
+
     if (errors.length > 0) {
       setValidationErrors(errors);
       return;
     }
+
+    // 驗證通過 → 顯示確認 Modal 供客戶核對基本資訊
+    setShowConfirmModal(true);
+  };
+
+  // ── 最終確認出貨（Modal 確認後執行儲存）──────────────────────────────────
+  const handleFinalConfirm = () => {
+    setShowConfirmModal(false);
 
     // 組裝出貨單資料並存入 localStorage（供出貨單查詢頁讀取）
     const now = new Date();
@@ -635,13 +650,14 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
         materialNo: r.materialNo,
         orderPendingQty: r.orderPendingQty,
         shipQty: r.shipQty,
-        qtyPerBox: parseFloat(r.qtyPerBox) || 0,
+        qtyPerBox: r.qtyPerBox || 0,
         totalBoxes: r.totalBoxes,
         boxes: r.boxes,
         netWeight: r.netWeight,
         grossWeight: r.grossWeight,
         weightUnit: r.weightUnit,
         countryOfOrigin: r.countryOfOrigin,
+        receivedQty: 0,
       })),
       status: 'open' as const,
     };
@@ -1070,6 +1086,73 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
                 className="w-full h-[40px] bg-[#1c252e] hover:bg-[#374151] text-white rounded-[8px] font-['Public_Sans:SemiBold',sans-serif] text-[14px] transition-colors"
               >
                 知道了
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 確認出貨 Modal（列出基本資訊供核對）────────────────────────────── */}
+      {showConfirmModal && (
+        <div
+          className="fixed inset-0 z-[300] flex items-center justify-center"
+          style={{ background: 'rgba(28,37,46,0.45)', backdropFilter: 'blur(4px)' }}
+          onClick={e => { if (e.target === e.currentTarget) setShowConfirmModal(false); }}
+        >
+          <div className="bg-white rounded-[16px] shadow-[0px_24px_48px_rgba(0,0,0,0.20)] w-[520px] max-w-[90vw] overflow-hidden">
+            {/* header */}
+            <div className="flex items-center gap-[10px] px-[24px] pt-[20px] pb-[16px] border-b border-[rgba(145,158,171,0.12)]">
+              <div className="w-[40px] h-[40px] rounded-full bg-[rgba(0,94,184,0.08)] flex items-center justify-center shrink-0">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#005eb8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                </svg>
+              </div>
+              <h3 className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[18px] text-[#1c252e]">確認出貨單資訊</h3>
+            </div>
+
+            {/* 基本資訊列表 */}
+            <div className="px-[24px] pt-[16px] pb-[8px] flex flex-col gap-[10px]">
+              {[
+                { label: '廠商出貨單號', value: vendorShipmentNo },
+                { label: '廠商', value: selectedOrders[0]?.vendorName ?? '' },
+                { label: '幣別', value: currency },
+                { label: '運輸型態', value: TRANSPORT_OPTIONS.find(o => o.value === transportType)?.label ?? transportType },
+                { label: '交貨日期', value: deliveryDate },
+                { label: '到貨日期', value: arrivalDate || '—' },
+                { label: '交貨地址', value: deliveryAddress || '—' },
+                { label: '出貨項次數', value: `${rows.length} 筆` },
+              ].map(item => (
+                <div key={item.label} className="flex items-baseline gap-[8px]">
+                  <span className="font-['Public_Sans:Regular',sans-serif] text-[14px] text-[#637381] whitespace-nowrap min-w-[100px]">{item.label}</span>
+                  <span className="font-['Public_Sans:SemiBold',sans-serif] text-[14px] text-[#1c252e] break-all">{item.value}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* 紅字警示 */}
+            <div className="mx-[24px] my-[12px] px-[14px] py-[12px] bg-[rgba(255,86,48,0.06)] border border-[rgba(255,86,48,0.24)] rounded-[10px] flex items-start gap-[8px]">
+              <svg width="18" height="18" viewBox="0 0 20 20" fill="none" className="shrink-0 mt-[2px]">
+                <circle cx="10" cy="10" r="9" stroke="#ff5630" strokeWidth="2"/>
+                <path d="M10 6v4M10 14h.01" stroke="#ff5630" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+              <p className="font-['Public_Sans:SemiBold',sans-serif] text-[13px] text-[#ff5630] leading-[20px]">
+                建立出貨單之後一旦有收料量就不能刪單重建，請確認基本資訊是否正確
+              </p>
+            </div>
+
+            {/* footer */}
+            <div className="flex items-center justify-end gap-[10px] px-[24px] py-[16px] border-t border-[rgba(145,158,171,0.12)]">
+              <button
+                onClick={() => setShowConfirmModal(false)}
+                className="h-[40px] px-[20px] rounded-[8px] border border-[rgba(145,158,171,0.32)] bg-white text-[#1c252e] hover:bg-[#f4f6f8] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors"
+              >
+                返回修改
+              </button>
+              <button
+                onClick={handleFinalConfirm}
+                className="h-[40px] px-[20px] rounded-[8px] bg-[#005eb8] hover:bg-[#004a94] text-white font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors"
+              >
+                確認建立
               </button>
             </div>
           </div>

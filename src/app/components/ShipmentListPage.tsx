@@ -34,13 +34,14 @@ export interface ShipmentDetailItem {
   materialNo: string;
   orderPendingQty: number;
   shipQty: number;
-  qtyPerBox: number;
+  qtyPerBox: number | string;
   totalBoxes: number;
   boxes: { boxNo: number; qty: number }[];
   netWeight: string;
   grossWeight: string;
   weightUnit: string;
   countryOfOrigin: string;
+  receivedQty?: number;  // 累計收料量（倉庫進貨時回傳）
 }
 
 /** 出貨單列 */
@@ -142,7 +143,7 @@ export const MOCK_SHIPMENTS: ShipmentRow[] = [
     deliveryAddress: '新北市新店區北新路三段200號',
     sapDeliveryNo: '1720580760',
     details: [
-      { itemNo: 10, orderNo: '4500200010', orderSeq: '10', materialNo: '8801-TIR0045-D01', orderPendingQty: 400, shipQty: 400, qtyPerBox: 100, totalBoxes: 4, boxes: mkBoxes(400,100), netWeight: '0.3', grossWeight: '0.4', weightUnit: 'KG', countryOfOrigin: 'JP' },
+      { itemNo: 10, orderNo: '4500200010', orderSeq: '10', materialNo: '8801-TIR0045-D01', orderPendingQty: 400, shipQty: 400, qtyPerBox: 100, totalBoxes: 4, boxes: mkBoxes(400,100), netWeight: '0.3', grossWeight: '0.4', weightUnit: 'KG', countryOfOrigin: 'JP', receivedQty: 400 },
     ],
     status: 'closed',
   },
@@ -251,7 +252,7 @@ export const MOCK_SHIPMENTS: ShipmentRow[] = [
     deliveryAddress: '新北市新店區北新路三段200號',
     sapDeliveryNo: '1720580710',
     details: [
-      { itemNo: 10, orderNo: '4500700060', orderSeq: '10', materialNo: '3301-STM0641-J01', orderPendingQty: 120, shipQty: 120, qtyPerBox: 40, totalBoxes: 3, boxes: mkBoxes(120,40), netWeight: '0.7', grossWeight: '0.9', weightUnit: 'KG', countryOfOrigin: 'TW' },
+      { itemNo: 10, orderNo: '4500700060', orderSeq: '10', materialNo: '3301-STM0641-J01', orderPendingQty: 120, shipQty: 120, qtyPerBox: 40, totalBoxes: 3, boxes: mkBoxes(120,40), netWeight: '0.7', grossWeight: '0.9', weightUnit: 'KG', countryOfOrigin: 'TW', receivedQty: 120 },
     ],
     status: 'closed',
   },
@@ -268,8 +269,8 @@ export const MOCK_SHIPMENTS: ShipmentRow[] = [
     deliveryAddress: '桃園市龜山區文化二路29號',
     sapDeliveryNo: '1720580820',
     details: [
-      { itemNo: 10, orderNo: '4500800070', orderSeq: '10', materialNo: '4401-WHL0641-K01', orderPendingQty: 200, shipQty: 200, qtyPerBox: 40, totalBoxes: 5, boxes: mkBoxes(200,40), netWeight: '1.2', grossWeight: '1.5', weightUnit: 'KG', countryOfOrigin: 'TW' },
-      { itemNo: 20, orderNo: '4500800070', orderSeq: '20', materialNo: '5501-RIM0641-K02', orderPendingQty: 200, shipQty: 200, qtyPerBox: 40, totalBoxes: 5, boxes: mkBoxes(200,40), netWeight: '0.8', grossWeight: '1.0', weightUnit: 'KG', countryOfOrigin: 'TW' },
+      { itemNo: 10, orderNo: '4500800070', orderSeq: '10', materialNo: '4401-WHL0641-K01', orderPendingQty: 200, shipQty: 200, qtyPerBox: 40, totalBoxes: 5, boxes: mkBoxes(200,40), netWeight: '1.2', grossWeight: '1.5', weightUnit: 'KG', countryOfOrigin: 'TW', receivedQty: 200 },
+      { itemNo: 20, orderNo: '4500800070', orderSeq: '20', materialNo: '5501-RIM0641-K02', orderPendingQty: 200, shipQty: 200, qtyPerBox: 40, totalBoxes: 5, boxes: mkBoxes(200,40), netWeight: '0.8', grossWeight: '1.0', weightUnit: 'KG', countryOfOrigin: 'TW', receivedQty: 50 },
       { itemNo: 30, orderNo: '4500800071', orderSeq: '10', materialNo: '6601-TIR0641-K03', orderPendingQty: 400, shipQty: 400, qtyPerBox: 50, totalBoxes: 8, boxes: mkBoxes(400,50), netWeight: '0.5', grossWeight: '0.7', weightUnit: 'KG', countryOfOrigin: 'CN' },
       { itemNo: 40, orderNo: '4500800071', orderSeq: '20', materialNo: '7701-TUB0641-K04', orderPendingQty: 400, shipQty: 400, qtyPerBox: 50, totalBoxes: 8, boxes: mkBoxes(400,50), netWeight: '0.2', grossWeight: '0.3', weightUnit: 'KG', countryOfOrigin: 'CN' },
       { itemNo: 50, orderNo: '4500800072', orderSeq: '10', materialNo: '8801-VAL0641-K05', orderPendingQty: 800, shipQty: 800, qtyPerBox: 100, totalBoxes: 8, boxes: mkBoxes(800,100), netWeight: '0.05', grossWeight: '0.08', weightUnit: 'KG', countryOfOrigin: 'TW' },
@@ -721,6 +722,13 @@ export function ShipmentListPage() {
   };
 
   // ── 刪除 ──────────────────────────────────────────────────────────────────
+  // 判斷所選出貨單是否有任一筆含有累計收料量（不可刪除）
+  const hasReceivedInSelected = useMemo(() => {
+    return shipments
+      .filter(r => selectedIds.has(r.id))
+      .some(r => r.details.some(d => (d.receivedQty ?? 0) > 0));
+  }, [shipments, selectedIds]);
+
   const handleDeleteConfirm = () => {
     const count = selectedIds.size;
     setShipments(prev => prev.filter(r => !selectedIds.has(r.id)));
@@ -852,8 +860,10 @@ export function ShipmentListPage() {
           {/* 刪除單：紅色文字 */}
           <button
             data-is-checkbox="true"
-            onClick={() => setShowDeleteModal(true)}
-            className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] text-[#ff5630] leading-[24px] whitespace-nowrap cursor-pointer select-none px-[10px] py-[16px] hover:opacity-70 transition-opacity"
+            onClick={() => hasReceivedInSelected ? showToast('所選出貨單中有項次已有累計收料量，不可刪除') : setShowDeleteModal(true)}
+            className={`font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] leading-[24px] whitespace-nowrap select-none px-[10px] py-[16px] transition-opacity ${
+              hasReceivedInSelected ? 'text-[#919eab] cursor-not-allowed' : 'text-[#ff5630] cursor-pointer hover:opacity-70'
+            }`}
           >
             刪除
           </button>

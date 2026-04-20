@@ -797,6 +797,15 @@ export function ShipmentCreatePage({ userRole }: ShipmentCreatePageProps) {
       showToast('請先勾選要出貨的訂單');
       return;
     }
+
+    // 卡控：訂單須為同一家廠商才能一起出貨
+    const vendorCodes = new Set(selected.map(o => o.vendorCode));
+    if (vendorCodes.size > 1) {
+      const vendorNames = [...new Set(selected.map(o => `${o.vendorName}`))];
+      showToast(`所選訂單包含不同廠商（${vendorNames.join('、')}），僅能選擇同一家廠商的訂單建立出貨單`);
+      return;
+    }
+
     setDetailOrders(selected);
     setShowDetail(true);
   };
