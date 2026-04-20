@@ -180,7 +180,7 @@ export default function App() {
             <OrderScheduleInquiryPage userRole={userRole} />
           </ResponsivePageLayout>
         );
-      // ── 出貨單管理：建立出貨單 ──
+      // ── 出貨單：建立出貨單 ──
       case 'shipping-create':
         return (
           <ResponsivePageLayout
@@ -189,12 +189,12 @@ export default function App() {
             onLogout={handleLogout}
             userRole={userRole}
             title="建立出貨單"
-            breadcrumb="出貨單管理 • 建立出貨單"
+            breadcrumb="出貨單 • 建立出貨單"
           >
             <ShipmentCreatePage userRole={userRole} />
           </ResponsivePageLayout>
         );
-      // ── 出貨單管理：出貨單查詢 ──
+      // ── 出貨單：出貨單查詢 ──
       case 'shipping-list':
         return (
           <ResponsivePageLayout
@@ -203,7 +203,7 @@ export default function App() {
             onLogout={handleLogout}
             userRole={userRole}
             title="出貨單查詢"
-            breadcrumb="出貨單管理 • 出貨單查詢"
+            breadcrumb="出貨單 • 出貨單查詢"
           >
             <ShipmentListPage />
           </ResponsivePageLayout>
@@ -217,7 +217,7 @@ export default function App() {
             onLogout={handleLogout}
             userRole={userRole}
             title="基本設定"
-            breadcrumb="出貨單管理 • 基本設定"
+            breadcrumb="出貨單 • 基本設定"
           >
             <ShippingBasicSettingsPage />
           </ResponsivePageLayout>

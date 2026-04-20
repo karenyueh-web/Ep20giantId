@@ -16,6 +16,8 @@ import IconsSolidIcSolarMultipleForwardLeftBroken from '@/imports/IconsSolidIcSo
 import type { OrderRow } from './AdvancedOrderTable';
 import { calcUndeliveredQty } from './AdvancedOrderTable';
 import { STORAGE_LOCATION_DATA } from './ShippingBasicSettingsPage';
+import { MOCK_SHIPMENTS } from './ShipmentListPage';
+import { useOrderStore } from './OrderStoreContext';
 
 // ── 選項定義 ─────────────────────────────────────────────────────────────────
 // CURRENCY_OPTIONS 已移除，改用 CurrencySelect（帶搜尋的 SAP 幣別表）
@@ -88,6 +90,7 @@ export interface ShipmentDetailPageProps {
   onClose: () => void;
   userRole?: string;
   csvData?: CsvPrefillData;  // 若為 CSV 匯入則傳入，預填所有欄位
+  onConfirmSuccess?: (vendorShipmentNo: string) => void; // 確認出貨成功 callback
   // ─ 查詢模式（readOnly）──────────────────────
   readOnly?: boolean;         // 出貨單查詢明細（唯讀）
   sapDeliveryNo?: string;     // SAP送貨單號（查詢模式顯示）
@@ -375,13 +378,15 @@ function TableSelect({
 }
 
 // ── 主元件 ───────────────────────────────────────────────────────────────────
-export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData, readOnly, sapDeliveryNo, createdAt, onDelete }: ShipmentDetailPageProps) {
+export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData, onConfirmSuccess, readOnly, sapDeliveryNo, createdAt, onDelete }: ShipmentDetailPageProps) {
+  const { orders, updateOrderFields } = useOrderStore();
   // ── 基本資訊（若為 CSV 匯入則優先使用 csvData 預填值）───────────────────
   const [vendorShipmentNo, setVendorShipmentNo] = useState(csvData?.vendorShipmentNo ?? '');
   const [currency, setCurrency]         = useState(csvData?.currency ?? 'TWD');
   const [transportType, setTransportType] = useState(csvData?.transportType ?? 'S');
   const [deliveryDate, setDeliveryDate] = useState(csvData?.deliveryDate ?? '');
   const [arrivalDate, setArrivalDate]   = useState(csvData?.arrivalDate ?? '');
+
   const [deliveryAddress, setDeliveryAddress] = useState<string>(() => {
     if (csvData?.deliveryAddress) return csvData.deliveryAddress;
     // 依第一張訂單的儲存地點代號，從主檔查詢中文地址自動帶出
@@ -441,7 +446,7 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
       // 計算 boxes：自訂箱數優先，次選每箱數量均分，最後留空
       let boxes: BoxItem[] = [];
       let totalBoxes = 0;
-      const shipQty = csvRow ? csvRow.shipQty : (o.undeliveredQty ?? 0);
+      const shipQty = csvRow ? csvRow.shipQty : calcUndeliveredQty(o.orderQty ?? 0, o.acceptQty ?? 0, o.inTransitQty ?? 0);
       if (csvRow?.customBoxes) {
         const parts = csvRow.customBoxes.split('/').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n) && n > 0);
         boxes = parts.map((qty, i) => ({ boxNo: i + 1, qty }));
@@ -498,19 +503,18 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
   const [isEditing, setIsEditing] = useState(false);
   // 進入編輯前的快照（用於「取消」還原）
   const [editSnapshot, setEditSnapshot] = useState<{
-    deliveryDate: string; arrivalDate: string; invoiceDate: string; deliveryAddress: string;
+    deliveryDate: string; arrivalDate: string; deliveryAddress: string;
     rows: typeof rows;
   } | null>(null);
 
   const handleStartEdit = () => {
-    setEditSnapshot({ deliveryDate, arrivalDate, invoiceDate, deliveryAddress, rows: rows.map(r => ({ ...r })) });
+    setEditSnapshot({ deliveryDate, arrivalDate, deliveryAddress, rows: rows.map(r => ({ ...r })) });
     setIsEditing(true);
   };
   const handleCancelEdit = () => {
     if (editSnapshot) {
       setDeliveryDate(editSnapshot.deliveryDate);
       setArrivalDate(editSnapshot.arrivalDate);
-      setInvoiceDate(editSnapshot.invoiceDate);
       setDeliveryAddress(editSnapshot.deliveryAddress);
       setRows(editSnapshot.rows);
     }
@@ -572,6 +576,19 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
     if (!deliveryDate)            errors.push('交貨日期 為必填');
     if (rows.length === 0)        errors.push('出貨明細不可為空');
 
+    // 廠商出貨單號重複驗證（MOCK + localStorage 已建立的出貨單）
+    if (vendorShipmentNo.trim()) {
+      const existingNos = new Set<string>();
+      MOCK_SHIPMENTS.forEach(s => existingNos.add(s.vendorShipmentNo));
+      try {
+        const saved = JSON.parse(localStorage.getItem('createdShipments') || '[]') as { vendorShipmentNo: string }[];
+        saved.forEach(s => existingNos.add(s.vendorShipmentNo));
+      } catch { /* ignore */ }
+      if (existingNos.has(vendorShipmentNo.trim())) {
+        errors.push(`廠商出貨單號「${vendorShipmentNo}」已存在，不可重複開立`);
+      }
+    }
+
     // 明細逐筆檢查
     rows.forEach(r => {
       if (!r.shipQty || r.shipQty <= 0) {
@@ -588,7 +605,59 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
       return;
     }
 
-    showToast(`出貨單 ${vendorShipmentNo} 已確認出貨（${rows.length} 筆明細）`);
+    // 組裝出貨單資料並存入 localStorage（供出貨單查詢頁讀取）
+    const now = new Date();
+    const createdAt = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const newShipment = {
+      id: Date.now(),
+      vendorShipmentNo,
+      vendorCode: selectedOrders[0]?.vendorCode ?? '',
+      vendorName: selectedOrders[0]?.vendorName ?? '',
+      currency,
+      transportType,
+      deliveryDate,
+      arrivalDate,
+      invoiceDate: '',
+      deliveryAddress,
+      sapDeliveryNo: '',
+      createdAt,
+      details: rows.map(r => ({
+        itemNo: r.itemNo,
+        orderNo: r.orderNo,
+        orderSeq: r.orderSeq,
+        materialNo: r.materialNo,
+        orderPendingQty: r.orderPendingQty,
+        shipQty: r.shipQty,
+        qtyPerBox: parseFloat(r.qtyPerBox) || 0,
+        totalBoxes: r.totalBoxes,
+        boxes: r.boxes,
+        netWeight: r.netWeight,
+        grossWeight: r.grossWeight,
+        weightUnit: r.weightUnit,
+        countryOfOrigin: r.countryOfOrigin,
+      })),
+      status: 'open' as const,
+    };
+    try {
+      const existing = JSON.parse(localStorage.getItem('createdShipments') || '[]');
+      existing.push(newShipment);
+      localStorage.setItem('createdShipments', JSON.stringify(existing));
+    } catch { /* ignore */ }
+
+    // 更新每筆來源訂單的在途量（inTransitQty += shipQty）
+    rows.forEach(r => {
+      const sourceOrder = orders.find(o => o.id === r.id);
+      if (sourceOrder) {
+        const currentInTransit = sourceOrder.inTransitQty ?? 0;
+        updateOrderFields(r.id, { inTransitQty: currentInTransit + r.shipQty });
+      }
+    });
+
+    if (onConfirmSuccess) {
+      onConfirmSuccess(vendorShipmentNo);
+    } else {
+      onClose();
+    }
   };
 
   // ── 歷程 panel（stub）────────────────────────────────────────────────────
@@ -697,9 +766,7 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
           <div style={{ flex: '1 1 140px', maxWidth: '180px' }}>
             <DropdownSelect label="運輸型態" value={transportType} onChange={setTransportType} options={TRANSPORT_OPTIONS} />
           </div>
-          <div style={{ flex: '1 1 140px', maxWidth: '180px' }}>
-            <FloatingDateField label="發票日期" value={invoiceDate} onChange={setInvoiceDate} />
-          </div>
+
           <div style={{ flex: '1 1 140px', maxWidth: '180px' }}>
             <FloatingDateField label="交貨日期" value={deliveryDate} onChange={setDeliveryDate}
               required hasError={submitted && !deliveryDate} />
@@ -1164,6 +1231,7 @@ function BoxDetailModal({
           </div>
         </div>
       </div>
+
     </div>
   );
 }

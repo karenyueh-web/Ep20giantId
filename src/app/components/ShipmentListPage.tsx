@@ -73,7 +73,7 @@ function mkBoxes(shipQty: number, perBox: number): { boxNo: number; qty: number 
   }));
 }
 
-const MOCK_SHIPMENTS: ShipmentRow[] = [
+export const MOCK_SHIPMENTS: ShipmentRow[] = [
   {
     id: 1,
     vendorShipmentNo: '91775295',
@@ -297,6 +297,7 @@ type ShipColKey =
   | 'deliveryDate'
   | 'arrivalDate'
   | 'deliveryAddress'
+  | 'createdAt'
   | 'detailCount';
 
 interface ShipCol {
@@ -313,10 +314,11 @@ const DEFAULT_COLS: ShipCol[] = [
   { key: 'deliveryDate',    label: '交貨日期',   width: 120, minWidth: 100 },
   { key: 'arrivalDate',     label: '到貨日期',   width: 120, minWidth: 100 },
   { key: 'deliveryAddress', label: '交貨地址',   width: 300, minWidth: 150 },
+  { key: 'createdAt',       label: '開立時間',   width: 150, minWidth: 120 },
   { key: 'detailCount',     label: '出貨項次數', width: 110, minWidth: 90  },
 ];
 
-const STORAGE_KEY = 'shipmentList_v1_cols';
+const STORAGE_KEY = 'shipmentList_v2_cols';
 const CHECKBOX_W   = 52;
 const VENDOR_NO_W  = 160; // 廠商出貨單號 (sticky)
 const VENDOR_COL_W = 200; // 廠商名稱 (sticky)
@@ -404,6 +406,17 @@ function getCellValue(row: ShipmentRow, key: ShipColKey): React.ReactNode {
     return (
       <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] text-[#1c252e]">
         {count}
+      </p>
+    );
+  }
+  if (key === 'createdAt') {
+    const s = row.createdAt && row.createdAt.trim() !== '' ? row.createdAt : '—';
+    return (
+      <p
+        className={`font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] truncate w-full ${s === '—' ? 'text-[#919eab]' : 'text-[#1c252e]'}`}
+        title={s}
+      >
+        {s}
       </p>
     );
   }
@@ -562,12 +575,19 @@ export function ShipmentListPage() {
   const [showFilterDialog, setShowFilterDialog] = useState(false);
   const [filters, setFilters] = useState<FilterCondition[]>([]);
   const [appliedFilters, setAppliedFilters] = useState<FilterCondition[]>([]);
-  const [sortConfig, setSortConfig] = useState<{ key: ShipColKey | null; dir: 'asc' | 'desc' | null }>({ key: null, dir: null });
+  const [sortConfig, setSortConfig] = useState<{ key: ShipColKey | null; dir: 'asc' | 'desc' | null }>({ key: 'createdAt', dir: 'desc' });
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [page, setPage] = useState(1);
-  const [perPage, setPerPage] = useState(10);
+  const [perPage, setPerPage] = useState(100);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [shipments, setShipments] = useState<ShipmentRow[]>(MOCK_SHIPMENTS);
+  const [shipments, setShipments] = useState<ShipmentRow[]>(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('createdShipments') || '[]') as ShipmentRow[];
+      return [...MOCK_SHIPMENTS, ...saved];
+    } catch {
+      return MOCK_SHIPMENTS;
+    }
+  });
 
   // Modal 狀態
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -575,6 +595,7 @@ export function ShipmentListPage() {
 
   // ── 搜尋狀態 ──────────────────────────────────────────────────────────────
   const [searchVendor, setSearchVendor] = useState('');
+  const [searchVendorShipNo, setSearchVendorShipNo] = useState('');
   const [searchDocNo, setSearchDocNo] = useState('');
   const [deliveryDateFrom, setDeliveryDateFrom] = useState('');
   const [deliveryDateTo, setDeliveryDateTo] = useState('');
@@ -612,7 +633,16 @@ export function ShipmentListPage() {
     }
     if (searchDocNo.trim()) {
       const kws = splitKeywords(searchDocNo);
-      data = data.filter(r => matchesAny(r.vendorShipmentNo, kws));
+      data = data.filter(r =>
+        r.details.some(d => {
+          const docSeq = `${d.orderNo ?? ''}${d.orderSeq ?? ''}`.toLowerCase();
+          return kws.some(kw => docSeq.includes(kw));
+        })
+      );
+    }
+    if (searchVendorShipNo.trim()) {
+      const kw = searchVendorShipNo.trim().toLowerCase();
+      data = data.filter(r => r.vendorShipmentNo.toLowerCase().includes(kw));
     }
     if (deliveryDateFrom.trim()) {
       data = data.filter(r => r.deliveryDate >= deliveryDateFrom.replace(/-/g, '/'));
@@ -642,7 +672,7 @@ export function ShipmentListPage() {
       }));
     }
     return data;
-  }, [shipments, searchVendor, searchDocNo, deliveryDateFrom, deliveryDateTo, appliedFilters]);
+  }, [shipments, searchVendor, searchVendorShipNo, searchDocNo, deliveryDateFrom, deliveryDateTo, appliedFilters]);
 
   const sortedData = useMemo(() => {
     if (!sortConfig.key || !sortConfig.dir) return filteredData;
@@ -694,6 +724,12 @@ export function ShipmentListPage() {
   const handleDeleteConfirm = () => {
     const count = selectedIds.size;
     setShipments(prev => prev.filter(r => !selectedIds.has(r.id)));
+    // 同步刪除 localStorage 中的使用者建立出貨單
+    try {
+      const saved = JSON.parse(localStorage.getItem('createdShipments') || '[]') as { id: number }[];
+      const filtered = saved.filter(s => !selectedIds.has(s.id));
+      localStorage.setItem('createdShipments', JSON.stringify(filtered));
+    } catch { /* ignore */ }
     setSelectedIds(new Set());
     setShowDeleteModal(false);
     showToast(`已刪除 ${count} 筆出貨單`);
@@ -755,6 +791,7 @@ export function ShipmentListPage() {
             searchable={true}
           />
         </div>
+        <SearchField label="廠商出貨單號" value={searchVendorShipNo} onChange={setSearchVendorShipNo} />
         <SearchField label="單號序號" value={searchDocNo} onChange={setSearchDocNo} />
         <SearchField label="交貨日期(起)" value={deliveryDateFrom} onChange={setDeliveryDateFrom} type="date" />
         <SearchField label="交貨日期(迄)" value={deliveryDateTo} onChange={setDeliveryDateTo} type="date" />

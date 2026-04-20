@@ -5,6 +5,7 @@
 
 import { useState } from 'react';
 import type { ShipmentRow } from './ShipmentListPage';
+import IconsSolidIcSolarMultipleForwardLeftBroken from '@/imports/IconsSolidIcSolarMultipleForwardLeftBroken';
 
 // ── TRANSPORT_OPTIONS ────────────────────────────────────────────────────────
 const TRANSPORT_OPTIONS = [
@@ -22,14 +23,7 @@ interface Props {
   onEdit?: () => void;
 }
 
-// ── 返回圖示 ──────────────────────────────────────────────────────────────────
-function BackIcon() {
-  return (
-    <svg width="29" height="29" viewBox="0 0 29 29" fill="none">
-      <path d="M18 7L11 14.5L18 22" stroke="#1c252e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
+
 
 // ── 列印下拉按鈕 ──────────────────────────────────────────────────────────────
 function PrintDropdown() {
@@ -99,17 +93,17 @@ function ReadonlyField({ label, value, required }: { label: string; value: strin
 
 // ── Table 欄位定義 ────────────────────────────────────────────────────────────
 const TABLE_COLS = [
-  { key: 'itemNo',         label: '出貨項次', width: 72  },
-  { key: 'orderNo',        label: '訂單號碼', width: 130 },
-  { key: 'materialNo',     label: '料號',     width: 140 },
-  { key: 'orderPendingQty',label: '訂單待交', width: 80  },
-  { key: 'shipQty',        label: '*出貨量',  width: 80  },
-  { key: 'qtyPerBox',      label: '每箱數量', width: 90  },
-  { key: 'totalBoxes',     label: '*總箱數',  width: 80  },
-  { key: 'netWeight',      label: '淨重(個)', width: 90  },
-  { key: 'grossWeight',    label: '毛重(個)', width: 90  },
-  { key: 'weightUnit',     label: '重量單位', width: 100 },
-  { key: 'countryOfOrigin',label: '原產國家', width: 110 },
+  { key: 'itemNo',         label: '出貨項次', width: 72,  align: 'left' },
+  { key: 'orderNo',        label: '單號序號', width: 130, align: 'left' },
+  { key: 'materialNo',     label: '料號',     width: 140, align: 'left' },
+  { key: 'orderPendingQty',label: '訂單待交', width: 80,  align: 'right' },
+  { key: 'shipQty',        label: '*出貨量',  width: 80,  align: 'right' },
+  { key: 'qtyPerBox',      label: '每箱數量', width: 90,  align: 'right' },
+  { key: 'totalBoxes',     label: '*總箱數',  width: 80,  align: 'center' },
+  { key: 'netWeight',      label: '淨重(個)', width: 90,  align: 'right' },
+  { key: 'grossWeight',    label: '毛重(個)', width: 90,  align: 'right' },
+  { key: 'weightUnit',     label: '重量單位', width: 100, align: 'center' },
+  { key: 'countryOfOrigin',label: '原產國家', width: 110, align: 'center' },
 ];
 
 // ── 主元件 ────────────────────────────────────────────────────────────────────
@@ -131,7 +125,7 @@ export function ShipmentInquiryDetailPage({ shipment, onClose, onDelete, onEdit 
           {/* 左側：← 返回 + 基本資訊 Tab + SAP送貨單號 + 開立時間 */}
           <div className="flex items-center gap-[10px] flex-wrap">
             <div onClick={onClose} className="overflow-clip relative shrink-0 size-[29px] cursor-pointer hover:opacity-70 transition-opacity" aria-label="返回">
-              <BackIcon />
+              <IconsSolidIcSolarMultipleForwardLeftBroken />
             </div>
             <div className="h-[48px] min-h-[48px] relative shrink-0">
               <div aria-hidden="true" className="absolute border-[#1c252e] border-b-2 border-solid inset-0 pointer-events-none" />
@@ -187,7 +181,6 @@ export function ShipmentInquiryDetailPage({ shipment, onClose, onDelete, onEdit 
           <ReadonlyField label="廠商出貨單號" value={shipment.vendorShipmentNo} required />
           <ReadonlyField label="幣別" value={shipment.currency} />
           <ReadonlyField label="運輸型態" value={transportLabel} />
-          <ReadonlyField label="發票日期" value={shipment.invoiceDate || ''} />
           <ReadonlyField label="交貨日期" value={shipment.deliveryDate} required />
           <ReadonlyField label="到貨日期" value={shipment.arrivalDate || ''} />
         </div>
@@ -233,8 +226,8 @@ export function ShipmentInquiryDetailPage({ shipment, onClose, onDelete, onEdit 
               {/* 表頭 */}
               <div className="flex items-center py-[10px] border-b border-[rgba(145,158,171,0.12)] bg-[rgba(145,158,171,0.04)]">
                 {TABLE_COLS.map(col => (
-                  <div key={col.key} style={{ width: col.width, minWidth: col.width }} className="px-[8px] shrink-0 text-right">
-                    <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#637381] uppercase leading-[18px]">
+                  <div key={col.key} style={{ width: col.width, minWidth: col.width }} className={`px-[8px] shrink-0 ${col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'}`}>
+                    <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#637381] leading-[20px]">
                       {col.label}
                     </span>
                   </div>
@@ -253,13 +246,13 @@ export function ShipmentInquiryDetailPage({ shipment, onClose, onDelete, onEdit 
                   key={row.itemNo}
                   className={`flex items-center py-[12px] border-b border-[rgba(145,158,171,0.08)] hover:bg-[rgba(145,158,171,0.04)] transition-colors ${idx % 2 === 1 ? 'bg-[rgba(145,158,171,0.02)]' : ''}`}
                 >
-                  <div style={{ width: 72, minWidth: 72 }} className="px-[8px] text-right shrink-0">
+                  <div style={{ width: 72, minWidth: 72 }} className="px-[8px] text-left shrink-0">
                     <span className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#637381]">{row.itemNo}</span>
                   </div>
-                  <div style={{ width: 130, minWidth: 130 }} className="px-[8px] text-right shrink-0">
+                  <div style={{ width: 130, minWidth: 130 }} className="px-[8px] text-left shrink-0">
                     <span className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#637381]">{row.orderNo}{row.orderSeq}</span>
                   </div>
-                  <div style={{ width: 140, minWidth: 140 }} className="px-[8px] text-right shrink-0">
+                  <div style={{ width: 140, minWidth: 140 }} className="px-[8px] text-left shrink-0">
                     <span className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#637381] truncate block">{row.materialNo}</span>
                   </div>
                   <div style={{ width: 80, minWidth: 80 }} className="px-[8px] text-right shrink-0">

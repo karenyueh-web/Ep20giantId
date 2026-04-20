@@ -628,6 +628,7 @@ export function ShipmentCreatePage({ userRole }: ShipmentCreatePageProps) {
   // ── 出貨單明細頁面狀態 ────────────────────────────────────────────────────
   const [showDetail, setShowDetail]   = useState(false);
   const [detailOrders, setDetailOrders] = useState<OrderRow[]>([]);
+  const [successVendorNo, setSuccessVendorNo] = useState<string | null>(null);
 
 
   // ── 訂單明細彈窗狀態 ──────────────────────────────────────────────────
@@ -911,6 +912,13 @@ export function ShipmentCreatePage({ userRole }: ShipmentCreatePageProps) {
           setSelectedOrderIds(new Set());
           setCsvPrefillData(null);
         }}
+        onConfirmSuccess={(vendorNo) => {
+          setShowDetail(false);
+          setSelectedOrderIds(new Set());
+          setCsvPrefillData(null);
+          setSuccessVendorNo(vendorNo);
+          setTimeout(() => setSuccessVendorNo(null), 2000);
+        }}
         userRole={userRole}
         csvData={csvPrefillData ?? undefined}
       />
@@ -1100,6 +1108,47 @@ export function ShipmentCreatePage({ userRole }: ShipmentCreatePageProps) {
           <p className="font-['Public_Sans:Regular',sans-serif] text-[14px]">{toastMessage}</p>
         </div>
       )}
+
+      {/* ── 出貨成功 Overlay ──────────────────────────────── */}
+      {successVendorNo && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center"
+          style={{ backgroundColor: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(2px)' }}
+        >
+          <div
+            className="flex flex-col items-center gap-[16px] px-[48px] py-[40px] rounded-[16px] shadow-[0px_24px_48px_rgba(0,0,0,0.16)]"
+            style={{ backgroundColor: '#fff', minWidth: '360px', maxWidth: '480px', animation: 'successPop 0.35s cubic-bezier(0.34,1.56,0.64,1)' }}
+          >
+            <div
+              className="flex items-center justify-center rounded-full"
+              style={{ width: 64, height: 64, backgroundColor: 'rgba(34,197,94,0.12)' }}
+            >
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="#22c55e" strokeWidth="2" />
+                <path d="M8 12.5l2.5 2.5L16 9.5" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <p
+              className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-center leading-[28px]"
+              style={{ fontSize: '18px', color: '#1c252e' }}
+            >
+              出貨單號 {successVendorNo} 已建立成功
+            </p>
+            <p
+              className="font-['Public_Sans:Regular',sans-serif] text-center leading-[22px]"
+              style={{ fontSize: '14px', color: '#637381' }}
+            >
+              可至出貨單查詢明細
+            </p>
+          </div>
+        </div>
+      )}
+      <style>{`
+        @keyframes successPop {
+          0% { opacity: 0; transform: scale(0.8); }
+          100% { opacity: 1; transform: scale(1); }
+        }
+      `}</style>
     </div>
   );
 }
