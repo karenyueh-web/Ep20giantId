@@ -10,6 +10,12 @@ interface OrderHistoryProps {
   docSeqNo?: string;
   /** 點擊修正單號連結的回調 */
   onCorrectionDocClick?: (docNo: string) => void;
+  /** 自訂標題（預設依內容顯示「修正歷程」或「訂單歷程」） */
+  titleLabel?: string;
+  /** 自訂 correctionDocNo 欄位標籤（預設「修正單號」） */
+  correctionDocNoLabel?: string;
+  /** 自訂 docSeqNo 欄位標籤（預設「單號序號」） */
+  docSeqNoLabel?: string;
 }
 
 // 修正單號格式：12 位數字（YYYYMMDD + 4 位流水號）
@@ -49,7 +55,10 @@ function renderWithCorrectionLinks(
   return parts.length > 0 ? <>{parts}</> : text;
 }
 
-export function OrderHistory({ onClose, entries = [], correctionDocNo, docSeqNo, onCorrectionDocClick }: OrderHistoryProps) {
+export function OrderHistory({ onClose, entries = [], correctionDocNo, docSeqNo, onCorrectionDocClick, titleLabel, correctionDocNoLabel, docSeqNoLabel }: OrderHistoryProps) {
+  const resolvedTitle = titleLabel ?? (correctionDocNo ? '修正歷程' : '訂單歷程');
+  const resolvedCorrLabel = correctionDocNoLabel ?? '修正單號';
+  const resolvedDocLabel = docSeqNoLabel ?? '單號序號';
   return (
     <div
       className="fixed inset-0 z-[200] flex items-center justify-center"
@@ -72,13 +81,13 @@ export function OrderHistory({ onClose, entries = [], correctionDocNo, docSeqNo,
         {/* 標題 */}
         <div className="absolute left-[45px] top-[66.39px] right-[45px] flex items-baseline gap-[16px]">
           <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[28px] text-[#1c252e] text-[18px] shrink-0">
-            {correctionDocNo ? '修正歷程' : '訂單歷程'}
+            {resolvedTitle}
           </p>
           {(correctionDocNo || docSeqNo) && (
             <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[#637381] text-[14px] truncate">
-              {correctionDocNo && <span>修正單號：<span className="text-[#1c252e]">{renderWithCorrectionLinks(correctionDocNo, onCorrectionDocClick)}</span></span>}
+              {correctionDocNo && <span>{resolvedCorrLabel}：<span className="text-[#1c252e]">{renderWithCorrectionLinks(correctionDocNo, onCorrectionDocClick)}</span></span>}
               {correctionDocNo && docSeqNo && <span className="mx-[8px]">|</span>}
-              {docSeqNo && <span>單號序號：<span className="text-[#1c252e]">{docSeqNo}</span></span>}
+              {docSeqNo && <span>{resolvedDocLabel}：<span className="text-[#1c252e]">{docSeqNo}</span></span>}
             </p>
           )}
         </div>

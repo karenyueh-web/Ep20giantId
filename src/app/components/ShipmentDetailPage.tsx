@@ -291,10 +291,17 @@ function InlineNumberInput({
 }) {
   return (
     <input
-      type="number"
+      type="text"
+      inputMode="decimal"
       value={value}
-      min={min}
-      onChange={e => onChange(e.target.value)}
+      onChange={e => {
+        const raw = e.target.value.replace(/[^0-9.]/g, '');
+        // 避免多個小數點
+        const parts = raw.split('.');
+        const sanitized = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : raw;
+        onChange(sanitized);
+      }}
+      onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
       className="w-full h-[32px] px-[8px] border border-[rgba(145,158,171,0.32)] rounded-[6px] font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#1c252e] outline-none focus:border-[#005eb8] transition-colors bg-white text-right"
     />
   );
@@ -607,7 +614,7 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
 
     // 組裝出貨單資料並存入 localStorage（供出貨單查詢頁讀取）
     const now = new Date();
-    const createdAt = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const createdAt = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     const newShipment = {
       id: Date.now(),
       vendorShipmentNo,
@@ -619,7 +626,7 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
       arrivalDate,
       invoiceDate: '',
       deliveryAddress,
-      sapDeliveryNo: '',
+      sapDeliveryNo: `17${String(Date.now()).slice(-8)}`,
       createdAt,
       details: rows.map(r => ({
         itemNo: r.itemNo,
@@ -740,11 +747,13 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
               title={vendorDateWarnings.length > 0 ? '有出貨明細尚未符合七天原則，無法確認出貨' : undefined}
               className="h-[36px] bg-[#005eb8] hover:bg-[#004a94] disabled:bg-[#919eab] disabled:cursor-not-allowed text-white rounded-[8px] px-[20px] text-[14px] font-semibold font-['Public_Sans:SemiBold',sans-serif] transition-colors whitespace-nowrap"
             >確認出貨</button>
-            <p
-              onClick={() => setShowHistory(v => !v)}
-              className="[text-decoration-skip-ink:none] decoration-solid font-['Roboto:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[32px] text-[#005eb8] text-[16px] underline cursor-pointer hover:opacity-70"
-              style={{ fontVariationSettings: "'wdth' 100" }}
-            >歷程</p>
+            {readOnly && (
+              <p
+                onClick={() => setShowHistory(v => !v)}
+                className="[text-decoration-skip-ink:none] decoration-solid font-['Roboto:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[32px] text-[#005eb8] text-[16px] underline cursor-pointer hover:opacity-70"
+                style={{ fontVariationSettings: "'wdth' 100" }}
+              >歷程</p>
+            )}
           </div>
         </div>
 
@@ -941,7 +950,7 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
                           inputMode="decimal"
                           value={row.qtyPerBox}
                           onChange={e => {
-                            const raw = e.target.value;
+                            const raw = e.target.value.replace(/[^0-9]/g, '');
                             if (raw === '') { updateRow(row.id, { qtyPerBox: '' }); return; }
                             const num = parseFloat(raw);
                             if (isNaN(num)) return;
@@ -967,7 +976,7 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
                     {row.totalBoxes > 0 ? (
                       <button
                         onClick={() => setBoxModalRowId(row.id)}
-                        className="font-['Public_Sans:SemiBold',sans-serif] text-[17px] text-[#005eb8] underline cursor-pointer hover:opacity-70 transition-opacity"
+                        className="font-['Public_Sans:SemiBold',sans-serif] text-[17px] text-[#005eb8] underline cursor-pointer hover:opacity-70 transition-opacity min-w-[40px] inline-block py-[4px]"
                         title="點擊查看箱數明細"
                       >{row.totalBoxes}</button>
                     ) : (

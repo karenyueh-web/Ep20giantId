@@ -86,7 +86,7 @@ export const MOCK_SHIPMENTS: ShipmentRow[] = [
     invoiceDate: '2025/06/18',
     deliveryAddress: '桃園市龜山區文化二路29號',
     sapDeliveryNo: '1720580792',
-    createdAt: '20250610 09:30',
+    createdAt: '2025/06/10 09:30',
     details: [
       { itemNo: 10, orderNo: '4500100001', orderSeq: '10', materialNo: '2201-FRM0641-A01', orderPendingQty: 50, shipQty: 50, qtyPerBox: 25, totalBoxes: 2, boxes: mkBoxes(50,25), netWeight: '2.5', grossWeight: '3.0', weightUnit: 'KG', countryOfOrigin: 'TW' },
       { itemNo: 20, orderNo: '4500100001', orderSeq: '20', materialNo: '3301-WHL0641-A02', orderPendingQty: 32, shipQty: 30, qtyPerBox: 10, totalBoxes: 3, boxes: mkBoxes(30,10), netWeight: '1.8', grossWeight: '2.2', weightUnit: 'KG', countryOfOrigin: 'TW' },

@@ -3,9 +3,11 @@
  * 出貨單查詢 — 明細頁（查詢唯讀版）
  */
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import type { ShipmentRow } from './ShipmentListPage';
 import IconsSolidIcSolarMultipleForwardLeftBroken from '@/imports/IconsSolidIcSolarMultipleForwardLeftBroken';
+import { OrderHistory } from './OrderHistory';
+import type { HistoryEntry } from './OrderStoreContext';
 
 // ── TRANSPORT_OPTIONS ────────────────────────────────────────────────────────
 const TRANSPORT_OPTIONS = [
@@ -110,6 +112,22 @@ const TABLE_COLS = [
 export function ShipmentInquiryDetailPage({ shipment, onClose, onDelete, onEdit }: Props) {
   const [showHistory, setShowHistory] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [boxDetailIdx, setBoxDetailIdx] = useState<number | null>(null);
+  const boxDetailRow = boxDetailIdx !== null ? shipment.details[boxDetailIdx] : null;
+
+  // 組裝歷程記錄
+  const historyEntries = useMemo<HistoryEntry[]>(() => {
+    const entries: HistoryEntry[] = [];
+    if (shipment.createdAt) {
+      entries.push({
+        date: shipment.createdAt,
+        event: '出貨單開立',
+        operator: '廠商-OOO',
+        remark: '',
+      });
+    }
+    return entries;
+  }, [shipment]);
 
   const transportLabel = TRANSPORT_OPTIONS.find(o => o.value === shipment.transportType)?.label ?? shipment.transportType;
 
@@ -266,7 +284,11 @@ export function ShipmentInquiryDetailPage({ shipment, onClose, onDelete, onEdit 
                   </div>
                   <div style={{ width: 80, minWidth: 80 }} className="px-[8px] text-center shrink-0">
                     {row.totalBoxes > 0 ? (
-                      <span className="font-['Public_Sans:SemiBold',sans-serif] text-[17px] text-[#005eb8]">{row.totalBoxes}</span>
+                      <button
+                        onClick={() => setBoxDetailIdx(idx)}
+                        className="font-['Public_Sans:SemiBold',sans-serif] text-[17px] text-[#005eb8] underline cursor-pointer hover:opacity-70 transition-opacity min-w-[40px] inline-block py-[4px]"
+                        title="點擊查看箱數明細"
+                      >{row.totalBoxes}</button>
                     ) : (
                       <span className="font-['Public_Sans:Regular',sans-serif] text-[17px] text-[#c4cdd6]">—</span>
                     )}
@@ -329,22 +351,74 @@ export function ShipmentInquiryDetailPage({ shipment, onClose, onDelete, onEdit 
         </div>
       )}
 
-      {/* ── 歷程面板 (stub) ──────────────────────────────────────────────────── */}
+      {/* ── 歷程面板 ──────────────────────────────────────────────────────── */}
       {showHistory && (
+        <OrderHistory
+          onClose={() => setShowHistory(false)}
+          entries={historyEntries}
+          titleLabel="出貨歷程"
+          correctionDocNo={shipment.vendorShipmentNo}
+          correctionDocNoLabel="廠商出貨單號"
+          docSeqNo={shipment.sapDeliveryNo || undefined}
+          docSeqNoLabel="SAP出貨單號"
+        />
+      )}
+
+      {/* ── 箱數明細彈窗（唯讀）─────────────────────────────────────────── */}
+      {boxDetailRow && (
         <div
-          className="fixed inset-0 z-[200] flex justify-end"
-          onClick={e => { if (e.target === e.currentTarget) setShowHistory(false); }}
-          style={{ background: 'rgba(28,37,46,0.35)' }}
+          className="fixed inset-0 z-[300] flex items-center justify-center"
+          style={{ background: 'rgba(28,37,46,0.45)', backdropFilter: 'blur(4px)' }}
+          onClick={e => { if (e.target === e.currentTarget) setBoxDetailIdx(null); }}
         >
-          <div className="bg-white w-[360px] h-full shadow-[-4px_0px_20px_rgba(0,0,0,0.08)] flex flex-col">
-            <div className="flex items-center justify-between px-[24px] pt-[24px] pb-[16px] border-b border-[rgba(145,158,171,0.12)]">
-              <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[18px] text-[#1c252e]">歷程紀錄</p>
-              <button onClick={() => setShowHistory(false)} className="text-[#919eab] hover:text-[#1c252e] transition-colors">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M18 6 6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
-              </button>
+          <div
+            className="bg-white rounded-[16px] shadow-[0px_24px_48px_rgba(0,0,0,0.20)] flex flex-col overflow-hidden"
+            style={{ width: 480, maxHeight: '90vh' }}
+          >
+            {/* 標題 + 資訊欄 */}
+            <div className="px-[24px] pt-[20px] pb-[16px]">
+              <h3 className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[18px] text-[#1c252e] mb-[16px]">箱數明細</h3>
+              <div className="grid grid-cols-2 gap-x-[24px] gap-y-[8px]">
+                {[
+                  { label: '出貨項次', value: boxDetailRow.itemNo },
+                  { label: '單號序號', value: `${boxDetailRow.orderNo}${boxDetailRow.orderSeq}` },
+                  { label: '料號', value: boxDetailRow.materialNo },
+                  { label: '出貨量', value: boxDetailRow.shipQty },
+                  { label: '每箱數量', value: boxDetailRow.qtyPerBox || '—' },
+                  { label: '總箱數', value: boxDetailRow.totalBoxes },
+                ].map(item => (
+                  <div key={item.label} className="flex gap-[6px] items-baseline">
+                    <span className="font-['Public_Sans:Regular',sans-serif] text-[16px] text-[#637381] whitespace-nowrap">{item.label}</span>
+                    <span className="font-['Public_Sans:SemiBold',sans-serif] text-[16px] text-[#1c252e]">{item.value}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="flex-1 px-[24px] py-[16px] flex items-center justify-center">
-              <p className="font-['Public_Sans:Regular',sans-serif] text-[14px] text-[#919eab]">歷程功能開發中</p>
+
+            {/* 箱數列表 */}
+            <div className="border-t border-[rgba(145,158,171,0.16)] flex-1 overflow-hidden flex flex-col">
+              <div className="flex items-center px-[24px] py-[10px] bg-[rgba(145,158,171,0.04)]">
+                <span style={{ width: 60 }} className="font-['Public_Sans:SemiBold',sans-serif] text-[17px] text-[#637381]">箱數</span>
+                <span style={{ flex: 1 }} className="font-['Public_Sans:SemiBold',sans-serif] text-[17px] text-[#637381]">數量</span>
+              </div>
+              <div className="overflow-y-auto flex-1 custom-scrollbar px-[24px]">
+                {(boxDetailRow.boxes ?? []).map(box => (
+                  <div key={box.boxNo} className="flex items-center py-[10px] border-b border-[rgba(145,158,171,0.08)] last:border-0">
+                    <span style={{ width: 60 }} className="font-['Public_Sans:Regular',sans-serif] text-[19px] text-[#1c252e]">{box.boxNo}</span>
+                    <span style={{ flex: 1 }} className="font-['Public_Sans:Regular',sans-serif] text-[18px] text-[#1c252e]">{box.qty}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 關閉按鈕 */}
+            <div className="px-[24px] py-[16px]">
+              <button
+                onClick={() => setBoxDetailIdx(null)}
+                className="w-full h-[40px] bg-[#1c252e] hover:bg-[#374151] text-white rounded-[8px] font-['Public_Sans:SemiBold',sans-serif] text-[14px] transition-colors"
+              >
+                關閉
+              </button>
             </div>
           </div>
         </div>
