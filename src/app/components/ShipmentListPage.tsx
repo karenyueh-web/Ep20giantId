@@ -772,6 +772,23 @@ export function ShipmentListPage() {
     setDetailOrders([]);
   };
 
+  // ── 編輯儲存（刪除出貨項次後同步資料）────────────────────────────────────
+  const handleEditSave = (shipmentId: number, updatedDetails: ShipmentRow['details']) => {
+    setShipments(prev => prev.map(r =>
+      r.id === shipmentId ? { ...r, details: updatedDetails } : r
+    ));
+    // 同步更新 localStorage
+    try {
+      const saved = JSON.parse(localStorage.getItem('createdShipments') || '[]') as ShipmentRow[];
+      const updated = saved.map(s =>
+        s.id === shipmentId ? { ...s, details: updatedDetails } : s
+      );
+      localStorage.setItem('createdShipments', JSON.stringify(updated));
+    } catch { /* ignore */ }
+    // 同步更新 detailShipment（讓畫面即時反映）
+    setDetailShipment(prev => prev ? { ...prev, details: updatedDetails } : prev);
+  };
+
   // 所有 hooks 已完整宣告，此處 early return 安全
   if (detailShipment) {
     return (
@@ -779,7 +796,7 @@ export function ShipmentListPage() {
         shipment={detailShipment}
         onClose={() => { setDetailShipment(null); setDetailOrders([]); }}
         onDelete={() => handleDetailDeleted(detailShipment.id)}
-        onEdit={() => { /* 編輯功能後續加入 */ }}
+        onEditSave={(updatedDetails) => handleEditSave(detailShipment.id, updatedDetails)}
       />
     );
   }

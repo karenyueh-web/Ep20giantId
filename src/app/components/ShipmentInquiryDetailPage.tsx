@@ -1,12 +1,13 @@
 /**
  * ShipmentInquiryDetailPage
- * 出貨單查詢 — 明細頁（查詢唯讀版）
+ * 出貨單查詢 — 明細頁（查詢唯讀版 + 編輯模式：刪除出貨項次）
  */
 
 import { useState, useMemo } from 'react';
-import type { ShipmentRow } from './ShipmentListPage';
+import type { ShipmentRow, ShipmentDetailItem } from './ShipmentListPage';
 import IconsSolidIcSolarMultipleForwardLeftBroken from '@/imports/IconsSolidIcSolarMultipleForwardLeftBroken';
 import { OrderHistory } from './OrderHistory';
+import { DeleteButton } from './ActionButtons';
 import type { HistoryEntry } from './OrderStoreContext';
 
 // ── TRANSPORT_OPTIONS ────────────────────────────────────────────────────────
@@ -23,6 +24,7 @@ interface Props {
   onClose: () => void;
   onDelete?: () => void;
   onEdit?: () => void;
+  onEditSave?: (updatedDetails: ShipmentDetailItem[]) => void;
 }
 
 
@@ -110,14 +112,78 @@ const TABLE_COLS = [
 ];
 
 // ── 主元件 ────────────────────────────────────────────────────────────────────
-export function ShipmentInquiryDetailPage({ shipment, onClose, onDelete, onEdit }: Props) {
+export function ShipmentInquiryDetailPage({ shipment, onClose, onDelete, onEdit, onEditSave }: Props) {
   const [showHistory, setShowHistory] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [boxDetailIdx, setBoxDetailIdx] = useState<number | null>(null);
   const boxDetailRow = boxDetailIdx !== null ? shipment.details[boxDetailIdx] : null;
 
+  // ── 編輯模式狀態 ────────────────────────────────────────────────────────
+  const [isEditing, setIsEditing] = useState(false);
+  const [markedForDeletion, setMarkedForDeletion] = useState<Set<number>>(new Set());
+  // Toast
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const showToast = (msg: string) => { setToastMessage(msg); setTimeout(() => setToastMessage(null), 3000); };
+
+  // 編輯用歷程（額外的歷程記錄，儲存時會追加）
+  const [editHistoryEntries, setEditHistoryEntries] = useState<HistoryEntry[]>([]);
+
   // 判斷是否有任一項次已有累計收料量
   const hasReceived = useMemo(() => shipment.details.some(d => (d.receivedQty ?? 0) > 0), [shipment]);
+
+  // ── 編輯模式操作 ────────────────────────────────────────────────────────
+  const handleStartEdit = () => {
+    setMarkedForDeletion(new Set());
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setMarkedForDeletion(new Set());
+    setIsEditing(false);
+  };
+
+  const handleToggleDelete = (itemNo: number) => {
+    setMarkedForDeletion(prev => {
+      const next = new Set(prev);
+      if (next.has(itemNo)) { next.delete(itemNo); } else { next.add(itemNo); }
+      return next;
+    });
+  };
+
+  const handleSaveEdit = () => {
+    if (markedForDeletion.size === 0) {
+      // 沒有標記任何項次，直接退出編輯
+      setIsEditing(false);
+      return;
+    }
+    // 卡控：不能刪光所有項次
+    const remaining = shipment.details.filter(d => !markedForDeletion.has(d.itemNo));
+    if (remaining.length === 0) {
+      showToast('至少須保留一個出貨項次');
+      return;
+    }
+    // 組歷程記錄
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const deletedItems = shipment.details.filter(d => markedForDeletion.has(d.itemNo)).sort((a, b) => a.itemNo - b.itemNo);
+    const remarkLines = deletedItems.map(d => `項次${d.itemNo} ${d.orderNo}${d.orderSeq} ${d.materialNo} 出貨量${d.shipQty}`).join('；');
+    const newEntry: HistoryEntry = {
+      date: dateStr,
+      event: '刪除出貨項次',
+      operator: '廠商-OOO',
+      remark: remarkLines,
+    };
+    setEditHistoryEntries(prev => [...prev, newEntry]);
+
+    // 呼叫上層 callback 同步資料
+    if (onEditSave) {
+      onEditSave(remaining);
+    }
+
+    setMarkedForDeletion(new Set());
+    setIsEditing(false);
+    showToast('已儲存變更');
+  };
 
   // 組裝歷程記錄
   const historyEntries = useMemo<HistoryEntry[]>(() => {
@@ -130,8 +196,10 @@ export function ShipmentInquiryDetailPage({ shipment, onClose, onDelete, onEdit 
         remark: '',
       });
     }
+    // 加入編輯產生的歷程
+    entries.push(...editHistoryEntries);
     return entries;
-  }, [shipment]);
+  }, [shipment, editHistoryEntries]);
 
   const transportLabel = TRANSPORT_OPTIONS.find(o => o.value === shipment.transportType)?.label ?? shipment.transportType;
 
@@ -176,34 +244,55 @@ export function ShipmentInquiryDetailPage({ shipment, onClose, onDelete, onEdit 
 
           {/* 右側按鈕 */}
           <div className="flex items-center gap-[10px]">
-            <PrintDropdown />
-            <button
-              onClick={onEdit}
-              className="h-[36px] min-w-[88px] px-[16px] rounded-[8px] bg-[#005eb8] hover:bg-[#004a94] text-white font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
-            >
-              編輯
-            </button>
-            <button
-              onClick={() => {
-                if (hasReceived) return;
-                setShowDeleteConfirm(true);
-              }}
-              disabled={hasReceived}
-              title={hasReceived ? '出貨項次中有累計收料量，不可整單刪除' : undefined}
-              className={`h-[36px] min-w-[88px] px-[16px] rounded-[8px] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap ${
-                hasReceived
-                  ? 'bg-[#919eab] text-white cursor-not-allowed'
-                  : 'bg-[#ff5630] hover:bg-[#b71d18] text-white'
-              }`}
-            >
-              整單刪除
-            </button>
-            <button
-              onClick={() => setShowHistory(v => !v)}
-              className="font-['Roboto:Regular',sans-serif] font-normal text-[16px] min-w-[44px] text-center text-[#005eb8] underline [text-decoration-skip-ink:none] hover:opacity-70 cursor-pointer transition-opacity whitespace-nowrap"
-            >
-              歷程
-            </button>
+            {isEditing ? (
+              /* ── 編輯模式：儲存 + 取消 ── */
+              <>
+                <button
+                  onClick={handleCancelEdit}
+                  className="h-[36px] min-w-[88px] px-[16px] rounded-[8px] border border-[rgba(145,158,171,0.32)] bg-white text-[#1c252e] hover:bg-[#f4f6f8] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={handleSaveEdit}
+                  className="h-[36px] min-w-[88px] px-[16px] rounded-[8px] bg-[#005eb8] hover:bg-[#004a94] text-white font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
+                >
+                  儲存
+                </button>
+              </>
+            ) : (
+              /* ── 正常唯讀模式：列印 + 編輯 + 整單刪除 + 歷程 ── */
+              <>
+                <PrintDropdown />
+                <button
+                  onClick={handleStartEdit}
+                  className="h-[36px] min-w-[88px] px-[16px] rounded-[8px] bg-[#005eb8] hover:bg-[#004a94] text-white font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
+                >
+                  編輯
+                </button>
+                <button
+                  onClick={() => {
+                    if (hasReceived) return;
+                    setShowDeleteConfirm(true);
+                  }}
+                  disabled={hasReceived}
+                  title={hasReceived ? '出貨項次中有累計收料量，不可整單刪除' : undefined}
+                  className={`h-[36px] min-w-[88px] px-[16px] rounded-[8px] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap ${
+                    hasReceived
+                      ? 'bg-[#919eab] text-white cursor-not-allowed'
+                      : 'bg-[#ff5630] hover:bg-[#b71d18] text-white'
+                  }`}
+                >
+                  整單刪除
+                </button>
+                <button
+                  onClick={() => setShowHistory(v => !v)}
+                  className="font-['Roboto:Regular',sans-serif] font-normal text-[16px] min-w-[44px] text-center text-[#005eb8] underline [text-decoration-skip-ink:none] hover:opacity-70 cursor-pointer transition-opacity whitespace-nowrap"
+                >
+                  歷程
+                </button>
+              </>
+            )}
           </div>
         </div>
 
@@ -257,6 +346,12 @@ export function ShipmentInquiryDetailPage({ shipment, onClose, onDelete, onEdit 
                     </span>
                   </div>
                 ))}
+                {/* 編輯模式額外操作欄 */}
+                {isEditing && (
+                  <div style={{ width: 60, minWidth: 60 }} className="px-[4px] shrink-0 text-center">
+                    <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#637381] leading-[20px]">操作</span>
+                  </div>
+                )}
               </div>
 
               {/* 資料列 */}
@@ -266,34 +361,45 @@ export function ShipmentInquiryDetailPage({ shipment, onClose, onDelete, onEdit 
                 </div>
               )}
 
-              {shipment.details.map((row, idx) => (
+              {shipment.details.map((row, idx) => {
+                const isMarked = markedForDeletion.has(row.itemNo);
+                const canDelete = (row.receivedQty ?? 0) === 0;
+                // 文字顏色：標記刪除時統一變灰
+                const txtClr = isMarked ? 'text-[rgba(145,158,171,0.5)]' : '';
+                const txtClrDark = isMarked ? 'text-[rgba(145,158,171,0.5)]' : 'text-[#1c252e]';
+                const txtClrLight = isMarked ? 'text-[rgba(145,158,171,0.5)]' : 'text-[#637381]';
+                return (
                 <div
                   key={row.itemNo}
-                  className={`flex items-center py-[12px] border-b border-[rgba(145,158,171,0.08)] hover:bg-[rgba(145,158,171,0.04)] transition-colors ${idx % 2 === 1 ? 'bg-[rgba(145,158,171,0.02)]' : ''}`}
+                  className={`flex items-center py-[12px] border-b border-[rgba(145,158,171,0.08)] hover:bg-[rgba(145,158,171,0.04)] transition-colors relative ${idx % 2 === 1 && !isMarked ? 'bg-[rgba(145,158,171,0.02)]' : ''} ${isMarked ? 'bg-[rgba(255,86,48,0.04)]' : ''}`}
                 >
+                  {/* 軟刪除紅線覆蓋層（同修正單樣式） */}
+                  {isMarked && (
+                    <div className="absolute inset-x-[8px] top-1/2 h-[1.5px] bg-[#ff5630] pointer-events-none z-[1]" />
+                  )}
                   <div style={{ width: 72, minWidth: 72 }} className="px-[8px] text-left shrink-0">
-                    <span className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#637381]">{row.itemNo}</span>
+                    <span className={`font-['Public_Sans:Regular',sans-serif] text-[13px] ${txtClrLight}`}>{row.itemNo}</span>
                   </div>
                   <div style={{ width: 130, minWidth: 130 }} className="px-[8px] text-left shrink-0">
-                    <span className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#637381]">{row.orderNo}{row.orderSeq}</span>
+                    <span className={`font-['Public_Sans:Regular',sans-serif] text-[13px] ${txtClrLight}`}>{row.orderNo}{row.orderSeq}</span>
                   </div>
                   <div style={{ width: 140, minWidth: 140 }} className="px-[8px] text-left shrink-0">
-                    <span className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#637381] truncate block">{row.materialNo}</span>
+                    <span className={`font-['Public_Sans:Regular',sans-serif] text-[13px] ${txtClrLight} truncate block`}>{row.materialNo}</span>
                   </div>
                   <div style={{ width: 80, minWidth: 80 }} className="px-[8px] text-right shrink-0">
-                    <span className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#637381]">{row.orderPendingQty}</span>
+                    <span className={`font-['Public_Sans:Regular',sans-serif] text-[13px] ${txtClrLight}`}>{row.orderPendingQty}</span>
                   </div>
                   <div style={{ width: 80, minWidth: 80 }} className="px-[8px] text-right shrink-0">
-                    <span className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#1c252e] font-medium">{row.shipQty}</span>
+                    <span className={`font-['Public_Sans:Regular',sans-serif] text-[13px] font-medium ${txtClrDark}`}>{row.shipQty}</span>
                   </div>
                   <div style={{ width: 90, minWidth: 90 }} className="px-[8px] text-right shrink-0">
-                    <span className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#1c252e]">{row.qtyPerBox}</span>
+                    <span className={`font-['Public_Sans:Regular',sans-serif] text-[13px] ${txtClrDark}`}>{row.qtyPerBox}</span>
                   </div>
-                  <div style={{ width: 80, minWidth: 80 }} className="px-[8px] text-center shrink-0">
+                  <div style={{ width: 80, minWidth: 80 }} className={`px-[8px] text-center shrink-0 ${isMarked ? 'pointer-events-none' : ''}`}>
                     {row.totalBoxes > 0 ? (
                       <button
                         onClick={() => setBoxDetailIdx(idx)}
-                        className="font-['Public_Sans:SemiBold',sans-serif] text-[17px] text-[#005eb8] underline cursor-pointer hover:opacity-70 transition-opacity min-w-[40px] inline-block py-[4px]"
+                        className={`font-['Public_Sans:SemiBold',sans-serif] text-[17px] underline cursor-pointer hover:opacity-70 transition-opacity min-w-[40px] inline-block py-[4px] ${isMarked ? 'text-[rgba(145,158,171,0.5)]' : 'text-[#005eb8]'}`}
                         title="點擊查看箱數明細"
                       >{row.totalBoxes}</button>
                     ) : (
@@ -301,26 +407,61 @@ export function ShipmentInquiryDetailPage({ shipment, onClose, onDelete, onEdit 
                     )}
                   </div>
                   <div style={{ width: 90, minWidth: 90 }} className="px-[8px] text-right shrink-0">
-                    <span className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#1c252e]">{row.netWeight || '0'}</span>
+                    <span className={`font-['Public_Sans:Regular',sans-serif] text-[13px] ${txtClrDark}`}>{row.netWeight || '0'}</span>
                   </div>
                   <div style={{ width: 90, minWidth: 90 }} className="px-[8px] text-right shrink-0">
-                    <span className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#1c252e]">{row.grossWeight || '0'}</span>
+                    <span className={`font-['Public_Sans:Regular',sans-serif] text-[13px] ${txtClrDark}`}>{row.grossWeight || '0'}</span>
                   </div>
                   <div style={{ width: 100, minWidth: 100 }} className="px-[8px] text-center shrink-0">
-                    <span className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#1c252e]">{row.weightUnit}</span>
+                    <span className={`font-['Public_Sans:Regular',sans-serif] text-[13px] ${txtClrDark}`}>{row.weightUnit}</span>
                   </div>
                   <div style={{ width: 110, minWidth: 110 }} className="px-[8px] text-center shrink-0">
-                    <span className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#1c252e]">{row.countryOfOrigin}</span>
+                    <span className={`font-['Public_Sans:Regular',sans-serif] text-[13px] ${txtClrDark}`}>{row.countryOfOrigin}</span>
                   </div>
                   <div style={{ width: 100, minWidth: 100 }} className="px-[8px] text-right shrink-0">
                     <span className={`font-['Public_Sans:Regular',sans-serif] text-[13px] ${
-                      (row.receivedQty ?? 0) > 0 ? 'text-[#118d57] font-medium' : 'text-[#c4cdd6]'
+                      isMarked ? 'text-[rgba(145,158,171,0.5)]' : (row.receivedQty ?? 0) > 0 ? 'text-[#118d57] font-medium' : 'text-[#c4cdd6]'
                     }`}>
                       {row.receivedQty ?? 0}
                     </span>
                   </div>
+                  {/* 編輯模式操作欄 */}
+                  {isEditing && (
+                    <div style={{ width: 60, minWidth: 60 }} className="px-[4px] flex justify-center shrink-0">
+                      {canDelete ? (
+                        isMarked ? (
+                          /* 已標記 → 顯示「復原」icon */
+                          <button
+                            onClick={() => handleToggleDelete(row.itemNo)}
+                            className="flex items-center justify-center shrink-0 w-[36px] h-[36px] rounded-full hover:bg-[rgba(24,144,255,0.08)] transition-colors"
+                            title="取消刪除"
+                          >
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1890FF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="1 4 1 10 7 10"/>
+                              <path d="M3.51 15a9 9 0 1 0 .49-3.08"/>
+                            </svg>
+                          </button>
+                        ) : (
+                          /* 未標記 → 顯示刪除 icon */
+                          <DeleteButton onClick={() => handleToggleDelete(row.itemNo)} title="刪除此項次" />
+                        )
+                      ) : (
+                        /* 有收料量 → 灰色鎖頭 */
+                        <div
+                          className="flex items-center justify-center w-[36px] h-[36px] cursor-not-allowed"
+                          title="有收料量，無法刪除"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c4cdd6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
@@ -435,6 +576,17 @@ export function ShipmentInquiryDetailPage({ shipment, onClose, onDelete, onEdit 
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── Toast ──────────────────────────────────────────────────────────── */}
+      {toastMessage && (
+        <div className="fixed bottom-[24px] left-1/2 -translate-x-1/2 z-[250] bg-[#1c252e] text-white px-[24px] py-[12px] rounded-[8px] shadow-[0px_8px_16px_rgba(0,0,0,0.16)] flex items-center gap-[8px]">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <circle cx="10" cy="10" r="9" stroke="#22c55e" strokeWidth="2"/>
+            <path d="M6 10l3 3 5-5" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          <p className="font-['Public_Sans:Regular',sans-serif] text-[14px]">{toastMessage}</p>
         </div>
       )}
     </div>
