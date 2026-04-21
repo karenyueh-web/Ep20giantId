@@ -396,35 +396,31 @@ const COLUMNS: StandardColumn<MyRow>[] = [
     </div>
 
     {/* ② X selected 數量文字（深色，非藍色） */}
-    <span className="font-semibold text-[14px] text-[#1c252e] leading-[24px] mr-[4px] whitespace-nowrap">
+    <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-[#1c252e] leading-[24px] mr-[4px] whitespace-nowrap">
       {selectedIds.size} selected
     </span>
 
-    {/* ③ 分隔線 */}
-    <div className="w-[1px] h-[16px] bg-[rgba(0,94,184,0.24)] mx-[12px] shrink-0" />
-
-    {/* ④ 操作一（藍色文字） */}
-    <button
+    {/* ③ 操作按鈕（用 span，非 button，對齊 OrderListWithTabs 標準） */}
+    <span
       onClick={handleActionA}
-      className="font-semibold text-[14px] text-[#005eb8] hover:text-[#004a94] hover:underline transition-colors shrink-0 whitespace-nowrap"
-    >
-      操作一
-    </button>
+      className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] text-[#004680] leading-[24px] whitespace-nowrap cursor-pointer select-none px-[10px] py-[16px] hover:opacity-70 transition-opacity"
+    >操作一</span>
 
-    {/* ⑤ 分隔線（多個操作時加） */}
-    <div className="w-[1px] h-[16px] bg-[rgba(0,94,184,0.24)] mx-[12px] shrink-0" />
+    {/* ④ 操作間分隔：| 字符（淡灰） */}
+    <span className="text-[rgba(145,158,171,0.4)] select-none">|</span>
 
-    {/* ⑥ 操作二（藍色文字） */}
-    <button
+    {/* ⑤ 操作按鈕二 */}
+    <span
       onClick={handleActionB}
-      className="font-semibold text-[14px] text-[#005eb8] hover:text-[#004a94] hover:underline transition-colors shrink-0 whitespace-nowrap"
-    >
-      操作二
-    </button>
+      className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] text-[#004680] leading-[24px] whitespace-nowrap cursor-pointer select-none px-[10px] py-[16px] hover:opacity-70 transition-opacity"
+    >操作二</span>
 
   </div>
 )}
 ```
+
+> ⚠️ **注意**：操作按鈕使用 `<span>` 而非 `<button>`，字色為 `text-[#004680]`（非 `#005eb8`），分隔線用 `|` 字符加 `text-[rgba(145,158,171,0.4)]`，hover 效果為 `hover:opacity-70`（非 hover:underline）。
+> 參考來源：`OrderListWithTabs.tsx` `batchActions` 區塊（第 1034-1044 行）
 
 ### CheckboxIcon 狀態說明
 
@@ -533,7 +529,105 @@ const isSomeSelected = selectedIds.size > 0 && !isAllSelected;
 
 ---
 
-## Step 5：實作規範
+## ⭐ 全域性 UI 設計規範
+
+> 以下規則由使用者確認，**適用全系統所有頁面**，實作時無需重複詢問。
+
+### 1. TAB 樣式（頁籤切換）
+
+適用場景：所有頁面層級的 TAB 切換列（如「出貨明細查詢 / 裝箱明細查詢」、「基本資料 / 業務帳號 / 其他聯絡人」）。
+
+**必須使用以下結構（對齊 `VendorDetailPage.tsx` `Tabs` 元件）**：
+
+```tsx
+{/* TAB 外層容器 */}
+<div className="content-stretch flex gap-[40px] h-[48px] items-center px-[20px] relative shrink-0 w-full">
+
+  {/* 每個 TAB */}
+  <div
+    onClick={() => setActiveTab('tabId')}
+    className="content-stretch flex gap-[8px] h-[48px] items-center justify-center min-h-[48px] min-w-[48px] relative shrink-0 cursor-pointer"
+  >
+    {/* Active 底線：absolute border-b-2 蓋滿整個 tab 高度 */}
+    {activeTab === 'tabId' && (
+      <div aria-hidden="true" className="absolute border-[#1c252e] border-b-2 border-solid inset-0 pointer-events-none" />
+    )}
+    {/* TAB 文字 */}
+    <p className={`font-['Public_Sans:Medium','Noto_Sans_JP:Medium',sans-serif] font-medium leading-[22px] relative shrink-0 text-[14px] ${
+      activeTab === 'tabId' ? 'text-[#1c252e]' : 'text-[#637381]'
+    }`}>
+      TAB 標題
+    </p>
+  </div>
+
+  {/* 底部統一灰色底線（所有 TAB 共用，absolute） */}
+  <div className="absolute bg-[rgba(145,158,171,0.08)] bottom-0 h-[2px] left-0 right-0" />
+</div>
+```
+
+| 項目 | 規格 |
+|------|------|
+| 高度 | `h-[48px]` |
+| 間距 | `gap-[40px]` 左右 padding `px-[20px]` |
+| 字體 | `font-medium text-[14px]` |
+| Active 底線 | `absolute border-b-2 border-[#1c252e] inset-0`，蓋滿整個 tab 格 |
+| Inactive 字色 | `text-[#637381]` |
+| Active 字色 | `text-[#1c252e]` |
+| 底部背景線 | `absolute bg-[rgba(145,158,171,0.08)] bottom-0 h-[2px] left-0 right-0` |
+| 參考來源 | `VendorDetailPage.tsx` `Tabs` 元件（第 35–97 行） |
+
+---
+
+### 2. 搜尋列不加裝飾線
+
+頁面中搜尋條件區塊（包含 `<SearchField>` / `<DropdownSelect>` 的區塊）**下方不加** `border-b`。
+
+```tsx
+{/* ✅ 正確 */}
+<div className="shrink-0 flex gap-[16px] items-end flex-wrap px-[20px] pt-[16px] pb-[16px]">
+  ...
+</div>
+
+{/* ❌ 錯誤 */}
+<div className="shrink-0 flex gap-[16px] ... border-b border-[rgba(145,158,171,0.12)]">
+  ...
+</div>
+```
+
+---
+
+### 3. 表身（表格 row）字體大小統一 14px
+
+所有資料表格的 cell 文字（falback text、數值、字串）一律使用 `text-[14px]`，**不使用 `text-[13px]`**。
+
+```tsx
+{/* ✅ 正確：表格 cell 值文字 */}
+<p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] truncate w-full ...">
+  {value}
+</p>
+
+{/* ❌ 錯誤 */}
+<p className="... text-[13px] ...">...
+```
+
+> 例外：`SearchField` 的 floating label（壓在框線上方的小標題）使用 `text-[13px]`，這是正確的且不受此規範影響。
+
+---
+
+### 4. 分頁（PaginationControls）預設每頁 100 筆
+
+所有使用 `PaginationControls` 的頁面，`perPage` 初始值一律設為 `100`：
+
+```tsx
+{/* ✅ */}
+const [perPage, setPerPage] = useState(100);
+
+{/* ❌ */}
+const [perPage, setPerPage] = useState(50);
+```
+
+---
+
 
 ### ✅ 應該做
 

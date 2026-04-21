@@ -9,6 +9,7 @@ import { UnderConstructionPage } from "@/app/components/UnderConstructionPage";
 import { ShippingBasicSettingsPage } from "@/app/components/ShippingBasicSettingsPage";
 import { ShipmentCreatePage } from "@/app/components/ShipmentCreatePage";
 import { ShipmentListPage } from "@/app/components/ShipmentListPage";
+import { ShipmentShippingInquiryPage } from "@/app/components/ShipmentShippingInquiryPage";
 import { CorrectionCreatePage } from "@/app/components/CorrectionCreatePage";
 import { CorrectionListWithTabs } from "@/app/components/CorrectionListWithTabs";
 import { HistoryCorrectionListPage } from "@/app/components/HistoryCorrectionListPage";
@@ -206,6 +207,20 @@ export default function App() {
             breadcrumb="出貨單 • 出貨單查詢"
           >
             <ShipmentListPage />
+          </ResponsivePageLayout>
+        );
+      // ── 出貨單：出貨/裝箱明細 ──
+      case 'shipping-packing':
+        return (
+          <ResponsivePageLayout
+            currentPage={currentPage}
+            onPageChange={handlePageChange}
+            onLogout={handleLogout}
+            userRole={userRole}
+            title="出貨/裝箱明細"
+            breadcrumb="出貨單 • 出貨/裝箱明細"
+          >
+            <ShipmentShippingInquiryPage />
           </ResponsivePageLayout>
         );
       // ── 尚未建置的功能頁面 → 畫面建置中 ──
