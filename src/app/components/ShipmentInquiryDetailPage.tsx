@@ -97,7 +97,7 @@ function ReadonlyField({ label, value, required }: { label: string; value: strin
 
 // ── Table 欄位定義 ────────────────────────────────────────────────────────────
 const TABLE_COLS = [
-  { key: 'itemNo',         label: '出貨項次', width: 72,  align: 'left' },
+  { key: 'itemNo',         label: '出貨項次', width: 80,  align: 'left' },
   { key: 'orderNo',        label: '單號序號', width: 130, align: 'left' },
   { key: 'materialNo',     label: '料號',     width: 140, align: 'left' },
   { key: 'orderPendingQty',label: '訂單待交', width: 80,  align: 'right' },
@@ -340,7 +340,7 @@ export function ShipmentInquiryDetailPage({ shipment, onClose, onDelete, onEdit,
               {/* 表頭 */}
               <div className="flex items-center py-[10px] border-b border-[rgba(145,158,171,0.12)] bg-[rgba(145,158,171,0.04)]">
                 {TABLE_COLS.map(col => (
-                  <div key={col.key} style={{ width: col.width, minWidth: col.width }} className={`px-[8px] shrink-0 ${col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'}`}>
+                  <div key={col.key} style={{ width: col.width, minWidth: col.width }} className={`${col.key === 'itemNo' ? 'pl-[16px] pr-[8px]' : 'px-[8px]'} shrink-0 ${col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'}`}>
                     <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#637381] leading-[20px]">
                       {col.label}
                     </span>
@@ -377,7 +377,7 @@ export function ShipmentInquiryDetailPage({ shipment, onClose, onDelete, onEdit,
                   {isMarked && (
                     <div className="absolute inset-x-[8px] top-1/2 h-[1.5px] bg-[#ff5630] pointer-events-none z-[1]" />
                   )}
-                  <div style={{ width: 72, minWidth: 72 }} className="px-[8px] text-left shrink-0">
+                  <div style={{ width: 80, minWidth: 80 }} className="pl-[16px] pr-[8px] text-left shrink-0">
                     <span className={`font-['Public_Sans:Regular',sans-serif] text-[13px] ${txtClrLight}`}>{row.itemNo}</span>
                   </div>
                   <div style={{ width: 130, minWidth: 130 }} className="px-[8px] text-left shrink-0">
@@ -400,7 +400,7 @@ export function ShipmentInquiryDetailPage({ shipment, onClose, onDelete, onEdit,
                       <button
                         onClick={() => setBoxDetailIdx(idx)}
                         className={`font-['Public_Sans:SemiBold',sans-serif] text-[17px] underline cursor-pointer hover:opacity-70 transition-opacity min-w-[40px] inline-block py-[4px] ${isMarked ? 'text-[rgba(145,158,171,0.5)]' : 'text-[#005eb8]'}`}
-                        title="點擊查看箱數明細"
+                        title={(row.boxes ?? []).map(b => b.qty).join('/')}
                       >{row.totalBoxes}</button>
                     ) : (
                       <span className="font-['Public_Sans:Regular',sans-serif] text-[17px] text-[#c4cdd6]">—</span>

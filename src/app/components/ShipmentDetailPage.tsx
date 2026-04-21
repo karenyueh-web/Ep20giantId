@@ -584,16 +584,21 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
     if (!deliveryDate)            errors.push('交貨日期 為必填');
     if (rows.length === 0)        errors.push('出貨明細不可為空');
 
-    // 廠商出貨單號重複驗證（MOCK + localStorage 已建立的出貨單）
+    // 廠商出貨單號重複驗證（同一廠商下不可重複，不同廠商可使用相同單號）
     if (vendorShipmentNo.trim()) {
+      const currentVendorCode = selectedOrders[0]?.vendorCode ?? '';
       const existingNos = new Set<string>();
-      MOCK_SHIPMENTS.forEach(s => existingNos.add(s.vendorShipmentNo));
+      MOCK_SHIPMENTS
+        .filter(s => s.vendorCode === currentVendorCode)
+        .forEach(s => existingNos.add(s.vendorShipmentNo));
       try {
-        const saved = JSON.parse(localStorage.getItem('createdShipments') || '[]') as { vendorShipmentNo: string }[];
-        saved.forEach(s => existingNos.add(s.vendorShipmentNo));
+        const saved = JSON.parse(localStorage.getItem('createdShipments') || '[]') as { vendorShipmentNo: string; vendorCode: string }[];
+        saved
+          .filter(s => s.vendorCode === currentVendorCode)
+          .forEach(s => existingNos.add(s.vendorShipmentNo));
       } catch { /* ignore */ }
       if (existingNos.has(vendorShipmentNo.trim())) {
-        errors.push(`廠商出貨單號「${vendorShipmentNo}」已存在，不可重複開立`);
+        errors.push(`廠商出貨單號「${vendorShipmentNo}」在該廠商下已存在，同一廠商不可重複開立`);
       }
     }
 
@@ -854,12 +859,12 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
         {/* 白底 table 卡片 */}
         <div className="bg-white rounded-[12px] overflow-hidden shadow-[0px_0px_2px_0px_rgba(145,158,171,0.2),0px_4px_8px_-2px_rgba(145,158,171,0.12)]">
           <div className="w-full overflow-x-auto custom-scrollbar">
-            <div style={{ minWidth: '1040px' }}>
+            <div style={{ minWidth: '1048px' }}>
 
               {/* Table header */}
               <div className="flex items-center py-[10px] border-b border-[rgba(145,158,171,0.16)] bg-[rgba(145,158,171,0.04)]">
                 {[
-                  { label: '出貨項次', w: 72,  align: 'left' },
+                  { label: '出貨項次', w: 80,  align: 'left' },
                   { label: '單號序號', w: 130, align: 'left' },
                   { label: '料號',     w: 140, align: 'left' },
                   { label: '訂單待交', w: 80,  align: 'right' },
@@ -902,7 +907,7 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
                   className={`flex items-center py-[12px] border-b border-[rgba(145,158,171,0.08)] hover:bg-[rgba(145,158,171,0.04)] transition-colors ${idx % 2 === 1 ? 'bg-[rgba(145,158,171,0.02)]' : ''}`}
                 >
                   {/* 出貨項次 */}
-                  <div style={{ width: 72, minWidth: 72 }} className="pl-[16px] pr-[8px] shrink-0">
+                  <div style={{ width: 80, minWidth: 80 }} className="pl-[16px] pr-[8px] shrink-0">
                     <span className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#637381]">
                       {row.itemNo}
                     </span>

@@ -215,7 +215,7 @@ function parseAndValidateShipmentCsv(text: string, referenceOrders: OrderRow[]):
   // Header 必填驗證
   if (!header.vendorShipmentNo || header.vendorShipmentNo === '(請填入)') globalErrors.push('廠商出貨單號 為必填');
   // 幣別：對抄 SAP_CURRENCIES 代碼白名單
-  if (!header.currency) {
+  if (!header.currency || header.currency === '(請填入)') {
     globalErrors.push('幣別 為必填');
   } else if (!SAP_CURRENCIES.some(c => c.code === header.currency)) {
     globalErrors.push(`幣別代碼「${header.currency}」非系統有效幣別，請從幣別選單中確認正確代碼`);
@@ -352,7 +352,7 @@ function CsvPreviewModal({
     >
       <div
         className="bg-white w-full rounded-[16px] shadow-[-40px_40px_80px_0px_rgba(145,158,171,0.24)] flex flex-col overflow-hidden"
-        style={{ maxWidth: '960px', maxHeight: '88vh' }}
+        style={{ maxWidth: '1160px', maxHeight: '88vh' }}
         onClick={e => e.stopPropagation()}
       >
         {/* ── Header ── */}
@@ -459,7 +459,7 @@ function CsvPreviewModal({
             </div>
           ) : (
             <div className="border border-[rgba(145,158,171,0.16)] rounded-[10px] overflow-hidden">
-              <table className="w-full" style={{ minWidth: 980 }}>
+              <table className="w-full" style={{ minWidth: 1100 }}>
                 <thead className="sticky top-0 z-[1]">
                   <tr className="bg-[#f4f6f8]">
                     {[
@@ -473,7 +473,7 @@ function CsvPreviewModal({
                       { label: '自訂箱數', w: 90  },
                       { label: '重量單位', w: 72  },
                       { label: '原產國',   w: 65  },
-                      { label: '驗證',     w: 160 },
+                      { label: '驗證',     w: 280 },
                     ].map(col => (
                       <th
                         key={col.label}
@@ -631,6 +631,7 @@ export function ShipmentCreatePage({ userRole }: ShipmentCreatePageProps) {
   // ── Search States ─────────────────────────────────────────────────────────
   const [searchCompany, setSearchCompany]       = useState('');
   const [searchPurchaseOrg, setSearchPurchaseOrg] = useState('');
+  const [searchVendor, setSearchVendor]           = useState('');
   const [searchDocSeqNo, setSearchDocSeqNo]     = useState('');
   const [searchMaterialNo, setSearchMaterialNo] = useState('');
 
@@ -699,6 +700,13 @@ export function ShipmentCreatePage({ userRole }: ShipmentCreatePageProps) {
     return [{ value: '', label: '全部' }, ...opts];
   }, [eligibleOrders]);
 
+  const vendorOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    eligibleOrders.forEach(o => { if (o.vendorCode && o.vendorName) map.set(o.vendorCode, o.vendorName); });
+    const opts = [...map.entries()].map(([code, name]) => ({ value: code, label: name }));
+    return [{ value: '', label: '全部' }, ...opts];
+  }, [eligibleOrders]);
+
   // ── 搜尋篩選 ──────────────────────────────────────────────────────────────
   const filteredOrders = useMemo(() => {
     let result = eligibleOrders;
@@ -706,6 +714,8 @@ export function ShipmentCreatePage({ userRole }: ShipmentCreatePageProps) {
       result = result.filter(o => o.company === searchCompany);
     if (searchPurchaseOrg)
       result = result.filter(o => o.purchaseOrg === searchPurchaseOrg);
+    if (searchVendor)
+      result = result.filter(o => o.vendorCode === searchVendor);
     if (searchDocSeqNo.trim()) {
       const kw = searchDocSeqNo.trim().toLowerCase();
       result = result.filter(o =>
@@ -719,7 +729,7 @@ export function ShipmentCreatePage({ userRole }: ShipmentCreatePageProps) {
       result = result.filter(o => (o.materialNo || '').toLowerCase().includes(kw));
     }
     return result;
-  }, [eligibleOrders, searchCompany, searchPurchaseOrg, searchDocSeqNo, searchMaterialNo]);
+  }, [eligibleOrders, searchCompany, searchPurchaseOrg, searchVendor, searchDocSeqNo, searchMaterialNo]);
 
   // ── 進階篩選後的計數 ───────────────────────────────────────────────────────
   const getFilteredCount = () => {
@@ -844,7 +854,7 @@ export function ShipmentCreatePage({ userRole }: ShipmentCreatePageProps) {
     const deliveryAddress = addrEntry?.addressZh ?? '';
 
     const headerRow1 = '廠商出貨單號,幣別,運輸型態,交貨日期,到貨日期,交貨地址';
-    const headerRow2 = `(請填入),,(請填入),(請填入),,${deliveryAddress}`;
+    const headerRow2 = `(請填入),(請填入),(請填入),(請填入),,${deliveryAddress}`;
     // 自訂箱數移至每箱數量之後（欄位順序需與 parser 一致）
     const detailHeader = '出貨項次,訂單號碼,訂單序號,料號,訂單待交量(參考),出貨量,每箱數量,自訂箱數(以/分隔),淨重(個),毛重(個),重量單位,原產國家';
     const detailRows = filteredOrders.map((o, idx) => {
@@ -892,10 +902,10 @@ export function ShipmentCreatePage({ userRole }: ShipmentCreatePageProps) {
       deliveryDate:     csvPreview.header.deliveryDate,
       arrivalDate:      csvPreview.header.arrivalDate,
       deliveryAddress:  csvPreview.header.deliveryAddress,
-      rows: validLines.map(l => ({
+      rows: validLines.map((l, idx) => ({
         orderNo:         l.orderNo,
         orderSeq:        l.orderSeq,
-        itemNo:          l.itemNo,
+        itemNo:          (idx + 1) * 10,  // 重新編號：過濾無效列後自動遞補
         shipQty:         l.shipQty,
         qtyPerBox:       l.qtyPerBox,
         customBoxes:     l.customBoxes,
@@ -979,6 +989,17 @@ export function ShipmentCreatePage({ userRole }: ShipmentCreatePageProps) {
               value={searchPurchaseOrg}
               onChange={setSearchPurchaseOrg}
               options={purchaseOrgOptions}
+            />
+          </div>
+
+          {/* 廠商（下拉，可搜尋） */}
+          <div style={{ minWidth: '260px', flex: '0 0 260px' }}>
+            <DropdownSelect
+              label="廠商"
+              value={searchVendor}
+              onChange={setSearchVendor}
+              options={vendorOptions}
+              searchable
             />
           </div>
 
