@@ -419,7 +419,10 @@ export function StandardDataTable<T extends { id: number }>({
                   className="flex items-center justify-center shrink-0 bg-[#f4f6f8] border-r border-[rgba(145,158,171,0.08)]"
                   style={{ width: CHECKBOX_COL_W, minWidth: CHECKBOX_COL_W, height: 56, position: 'sticky', left: 0, zIndex: 20, boxShadow: '2px 0 4px -2px rgba(145,158,171,0.16)' }}
                 >
-                  <CheckboxIcon checked={isAllSelected} onChange={handleSelectAll} />
+                  {/* 有選取時隱藏表頭 checkbox，規範同 AdvancedOrderTable */}
+                  {selectedIds.size === 0 && (
+                    <CheckboxIcon checked={isAllSelected} onChange={handleSelectAll} />
+                  )}
                 </div>
               )}
               {/* 可拖拉欄位（一般欄） */}

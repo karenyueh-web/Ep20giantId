@@ -649,13 +649,15 @@ export function HistoryOrderListWithTabs() {
 
             {/* 表頭 */}
             <div className="flex sticky top-0 z-10 border-b border-[rgba(145,158,171,0.08)]">
-              {/* Checkbox */}
+              {/* Checkbox — 有選取時隱藏，規範同 AdvancedOrderTable */}
               <div
                 data-is-checkbox="true"
                 className="flex items-center justify-center shrink-0 bg-[#f4f6f8] border-r border-[rgba(145,158,171,0.08)]"
                 style={{ width: CHECKBOX_W, minWidth: CHECKBOX_W, height: 56, position: 'sticky', left: 0, zIndex: 20, boxShadow: '2px 0 4px -2px rgba(145,158,171,0.16)' }}
               >
-                <CheckboxIcon checked={isAllSelected} onChange={handleSelectAll} />
+                {selectedIds.size === 0 && (
+                  <CheckboxIcon checked={isAllSelected} onChange={handleSelectAll} />
+                )}
               </div>
               {/* 單號序號 sticky 欄 */}
               <div

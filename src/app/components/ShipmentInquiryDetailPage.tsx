@@ -114,6 +114,7 @@ const TABLE_COLS = [
 // ── 主元件 ────────────────────────────────────────────────────────────────────
 export function ShipmentInquiryDetailPage({ shipment, onClose, onDelete, onEdit, onEditSave }: Props) {
   const [showHistory, setShowHistory] = useState(false);
+  const [hoveredBoxIdx, setHoveredBoxIdx] = useState<number | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [boxDetailIdx, setBoxDetailIdx] = useState<number | null>(null);
   const boxDetailRow = boxDetailIdx !== null ? shipment.details[boxDetailIdx] : null;
@@ -198,7 +199,8 @@ export function ShipmentInquiryDetailPage({ shipment, onClose, onDelete, onEdit,
     }
     // 加入編輯產生的歷程
     entries.push(...editHistoryEntries);
-    return entries;
+    // 由近到遠排序（最新事件在最上方）
+    return [...entries].reverse();
   }, [shipment, editHistoryEntries]);
 
   const transportLabel = TRANSPORT_OPTIONS.find(o => o.value === shipment.transportType)?.label ?? shipment.transportType;
@@ -325,11 +327,13 @@ export function ShipmentInquiryDetailPage({ shipment, onClose, onDelete, onEdit,
 
           {/* 出貨明細標題列 */}
           <div className="flex items-center gap-[12px] mb-[8px]">
-            <div className="relative inline-flex items-end">
-              <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[18px] text-[#1c252e] leading-[28px]">
-                出貨明細
-              </p>
-              <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#1c252e]" />
+            <div className="h-[48px] min-h-[48px] relative shrink-0">
+              <div aria-hidden="true" className="absolute border-[#1c252e] border-b-2 border-solid inset-0 pointer-events-none" />
+              <div className="flex flex-row items-center justify-center min-h-[inherit] size-full px-[4px]">
+                <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[28px] text-[#1c252e] text-[18px] whitespace-nowrap">
+                  出貨明細
+                </p>
+              </div>
             </div>
           </div>
 
@@ -397,11 +401,30 @@ export function ShipmentInquiryDetailPage({ shipment, onClose, onDelete, onEdit,
                   </div>
                   <div style={{ width: 80, minWidth: 80 }} className={`px-[8px] text-center shrink-0 ${isMarked ? 'pointer-events-none' : ''}`}>
                     {row.totalBoxes > 0 ? (
-                      <button
-                        onClick={() => setBoxDetailIdx(idx)}
-                        className={`font-['Public_Sans:SemiBold',sans-serif] text-[17px] underline cursor-pointer hover:opacity-70 transition-opacity min-w-[40px] inline-block py-[4px] ${isMarked ? 'text-[rgba(145,158,171,0.5)]' : 'text-[#005eb8]'}`}
-                        title={(row.boxes ?? []).map(b => b.qty).join('/')}
-                      >{row.totalBoxes}</button>
+                      <div
+                        className="relative inline-block"
+                        onMouseEnter={() => setHoveredBoxIdx(idx)}
+                        onMouseLeave={() => setHoveredBoxIdx(null)}
+                      >
+                        <button
+                          onClick={() => setBoxDetailIdx(idx)}
+                          className={`font-['Public_Sans:SemiBold',sans-serif] text-[17px] underline cursor-pointer hover:opacity-70 transition-opacity min-w-[40px] inline-block py-[4px] ${isMarked ? 'text-[rgba(145,158,171,0.5)]' : 'text-[#005eb8]'}`}
+                        >{row.totalBoxes}</button>
+                        {hoveredBoxIdx === idx && (row.boxes ?? []).length > 0 && (
+                          <div
+                            className="absolute bottom-full left-1/2 -translate-x-1/2 mb-[6px] z-[200] pointer-events-none"
+                            style={{ filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.15))' }}
+                          >
+                            <div className="bg-[#1c252e] text-white rounded-[8px] px-[10px] py-[6px] whitespace-nowrap font-['Public_Sans:Regular',sans-serif] text-[13px] leading-[20px]">
+                              {(row.boxes ?? []).map(b => b.qty).join(' / ')}
+                            </div>
+                            {/* 小三角 */}
+                            <div className="flex justify-center">
+                              <div style={{ width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid #1c252e' }} />
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     ) : (
                       <span className="font-['Public_Sans:Regular',sans-serif] text-[17px] text-[#c4cdd6]">—</span>
                     )}

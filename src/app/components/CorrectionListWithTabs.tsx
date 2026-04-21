@@ -1624,9 +1624,11 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
               {/* 表頭（恆常顯示欄位標題，工具列已獨立至 scroll 外） */}
               <div data-table-header="true" className="flex sticky top-0 z-10 border-b border-[rgba(145,158,171,0.08)]">
                 <>
-                  {/* Checkbox header */}
+                  {/* Checkbox header — 有選取時隱藏，規範同 AdvancedOrderTable */}
                   <div className="bg-[#f4f6f8] shrink-0 w-[56px] flex items-center justify-center border-r border-[rgba(145,158,171,0.08)]" style={stickyCheckboxStyle}>
-                    <CheckboxIcon checked={isAllSelected} onClick={toggleAll} />
+                    {!showToolbar && (
+                      <CheckboxIcon checked={isAllSelected} onClick={toggleAll} />
+                    )}
                   </div>
                   {/* 修正單號 header — 支援欄寬拖曳調整 */}
                   <Resizable
