@@ -280,6 +280,26 @@ function parseAndValidateShipmentCsv(text: string, referenceOrders: OrderRow[]):
     lines.push({ itemNo: (lines.length + 1) * 10, orderNo, orderSeq, materialNo: materialNo || (matched?.materialNo ?? ''), orderPendingQtyRef: pendingQty, shipQty, qtyPerBox, netWeight, grossWeight, weightUnit, countryOfOrigin, customBoxes, errors: rowErrors });
   }
   if (lines.length === 0) globalErrors.push('出貨明細不可為空');
+
+  // ── 同一廠商卡控（與手動開立同步）────────────────────────────────────
+  const vendorSet = new Set<string>();
+  lines.forEach(l => {
+    if (l.errors.length === 0) {
+      const m = referenceOrders.find(o => o.orderNo === l.orderNo && o.orderSeq === l.orderSeq);
+      if (m?.vendorCode) vendorSet.add(m.vendorCode);
+    }
+  });
+  if (vendorSet.size > 1) {
+    const vendorNames = new Set<string>();
+    lines.forEach(l => {
+      if (l.errors.length === 0) {
+        const m = referenceOrders.find(o => o.orderNo === l.orderNo && o.orderSeq === l.orderSeq);
+        if (m?.vendorName) vendorNames.add(m.vendorName);
+      }
+    });
+    globalErrors.push(`CSV 包含不同廠商（${[...vendorNames].join('、')}），僅能開立同一家廠商的出貨單`);
+  }
+
   return { header, lines, globalErrors };
 }
 

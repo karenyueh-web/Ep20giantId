@@ -594,6 +594,111 @@ export const orderMockData: OrderRow[] = [
     internalNote: '測試資料：今日(4/15) < 最早可開立日(4/23) → 不應出現', materialPOContent: '',
     gbdOrderNo: 'GBD-2026-TEST004', statisticalDeliveryDate: '2026/04/30', storageLocationCode: '2130',
   },
+  // ── 速聯國際 CK 多筆測試資料（測試多項出貨明細）─────────────────────────
+  {
+    id: 40, status: 'CK', vendorDeliveryDate: '2026/04/25',
+    orderNo: '400651010', orderDate: '2026/04/01', orderType: 'Z2QB',
+    company: '巨大機械', purchaseOrg: '台灣廠生產採購組織', orderSeq: '10', docSeqNo: '400651010010',
+    purchaser: '王大明', orderQty: 300, acceptQty: 50, comparePrice: '1200', unit: 'SET', currency: 'TWD',
+    leadtime: 7, vendorCode: '00010046', vendorName: '速聯國際(00010046)',
+    materialNo: '1129-CSL0301-A01', customerBrand: 'G01', vendorMaterialNo: 'SL-M7100-R',
+    productName: '後變速撥桿', specification: 'SHIMANO SLX SL-M7100 SHIFT LEVER RIGHT 12-SPEED',
+    expectedDelivery: '2026/04/25', deliveryQty: 300,
+    inTransitQty: 20, undeliveredQty: 230, lineItemNote: '360000', agreedDate: '2026/04/18',
+    internalNote: '', materialPOContent: '',
+    gbdOrderNo: 'GBD-2026-SL001', statisticalDeliveryDate: '2026/04/25', storageLocationCode: '2020',
+  },
+  {
+    id: 41, status: 'CK', vendorDeliveryDate: '2026/04/25',
+    orderNo: '400651010', orderDate: '2026/04/01', orderType: 'Z2QB',
+    company: '巨大機械', purchaseOrg: '台灣廠生產採購組織', orderSeq: '20', docSeqNo: '400651010020',
+    purchaser: '王大明', orderQty: 200, acceptQty: 30, comparePrice: '850', unit: 'SET', currency: 'TWD',
+    leadtime: 7, vendorCode: '00010046', vendorName: '速聯國際(00010046)',
+    materialNo: '2201-CHN0302-B01', customerBrand: 'G01', vendorMaterialNo: 'CN-M7100-12SPD',
+    productName: '12速鏈條', specification: 'SHIMANO SLX CN-M7100 12-SPEED CHAIN 126L',
+    expectedDelivery: '2026/04/25', deliveryQty: 200,
+    inTransitQty: 10, undeliveredQty: 160, lineItemNote: '170000', agreedDate: '2026/04/18',
+    internalNote: '', materialPOContent: '',
+    gbdOrderNo: 'GBD-2026-SL002', statisticalDeliveryDate: '2026/04/25', storageLocationCode: '2020',
+  },
+  {
+    id: 42, status: 'CK', vendorDeliveryDate: '2026/04/26',
+    orderNo: '400651011', orderDate: '2026/04/02', orderType: 'Z2QB',
+    company: '巨大機械', purchaseOrg: '台灣廠生產採購組織', orderSeq: '10', docSeqNo: '400651011010',
+    purchaser: '李玉霞', orderQty: 500, acceptQty: 100, comparePrice: '380', unit: 'PCS', currency: 'TWD',
+    leadtime: 7, vendorCode: '00010046', vendorName: '速聯國際(00010046)',
+    materialNo: '3301-BRK0303-C01', customerBrand: 'G02', vendorMaterialNo: 'BR-M7100-F',
+    productName: '油壓碟煞卡鉗(前)', specification: 'SHIMANO SLX BR-M7100 HYDRAULIC DISC BRAKE CALIPER FRONT',
+    expectedDelivery: '2026/04/26', deliveryQty: 500,
+    inTransitQty: 50, undeliveredQty: 350, lineItemNote: '190000', agreedDate: '2026/04/19',
+    internalNote: '', materialPOContent: '',
+    gbdOrderNo: 'GBD-2026-SL003', statisticalDeliveryDate: '2026/04/26', storageLocationCode: '2020',
+  },
+  {
+    id: 43, status: 'CK', vendorDeliveryDate: '2026/04/26',
+    orderNo: '400651011', orderDate: '2026/04/02', orderType: 'Z2QB',
+    company: '巨大機械', purchaseOrg: '台灣廠生產採購組織', orderSeq: '20', docSeqNo: '400651011020',
+    purchaser: '李玉霞', orderQty: 500, acceptQty: 80, comparePrice: '380', unit: 'PCS', currency: 'TWD',
+    leadtime: 7, vendorCode: '00010046', vendorName: '速聯國際(00010046)',
+    materialNo: '3301-BRK0304-C02', customerBrand: 'G02', vendorMaterialNo: 'BR-M7100-R',
+    productName: '油壓碟煞卡鉗(後)', specification: 'SHIMANO SLX BR-M7100 HYDRAULIC DISC BRAKE CALIPER REAR',
+    expectedDelivery: '2026/04/26', deliveryQty: 500,
+    inTransitQty: 40, undeliveredQty: 380, lineItemNote: '190000', agreedDate: '2026/04/19',
+    internalNote: '', materialPOContent: '',
+    gbdOrderNo: 'GBD-2026-SL004', statisticalDeliveryDate: '2026/04/26', storageLocationCode: '2020',
+  },
+  {
+    id: 44, status: 'CK', vendorDeliveryDate: '2026/04/27',
+    orderNo: '400651012', orderDate: '2026/04/03', orderType: 'Z2QB',
+    company: '巨大機械', purchaseOrg: '台灣廠生產採購組織', orderSeq: '10', docSeqNo: '400651012010',
+    purchaser: '陳俊宏', orderQty: 150, acceptQty: 0, comparePrice: '2800', unit: 'SET', currency: 'TWD',
+    leadtime: 7, vendorCode: '00010046', vendorName: '速聯國際(00010046)',
+    materialNo: '4401-CRK0305-D01', customerBrand: 'G01', vendorMaterialNo: 'FC-M7100-1-170',
+    productName: '大盤組(1x)', specification: 'SHIMANO SLX FC-M7100-1 CRANKSET 170MM 32T 1X12-SPEED',
+    expectedDelivery: '2026/04/27', deliveryQty: 150,
+    inTransitQty: 0, undeliveredQty: 150, lineItemNote: '420000', agreedDate: '2026/04/20',
+    internalNote: '', materialPOContent: '',
+    gbdOrderNo: 'GBD-2026-SL005', statisticalDeliveryDate: '2026/04/27', storageLocationCode: '2110',
+  },
+  {
+    id: 45, status: 'CK', vendorDeliveryDate: '2026/04/27',
+    orderNo: '400651012', orderDate: '2026/04/03', orderType: 'Z2QB',
+    company: '巨大機械', purchaseOrg: '台灣廠生產採購組織', orderSeq: '20', docSeqNo: '400651012020',
+    purchaser: '陳俊宏', orderQty: 400, acceptQty: 50, comparePrice: '650', unit: 'PCS', currency: 'TWD',
+    leadtime: 7, vendorCode: '00010046', vendorName: '速聯國際(00010046)',
+    materialNo: '5501-CST0306-E01', customerBrand: 'G01', vendorMaterialNo: 'CS-M7100-12SPD',
+    productName: '12速飛輪', specification: 'SHIMANO SLX CS-M7100 12-SPEED CASSETTE 10-51T',
+    expectedDelivery: '2026/04/27', deliveryQty: 400,
+    inTransitQty: 30, undeliveredQty: 320, lineItemNote: '260000', agreedDate: '2026/04/20',
+    internalNote: '', materialPOContent: '',
+    gbdOrderNo: 'GBD-2026-SL006', statisticalDeliveryDate: '2026/04/27', storageLocationCode: '2110',
+  },
+  {
+    id: 46, status: 'CK', vendorDeliveryDate: '2026/04/28',
+    orderNo: '400651013', orderDate: '2026/04/05', orderType: 'Z2QB',
+    company: '巨大機械', purchaseOrg: '台灣廠生產採購組織', orderSeq: '10', docSeqNo: '400651013010',
+    purchaser: '張建國', orderQty: 250, acceptQty: 0, comparePrice: '1500', unit: 'SET', currency: 'TWD',
+    leadtime: 7, vendorCode: '00010046', vendorName: '速聯國際(00010046)',
+    materialNo: '6601-RDR0307-F01', customerBrand: 'G01', vendorMaterialNo: 'RD-M7100-SGS',
+    productName: '後變速器(SGS)', specification: 'SHIMANO SLX RD-M7100-SGS REAR DERAILLEUR 12-SPEED LONG CAGE',
+    expectedDelivery: '2026/04/28', deliveryQty: 250,
+    inTransitQty: 0, undeliveredQty: 250, lineItemNote: '375000', agreedDate: '2026/04/21',
+    internalNote: '', materialPOContent: '',
+    gbdOrderNo: 'GBD-2026-SL007', statisticalDeliveryDate: '2026/04/28', storageLocationCode: '2020',
+  },
+  {
+    id: 47, status: 'CK', vendorDeliveryDate: '2026/04/28',
+    orderNo: '400651013', orderDate: '2026/04/05', orderType: 'Z2QB',
+    company: '巨大機械', purchaseOrg: '台灣廠生產採購組織', orderSeq: '20', docSeqNo: '400651013020',
+    purchaser: '張建國', orderQty: 180, acceptQty: 20, comparePrice: '950', unit: 'PCS', currency: 'TWD',
+    leadtime: 7, vendorCode: '00010046', vendorName: '速聯國際(00010046)',
+    materialNo: '7701-HUB0308-G01', customerBrand: 'G03', vendorMaterialNo: 'FH-M7110-B-12SPD',
+    productName: '後花鼓(12速)', specification: 'SHIMANO SLX FH-M7110-B 12-SPEED REAR HUB BOOST 148X12MM',
+    expectedDelivery: '2026/04/28', deliveryQty: 180,
+    inTransitQty: 10, undeliveredQty: 150, lineItemNote: '171000', agreedDate: '2026/04/21',
+    internalNote: '', materialPOContent: '',
+    gbdOrderNo: 'GBD-2026-SL008', statisticalDeliveryDate: '2026/04/28', storageLocationCode: '2020',
+  },
 ];
 
 
@@ -1195,7 +1300,10 @@ export function AdvancedOrderTable({
                     className="h-[56px] bg-[#f4f6f8] flex items-center justify-center shrink-0 border-r border-[rgba(145,158,171,0.08)]"
                     style={stickyLeftStyle}
                   >
-                    <CheckboxIcon checked={isAllSelected} onChange={() => onSelectAll()} />
+                    {/* 有選取時隱藏 header checkbox，避免與 selected 狀態列重複 */}
+                    {!hasSelected && (
+                      <CheckboxIcon checked={isAllSelected} onChange={() => onSelectAll()} />
+                    )}
                   </div>
                 )}
                 {/* 單號序號 sticky 欄 header（onDocNoClick 模式） */}

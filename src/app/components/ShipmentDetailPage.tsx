@@ -875,7 +875,7 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
                   <div
                     key={i}
                     style={{ width: col.w, minWidth: col.w, flex: `0 0 ${col.w}px` }}
-                    className={`px-[8px] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] leading-[20px] ${
+                    className={`${i === 0 ? 'pl-[16px] pr-[8px]' : 'px-[8px]'} font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] leading-[20px] ${
                       (col as any).blue ? 'text-[#005eb8]' :
                       col.align === 'right' ? 'text-right text-[#637381]' :
                       col.align === 'center' ? 'text-center text-[#637381]' :
@@ -902,7 +902,7 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
                   className={`flex items-center py-[12px] border-b border-[rgba(145,158,171,0.08)] hover:bg-[rgba(145,158,171,0.04)] transition-colors ${idx % 2 === 1 ? 'bg-[rgba(145,158,171,0.02)]' : ''}`}
                 >
                   {/* 出貨項次 */}
-                  <div style={{ width: 72, minWidth: 72 }} className="px-[8px] shrink-0">
+                  <div style={{ width: 72, minWidth: 72 }} className="pl-[16px] pr-[8px] shrink-0">
                     <span className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#637381]">
                       {row.itemNo}
                     </span>

@@ -394,11 +394,18 @@ function DraggableColHeader({
 
 function getCellValue(row: ShipmentRow, key: ShipColKey): React.ReactNode {
   if (key === 'transportType') {
-    const map: Record<string, string> = { S: 'S 海運', A: 'A 空運', T: 'T 陸運' };
-    const label = map[row.transportType] ?? row.transportType;
+    const map: Record<string, { label: string; bg: string; text: string }> = {
+      S: { label: 'S 海運', bg: 'rgba(0,120,212,0.10)',  text: '#0068b8' },
+      A: { label: 'A 空運', bg: 'rgba(255,171,0,0.12)',  text: '#b76e00' },
+      T: { label: 'T 陸運', bg: 'rgba(34,197,94,0.12)',  text: '#118d57' },
+    };
+    const cfg = map[row.transportType] ?? { label: row.transportType, bg: 'rgba(145,158,171,0.12)', text: '#637381' };
     return (
-      <span className="inline-flex items-center px-[8px] py-[2px] rounded-[6px] text-[12px] font-semibold bg-[rgba(145,158,171,0.12)] text-[#637381]">
-        {label}
+      <span
+        className="inline-flex items-center px-[8px] py-[2px] rounded-[6px] text-[12px] font-semibold"
+        style={{ backgroundColor: cfg.bg, color: cfg.text }}
+      >
+        {cfg.label}
       </span>
     );
   }
