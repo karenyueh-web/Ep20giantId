@@ -1,7 +1,6 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo , useRef } from 'react';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
-import { Resizable } from 're-resizable';
 import { useHorizontalDragScroll } from './useHorizontalDragScroll';
 
 // 完全保留原有的 6 個欄位
@@ -42,12 +41,30 @@ interface AdvancedSalesTableProps {
   columnsVersion?: number; // 新增：用於強制重新載入欄位
 }
 
+
+// ── 測量文字寬度（使用 DOM span，支援中文字型 fallback）──────────────────────
+function measureTextWidth(text: string, font = '14px "Public Sans", "Noto Sans JP", sans-serif'): number {
+  let el = (measureTextWidth as any)._el as HTMLSpanElement | undefined;
+  if (!el) {
+    el = document.createElement('span');
+    el.style.position = 'absolute';
+    el.style.visibility = 'hidden';
+    el.style.whiteSpace = 'nowrap';
+    el.style.left = '-9999px';
+    el.style.top = '-9999px';
+    document.body.appendChild(el);
+    (measureTextWidth as any)._el = el;
+  }
+  el.style.font = font;
+  el.textContent = text;
+  return el.offsetWidth;
+}
+
 const DraggableColumnHeader = ({ 
   column, 
   index, 
   moveColumn, 
-  updateColumnWidth,
-  sortConfig,
+  updateColumnWidth, autoFitWidth, sortConfig,
   onSort,
   isLast
 }: { 
@@ -55,11 +72,37 @@ const DraggableColumnHeader = ({
   index: number; 
   moveColumn: (dragKey: SalesColumnKey, hoverKey: SalesColumnKey) => void;
   updateColumnWidth: (key: SalesColumnKey, width: number) => void;
+  autoFitWidth: (key: any) => void;
   sortConfig: { key: SalesColumnKey | null; direction: 'asc' | 'desc' | null };
   onSort: (key: SalesColumnKey) => void;
   isLast?: boolean;
 }) => {
   const [isHovered, setIsHovered] = useState(false);
+
+  // ── 自製 resize drag（可靠且支持 dblclick） ──
+  const [resizing, setResizing] = useState(false);
+  const resizeStartX = useRef(0);
+  const resizeStartW = useRef(0);
+
+  useEffect(() => {
+    if (!resizing) return;
+    const onMove = (e: MouseEvent) => {
+      const diff = e.clientX - resizeStartX.current;
+      const newW = Math.max(column.minWidth, resizeStartW.current + diff);
+      updateColumnWidth(column.key, newW);
+    };
+    const onUp = () => setResizing(false);
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    return () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [resizing]);
   
   const [{ isDragging }, drag] = useDrag({
     type: 'column',
@@ -83,27 +126,9 @@ const DraggableColumnHeader = ({
   const sortDirection = isSorted ? sortConfig.direction : null;
 
   return (
-    <Resizable
-      size={{ width: column.width, height: 56 }}
-      minWidth={column.minWidth}
-      maxWidth={800}
-      enable={{ right: true }}
-      onResizeStop={(e, direction, ref, d) => {
-        updateColumnWidth(column.key, column.width + d.width);
-      }}
-      handleStyles={{
-        right: {
-          width: '4px',
-          right: '0',
-          cursor: 'col-resize',
-          background: 'transparent',
-          zIndex: 1,
-        },
-      }}
-      handleClasses={{
-        right: 'hover:bg-[#1D7BF5] transition-colors',
-      }}
-      className={`bg-[#f4f6f8] ${isLast ? '' : 'border-r border-[rgba(145,158,171,0.08)]'}`}
+    <div
+      className={`relative bg-[#f4f6f8] shrink-0 ${isLast ? '' : 'border-r border-[rgba(145,158,171,0.08)]'}`}
+      style={{ width: column.width, height: 56 }}
     >
       <div
         ref={(node) => drag(drop(node))}
@@ -141,7 +166,27 @@ const DraggableColumnHeader = ({
           </svg>
         )}
       </div>
-    </Resizable>
+      {/* 欄寬調整 handle：拖拽調寬 或 雙擊自動最適 */}
+      {!isLast && (
+        <div
+          className="absolute right-0 top-0 bottom-0 w-[8px] cursor-col-resize hover:bg-[#1D7BF5] hover:bg-opacity-20 z-10 group transition-colors"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (e.detail >= 2) {
+              autoFitWidth(column.key);
+              return;
+            }
+            setResizing(true);
+            resizeStartX.current = e.clientX;
+            resizeStartW.current = column.width;
+          }}
+          title="拖拽調整欄位寬度；雙擊自動最適欄寬"
+        >
+          <div className="absolute right-[3px] top-0 bottom-0 w-[2px] bg-transparent group-hover:bg-[#1D7BF5] transition-colors" />
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -247,7 +292,8 @@ export function AdvancedSalesTable({
     });
   }, []);
 
-  // 篩選可見的欄位
+    // 篩選可見的欄位
+
   const visibleColumns = columns.filter(col => col.visible !== false);
 
   // 進階篩選
@@ -374,6 +420,24 @@ export function AdvancedSalesTable({
 
   const totalWidth = visibleColumns.reduce((sum, col) => sum + col.width, 0);
 
+
+// ── 雙擊自動最適欄寬 ───────────────────────────────────────────────────────
+  const autoFitWidth = (key: string) => {
+    const col = columns.find(c => c.key === key);
+    if (!col) return;
+    const labelText = typeof col.label === 'string' ? col.label : '';
+    const headerW = measureTextWidth(labelText, '600 14px "Public Sans", "Noto Sans JP", sans-serif') + 32 + 16;
+    let maxDataW = 0;
+    try {
+      (data || []).forEach((row: any) => {
+        const raw = String(row[key] ?? '');
+        const w = measureTextWidth(raw, '14px "Public Sans", "Noto Sans JP", sans-serif') + 32;
+        if (w > maxDataW) maxDataW = w;
+      });
+    } catch { /* data may not be available */ }
+    const bestFit = Math.max(col.minWidth ?? 50, Math.ceil(Math.max(headerW, maxDataW)));
+    setColumns(prev => prev.map(c => c.key === key ? { ...c, width: bestFit } : c));
+  };
   return (
     <DndProvider backend={HTML5Backend}>
       <div className="flex flex-col h-full overflow-hidden">
@@ -393,6 +457,7 @@ export function AdvancedSalesTable({
                   index={index}
                   moveColumn={moveColumn}
                   updateColumnWidth={updateColumnWidth}
+                  autoFitWidth={autoFitWidth}
                   sortConfig={sortConfig}
                   onSort={(key) => {
                     let direction: 'asc' | 'desc' | null = 'asc';

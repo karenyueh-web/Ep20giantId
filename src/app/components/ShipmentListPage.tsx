@@ -11,7 +11,6 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
-import { Resizable } from 're-resizable';
 import svgCheckboxOn from '@/imports/svg-jk6epzc9me';
 import { useHorizontalDragScroll } from './useHorizontalDragScroll';
 import { CheckboxIcon } from './CheckboxIcon';
@@ -328,17 +327,62 @@ const VENDOR_COL_W = 200; // 廠商名稱 (sticky)
 
 const DRAG_TYPE = 'shipment-col';
 
+// ── 測量文字寬度（使用 DOM span，支援中文字型 fallback）──────────────────────
+function measureTextWidth(text: string, font = '14px "Public Sans", "Noto Sans JP", sans-serif'): number {
+  let el = (measureTextWidth as any)._el as HTMLSpanElement | undefined;
+  if (!el) {
+    el = document.createElement('span');
+    el.style.position = 'absolute';
+    el.style.visibility = 'hidden';
+    el.style.whiteSpace = 'nowrap';
+    el.style.left = '-9999px';
+    el.style.top = '-9999px';
+    document.body.appendChild(el);
+    (measureTextWidth as any)._el = el;
+  }
+  el.style.font = font;
+  el.textContent = text;
+  return el.offsetWidth;
+}
+
 function DraggableColHeader({
-  col, index, moveCol, updateWidth, sortConfig, onSort, isLast,
+  col, index, moveCol, updateWidth, autoFitWidth, sortConfig, onSort, isLast,
 }: {
   col: ShipCol; index: number;
   moveCol: (drag: ShipColKey, hover: ShipColKey) => void;
   updateWidth: (key: ShipColKey, w: number) => void;
+  autoFitWidth: (key: ShipColKey) => void;
   sortConfig: { key: ShipColKey | null; dir: 'asc' | 'desc' | null };
   onSort: (key: ShipColKey) => void;
   isLast?: boolean;
 }) {
   const [hovered, setHovered] = useState(false);
+
+  // ── 自製 resize drag ──
+  const [resizing, setResizing] = useState(false);
+  const resizeStartX = useRef(0);
+  const resizeStartW = useRef(0);
+
+  useEffect(() => {
+    if (!resizing) return;
+    const onMove = (e: MouseEvent) => {
+      const diff = e.clientX - resizeStartX.current;
+      const newW = Math.max(col.minWidth, resizeStartW.current + diff);
+      updateWidth(col.key, newW);
+    };
+    const onUp = () => setResizing(false);
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    return () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [resizing, col.minWidth, col.key, updateWidth]);
+
   const [{ isDragging }, drag] = useDrag({
     type: DRAG_TYPE,
     item: () => ({ key: col.key, index }),
@@ -352,14 +396,9 @@ function DraggableColHeader({
   });
   const isSorted = sortConfig.key === col.key;
   return (
-    <Resizable
-      size={{ width: col.width, height: 56 }}
-      minWidth={col.minWidth} maxWidth={900}
-      enable={{ right: true }}
-      onResizeStop={(_e, _d, _r, delta) => updateWidth(col.key, col.width + delta.width)}
-      handleStyles={{ right: { width: '4px', right: 0, cursor: 'col-resize', background: 'transparent', zIndex: 1 } }}
-      handleClasses={{ right: 'hover:bg-[#1D7BF5] transition-colors' }}
-      className={`bg-[#f4f6f8] ${isLast ? '' : 'border-r border-[rgba(145,158,171,0.08)]'}`}
+    <div
+      className={`relative bg-[#f4f6f8] shrink-0 ${isLast ? '' : 'border-r border-[rgba(145,158,171,0.08)]'}`}
+      style={{ width: col.width, height: 56 }}
     >
       <div
         ref={node => drag(drop(node)) as any}
@@ -386,7 +425,26 @@ function DraggableColHeader({
           </svg>
         )}
       </div>
-    </Resizable>
+      {!isLast && (
+        <div
+          className="absolute right-0 top-0 bottom-0 w-[8px] cursor-col-resize hover:bg-[#1D7BF5] hover:bg-opacity-20 z-10 group transition-colors"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (e.detail >= 2) {
+              autoFitWidth(col.key);
+              return;
+            }
+            setResizing(true);
+            resizeStartX.current = e.clientX;
+            resizeStartW.current = col.width;
+          }}
+          title="拖拽調整欄位寬度；雙擊自動最適欄寬"
+        >
+          <div className="absolute right-[3px] top-0 bottom-0 w-[2px] bg-transparent group-hover:bg-[#1D7BF5] transition-colors" />
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -627,6 +685,23 @@ export function ShipmentListPage() {
   const updateWidth = useCallback((key: ShipColKey, w: number) => {
     setColumns(prev => prev.map(c => c.key === key ? { ...c, width: w } : c));
   }, []);
+
+  // ── 雙擊自動最適欄寬 ───────────────────────────────────────────────────
+  const autoFitWidth = (key: ShipColKey) => {
+    const col = columns.find(c => c.key === key);
+    if (!col) return;
+    const headerW = measureTextWidth(col.label, '600 14px "Public Sans", "Noto Sans JP", sans-serif') + 32 + 16;
+    let maxDataW = 0;
+    try {
+      (filteredData || []).forEach(row => {
+        const raw = key === 'detailCount' ? String(row.details.length) : String((row as any)[key] ?? '');
+        const w = measureTextWidth(raw, '14px "Public Sans", "Noto Sans JP", sans-serif') + 32;
+        if (w > maxDataW) maxDataW = w;
+      });
+    } catch { /* data may not be available yet */ }
+    const bestFit = Math.max(col.minWidth, Math.ceil(Math.max(headerW, maxDataW)));
+    setColumns(prev => prev.map(c => c.key === key ? { ...c, width: bestFit } : c));
+  };
 
   const visibleColumns = columns.filter(c => c.visible !== false);
 
@@ -949,7 +1024,7 @@ export function ShipmentListPage() {
               {visibleColumns.map((col, idx) => (
                 <DraggableColHeader
                   key={col.key} col={col} index={idx}
-                  moveCol={moveCol} updateWidth={updateWidth}
+                  moveCol={moveCol} updateWidth={updateWidth} autoFitWidth={autoFitWidth}
                   sortConfig={sortConfig}
                   onSort={(key) => setSortConfig(s => ({ key, dir: s.key === key && s.dir === 'asc' ? 'desc' : 'asc' }))}
                   isLast={idx === visibleColumns.length - 1}

@@ -1,8 +1,7 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect , useRef } from 'react';
 import type React from 'react';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
-import { Resizable } from 're-resizable';
 import { useOrderStore, nowDateStr, operatorByRole } from './OrderStoreContext';
 import type { CorrectionOrderRow, CorrectionStatus, HistoryEntry } from './OrderStoreContext';
 import type { OrderRow } from './AdvancedOrderTable';
@@ -222,18 +221,63 @@ function TabItem({ tabDef, count, isActive, onClick }: { tabDef: TabDef; count?:
 }
 
 // ─── Draggable Column Header ─────────────────────────────────────────────────
+
+// ── 測量文字寬度（使用 DOM span，支援中文字型 fallback）──────────────────────
+function measureTextWidth(text: string, font = '14px "Public Sans", "Noto Sans JP", sans-serif'): number {
+  let el = (measureTextWidth as any)._el as HTMLSpanElement | undefined;
+  if (!el) {
+    el = document.createElement('span');
+    el.style.position = 'absolute';
+    el.style.visibility = 'hidden';
+    el.style.whiteSpace = 'nowrap';
+    el.style.left = '-9999px';
+    el.style.top = '-9999px';
+    document.body.appendChild(el);
+    (measureTextWidth as any)._el = el;
+  }
+  el.style.font = font;
+  el.textContent = text;
+  return el.offsetWidth;
+}
+
 const DraggableColumnHeader = ({
-  column, index, moveColumn, updateColumnWidth, sortConfig, onSort, isLast,
+  column, index, moveColumn, updateColumnWidth, autoFitWidth, sortConfig, onSort, isLast,
 }: {
   column: CorrectionColumn;
   index: number;
   moveColumn: (dragKey: CorrectionColumnKey, hoverKey: CorrectionColumnKey) => void;
   updateColumnWidth: (key: CorrectionColumnKey, width: number) => void;
+  autoFitWidth: (key: any) => void;
   sortConfig: { key: CorrectionColumnKey | null; direction: 'asc' | 'desc' | null };
   onSort: (key: CorrectionColumnKey) => void;
   isLast?: boolean;
 }) => {
   const [isHovered, setIsHovered] = useState(false);
+
+  // ── 自製 resize drag（可靠且支持 dblclick） ──
+  const [resizing, setResizing] = useState(false);
+  const resizeStartX = useRef(0);
+  const resizeStartW = useRef(0);
+
+  useEffect(() => {
+    if (!resizing) return;
+    const onMove = (e: MouseEvent) => {
+      const diff = e.clientX - resizeStartX.current;
+      const newW = Math.max(column.minWidth, resizeStartW.current + diff);
+      updateColumnWidth(column.key, newW);
+    };
+    const onUp = () => setResizing(false);
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    return () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [resizing]);
 
   const [{ isDragging }, drag] = useDrag({
     type: 'correction-column',
@@ -255,15 +299,9 @@ const DraggableColumnHeader = ({
   const sortDirection = isSorted ? sortConfig.direction : null;
 
   return (
-    <Resizable
-      size={{ width: column.width, height: 56 }}
-      minWidth={column.minWidth}
-      maxWidth={800}
-      enable={{ right: true }}
-      onResizeStop={(_e, _dir, _ref, d) => updateColumnWidth(column.key, column.width + d.width)}
-      handleStyles={{ right: { width: '4px', right: '0', cursor: 'col-resize', background: 'transparent', zIndex: 1 } }}
-      handleClasses={{ right: 'hover:bg-[#1D7BF5] transition-colors' }}
-      className={`bg-[#f4f6f8] ${isLast ? '' : 'border-r border-[rgba(145,158,171,0.08)]'}`}
+    <div
+      className={`relative bg-[#f4f6f8] shrink-0 ${isLast ? '' : 'border-r border-[rgba(145,158,171,0.08)]'}`}
+      style={{ width: column.width, height: 56 }}
     >
       <div
         ref={(node) => drag(drop(node))}
@@ -299,7 +337,27 @@ const DraggableColumnHeader = ({
           </svg>
         )}
       </div>
-    </Resizable>
+      {/* 欄寬調整 handle：拖拽調寬 或 雙擊自動最適 */}
+      {!isLast && (
+        <div
+          className="absolute right-0 top-0 bottom-0 w-[8px] cursor-col-resize hover:bg-[#1D7BF5] hover:bg-opacity-20 z-10 group transition-colors"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (e.detail >= 2) {
+              autoFitWidth(column.key);
+              return;
+            }
+            setResizing(true);
+            resizeStartX.current = e.clientX;
+            resizeStartW.current = column.width;
+          }}
+          title="拖拽調整欄位寬度；雙擊自動最適欄寬"
+        >
+          <div className="absolute right-[3px] top-0 bottom-0 w-[2px] bg-transparent group-hover:bg-[#1D7BF5] transition-colors" />
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -515,6 +573,7 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
     }
   }, [columns, activeTab, isLoadingFromStorage, saveColumnsToStorage]);
 
+
   const visibleColumns = useMemo(() => columns.filter(c => c.visible !== false), [columns]);
 
   // ── Column drag / resize ───────────────────────────────────────────────────
@@ -533,7 +592,7 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
     setColumns(prev => prev.map(c => c.key === key ? { ...c, width } : c));
   }, []);
 
-  // ── Columns button handlers ────────────────────────────────────────────────
+    // ── Columns button handlers ────────────────────────────────────────────────
   const handleColumnsClick = useCallback(() => {
     setTempColumns(JSON.parse(JSON.stringify(columns)));
     setShowColumnSelector(v => !v);
@@ -1516,6 +1575,24 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
 
   const showToolbar = selectedIdsOnPage.size > 0;
 
+
+// ── 雙擊自動最適欄寬 ───────────────────────────────────────────────────────
+  const autoFitWidth = (key: string) => {
+    const col = columns.find(c => c.key === key);
+    if (!col) return;
+    const labelText = typeof col.label === 'string' ? col.label : '';
+    const headerW = measureTextWidth(labelText, '600 14px "Public Sans", "Noto Sans JP", sans-serif') + 32 + 16;
+    let maxDataW = 0;
+    try {
+      (rows || []).forEach((row: any) => {
+        const raw = String(row[key] ?? '');
+        const w = measureTextWidth(raw, '14px "Public Sans", "Noto Sans JP", sans-serif') + 32;
+        if (w > maxDataW) maxDataW = w;
+      });
+    } catch { /* data may not be available */ }
+    const bestFit = Math.max(col.minWidth ?? 50, Math.ceil(Math.max(headerW, maxDataW)));
+    setColumns(prev => prev.map(c => c.key === key ? { ...c, width: bestFit } : c));
+  };
   return (
     <DndProvider backend={HTML5Backend}>
       <div className="bg-white flex flex-col h-full relative rounded-[16px] shadow-[0px_0px_2px_0px_rgba(145,158,171,0.2),0px_12px_24px_-4px_rgba(145,158,171,0.12)] w-full overflow-hidden">
@@ -1631,16 +1708,9 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
                     )}
                   </div>
                   {/* 修正單號 header — 支援欄寬拖曳調整 */}
-                  <Resizable
-                    size={{ width: docNoWidth, height: 56 }}
-                    minWidth={80}
-                    maxWidth={400}
-                    enable={{ right: true }}
-                    onResizeStop={(_e, _dir, _ref, d) => setDocNoWidth(prev => prev + d.width)}
-                    handleStyles={{ right: { width: '4px', right: '0', cursor: 'col-resize', background: 'transparent', zIndex: 1 } }}
-                    handleClasses={{ right: 'hover:bg-[#1D7BF5] transition-colors' }}
-                    className="bg-[#f4f6f8] border-r border-[rgba(145,158,171,0.08)] shrink-0"
-                    style={stickyDocNoStyle}
+                  <div
+                    className={`relative bg-[#f4f6f8] shrink-0 ${isLast ? '' : 'border-r border-[rgba(145,158,171,0.08)]'}`}
+                    style={{ width: column.width, height: 56 }}
                   >
                     <div
                       className="h-full flex items-center justify-start px-[16px] cursor-pointer select-none"
@@ -1657,7 +1727,27 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
                         </svg>
                       )}
                     </div>
-                  </Resizable>
+                    {/* 欄寬調整 handle：拖拽調寬 或 雙擊自動最適 */}
+                    {!isLast && (
+                      <div
+                        className="absolute right-0 top-0 bottom-0 w-[8px] cursor-col-resize hover:bg-[#1D7BF5] hover:bg-opacity-20 z-10 group transition-colors"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (e.detail >= 2) {
+                            autoFitWidth(column.key);
+                            return;
+                          }
+                          setResizing(true);
+                          resizeStartX.current = e.clientX;
+                          resizeStartW.current = column.width;
+                        }}
+                        title="拖拽調整欄位寬度；雙擊自動最適欄寬"
+                      >
+                        <div className="absolute right-[3px] top-0 bottom-0 w-[2px] bg-transparent group-hover:bg-[#1D7BF5] transition-colors" />
+                      </div>
+                    )}
+                  </div>
                   {visibleColumns.map((col, idx) => (
                     <DraggableColumnHeader
                       key={col.key}
@@ -1665,6 +1755,7 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
                       index={idx}
                       moveColumn={moveColumn}
                       updateColumnWidth={updateColumnWidth}
+                      autoFitWidth={autoFitWidth}
                       sortConfig={sortConfig}
                       onSort={handleSort}
                       isLast={idx === visibleColumns.length - 1}

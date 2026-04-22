@@ -12,10 +12,9 @@
  *   - 包含多選 Checkbox + 批次列印貼紙（中/英文）
  */
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
-import { Resizable } from 're-resizable';
 import { useHorizontalDragScroll } from './useHorizontalDragScroll';
 import { CheckboxIcon } from './CheckboxIcon';
 import { TableToolbar } from './TableToolbar';
@@ -308,23 +307,68 @@ const ITEM_STORAGE_KEY = 'shipmentItemInquiry_v1_cols';
 const BOX_STORAGE_KEY  = 'shipmentBoxInquiry_v1_cols';
 const CHECKBOX_W = 52;
 
-// ── DraggableColHeader（通用泛型版）──────────────────────────────────────────
+// ── 測量文字寬度（使用 DOM span，支援中文字型 fallback）──────────────────────
+function measureTextWidth(text: string, font = '14px "Public Sans", "Noto Sans JP", sans-serif'): number {
+  let el = (measureTextWidth as any)._el as HTMLSpanElement | undefined;
+  if (!el) {
+    el = document.createElement('span');
+    el.style.position = 'absolute';
+    el.style.visibility = 'hidden';
+    el.style.whiteSpace = 'nowrap';
+    el.style.left = '-9999px';
+    el.style.top = '-9999px';
+    document.body.appendChild(el);
+    (measureTextWidth as any)._el = el;
+  }
+  el.style.font = font;
+  el.textContent = text;
+  return el.offsetWidth;
+}
+
+// ── DraggableColHeader（通用泛型版，自製 resize + 雙擊自動最適）──────────────
 const DRAG_TYPE_ITEM = 'shipping-item-col';
 const DRAG_TYPE_BOX  = 'shipping-box-col';
 
 function DraggableColHeader<K extends string>({
-  col, index, moveCol, updateWidth, sortConfig, onSort, isLast, dragType,
+  col, index, moveCol, updateWidth, autoFitWidth, sortConfig, onSort, isLast, dragType,
 }: {
   col: { key: K; label: string; width: number; minWidth: number };
   index: number;
   moveCol: (drag: K, hover: K) => void;
   updateWidth: (key: K, w: number) => void;
+  autoFitWidth: (key: K) => void;
   sortConfig: { key: K | null; dir: 'asc' | 'desc' | null };
   onSort: (key: K) => void;
   isLast?: boolean;
   dragType: string;
 }) {
   const [hovered, setHovered] = useState(false);
+
+  // ── 自製 resize drag（可靠且支持 dblclick） ──
+  const [resizing, setResizing] = useState(false);
+  const resizeStartX = useRef(0);
+  const resizeStartW = useRef(0);
+
+  useEffect(() => {
+    if (!resizing) return;
+    const onMove = (e: MouseEvent) => {
+      const diff = e.clientX - resizeStartX.current;
+      const newW = Math.max(col.minWidth, resizeStartW.current + diff);
+      updateWidth(col.key, newW);
+    };
+    const onUp = () => setResizing(false);
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    return () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [resizing, col.minWidth, col.key, updateWidth]);
+
   const [{ isDragging }, drag] = useDrag({
     type: dragType,
     item: () => ({ key: col.key, index }),
@@ -338,14 +382,9 @@ function DraggableColHeader<K extends string>({
   });
   const isSorted = sortConfig.key === col.key;
   return (
-    <Resizable
-      size={{ width: col.width, height: 56 }}
-      minWidth={col.minWidth} maxWidth={900}
-      enable={{ right: true }}
-      onResizeStop={(_e, _d, _r, delta) => updateWidth(col.key, col.width + delta.width)}
-      handleStyles={{ right: { width: '4px', right: 0, cursor: 'col-resize', background: 'transparent', zIndex: 1 } }}
-      handleClasses={{ right: 'hover:bg-[#1D7BF5] transition-colors' }}
-      className={`bg-[#f4f6f8] ${isLast ? '' : 'border-r border-[rgba(145,158,171,0.08)]'}`}
+    <div
+      className={`relative bg-[#f4f6f8] shrink-0 ${isLast ? '' : 'border-r border-[rgba(145,158,171,0.08)]'}`}
+      style={{ width: col.width, height: 56 }}
     >
       <div
         ref={node => drag(drop(node)) as any}
@@ -372,7 +411,28 @@ function DraggableColHeader<K extends string>({
           </svg>
         )}
       </div>
-    </Resizable>
+      {/* 欄寬調整 handle：拖拽調寬 或 雙擊自動最適 */}
+      {!isLast && (
+        <div
+          className="absolute right-0 top-0 bottom-0 w-[8px] cursor-col-resize hover:bg-[#1D7BF5] hover:bg-opacity-20 z-10 group transition-colors"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (e.detail >= 2) {
+              // 第二次 mousedown（雙擊的一部分）→ 自動最適
+              autoFitWidth(col.key);
+              return;
+            }
+            setResizing(true);
+            resizeStartX.current = e.clientX;
+            resizeStartW.current = col.width;
+          }}
+          title="拖拽調整欄位寬度；雙擊自動最適欄寬"
+        >
+          <div className="absolute right-[3px] top-0 bottom-0 w-[2px] bg-transparent group-hover:bg-[#1D7BF5] transition-colors" />
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -502,6 +562,24 @@ function ItemInquiryTab({ shipments }: { shipments: ShipmentRow[] }) {
   const updateWidth = useCallback((key: ItemColKey, w: number) => {
     setColumns(prev => prev.map(c => c.key === key ? { ...c, width: w } : c));
   }, []);
+
+  // ── 雙擊自動最適欄寬 ───────────────────────────────────────────────────
+  const autoFitWidth = (key: ItemColKey) => {
+    const col = columns.find(c => c.key === key);
+    if (!col) return;
+    const headerW = measureTextWidth(col.label, '600 14px "Public Sans", sans-serif') + 32 + 16;
+    let maxDataW = 0;
+    try {
+      (allItemRows || []).forEach(row => {
+        const raw = (row as any)[key];
+        const val = raw !== undefined && raw !== null ? String(raw) : '';
+        const w = measureTextWidth(val, '14px "Public Sans", sans-serif') + 32;
+        if (w > maxDataW) maxDataW = w;
+      });
+    } catch { /* */ }
+    const bestFit = Math.max(col.minWidth, Math.ceil(Math.max(headerW, maxDataW)));
+    setColumns(prev => prev.map(c => c.key === key ? { ...c, width: bestFit } : c));
+  };
 
   const visibleColumns = columns.filter(c => c.visible !== false);
 
@@ -635,6 +713,7 @@ function ItemInquiryTab({ shipments }: { shipments: ShipmentRow[] }) {
                 <DraggableColHeader
                   key={col.key} col={col} index={idx}
                   moveCol={moveCol as any} updateWidth={updateWidth as any}
+                  autoFitWidth={autoFitWidth as any}
                   sortConfig={sortConfig as any}
                   onSort={(key) => setSortConfig(s => ({ key: key as ItemColKey, dir: s.key === key && s.dir === 'asc' ? 'desc' : 'asc' }))}
                   isLast={idx === visibleColumns.length - 1}
@@ -758,6 +837,24 @@ function BoxInquiryTab({ shipments }: { shipments: ShipmentRow[] }) {
   const updateWidth = useCallback((key: BoxColKey, w: number) => {
     setColumns(prev => prev.map(c => c.key === key ? { ...c, width: w } : c));
   }, []);
+
+  // ── 雙擊自動最適欄寬 ───────────────────────────────────────────────────
+  const autoFitWidth = (key: BoxColKey) => {
+    const col = columns.find(c => c.key === key);
+    if (!col) return;
+    const headerW = measureTextWidth(col.label, '600 14px "Public Sans", sans-serif') + 32 + 16;
+    let maxDataW = 0;
+    try {
+      (allBoxRows || []).forEach(row => {
+        const raw = (row as any)[key];
+        const val = raw !== undefined && raw !== null ? String(raw) : '';
+        const w = measureTextWidth(val, '14px "Public Sans", sans-serif') + 32;
+        if (w > maxDataW) maxDataW = w;
+      });
+    } catch { /* */ }
+    const bestFit = Math.max(col.minWidth, Math.ceil(Math.max(headerW, maxDataW)));
+    setColumns(prev => prev.map(c => c.key === key ? { ...c, width: bestFit } : c));
+  };
 
   const visibleColumns = columns.filter(c => c.visible !== false);
 
@@ -942,6 +1039,7 @@ function BoxInquiryTab({ shipments }: { shipments: ShipmentRow[] }) {
                 <DraggableColHeader
                   key={col.key} col={col} index={idx}
                   moveCol={moveCol as any} updateWidth={updateWidth as any}
+                  autoFitWidth={autoFitWidth as any}
                   sortConfig={sortConfig as any}
                   onSort={(key) => setSortConfig(s => ({ key: key as BoxColKey, dir: s.key === key && s.dir === 'asc' ? 'desc' : 'asc' }))}
                   isLast={idx === visibleColumns.length - 1}

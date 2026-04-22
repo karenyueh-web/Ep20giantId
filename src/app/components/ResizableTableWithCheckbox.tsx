@@ -1,5 +1,23 @@
 import { useState, useEffect, ReactNode } from 'react';
 
+// ── 測量文字寬度（使用 DOM span，支援中文字型 fallback）──────────────────────
+function measureTextWidth(text: string, font = '14px "Public Sans", "Noto Sans JP", sans-serif'): number {
+  let el = (measureTextWidth as any)._el as HTMLSpanElement | undefined;
+  if (!el) {
+    el = document.createElement('span');
+    el.style.position = 'absolute';
+    el.style.visibility = 'hidden';
+    el.style.whiteSpace = 'nowrap';
+    el.style.left = '-9999px';
+    el.style.top = '-9999px';
+    document.body.appendChild(el);
+    (measureTextWidth as any)._el = el;
+  }
+  el.style.font = font;
+  el.textContent = text;
+  return el.offsetWidth;
+}
+
 export interface ColumnConfig {
   key: string;
   label: string | ReactNode;
@@ -69,6 +87,24 @@ export function ResizableTableWithCheckbox({
 
   const handleMouseDown = (e: React.MouseEvent, columnKey: string) => {
     e.preventDefault();
+    e.stopPropagation();
+    if (e.detail >= 2) {
+      // 第二次 mousedown（雙擊的一部分）→ 自動最適欄寬
+      const col = columns.find(c => c.key === columnKey);
+      if (!col) return;
+      const labelText = typeof col.label === 'string' ? col.label : '';
+      const headerW = measureTextWidth(labelText, '600 14px "Public Sans", sans-serif') + 32 + 16;
+      let maxDataW = 0;
+      data.forEach(row => {
+        const val = col.render ? '' : String(row[columnKey] ?? '');
+        const w = measureTextWidth(val, '14px "Public Sans", sans-serif') + 32;
+        if (w > maxDataW) maxDataW = w;
+      });
+      const minW = col.minWidth ?? 50;
+      const bestFit = Math.max(minW, Math.ceil(Math.max(headerW, maxDataW)));
+      setColumnWidths(prev => ({ ...prev, [columnKey]: bestFit }));
+      return;
+    }
     setResizing(columnKey);
     setStartX(e.clientX);
     setStartWidth(columnWidths[columnKey]);
@@ -154,7 +190,7 @@ export function ResizableTableWithCheckbox({
                   <div
                     className="absolute right-0 top-0 bottom-0 w-[8px] cursor-col-resize hover:bg-[#005eb8] hover:bg-opacity-20 z-10 group transition-colors"
                     onMouseDown={(e) => handleMouseDown(e, column.key)}
-                    title="拖拽調整欄位寬度"
+                    title="拖拽調整欄位寬度；雙擊自動最適欄寬"
                   >
                     <div className="absolute right-[3px] top-0 bottom-0 w-[2px] bg-transparent group-hover:bg-[#005eb8] transition-colors" />
                   </div>

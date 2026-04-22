@@ -4,7 +4,7 @@
  * 功能清單（符合表格系統規範）：
  *  ✅ DnD 欄位拖拉重排  (react-dnd)
  *  ✅ 欄位排序（點表頭）
- *  ✅ 欄位拖拽調整寬度  (re-resizable)
+ *  ✅ 欄位拖拽調整寬度  (自製 resize handle + 雙擊自動最適欄寬)
  *  ✅ 橫向拖拉捲動      (useHorizontalDragScroll)
  *  ✅ Checkbox 多選
  *  ✅ TableToolbar（Columns / Filters / Export）
@@ -21,16 +21,33 @@
  * 範例參考：OrderScheduleInquiryPage.tsx
  */
 
-import { useState, useMemo, useCallback, useEffect, ReactNode } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef, ReactNode } from 'react';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
-import { Resizable } from 're-resizable';
 import { useHorizontalDragScroll } from './useHorizontalDragScroll';
 import { CheckboxIcon } from './CheckboxIcon';
 import { TableToolbar } from './TableToolbar';
 import { ColumnSelector } from './ColumnSelector';
 import { FilterDialog, type FilterCondition } from './FilterDialog';
 import { PaginationControls } from './PaginationControls';
+
+// ── 測量文字寬度（使用 DOM span，支援中文字型 fallback）──────────────────────
+function measureTextWidth(text: string, font = '14px "Public Sans", "Noto Sans JP", sans-serif'): number {
+  let el = (measureTextWidth as any)._el as HTMLSpanElement | undefined;
+  if (!el) {
+    el = document.createElement('span');
+    el.style.position = 'absolute';
+    el.style.visibility = 'hidden';
+    el.style.whiteSpace = 'nowrap';
+    el.style.left = '-9999px';
+    el.style.top = '-9999px';
+    document.body.appendChild(el);
+    (measureTextWidth as any)._el = el;
+  }
+  el.style.font = font;
+  el.textContent = text;
+  return el.offsetWidth;
+}
 
 // ── 泛型欄位定義 ──────────────────────────────────────────────────────────────
 export interface StandardColumn<T = Record<string, unknown>> {
@@ -82,17 +99,43 @@ const DRAG_TYPE = 'std-col';
 
 // ── 可拖拉排序的表頭欄 ────────────────────────────────────────────────────────
 function DraggableColHeader<T extends { id: number }>({
-  col, index, moveCol, updateWidth, sortConfig, onSort, isLast,
+  col, index, moveCol, updateWidth, autoFitWidth, sortConfig, onSort, isLast,
 }: {
   col: StandardColumn<T>;
   index: number;
   moveCol: (drag: string, hover: string) => void;
   updateWidth: (key: string, w: number) => void;
+  autoFitWidth: (key: string) => void;
   sortConfig: { key: string | null; dir: 'asc' | 'desc' | null };
   onSort: (key: string) => void;
   isLast?: boolean;
 }) {
   const [hovered, setHovered] = useState(false);
+
+  // ── 自製 resize drag（與 ResizableTable 相同的模式Ⲁ可靠且支持 dblclick）──
+  const [resizing, setResizing] = useState(false);
+  const resizeStartX = useRef(0);
+  const resizeStartW = useRef(0);
+
+  useEffect(() => {
+    if (!resizing) return;
+    const onMove = (e: MouseEvent) => {
+      const diff = e.clientX - resizeStartX.current;
+      const newW = Math.max(col.minWidth, resizeStartW.current + diff);
+      updateWidth(col.key, newW);
+    };
+    const onUp = () => setResizing(false);
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    return () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [resizing, col.minWidth, col.key, updateWidth]);
 
   const [{ isDragging }, drag] = useDrag({
     type: DRAG_TYPE,
@@ -113,16 +156,11 @@ function DraggableColHeader<T extends { id: number }>({
   const isSorted = sortConfig.key === col.key;
 
   return (
-    <Resizable
-      size={{ width: col.width, height: 56 }}
-      minWidth={col.minWidth}
-      maxWidth={900}
-      enable={{ right: true }}
-      onResizeStop={(_e, _d, _r, delta) => updateWidth(col.key, col.width + delta.width)}
-      handleStyles={{ right: { width: '4px', right: 0, cursor: 'col-resize', background: 'transparent', zIndex: 1 } }}
-      handleClasses={{ right: 'hover:bg-[#1D7BF5] transition-colors' }}
-      className={`bg-[#f4f6f8] ${isLast ? '' : 'border-r border-[rgba(145,158,171,0.08)]'}`}
+    <div
+      className={`relative bg-[#f4f6f8] shrink-0 ${isLast ? '' : 'border-r border-[rgba(145,158,171,0.08)]'}`}
+      style={{ width: col.width, height: 56 }}
     >
+      {/* 可拖拽排序的內容區 */}
       <div
         ref={node => drag(drop(node)) as unknown as void}
         className={`h-full flex items-center px-[16px] cursor-pointer select-none ${isDragging ? 'opacity-50' : ''}`}
@@ -150,7 +188,28 @@ function DraggableColHeader<T extends { id: number }>({
           </svg>
         )}
       </div>
-    </Resizable>
+      {/* 欄寬調整 handle：拖拽調寬 或 雙擊自動最適 */}
+      {!isLast && (
+        <div
+          className="absolute right-0 top-0 bottom-0 w-[8px] cursor-col-resize hover:bg-[#1D7BF5] hover:bg-opacity-20 z-10 group transition-colors"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (e.detail >= 2) {
+              // 第二次 mousedown（雙擊的一部分）→ 自動最適
+              autoFitWidth(col.key);
+              return;
+            }
+            setResizing(true);
+            resizeStartX.current = e.clientX;
+            resizeStartW.current = col.width;
+          }}
+          title="拖拽調整欄位寬度；雙擊自動最適欄寬"
+        >
+          <div className="absolute right-[3px] top-0 bottom-0 w-[2px] bg-transparent group-hover:bg-[#1D7BF5] transition-colors" />
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -240,6 +299,31 @@ export function StandardDataTable<T extends { id: number }>({
   const updateWidth = useCallback((key: string, w: number) => {
     setColumns(prev => prev.map(c => c.key === key ? { ...c, width: w } : c));
   }, []);
+
+  // ── 雙擊自動最適欄寬度 ───────────────────────────────────────────────────
+  const autoFitWidth = (key: string) => {
+    setColumns(prev => {
+      const col = prev.find(c => c.key === key);
+      if (!col) return prev;
+
+      // 表頭文字寬度（SemiBold 14px + 左右 padding 32px）
+      const headerW = measureTextWidth(col.label, '600 14px "Public Sans", sans-serif') + 32 + 16;
+
+      // 所有資料列中該欄最長的文字（Regular 14px + 左右 padding 32px）
+      let maxDataW = 0;
+      const baseData = externalFilteredData ?? data;
+      baseData.forEach(row => {
+        const raw = (row as Record<string, unknown>)[key];
+        if (col.renderCell) return; // 自訂 render 的欄不在此計算
+        const val = raw !== undefined && raw !== null ? String(raw) : '';
+        const w = measureTextWidth(val, '14px "Public Sans", sans-serif') + 32;
+        if (w > maxDataW) maxDataW = w;
+      });
+
+      const bestFit = Math.max(col.minWidth, Math.ceil(Math.max(headerW, maxDataW)));
+      return prev.map(c => c.key === key ? { ...c, width: bestFit } : c);
+    });
+  };
 
   const visibleColumns = columns.filter(c => c.visible !== false);
   // required=true 欄位（操作欄）固定在最右側，其餘欄位正常排列
@@ -433,6 +517,7 @@ export function StandardDataTable<T extends { id: number }>({
                   index={idx}
                   moveCol={moveCol}
                   updateWidth={updateWidth}
+                  autoFitWidth={autoFitWidth}
                   sortConfig={sortConfig}
                   onSort={handleSort}
                   isLast={idx === normalVisibleCols.length - 1}

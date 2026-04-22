@@ -260,7 +260,8 @@ import { ActionCellButtons } from './ActionButtons';
 |------|----------|------|
 | ✅ **欄位拖拉重排** | `react-dnd` (`useDrag` + `useDrop`) | Hover 時顯示 6-dot drag icon，拖拉改變欄位順序 |
 | ✅ **欄位排序** | 點擊表頭觸發，顯示 ▲/▼ 排序箭頭 | 欄位頂端點擊切換 asc/desc |
-| ✅ **欄寬拖拽調整** | `re-resizable`（`<Resizable>`） | 拖拽欄位右邊框調整寬度，hover 顯示藍色高亮 |
+| ✅ **欄寬拖拽調整** | 自製 resize handle（`div` + `mousedown`/`mousemove`/`mouseup`） | 拖拽欄位右邊框調整寬度，hover 顯示藍色高亮。**禁止使用 `re-resizable`**（會攔截 dblclick） |
+| ✅ **雙擊欄寬自動最適** | `measureTextWidth` + `e.detail >= 2` | 雙擊欄位右邊框，自動計算表頭 + 所有資料列的最大文字寬度並展開欄位 |
 | ✅ **橫向拖拉捲動** | `useHorizontalDragScroll` | 在表格空白處按住拖拉可左右捲動，cursor 變 grab |
 | ✅ **Checkbox 多選** | `CheckboxIcon` | 表頭全選 + 每列勾選 |
 | ✅ **TableToolbar** | `TableToolbar` | 左側顯示 results count，右側有 Columns / Filters / Export 按鈕 |
@@ -297,8 +298,9 @@ const COLUMNS: StandardColumn<MyRow>[] = [
 
 參考 `HistoryOrderListWithTabs.tsx`（標準模板），包含：
 1. 定義 `type ColKey` + `interface ColDef`
-2. 建立 `DraggableColHeader`（`useDrag` + `useDrop` + `<Resizable>`）
-3. 主元件引入 `useHorizontalDragScroll`
+2. 建立 `DraggableColHeader`（`useDrag` + `useDrop` + 自製 resize handle + 雙擊自動最適）
+3. 加入 `measureTextWidth` 工具函式（DOM span 方式，支援中文）
+4. 主元件引入 `useHorizontalDragScroll`
 4. `<DndProvider backend={HTML5Backend}>`
 5. 繪製 sticky Checkbox 欄（`position: sticky, left: 0, zIndex: 20`）
 6. 排列 `<DraggableColHeader>` 陣列
@@ -359,6 +361,81 @@ const COLUMNS: StandardColumn<MyRow>[] = [
 | `CheckboxIcon.tsx` | Checkbox 圖示元件：使用 Figma 原始 SVG（`svg-jk6epzc9me` p2dde97c0）。三態：空框（灰）/ 藍底白勾（selected）/ 藍底橫線（indeterminate）。**全系統唯一標準，禁止自行繪製 checkbox** |
 | `useHorizontalDragScroll.ts` | 橫向拖拉捲動 hook |
 | `PaginationControls.tsx` | 分頁控制元件 |
+
+### ⚠️ 欄寬調整實作規範（自製 Resize Handle）
+
+> **禁止使用 `re-resizable` 套件**。該套件會在 `mousedown` 階段攔截事件，導致 `dblclick` 無法觸發。
+
+#### 1. `measureTextWidth` 工具函式（必備）
+
+使用 DOM `<span>` 方式測量文字寬度，**不可使用 Canvas API**（Canvas `measureText` 不支援中文字型 fallback）：
+
+```tsx
+function measureTextWidth(text: string, font = '14px "Public Sans", "Noto Sans JP", sans-serif'): number {
+  let el = (measureTextWidth as any)._el as HTMLSpanElement | undefined;
+  if (!el) {
+    el = document.createElement('span');
+    el.style.position = 'absolute';
+    el.style.visibility = 'hidden';
+    el.style.whiteSpace = 'nowrap';
+    el.style.left = '-9999px';
+    el.style.top = '-9999px';
+    document.body.appendChild(el);
+    (measureTextWidth as any)._el = el;
+  }
+  el.style.font = font;
+  el.textContent = text;
+  return el.offsetWidth;
+}
+```
+
+#### 2. Resize Handle 結構（每個欄位標頭右側）
+
+使用 `e.detail >= 2` 在 `mousedown` 中偵測雙擊（比 `onDoubleClick` 更可靠，避免 resize 時序衝突）：
+
+```tsx
+{/* 欄寬調整 handle：拖拽調寬 或 雙擊自動最適 */}
+{!isLast && (
+  <div
+    className="absolute right-0 top-0 bottom-0 w-[8px] cursor-col-resize hover:bg-[#1D7BF5] hover:bg-opacity-20 z-10 group transition-colors"
+    onMouseDown={(e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.detail >= 2) {
+        // 第二次 mousedown（雙擊的一部分）→ 自動最適
+        autoFitWidth(col.key);
+        return;
+      }
+      setResizing(true);
+      resizeStartX.current = e.clientX;
+      resizeStartW.current = col.width;
+    }}
+    title="拖拽調整欄位寬度；雙擊自動最適欄寬"
+  >
+    <div className="absolute right-[3px] top-0 bottom-0 w-[2px] bg-transparent group-hover:bg-[#1D7BF5] transition-colors" />
+  </div>
+)}
+```
+
+#### 3. `autoFitWidth` 計算邏輯
+
+```tsx
+const autoFitWidth = useCallback((key: ColKey) => {
+  const col = columns.find(c => c.key === key);
+  if (!col) return;
+  // 表頭：SemiBold 14px + padding
+  const headerW = measureTextWidth(col.label, '600 14px "Public Sans", "Noto Sans JP", sans-serif') + 32 + 16;
+  // 資料列：Regular 14px + padding
+  let maxDataW = 0;
+  data.forEach(row => {
+    const val = String((row as any)[key] ?? '');
+    const w = measureTextWidth(val, '14px "Public Sans", "Noto Sans JP", sans-serif') + 32;
+    if (w > maxDataW) maxDataW = w;
+  });
+  const bestFit = Math.max(col.minWidth, Math.ceil(Math.max(headerW, maxDataW)));
+  setColumns(prev => prev.map(c => c.key === key ? { ...c, width: bestFit } : c));
+}, [columns, data]);
+```
 
 ---
 
