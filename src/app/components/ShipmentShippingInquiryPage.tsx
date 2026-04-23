@@ -25,6 +25,7 @@ import { DropdownSelect } from './DropdownSelect';
 import { PaginationControls } from './PaginationControls';
 import { MOCK_SHIPMENTS } from './ShipmentListPage';
 import type { ShipmentRow, ShipmentDetailItem } from './ShipmentListPage';
+import { ShipmentPrintPage, type PrintTab } from './ShipmentPrintPage';
 
 // ── 運輸型態 Label ───────────────────────────────────────────────────────────
 const TRANSPORT_LABEL: Record<string, string> = {
@@ -779,7 +780,7 @@ function ItemInquiryTab({ shipments }: { shipments: ShipmentRow[] }) {
 }
 
 // ── TAB2 表格元件 ─────────────────────────────────────────────────────────────
-function BoxInquiryTab({ shipments }: { shipments: ShipmentRow[] }) {
+function BoxInquiryTab({ shipments, onPrint }: { shipments: ShipmentRow[]; onPrint: (tab: PrintTab) => void }) {
   const { scrollContainerRef, handleMouseDown, canDragScroll } = useHorizontalDragScroll();
 
   const allBoxRows = useMemo(() => buildBoxRows(shipments), [shipments]);
@@ -1003,13 +1004,13 @@ function BoxInquiryTab({ shipments }: { shipments: ShipmentRow[] }) {
           </span>
           {/* 列印中文貼紙 */}
           <span
-            onClick={() => showToast(`列印中文貼紙 ${selectedIds.size} 張`)}
+            onClick={() => onPrint('zh-sticker')}
             className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] text-[#004680] leading-[24px] whitespace-nowrap cursor-pointer select-none px-[10px] py-[16px] hover:opacity-70 transition-opacity"
           >列印中文貼紙</span>
           <span className="text-[rgba(145,158,171,0.4)] select-none">|</span>
           {/* 列印英文貼紙 */}
           <span
-            onClick={() => showToast(`列印英文貼紙 ${selectedIds.size} 張`)}
+            onClick={() => onPrint('en-sticker')}
             className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] text-[#004680] leading-[24px] whitespace-nowrap cursor-pointer select-none px-[10px] py-[16px] hover:opacity-70 transition-opacity"
           >列印英文貼紙</span>
         </div>
@@ -1116,6 +1117,8 @@ function BoxInquiryTab({ shipments }: { shipments: ShipmentRow[] }) {
 // ── 主元件：兩個 TAB ──────────────────────────────────────────────────────────
 export function ShipmentShippingInquiryPage() {
   const [activeTab, setActiveTab] = useState<'item' | 'box'>('item');
+  // ── 列印頁導覽 ───────────────────────────────────────────────────────────
+  const [printState, setPrintState] = useState<{ tab: PrintTab } | null>(null);
 
   // 讀取出貨單資料（同 ShipmentListPage 邏輯）
   const shipments = useMemo((): ShipmentRow[] => {
@@ -1131,6 +1134,18 @@ export function ShipmentShippingInquiryPage() {
     { id: 'item' as const, label: '出貨明細查詢' },
     { id: 'box'  as const, label: '裝箱明細查詢' },
   ];
+
+  // ── 列印頁 early return ─────────────────────────────────────────────
+  if (printState) {
+    return (
+      <ShipmentPrintPage
+        vendorShipmentNo=""
+        initialTab={printState.tab}
+        tabs={['zh-sticker', 'en-sticker']}
+        onBack={() => setPrintState(null)}
+      />
+    );
+  }
 
   return (
     <div className="bg-white flex flex-col h-full relative rounded-[16px] shadow-[0px_0px_2px_0px_rgba(145,158,171,0.2),0px_12px_24px_-4px_rgba(145,158,171,0.12)] w-full overflow-hidden">
@@ -1160,7 +1175,7 @@ export function ShipmentShippingInquiryPage() {
       <div className="flex-1 min-h-0 overflow-hidden">
         {activeTab === 'item'
           ? <ItemInquiryTab shipments={shipments} />
-          : <BoxInquiryTab  shipments={shipments} />
+          : <BoxInquiryTab  shipments={shipments} onPrint={(tab) => setPrintState({ tab })} />
         }
       </div>
     </div>

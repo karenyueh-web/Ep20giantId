@@ -9,6 +9,7 @@ import IconsSolidIcSolarMultipleForwardLeftBroken from '@/imports/IconsSolidIcSo
 import { OrderHistory } from './OrderHistory';
 import { DeleteButton } from './ActionButtons';
 import type { HistoryEntry } from './OrderStoreContext';
+import type { PrintTab } from './ShipmentPrintPage';
 
 // ── TRANSPORT_OPTIONS ────────────────────────────────────────────────────────
 const TRANSPORT_OPTIONS = [
@@ -25,19 +26,20 @@ interface Props {
   onDelete?: () => void;
   onEdit?: () => void;
   onEditSave?: (updatedDetails: ShipmentDetailItem[]) => void;
+  onPrint?: (tab: PrintTab) => void;
 }
 
 
 
 // ── 列印下拉按鈕 ──────────────────────────────────────────────────────────────
-function PrintDropdown() {
+function PrintDropdown({ onSelect }: { onSelect: (tab: PrintTab) => void }) {
   const [open, setOpen] = useState(false);
 
-  const options = [
-    { label: '列印中文出貨單' },
-    { label: '列印英文出貨單' },
-    { label: '列印中文外箱貼紙' },
-    { label: '列印英文外箱貼紙' },
+  const options: { label: string; tab: PrintTab }[] = [
+    { label: '中文出貨單',   tab: 'zh-shipment' },
+    { label: '中文外箱貼紙', tab: 'zh-sticker'  },
+    { label: '英文出貨單',   tab: 'en-shipment' },
+    { label: '英文外箱貼紙', tab: 'en-sticker'  },
   ];
 
   return (
@@ -61,8 +63,8 @@ function PrintDropdown() {
         <div className="absolute top-[42px] right-0 z-50 bg-white rounded-[10px] shadow-[0px_4px_20px_rgba(0,0,0,0.12)] border border-[rgba(145,158,171,0.12)] py-[6px] min-w-[160px]">
           {options.map(o => (
             <div
-              key={o.label}
-              onClick={() => { setOpen(false); }}
+              key={o.tab}
+              onClick={() => { setOpen(false); onSelect(o.tab); }}
               className="px-[16px] py-[10px] font-['Public_Sans:Regular',sans-serif] text-[14px] text-[#1c252e] cursor-pointer hover:bg-[rgba(145,158,171,0.08)] transition-colors whitespace-nowrap"
             >
               {o.label}
@@ -112,7 +114,7 @@ const TABLE_COLS = [
 ];
 
 // ── 主元件 ────────────────────────────────────────────────────────────────────
-export function ShipmentInquiryDetailPage({ shipment, onClose, onDelete, onEdit, onEditSave }: Props) {
+export function ShipmentInquiryDetailPage({ shipment, onClose, onDelete, onEdit, onEditSave, onPrint }: Props) {
   const [showHistory, setShowHistory] = useState(false);
   const [hoveredBoxIdx, setHoveredBoxIdx] = useState<number | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -265,7 +267,7 @@ export function ShipmentInquiryDetailPage({ shipment, onClose, onDelete, onEdit,
             ) : (
               /* ── 正常唯讀模式：列印 + 編輯 + 整單刪除 + 歷程 ── */
               <>
-                <PrintDropdown />
+                <PrintDropdown onSelect={(tab) => onPrint?.(tab)} />
                 <button
                   onClick={handleStartEdit}
                   className="h-[36px] min-w-[88px] px-[16px] rounded-[8px] bg-[#005eb8] hover:bg-[#004a94] text-white font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
@@ -601,6 +603,7 @@ export function ShipmentInquiryDetailPage({ shipment, onClose, onDelete, onEdit,
           </div>
         </div>
       )}
+
 
       {/* ── Toast ──────────────────────────────────────────────────────────── */}
       {toastMessage && (

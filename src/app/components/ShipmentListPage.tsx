@@ -21,6 +21,7 @@ import { SearchField } from './SearchField';
 import { DropdownSelect } from './DropdownSelect';
 import { PaginationControls } from './PaginationControls';
 import { ShipmentInquiryDetailPage } from './ShipmentInquiryDetailPage';
+import { ShipmentPrintPage, type PrintTab } from './ShipmentPrintPage';
 import type { OrderRow } from './AdvancedOrderTable';
 
 // ── 型別定義 ─────────────────────────────────────────────────────────────────
@@ -618,6 +619,8 @@ export function ShipmentListPage() {
   // ── 明細頁導覽 ────────────────────────────────────────────────────────────
   const [detailShipment, setDetailShipment] = useState<ShipmentRow | null>(null);
   const [detailOrders, setDetailOrders] = useState<OrderRow[]>([]);
+  // ── 列印頁導覽 ────────────────────────────────────────────────────────────
+  const [printState, setPrintState] = useState<{ vendorShipmentNo: string; tab: PrintTab } | null>(null);
 
   // ── 欄位管理 ──────────────────────────────────────────────────────────────
   const loadCols = (): ShipCol[] => {
@@ -872,6 +875,18 @@ export function ShipmentListPage() {
   };
 
   // 所有 hooks 已完整宣告，此處 early return 安全
+
+  // ── 列印頁 early return ──────────────────────────────────────────────
+  if (printState) {
+    return (
+      <ShipmentPrintPage
+        vendorShipmentNo={printState.vendorShipmentNo}
+        initialTab={printState.tab}
+        onBack={() => setPrintState(null)}
+      />
+    );
+  }
+
   if (detailShipment) {
     return (
       <ShipmentInquiryDetailPage
@@ -879,6 +894,7 @@ export function ShipmentListPage() {
         onClose={() => { setDetailShipment(null); setDetailOrders([]); }}
         onDelete={() => handleDetailDeleted(detailShipment.id)}
         onEditSave={(updatedDetails) => handleEditSave(detailShipment.id, updatedDetails)}
+        onPrint={(tab) => setPrintState({ vendorShipmentNo: detailShipment.vendorShipmentNo, tab })}
       />
     );
   }
