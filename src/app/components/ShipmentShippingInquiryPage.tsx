@@ -28,7 +28,7 @@ import type { ShipmentRow, ShipmentDetailItem } from './ShipmentListPage';
 import { ShipmentPrintPage, type PrintTab } from './ShipmentPrintPage';
 
 // ── 運輸型態 Label ───────────────────────────────────────────────────────────
-const TRANSPORT_LABEL: Record<string, string> = {
+export const TRANSPORT_LABEL: Record<string, string> = {
   S: 'S 海運', A: 'A 空運', T: 'T 陸運', E: 'E 快遞',
 };
 
@@ -121,7 +121,7 @@ export interface BoxLineRow {
 
 // ── Mock 資料展開 ──────────────────────────────────────────────────────────────
 
-function buildItemRows(shipments: ShipmentRow[]): ShipmentItemRow[] {
+export function buildItemRows(shipments: ShipmentRow[]): ShipmentItemRow[] {
   const rows: ShipmentItemRow[] = [];
   for (const ship of shipments) {
     for (const d of ship.details) {
@@ -163,7 +163,7 @@ function genBarcode(): string {
   return `0${n}$`;
 }
 
-function buildBoxRows(shipments: ShipmentRow[]): BoxLineRow[] {
+export function buildBoxRows(shipments: ShipmentRow[]): BoxLineRow[] {
   _barcodeCounter = 1;
   const rows: BoxLineRow[] = [];
   for (const ship of shipments) {
@@ -203,7 +203,7 @@ function buildBoxRows(shipments: ShipmentRow[]): BoxLineRow[] {
 }
 
 // ── 廠商選項 ──────────────────────────────────────────────────────────────────
-const VENDOR_OPTIONS = [
+export const VENDOR_OPTIONS = [
   { value: '', label: '全部' },
   ...Array.from(new Map(MOCK_SHIPMENTS.map(r => [r.vendorCode, r])).values()).map(r => ({
     value: r.vendorCode,
@@ -214,7 +214,7 @@ const VENDOR_OPTIONS = [
 // ─────────────────────────────────────────────────────────────────────────────
 // ── 欄位定義 TAB1 出貨明細
 // ─────────────────────────────────────────────────────────────────────────────
-type ItemColKey =
+export type ItemColKey =
   | 'vendorName' | 'vendorShipmentNo' | 'sapDeliveryNo' | 'currency'
   | 'transportType' | 'deliveryDate' | 'arrivalDate' | 'deliveryAddress'
   | 'itemNo' | 'orderDocSeq' | 'purchaseOrg' | 'materialNo'
@@ -222,7 +222,7 @@ type ItemColKey =
   | 'orderPendingQty' | 'shipQty' | 'qtyPerBox' | 'totalBoxes'
   | 'netWeight' | 'grossWeight' | 'weightUnit' | 'countryOfOrigin' | 'receivedQty';
 
-interface ItemCol {
+export interface ItemCol {
   key: ItemColKey;
   label: string;
   width: number;
@@ -231,7 +231,7 @@ interface ItemCol {
   visible?: boolean;
 }
 
-const ITEM_DEFAULT_COLS: ItemCol[] = [
+export const ITEM_DEFAULT_COLS: ItemCol[] = [
   { key: 'vendorName',         label: '廠商名稱',     width: 120, minWidth: 100, align: 'left' },
   { key: 'vendorShipmentNo',   label: '廠商出貨單號', width: 140, minWidth: 110, align: 'left' },
   { key: 'sapDeliveryNo',      label: 'SAP送貨單號', width: 130, minWidth: 100, align: 'left' },
@@ -261,7 +261,7 @@ const ITEM_DEFAULT_COLS: ItemCol[] = [
 // ─────────────────────────────────────────────────────────────────────────────
 // ── 欄位定義 TAB2 裝箱明細
 // ─────────────────────────────────────────────────────────────────────────────
-type BoxColKey =
+export type BoxColKey =
   | 'barcode' | 'boxQty' | 'labelSeq'
   | 'itemNo' | 'orderDocSeq' | 'purchaseOrg' | 'materialNo'
   | 'productName' | 'customerMaterialNo' | 'customerOrderNo'
@@ -269,7 +269,7 @@ type BoxColKey =
   | 'vendorName' | 'vendorShipmentNo' | 'sapDeliveryNo'
   | 'deliveryDate' | 'deliveryAddress' | 'transportType' | 'storageLocation';
 
-interface BoxCol {
+export interface BoxCol {
   key: BoxColKey;
   label: string;
   width: number;
@@ -278,7 +278,7 @@ interface BoxCol {
   visible?: boolean;
 }
 
-const BOX_DEFAULT_COLS: BoxCol[] = [
+export const BOX_DEFAULT_COLS: BoxCol[] = [
   { key: 'barcode',            label: '條碼',         width: 140, minWidth: 110, align: 'left' },
   { key: 'boxQty',             label: '本件數量',     width: 88,  minWidth: 70,  align: 'right' },
   { key: 'labelSeq',           label: '貼標項次/總箱', width: 110, minWidth: 90,  align: 'center' },
@@ -309,7 +309,7 @@ const BOX_STORAGE_KEY  = 'shipmentBoxInquiry_v1_cols';
 const CHECKBOX_W = 52;
 
 // ── 測量文字寬度（使用 DOM span，支援中文字型 fallback）──────────────────────
-function measureTextWidth(text: string, font = '14px "Public Sans", "Noto Sans JP", sans-serif'): number {
+export function measureTextWidth(text: string, font = '14px "Public Sans", "Noto Sans JP", sans-serif'): number {
   let el = (measureTextWidth as any)._el as HTMLSpanElement | undefined;
   if (!el) {
     el = document.createElement('span');

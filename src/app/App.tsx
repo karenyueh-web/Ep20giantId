@@ -10,6 +10,7 @@ import { ShippingBasicSettingsPage } from "@/app/components/ShippingBasicSetting
 import { ShipmentCreatePage } from "@/app/components/ShipmentCreatePage";
 import { ShipmentListPage } from "@/app/components/ShipmentListPage";
 import { ShipmentShippingInquiryPage } from "@/app/components/ShipmentShippingInquiryPage";
+import { ShipmentPrintDocPage } from "@/app/components/ShipmentPrintDocPage";
 import { CorrectionCreatePage } from "@/app/components/CorrectionCreatePage";
 import { CorrectionListWithTabs } from "@/app/components/CorrectionListWithTabs";
 import { HistoryCorrectionListPage } from "@/app/components/HistoryCorrectionListPage";
@@ -235,6 +236,20 @@ export default function App() {
             breadcrumb="出貨單 • 基本設定"
           >
             <ShippingBasicSettingsPage />
+          </ResponsivePageLayout>
+        );
+      // ── 出貨單：列印單據 ──
+      case 'shipping-print':
+        return (
+          <ResponsivePageLayout
+            currentPage={currentPage}
+            onPageChange={handlePageChange}
+            onLogout={handleLogout}
+            userRole={userRole}
+            title="列印單據"
+            breadcrumb="出貨單 • 列印單據"
+          >
+            <ShipmentPrintDocPage />
           </ResponsivePageLayout>
         );
       case 'invoice-create':
