@@ -10,6 +10,7 @@
  */
 
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import IconsSolidIcSolarMultipleForwardLeftBroken from '@/imports/IconsSolidIcSolarMultipleForwardLeftBroken';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { useHorizontalDragScroll } from './useHorizontalDragScroll';
@@ -211,6 +212,7 @@ interface StickerTabConfig {
 }
 
 function StickerTab({ config, onPrint }: { config: StickerTabConfig; onPrint: (tab: PrintTab, availableTabs: PrintTab[]) => void }) {
+  const [showStoPage, setShowStoPage] = useState(false);
   const allRows = useMemo(() => buildBoxRows(MOCK_SHIPMENTS), []);
 
   // 搜尋
@@ -343,6 +345,10 @@ function StickerTab({ config, onPrint }: { config: StickerTabConfig; onPrint: (t
 
   const { scrollContainerRef, handleMouseDown, canDragScroll } = useHorizontalDragScroll();
 
+  if (showStoPage) {
+    return <StoStickerPage onBack={() => setShowStoPage(false)} />;
+  }
+
   return (
     <div className="flex flex-col h-full">
       {/* 搜尋列（不加 border-b） */}
@@ -383,7 +389,16 @@ function StickerTab({ config, onPrint }: { config: StickerTabConfig; onPrint: (t
         }
         onExportExcel={() => showToast(`已匯出 ${filteredData.length} 筆 (Excel)`)}
         onExportCsv={() => showToast(`已匯出 ${filteredData.length} 筆 (CSV)`)}
-        actionButton={<div />}
+        actionButton={
+          config.showStoButton ? (
+            <button
+              onClick={() => setShowStoPage(true)}
+              className="flex items-center gap-[6px] h-[36px] px-[16px] rounded-[8px] bg-[#1c252e] hover:bg-[#2d3748] text-white font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap shrink-0"
+            >
+              列印STO
+            </button>
+          ) : <div />
+        }
       />
 
       {/* Selection Toolbar */}
@@ -412,12 +427,6 @@ function StickerTab({ config, onPrint }: { config: StickerTabConfig; onPrint: (t
                 onClick={() => onPrint('en-sticker', ['zh-sticker', 'en-sticker'])}
                 className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] text-[#004680] leading-[24px] whitespace-nowrap cursor-pointer select-none px-[10px] py-[16px] hover:opacity-70 transition-opacity"
               >英文外箱貼紙</span>
-            </>
-          )}
-          {config.showStoButton && (
-            <>
-              <span className="text-[rgba(145,158,171,0.4)] select-none">|</span>
-              <span onClick={() => showToast('列印STO 功能開發中')} className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] text-[#1c252e] leading-[24px] whitespace-nowrap cursor-pointer select-none px-[10px] py-[16px] hover:opacity-70 transition-opacity bg-[#1c252e] text-white rounded-[6px] mx-[4px]">列印STO</span>
             </>
           )}
         </div>
@@ -853,6 +862,174 @@ export function ShipmentPrintDocPage() {
           <ShipmentDocTab onPrint={handlePrint} />
         )}
       </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// StoStickerPage — 列印STO 獨立功能頁
+// ═══════════════════════════════════════════════════════════════════════════════
+function StoStickerPage({ onBack }: { onBack: () => void }) {
+  const [stoNo, setStoNo]               = useState('');
+  const [copies, setCopies]             = useState<number | ''>(1);
+  const [previewSto, setPreviewSto]     = useState('');
+  const [previewCopies, setPreviewCopies] = useState(0);
+
+  // 當 stoNo 和 copies 都合法時，自動即時更新預覽
+  useEffect(() => {
+    const c = Number(copies);
+    if (stoNo.trim() && c >= 1) {
+      setPreviewSto(stoNo.trim());
+      setPreviewCopies(c);
+    }
+  }, [stoNo, copies]);
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const labels = previewCopies > 0
+    ? Array.from({ length: previewCopies }, (_, i) => i)
+    : [];
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* ── 工具列 ─────────────────────────────────────────────────────────── */}
+      <div className="shrink-0 border-b border-[rgba(145,158,171,0.08)] relative">
+        <div className="content-stretch flex items-center h-[56px] px-[20px] gap-[16px] relative w-full">
+
+          {/* ← 返回 */}
+          <div
+            onClick={onBack}
+            className="overflow-clip relative shrink-0 size-[29px] cursor-pointer hover:opacity-70 transition-opacity"
+            aria-label="返回"
+          >
+            <IconsSolidIcSolarMultipleForwardLeftBroken />
+          </div>
+
+
+          {/* STO 編號 輸入 */}
+          <div className="flex items-center gap-[8px] shrink-0">
+            <span className="font-['Public_Sans:Medium','Noto_Sans_JP:Medium',sans-serif] font-medium text-[13px] text-[#637381] whitespace-nowrap">STO編號</span>
+            <div className="relative" style={{ minHeight: 36 }}>
+              <div
+                aria-hidden="true"
+                className="absolute inset-0 pointer-events-none rounded-[8px] border border-solid"
+                style={{ borderColor: 'rgba(145,158,171,0.3)' }}
+              />
+              <input
+                type="text"
+                value={stoNo}
+                onChange={e => setStoNo(e.target.value)}
+                placeholder="輸入 STO 編號"
+                className="h-[36px] px-[12px] rounded-[8px] text-[14px] font-['Public_Sans:Regular',sans-serif] font-normal text-[#1c252e] placeholder-[#c4cdd6] bg-transparent outline-none"
+                style={{ width: 180 }}
+              />
+            </div>
+          </div>
+
+          {/* 列印張數 輸入 */}
+          <div className="flex items-center gap-[8px] shrink-0">
+            <span className="font-['Public_Sans:Medium','Noto_Sans_JP:Medium',sans-serif] font-medium text-[13px] text-[#637381] whitespace-nowrap">列印張數</span>
+            <div className="relative" style={{ minHeight: 36 }}>
+              <div
+                aria-hidden="true"
+                className="absolute inset-0 pointer-events-none rounded-[8px] border border-solid"
+                style={{ borderColor: 'rgba(145,158,171,0.3)' }}
+              />
+              <input
+                type="number"
+                min={1}
+                max={9999}
+                value={copies}
+                onChange={e => {
+                  const v = e.target.value;
+                  setCopies(v === '' ? '' : Math.max(1, parseInt(v, 10) || 1));
+                }}
+                className="h-[36px] px-[12px] rounded-[8px] text-[14px] font-['Public_Sans:Regular',sans-serif] font-normal text-[#1c252e] placeholder-[#c4cdd6] bg-transparent outline-none"
+                style={{ width: 80 }}
+              />
+            </div>
+          </div>
+
+          {/* print 黑色按鈕（最後） */}
+          <button
+            onClick={handlePrint}
+            className="flex items-center gap-[7px] h-[36px] px-[16px] rounded-[8px] bg-[#1c252e] hover:bg-[#2d3748] text-white font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap shrink-0"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="6 9 6 2 18 2 18 9" />
+              <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+              <rect x="6" y="14" width="12" height="8" />
+            </svg>
+            print
+          </button>
+
+          {/* 底部灰色背景線 */}
+          <div className="absolute bg-[rgba(145,158,171,0.08)] bottom-0 h-[2px] left-0 right-0" />
+        </div>
+      </div>
+
+      {/* ── 預覽區 ─────────────────────────────────────────────────────────── */}
+      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar bg-[#f4f6f8] px-[32px] py-[28px]">
+        {labels.length === 0 ? (
+          /* 空狀態 */
+          <div className="flex flex-col items-center justify-center h-full gap-[16px]">
+            <div
+              className="flex items-center justify-center rounded-full shrink-0"
+              style={{
+                width: 72,
+                height: 72,
+                background: 'rgba(0,94,184,0.08)',
+                boxShadow: '0 0 0 16px rgba(0,94,184,0.04)',
+              }}
+            >
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#005eb8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <path d="M3 9h18M9 21V9" />
+              </svg>
+            </div>
+            <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[16px] text-[#1c252e]">
+              請輸入 STO 編號與列印張數
+            </p>
+            <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] text-[13px] text-[#919eab] text-center leading-[22px]">
+              輸入完成後按 Enter 或點選「預覽」<br />預覽區將以一行兩欄方式顯示所有貼紙
+            </p>
+          </div>
+        ) : (
+          /* 貼紙預覽：固定一行兩欄 */
+          <div
+            className="grid gap-[16px]"
+            style={{ gridTemplateColumns: '1fr 1fr' }}
+          >
+            {labels.map((_, i) => (
+              <StoStickerCard key={i} stoNo={previewSto} index={i + 1} total={labels.length} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── STO 貼紙卡片 ──────────────────────────────────────────────────────────────
+function StoStickerCard({ stoNo, index, total }: { stoNo: string; index: number; total: number }) {
+  return (
+    <div
+      className="bg-white rounded-[12px] border border-[rgba(145,158,171,0.16)] shadow-[0px_2px_8px_rgba(0,0,0,0.06)] flex flex-col items-center justify-center"
+      style={{ minHeight: 160, padding: '24px 16px' }}
+    >
+      {/* 序號 */}
+      <p className="font-['Public_Sans:Regular',sans-serif] text-[11px] text-[#919eab] mb-[8px] tracking-wide">
+        {index} / {total}
+      </p>
+      {/* STO 號碼 — 超大顯示 */}
+      <p
+        className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-center text-[#1c252e] leading-[1.1] break-all"
+        style={{ fontSize: 'clamp(28px, 5vw, 56px)' }}
+      >
+        {stoNo}
+      </p>
     </div>
   );
 }
