@@ -21,11 +21,13 @@ import { FilterDialog, type FilterCondition } from './FilterDialog';
 import { SearchField } from './SearchField';
 import { DropdownSelect } from './DropdownSelect';
 import { PaginationControls } from './PaginationControls';
+import { DraggableColumnHeader } from './table/DraggableColumnHeader';
+import { measureTextWidth } from './table/tableUtils';
 import { MOCK_SHIPMENTS } from './ShipmentListPage';
 import {
   buildBoxRows, buildItemRows,
   BOX_DEFAULT_COLS, ITEM_DEFAULT_COLS,
-  VENDOR_OPTIONS, measureTextWidth, TRANSPORT_LABEL,
+  VENDOR_OPTIONS, TRANSPORT_LABEL,
   type BoxLineRow, type ShipmentItemRow,
   type BoxCol, type BoxColKey,
   type ItemCol, type ItemColKey,
@@ -54,111 +56,6 @@ interface PrintState {
   tabs: PrintTab[];
 }
 
-// ── measureTextWidth 工具（支援中文，DOM span） ───────────────────────────────
-function measureW(text: string, font = '14px "Public Sans", "Noto Sans JP", sans-serif') {
-  return measureTextWidth(text, font);
-}
-
-// ── 泛型 DraggableColHeader（完全對齊標準） ───────────────────────────────────
-function DraggableColHeader<K extends string>({
-  col, index, moveCol, updateWidth, autoFitWidth: autoFit, sortConfig, onSort, isLast, dragType,
-}: {
-  col: { key: K; label: string; width: number; minWidth: number };
-  index: number;
-  moveCol: (drag: K, hover: K) => void;
-  updateWidth: (key: K, w: number) => void;
-  autoFitWidth: (key: K) => void;
-  sortConfig: { key: K | null; dir: 'asc' | 'desc' | null };
-  onSort: (key: K) => void;
-  isLast?: boolean;
-  dragType: string;
-}) {
-  const [hovered, setHovered] = useState(false);
-  const [resizing, setResizing] = useState(false);
-  const resizeStartX = useRef(0);
-  const resizeStartW = useRef(0);
-
-  useEffect(() => {
-    if (!resizing) return;
-    const onMove = (e: MouseEvent) => {
-      const diff = e.clientX - resizeStartX.current;
-      updateWidth(col.key, Math.max(col.minWidth, resizeStartW.current + diff));
-    };
-    const onUp = () => setResizing(false);
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
-    return () => {
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-    };
-  }, [resizing, col.minWidth, col.key, updateWidth]);
-
-  const [{ isDragging }, drag] = useDrag({
-    type: dragType,
-    item: () => ({ key: col.key, index }),
-    collect: m => ({ isDragging: m.isDragging() }),
-  });
-  const [, drop] = useDrop({
-    accept: dragType,
-    hover: (item: { key: K; index: number }) => {
-      if (item.index !== index) { moveCol(item.key, col.key); item.index = index; }
-    },
-  });
-
-  const isSorted = sortConfig.key === col.key;
-  return (
-    <div
-      className={`relative bg-[#f4f6f8] shrink-0 ${isLast ? '' : 'border-r border-[rgba(145,158,171,0.08)]'}`}
-      style={{ width: col.width, height: 56 }}
-    >
-      <div
-        ref={node => drag(drop(node)) as any}
-        className={`h-full flex items-center px-[16px] cursor-pointer select-none ${isDragging ? 'opacity-50' : ''}`}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-        onClick={() => onSort(col.key)}
-      >
-        {hovered && (
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="mr-[6px] shrink-0">
-            <circle cx="5" cy="3" r="1.5" fill="#919EAB" /><circle cx="11" cy="3" r="1.5" fill="#919EAB" />
-            <circle cx="5" cy="8" r="1.5" fill="#919EAB" /><circle cx="11" cy="8" r="1.5" fill="#919EAB" />
-            <circle cx="5" cy="13" r="1.5" fill="#919EAB" /><circle cx="11" cy="13" r="1.5" fill="#919EAB" />
-          </svg>
-        )}
-        <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[24px] text-[#637381] text-[14px] whitespace-nowrap truncate">
-          {col.label}
-        </p>
-        {isSorted && (
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="ml-[6px] shrink-0">
-            {sortConfig.dir === 'asc'
-              ? <path d="M8 3L12 7H4L8 3Z" fill="#637381" />
-              : <path d="M8 13L4 9H12L8 13Z" fill="#637381" />}
-          </svg>
-        )}
-      </div>
-      {!isLast && (
-        <div
-          className="absolute right-0 top-0 bottom-0 w-[8px] cursor-col-resize hover:bg-[#1D7BF5] hover:bg-opacity-20 z-10 group transition-colors"
-          onMouseDown={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            if (e.detail >= 2) { autoFit(col.key); return; }
-            setResizing(true);
-            resizeStartX.current = e.clientX;
-            resizeStartW.current = col.width;
-          }}
-          title="拖拽調整欄位寬度；雙擊自動最適欄寬"
-        >
-          <div className="absolute right-[3px] top-0 bottom-0 w-[2px] bg-transparent group-hover:bg-[#1D7BF5] transition-colors" />
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ── Cell 渲染：BoxLineRow ─────────────────────────────────────────────────────
 function renderBoxCell(row: BoxLineRow, key: BoxColKey): React.ReactNode {
@@ -268,11 +165,11 @@ function StickerTab({ config, onPrint }: { config: StickerTabConfig; onPrint: (t
   const autoFitWidth = (key: BoxColKey) => {
     const col = columns.find(c => c.key === key);
     if (!col) return;
-    const hW = measureW(col.label, '600 14px "Public Sans", sans-serif') + 32 + 16;
+    const hW = measureTextWidth(col.label, '600 14px "Public Sans", sans-serif') + 32 + 16;
     let dW = 0;
     allRows.forEach(row => {
       const val = String((row as any)[key] ?? '');
-      const w = measureW(val) + 32; if (w > dW) dW = w;
+      const w = measureTextWidth(val) + 32; if (w > dW) dW = w;
     });
     setColumns(prev => prev.map(c => c.key === key ? { ...c, width: Math.max(c.minWidth, Math.ceil(Math.max(hW, dW))) } : c));
   };
@@ -453,13 +350,14 @@ function StickerTab({ config, onPrint }: { config: StickerTabConfig; onPrint: (t
                 )}
               </div>
               {visibleColumns.map((col, idx) => (
-                <DraggableColHeader
-                  key={col.key} col={col} index={idx}
-                  moveCol={moveCol as any} updateWidth={updateWidth as any}
+                <DraggableColumnHeader
+                  key={col.key} column={col} index={idx}
+                  moveColumn={moveCol as any} updateColumnWidth={updateWidth as any}
                   autoFitWidth={autoFitWidth as any}
-                  sortConfig={sortConfig as any}
+                  sortConfig={{ key: sortConfig.key, direction: sortConfig.dir }}
                   onSort={(key) => setSortConfig(s => ({ key: key as BoxColKey, dir: s.key === key && s.dir === 'asc' ? 'desc' : 'asc' }))}
                   isLast={idx === visibleColumns.length - 1}
+                  isFiltered={!!appliedFilters?.some(f => f.column === col.key)}
                   dragType={DRAG_BOX}
                 />
               ))}
@@ -579,11 +477,11 @@ function ShipmentDocTab({ onPrint }: { onPrint: (tab: PrintTab, availableTabs: P
   const autoFitWidth = (key: ItemColKey) => {
     const col = columns.find(c => c.key === key);
     if (!col) return;
-    const hW = measureW(col.label, '600 14px "Public Sans", sans-serif') + 32 + 16;
+    const hW = measureTextWidth(col.label, '600 14px "Public Sans", sans-serif') + 32 + 16;
     let dW = 0;
     allRows.forEach(row => {
       const val = String((row as any)[key] ?? '');
-      const w = measureW(val) + 32; if (w > dW) dW = w;
+      const w = measureTextWidth(val) + 32; if (w > dW) dW = w;
     });
     setColumns(prev => prev.map(c => c.key === key ? { ...c, width: Math.max(c.minWidth, Math.ceil(Math.max(hW, dW))) } : c));
   };
@@ -732,13 +630,14 @@ function ShipmentDocTab({ onPrint }: { onPrint: (tab: PrintTab, availableTabs: P
                 )}
               </div>
               {visibleColumns.map((col, idx) => (
-                <DraggableColHeader
-                  key={col.key} col={col} index={idx}
-                  moveCol={moveCol as any} updateWidth={updateWidth as any}
+                <DraggableColumnHeader
+                  key={col.key} column={col} index={idx}
+                  moveColumn={moveCol as any} updateColumnWidth={updateWidth as any}
                   autoFitWidth={autoFitWidth as any}
-                  sortConfig={sortConfig as any}
+                  sortConfig={{ key: sortConfig.key, direction: sortConfig.dir }}
                   onSort={(key) => setSortConfig(s => ({ key: key as ItemColKey, dir: s.key === key && s.dir === 'asc' ? 'desc' : 'asc' }))}
                   isLast={idx === visibleColumns.length - 1}
+                  isFiltered={!!appliedFilters?.some(f => f.column === col.key)}
                   dragType={DRAG_ITEM}
                 />
               ))}

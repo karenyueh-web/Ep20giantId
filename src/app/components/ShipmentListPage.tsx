@@ -20,6 +20,8 @@ import { FilterDialog, type FilterCondition } from './FilterDialog';
 import { SearchField } from './SearchField';
 import { DropdownSelect } from './DropdownSelect';
 import { PaginationControls } from './PaginationControls';
+import { DraggableColumnHeader } from './table/DraggableColumnHeader';
+import { measureTextWidth } from './table/tableUtils';
 import { ShipmentInquiryDetailPage } from './ShipmentInquiryDetailPage';
 import { ShipmentPrintPage, type PrintTab } from './ShipmentPrintPage';
 import type { OrderRow } from './AdvancedOrderTable';
@@ -324,130 +326,6 @@ const CHECKBOX_W   = 52;
 const VENDOR_NO_W  = 160; // 廠商出貨單號 (sticky)
 const VENDOR_COL_W = 200; // 廠商名稱 (sticky)
 
-// ── 拖拽欄表頭 ─────────────────────────────────────────────────────────────────
-
-const DRAG_TYPE = 'shipment-col';
-
-// ── 測量文字寬度（使用 DOM span，支援中文字型 fallback）──────────────────────
-function measureTextWidth(text: string, font = '14px "Public Sans", "Noto Sans JP", sans-serif'): number {
-  let el = (measureTextWidth as any)._el as HTMLSpanElement | undefined;
-  if (!el) {
-    el = document.createElement('span');
-    el.style.position = 'absolute';
-    el.style.visibility = 'hidden';
-    el.style.whiteSpace = 'nowrap';
-    el.style.left = '-9999px';
-    el.style.top = '-9999px';
-    document.body.appendChild(el);
-    (measureTextWidth as any)._el = el;
-  }
-  el.style.font = font;
-  el.textContent = text;
-  return el.offsetWidth;
-}
-
-function DraggableColHeader({
-  col, index, moveCol, updateWidth, autoFitWidth, sortConfig, onSort, isLast,
-}: {
-  col: ShipCol; index: number;
-  moveCol: (drag: ShipColKey, hover: ShipColKey) => void;
-  updateWidth: (key: ShipColKey, w: number) => void;
-  autoFitWidth: (key: ShipColKey) => void;
-  sortConfig: { key: ShipColKey | null; dir: 'asc' | 'desc' | null };
-  onSort: (key: ShipColKey) => void;
-  isLast?: boolean;
-}) {
-  const [hovered, setHovered] = useState(false);
-
-  // ── 自製 resize drag ──
-  const [resizing, setResizing] = useState(false);
-  const resizeStartX = useRef(0);
-  const resizeStartW = useRef(0);
-
-  useEffect(() => {
-    if (!resizing) return;
-    const onMove = (e: MouseEvent) => {
-      const diff = e.clientX - resizeStartX.current;
-      const newW = Math.max(col.minWidth, resizeStartW.current + diff);
-      updateWidth(col.key, newW);
-    };
-    const onUp = () => setResizing(false);
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
-    return () => {
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-    };
-  }, [resizing, col.minWidth, col.key, updateWidth]);
-
-  const [{ isDragging }, drag] = useDrag({
-    type: DRAG_TYPE,
-    item: () => ({ key: col.key, index }),
-    collect: m => ({ isDragging: m.isDragging() }),
-  });
-  const [, drop] = useDrop({
-    accept: DRAG_TYPE,
-    hover: (item: { key: ShipColKey; index: number }) => {
-      if (item.index !== index) { moveCol(item.key, col.key); item.index = index; }
-    },
-  });
-  const isSorted = sortConfig.key === col.key;
-  return (
-    <div
-      className={`relative bg-[#f4f6f8] shrink-0 ${isLast ? '' : 'border-r border-[rgba(145,158,171,0.08)]'}`}
-      style={{ width: col.width, height: 56 }}
-    >
-      <div
-        ref={node => drag(drop(node)) as any}
-        className={`h-full flex items-center px-[16px] cursor-pointer select-none ${isDragging ? 'opacity-50' : ''}`}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-        onClick={() => onSort(col.key)}
-      >
-        {hovered && (
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="mr-[6px] shrink-0">
-            <circle cx="5" cy="3" r="1.5" fill="#919EAB" /><circle cx="11" cy="3" r="1.5" fill="#919EAB" />
-            <circle cx="5" cy="8" r="1.5" fill="#919EAB" /><circle cx="11" cy="8" r="1.5" fill="#919EAB" />
-            <circle cx="5" cy="13" r="1.5" fill="#919EAB" /><circle cx="11" cy="13" r="1.5" fill="#919EAB" />
-          </svg>
-        )}
-        <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[24px] text-[#637381] text-[14px] whitespace-nowrap truncate">
-          {col.label}
-        </p>
-        {isSorted && (
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="ml-[6px] shrink-0">
-            {sortConfig.dir === 'asc'
-              ? <path d="M8 3L12 7H4L8 3Z" fill="#637381" />
-              : <path d="M8 13L4 9H12L8 13Z" fill="#637381" />}
-          </svg>
-        )}
-      </div>
-      {!isLast && (
-        <div
-          className="absolute right-0 top-0 bottom-0 w-[8px] cursor-col-resize hover:bg-[#1D7BF5] hover:bg-opacity-20 z-10 group transition-colors"
-          onMouseDown={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            if (e.detail >= 2) {
-              autoFitWidth(col.key);
-              return;
-            }
-            setResizing(true);
-            resizeStartX.current = e.clientX;
-            resizeStartW.current = col.width;
-          }}
-          title="拖拽調整欄位寬度；雙擊自動最適欄寬"
-        >
-          <div className="absolute right-[3px] top-0 bottom-0 w-[2px] bg-transparent group-hover:bg-[#1D7BF5] transition-colors" />
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ── Cell 渲染 ─────────────────────────────────────────────────────────────────
 
@@ -1111,12 +989,14 @@ export function ShipmentListPage() {
               </div>
               {/* 一般欄 DnD */}
               {visibleColumns.map((col, idx) => (
-                <DraggableColHeader
-                  key={col.key} col={col} index={idx}
-                  moveCol={moveCol} updateWidth={updateWidth} autoFitWidth={autoFitWidth}
-                  sortConfig={sortConfig}
-                  onSort={(key) => setSortConfig(s => ({ key, dir: s.key === key && s.dir === 'asc' ? 'desc' : 'asc' }))}
+                <DraggableColumnHeader
+                  key={col.key} column={col} index={idx}
+                  moveColumn={moveCol} updateColumnWidth={updateWidth} autoFitWidth={autoFitWidth}
+                  sortConfig={{ key: sortConfig.key, direction: sortConfig.dir }}
+                  onSort={(key) => setSortConfig(s => ({ key: key as any, dir: s.key === key && s.dir === 'asc' ? 'desc' : 'asc' }))}
                   isLast={idx === visibleColumns.length - 1}
+                  isFiltered={!!appliedFilters?.some(f => f.column === col.key)}
+                  dragType="shipment-col"
                 />
               ))}
               <div className="flex-1 bg-[#f4f6f8] min-w-0" />
