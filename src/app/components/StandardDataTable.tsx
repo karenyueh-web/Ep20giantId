@@ -30,24 +30,10 @@ import { TableToolbar } from './TableToolbar';
 import { ColumnSelector } from './ColumnSelector';
 import { FilterDialog, type FilterCondition } from './FilterDialog';
 import { PaginationControls } from './PaginationControls';
+import { DraggableColumnHeader } from './table/DraggableColumnHeader';
+import { measureTextWidth } from './table/tableUtils';
 
-// ── 測量文字寬度（使用 DOM span，支援中文字型 fallback）──────────────────────
-function measureTextWidth(text: string, font = '14px "Public Sans", "Noto Sans JP", sans-serif'): number {
-  let el = (measureTextWidth as any)._el as HTMLSpanElement | undefined;
-  if (!el) {
-    el = document.createElement('span');
-    el.style.position = 'absolute';
-    el.style.visibility = 'hidden';
-    el.style.whiteSpace = 'nowrap';
-    el.style.left = '-9999px';
-    el.style.top = '-9999px';
-    document.body.appendChild(el);
-    (measureTextWidth as any)._el = el;
-  }
-  el.style.font = font;
-  el.textContent = text;
-  return el.offsetWidth;
-}
+
 
 // ── 泛型欄位定義 ──────────────────────────────────────────────────────────────
 export interface StandardColumn<T = Record<string, unknown>> {
@@ -94,125 +80,9 @@ export interface StandardDataTableProps<T extends { id: number }> {
   onRowClick?: (row: T) => void;
 }
 
-// ── 欄位拖拉型別 ──────────────────────────────────────────────────────────────
-const DRAG_TYPE = 'std-col';
 
-// ── 可拖拉排序的表頭欄 ────────────────────────────────────────────────────────
-function DraggableColHeader<T extends { id: number }>({
-  col, index, moveCol, updateWidth, autoFitWidth, sortConfig, onSort, isLast, isFiltered,
-}: {
-  col: StandardColumn<T>;
-  index: number;
-  moveCol: (drag: string, hover: string) => void;
-  updateWidth: (key: string, w: number) => void;
-  autoFitWidth: (key: string) => void;
-  sortConfig: { key: string | null; dir: 'asc' | 'desc' | null };
-  onSort: (key: string) => void;
-  isLast?: boolean;
-  isFiltered?: boolean;
-}) {
-  const [hovered, setHovered] = useState(false);
 
-  // ── 自製 resize drag（與 ResizableTable 相同的模式Ⲁ可靠且支持 dblclick）──
-  const [resizing, setResizing] = useState(false);
-  const resizeStartX = useRef(0);
-  const resizeStartW = useRef(0);
 
-  useEffect(() => {
-    if (!resizing) return;
-    const onMove = (e: MouseEvent) => {
-      const diff = e.clientX - resizeStartX.current;
-      const newW = Math.max(col.minWidth, resizeStartW.current + diff);
-      updateWidth(col.key, newW);
-    };
-    const onUp = () => setResizing(false);
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
-    return () => {
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-    };
-  }, [resizing, col.minWidth, col.key, updateWidth]);
-
-  const [{ isDragging }, drag] = useDrag({
-    type: DRAG_TYPE,
-    item: () => ({ key: col.key, index }),
-    collect: m => ({ isDragging: m.isDragging() }),
-  });
-
-  const [, drop] = useDrop({
-    accept: DRAG_TYPE,
-    hover: (item: { key: string; index: number }) => {
-      if (item.index !== index) {
-        moveCol(item.key, col.key);
-        item.index = index;
-      }
-    },
-  });
-
-  const isSorted = sortConfig.key === col.key;
-
-  return (
-    <div
-      className={`relative shrink-0 ${isFiltered ? 'bg-[#fff8e1]' : 'bg-[#f4f6f8]'} ${isLast ? '' : 'border-r border-[rgba(145,158,171,0.08)]'}`}
-      style={{ width: col.width, height: 56 }}
-    >
-      {/* 可拖拽排序的內容區 */}
-      <div
-        ref={node => drag(drop(node)) as unknown as void}
-        className={`h-full flex items-center px-[16px] cursor-pointer select-none ${isDragging ? 'opacity-50' : ''}`}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-        onClick={() => onSort(col.key)}
-      >
-        {/* 6-dot drag handle（hover 顯示） */}
-        {hovered && (
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="mr-[6px] shrink-0">
-            <circle cx="5" cy="3" r="1.5" fill="#919EAB" /><circle cx="11" cy="3" r="1.5" fill="#919EAB" />
-            <circle cx="5" cy="8" r="1.5" fill="#919EAB" /><circle cx="11" cy="8" r="1.5" fill="#919EAB" />
-            <circle cx="5" cy="13" r="1.5" fill="#919EAB" /><circle cx="11" cy="13" r="1.5" fill="#919EAB" />
-          </svg>
-        )}
-        <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[24px] text-[#637381] text-[14px] whitespace-nowrap truncate">
-          {col.label}
-        </p>
-        {/* 排序箭頭 */}
-        {isSorted && (
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="ml-[6px] shrink-0">
-            {sortConfig.dir === 'asc'
-              ? <path d="M8 3L12 7H4L8 3Z" fill="#637381" />
-              : <path d="M8 13L4 9H12L8 13Z" fill="#637381" />}
-          </svg>
-        )}
-      </div>
-      {/* 欄寬調整 handle：拖拽調寬 或 雙擊自動最適 */}
-      {!isLast && (
-        <div
-          className="absolute right-0 top-0 bottom-0 w-[8px] cursor-col-resize hover:bg-[#1D7BF5] hover:bg-opacity-20 z-10 group transition-colors"
-          onMouseDown={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            if (e.detail >= 2) {
-              // 第二次 mousedown（雙擊的一部分）→ 自動最適
-              autoFitWidth(col.key);
-              return;
-            }
-            setResizing(true);
-            resizeStartX.current = e.clientX;
-            resizeStartW.current = col.width;
-          }}
-          title="拖拽調整欄位寬度；雙擊自動最適欄寬"
-        >
-          <div className="absolute right-[3px] top-0 bottom-0 w-[2px] bg-transparent group-hover:bg-[#1D7BF5] transition-colors" />
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ── 主元件 ────────────────────────────────────────────────────────────────────
 const CHECKBOX_COL_W = 52;
@@ -512,17 +382,18 @@ export function StandardDataTable<T extends { id: number }>({
               )}
               {/* 可拖拉欄位（一般欄） */}
               {normalVisibleCols.map((col, idx) => (
-                <DraggableColHeader
+                <DraggableColumnHeader
                   key={col.key}
-                  col={col}
+                  column={col}
                   index={idx}
-                  moveCol={moveCol}
-                  updateWidth={updateWidth}
+                  moveColumn={moveCol}
+                  updateColumnWidth={updateWidth}
                   autoFitWidth={autoFitWidth}
-                  sortConfig={sortConfig}
+                  sortConfig={{ key: sortConfig.key, direction: sortConfig.dir }}
                   onSort={handleSort}
                   isLast={idx === normalVisibleCols.length - 1}
                   isFiltered={!!appliedFilters?.some(f => f.column === col.key)}
+                  dragType="std-col"
                 />
               ))}
               <div className="flex-1 bg-[#f4f6f8] min-w-0" />
