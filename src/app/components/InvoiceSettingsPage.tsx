@@ -7,6 +7,7 @@
  */
 
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { useHorizontalDragScroll } from './useHorizontalDragScroll';
@@ -651,6 +652,7 @@ function DeadlineTab() {
 
   // 日期選擇器狀態
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [pickerPos, setPickerPos] = useState<{ top: number; left: number } | null>(null);
   const [deadlineData, setDeadlineData] = useState<DeadlineRecord[]>(DEADLINE_DATA);
   const datePickerRef = useRef<HTMLDivElement>(null);
 
@@ -672,6 +674,7 @@ function DeadlineTab() {
     const handler = (e: MouseEvent) => {
       if (datePickerRef.current && !datePickerRef.current.contains(e.target as Node)) {
         setEditingId(null);
+        setPickerPos(null);
       }
     };
     document.addEventListener('mousedown', handler);
@@ -818,24 +821,27 @@ function DeadlineTab() {
   const renderCell = (col: ColDef<DeadlineRecord>, row: DeadlineRecord, isEditing: boolean, rowIdx: number) => {
     if (col.key === 'deadline') {
       return (
-        <div className="relative" ref={isEditing ? datePickerRef : undefined}>
+        <div ref={isEditing ? datePickerRef : undefined}>
           <button
             className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] text-[#1677ff] underline hover:text-[#0958d9] transition-colors cursor-pointer"
-            onClick={() => setEditingId(isEditing ? null : row.id)}
+            onClick={(e) => {
+              if (isEditing) {
+                setEditingId(null);
+                setPickerPos(null);
+              } else {
+                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                const PICKER_HEIGHT = 320; // SimpleDatePicker 大約高度
+                const spaceBelow = window.innerHeight - rect.bottom;
+                const top = spaceBelow >= PICKER_HEIGHT
+                  ? rect.bottom + 4          // 下方空間足夠 → 向下展開
+                  : rect.top - PICKER_HEIGHT - 4; // 下方不足 → 向上展開
+                setPickerPos({ top, left: rect.left });
+                setEditingId(row.id);
+              }
+            }}
           >
             {row.deadline || '—'}
           </button>
-          {isEditing && (
-            <div
-              className="absolute z-50"
-              style={{ top: 40, left: 0 }}
-            >
-              <SimpleDatePicker
-                selectedDate={row.deadline}
-                onDateSelect={(date) => handleDateSelect(row.id, date)}
-              />
-            </div>
-          )}
         </div>
       );
     }
@@ -978,6 +984,21 @@ function DeadlineTab() {
           onItemsPerPageChange={n => { setPerPage(n); setPage(1); }}
         />
       </div>
+
+      {/* 日期選擇器 Portal：渲染到 document.body，避免 overflow-hidden 截斷 */}
+      {editingId !== null && pickerPos && createPortal(
+        <div
+          ref={datePickerRef}
+          className="fixed z-[9999]"
+          style={{ top: pickerPos.top, left: pickerPos.left }}
+        >
+          <SimpleDatePicker
+            selectedDate={deadlineData.find(r => r.id === editingId)?.deadline ?? ''}
+            onDateSelect={(date) => handleDateSelect(editingId, date)}
+          />
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

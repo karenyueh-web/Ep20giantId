@@ -525,6 +525,31 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
     try { localStorage.setItem(getDocNoWidthKey(), String(docNoWidth)); } catch { /* ignore */ }
   }, [docNoWidth, getDocNoWidthKey]);
 
+  // ── 修正單號欄寬拖曳調整 ─────────────────────────────────────────────────
+  const [docNoResizing, setDocNoResizing] = useState(false);
+  const docNoResizeStartX = useRef(0);
+  const docNoResizeStartW = useRef(docNoWidth);
+
+  useEffect(() => {
+    if (!docNoResizing) return;
+    const onMove = (e: MouseEvent) => {
+      const diff = e.clientX - docNoResizeStartX.current;
+      const newW = Math.max(80, docNoResizeStartW.current + diff);
+      setDocNoWidth(newW);
+    };
+    const onUp = () => setDocNoResizing(false);
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    return () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [docNoResizing]);
+
   // ── Horizontal drag scroll ─────────────────────────────────────────────────
   const { scrollContainerRef, handleMouseDown, canDragScroll } = useHorizontalDragScroll();
 
@@ -1584,7 +1609,7 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
     const headerW = measureTextWidth(labelText, '600 14px "Public Sans", "Noto Sans JP", sans-serif') + 32 + 16;
     let maxDataW = 0;
     try {
-      (rows || []).forEach((row: any) => {
+      (sortedOrders || []).forEach((row: any) => {
         const raw = String(row[key] ?? '');
         const w = measureTextWidth(raw, '14px "Public Sans", "Noto Sans JP", sans-serif') + 32;
         if (w > maxDataW) maxDataW = w;
@@ -1707,10 +1732,10 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
                       <CheckboxIcon checked={isAllSelected} onClick={toggleAll} />
                     )}
                   </div>
-                  {/* 修正單號 header — 支援欄寬拖曳調整 */}
+                  {/* 修正單號 header — 支援欄寬拖曳調整（sticky 欄，非 DraggableColumnHeader） */}
                   <div
-                    className={`relative bg-[#f4f6f8] shrink-0 ${isLast ? '' : 'border-r border-[rgba(145,158,171,0.08)]'}`}
-                    style={{ width: column.width, height: 56 }}
+                    className="relative bg-[#f4f6f8] shrink-0 border-r border-[rgba(145,158,171,0.08)]"
+                    style={{ width: docNoWidth, height: 56 }}
                   >
                     <div
                       className="h-full flex items-center justify-start px-[16px] cursor-pointer select-none"
@@ -1728,25 +1753,23 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
                       )}
                     </div>
                     {/* 欄寬調整 handle：拖拽調寬 或 雙擊自動最適 */}
-                    {!isLast && (
-                      <div
-                        className="absolute right-0 top-0 bottom-0 w-[8px] cursor-col-resize hover:bg-[#1D7BF5] hover:bg-opacity-20 z-10 group transition-colors"
-                        onMouseDown={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          if (e.detail >= 2) {
-                            autoFitWidth(column.key);
-                            return;
-                          }
-                          setResizing(true);
-                          resizeStartX.current = e.clientX;
-                          resizeStartW.current = column.width;
-                        }}
-                        title="拖拽調整欄位寬度；雙擊自動最適欄寬"
-                      >
-                        <div className="absolute right-[3px] top-0 bottom-0 w-[2px] bg-transparent group-hover:bg-[#1D7BF5] transition-colors" />
-                      </div>
-                    )}
+                    <div
+                      className="absolute right-0 top-0 bottom-0 w-[8px] cursor-col-resize hover:bg-[#1D7BF5] hover:bg-opacity-20 z-10 group transition-colors"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (e.detail >= 2) {
+                          autoFitWidth('correctionDocNo');
+                          return;
+                        }
+                        setDocNoResizing(true);
+                        docNoResizeStartX.current = e.clientX;
+                        docNoResizeStartW.current = docNoWidth;
+                      }}
+                      title="拖拽調整欄位寬度；雙擊自動最適欄寬"
+                    >
+                      <div className="absolute right-[3px] top-0 bottom-0 w-[2px] bg-transparent group-hover:bg-[#1D7BF5] transition-colors" />
+                    </div>
                   </div>
                   {visibleColumns.map((col, idx) => (
                     <DraggableColumnHeader
