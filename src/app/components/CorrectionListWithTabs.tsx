@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect , useRef } from 'react';
+﻿import { useState, useMemo, useCallback, useEffect , useRef } from 'react';
 import type React from 'react';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -19,12 +19,14 @@ import { useHorizontalDragScroll } from './useHorizontalDragScroll';
 import { exportOrdersExcel, exportOrdersCsv } from './OrderCsvManager';
 import { CheckboxIcon } from './CheckboxIcon';
 import svgTrash from '@/imports/svg-g29eakwhmm';
+import { DraggableColumnHeader } from './table/DraggableColumnHeader';
+import { measureTextWidth } from './table/tableUtils';
 
-// ─── 常數 ─────────────────────────────────────────────────────────────────────
+// ??? 撣豢 ?????????????????????????????????????????????????????????????????????
 const DOCNO_COL_WIDTH = 120;
 const ACTION_COL_WIDTH = 148;
 
-// ─── Column 定義 ─────────────────────────────────────────────────────────────
+// ??? Column 摰儔 ?????????????????????????????????????????????????????????????
 export type CorrectionColumnKey =
   | 'vendorName' | 'purchaseOrg' | 'correctionStatus' | 'correctionDocNo'
   | 'correctionType' | 'orderNo' | 'orderSeq' | 'materialNo' | 'productName'
@@ -39,41 +41,41 @@ export interface CorrectionColumn {
 }
 
 export const defaultCorrectionColumns: CorrectionColumn[] = [
-  { key: 'vendorName',        label: '廠商(編號)',             width: 200, minWidth: 120 },
-  { key: 'purchaseOrg',       label: '採購組織',               width: 110, minWidth: 80 },
-  { key: 'correctionStatus',  label: '修正單狀態',             width: 100, minWidth: 80 },
-  { key: 'correctionType',    label: '修正類型',               width: 110, minWidth: 80 },
-  { key: 'orderNo',           label: '訂單號碼',               width: 120, minWidth: 100 },
-  { key: 'orderSeq',          label: '訂單序號',               width: 80,  minWidth: 60 },
-  { key: 'materialNo',        label: '料號',                   width: 160, minWidth: 100 },
-  { key: 'productName',       label: '品名',                   width: 180, minWidth: 100 },
-  { key: 'orderDate',         label: '訂單日期',               width: 110, minWidth: 90 },
-  { key: 'acceptQty',         label: '驗收量',                 width: 90,  minWidth: 60 },
-  { key: 'orderQty',          label: '訂貨量',                 width: 90,  minWidth: 60 },
-  { key: 'company',           label: '公司',                   width: 110, minWidth: 80 },
-  { key: 'createdAt',         label: '開立時間',               width: 140, minWidth: 100 },
+  { key: 'vendorName',        label: '撱?(蝺刻?)',             width: 200, minWidth: 120 },
+  { key: 'purchaseOrg',       label: '?∟頃蝯?',               width: 110, minWidth: 80 },
+  { key: 'correctionStatus',  label: '靽格迤?桃???,             width: 100, minWidth: 80 },
+  { key: 'correctionType',    label: '靽格迤憿?',               width: 110, minWidth: 80 },
+  { key: 'orderNo',           label: '閮?Ⅳ',               width: 120, minWidth: 100 },
+  { key: 'orderSeq',          label: '閮摨?',               width: 80,  minWidth: 60 },
+  { key: 'materialNo',        label: '??',                   width: 160, minWidth: 100 },
+  { key: 'productName',       label: '??',                   width: 180, minWidth: 100 },
+  { key: 'orderDate',         label: '閮?交?',               width: 110, minWidth: 90 },
+  { key: 'acceptQty',         label: '撽??,                 width: 90,  minWidth: 60 },
+  { key: 'orderQty',          label: '閮疏??,                 width: 90,  minWidth: 60 },
+  { key: 'company',           label: '?砍',                   width: 110, minWidth: 80 },
+  { key: 'createdAt',         label: '????',               width: 140, minWidth: 100 },
 ];
 
 export function getCorrectionColumns(): CorrectionColumn[] {
   return defaultCorrectionColumns.map(c => ({ ...c }));
 }
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
+// ??? Mock Data ????????????????????????????????????????????????????????????????
 const correctionMockData: CorrectionOrderRow[] = [
-  { id: 80001, correctionDocNo: '202603080004', correctionStatus: 'DR', correctionType: '不拆單', orderNo: '400649723', orderSeq: '10', docSeqNo: '40064972310', vendorCode: '0001000734', vendorName: 'SHIMANOSIC(0001000734)', purchaseOrg: 'GEM採購組織', materialNo: '1129-CSL0075-L01', productName: '碳纖維座管', orderDate: '2024/12/25', orderQty: 100, acceptQty: 0, company: '巨大機械', createdAt: '2026/03/08 10:20' },
-  { id: 80002, correctionDocNo: '202603080005', correctionStatus: 'DR', correctionType: '不拆單', orderNo: '400649723', orderSeq: '10', docSeqNo: '40064972310', vendorCode: '0001000734', vendorName: 'SHIMANOSIC(0001000734)', purchaseOrg: 'GEM採購組織', materialNo: '1129-CSL0075-L01', productName: '碳纖維座管', orderDate: '2024/12/25', orderQty: 100, acceptQty: 0, company: '巨大機械', createdAt: '2026/03/08 11:05' },
-  { id: 80003, correctionDocNo: '202603080006', correctionStatus: 'DR', correctionType: '不拆單', orderNo: '400649723', orderSeq: '10', docSeqNo: '40064972310', vendorCode: '0001000734', vendorName: 'SHIMANOSIC(0001000734)', purchaseOrg: 'GEM採購組織', materialNo: '1129-CSL0075-L01', productName: '碳纖維座管', orderDate: '2024/12/25', orderQty: 100, acceptQty: 0, company: '巨大機械', createdAt: '2026/03/08 11:30' },
-  { id: 80004, correctionDocNo: '202603090007', correctionStatus: 'V', correctionType: '不拆單', orderNo: '400649801', orderSeq: '10', docSeqNo: '40064980110', vendorCode: '00010046', vendorName: '速聯國際(00010046)', purchaseOrg: 'GEM採購組織', materialNo: '2101-CHN0099-A01', productName: '12速鏈條', orderDate: '2025/03/05', orderQty: 300, acceptQty: 300, company: '巨大機械', createdAt: '2026/03/09 09:00' },
-  { id: 80005, correctionDocNo: '202603090008', correctionStatus: 'V', correctionType: '不拆單', orderNo: '400649802', orderSeq: '20', docSeqNo: '40064980220', vendorCode: '00010053', vendorName: '久廣精密(00010053)', purchaseOrg: 'GEM採購組織', materialNo: '3301-FRK0055-B01', productName: '碳纖維前叉-D型', orderDate: '2025/03/08', orderQty: 150, acceptQty: 150, company: '巨大機械', createdAt: '2026/03/09 09:15' },
-  { id: 80006, correctionDocNo: '202603090009', correctionStatus: 'V', correctionType: '不拆單', orderNo: '400649803', orderSeq: '30', docSeqNo: '40064980330', vendorCode: '00010059', vendorName: '金盛元工業(00010059)', purchaseOrg: 'GEM採購組織', materialNo: '4401-GRP0022-C01', productName: '競速握把套', orderDate: '2025/03/10', orderQty: 400, acceptQty: 0, company: '巨大機械', createdAt: '2026/03/09 10:00' },
-  { id: 80007, correctionDocNo: '202603090010', correctionStatus: 'B', correctionType: '不拆單', orderNo: '400649804', orderSeq: '40', docSeqNo: '40064980440', vendorCode: '00010045', vendorName: '佳承精密(00010045)', purchaseOrg: 'GEM採購組織', materialNo: '5501-WHL0088-D01', productName: '碟煞輪組後輪', orderDate: '2025/03/12', orderQty: 80, acceptQty: 0, company: '巨大機械', createdAt: '2026/03/09 14:00' },
-  { id: 80008, correctionDocNo: '202603090011', correctionStatus: 'B', correctionType: '不拆單', orderNo: '400649805', orderSeq: '50', docSeqNo: '40064980550', vendorCode: '00010012', vendorName: '台灣製造(00010012)', purchaseOrg: 'GEM採購組織', materialNo: '6601-BRK0044-E01', productName: '後碟煞系統', orderDate: '2025/03/15', orderQty: 200, acceptQty: 0, company: '巨大機械', createdAt: '2026/03/09 15:00' },
-  { id: 80009, correctionDocNo: '202603070003', correctionStatus: 'CP', correctionType: '不拆單', orderNo: '400649808', orderSeq: '10', docSeqNo: '40064980810', vendorCode: '00010046', vendorName: '速聯國際(00010046)', purchaseOrg: 'GEM採購組織', materialNo: '9901-STM0033-H01', productName: '鋁合金龍頭', orderDate: '2025/02/20', orderQty: 250, acceptQty: 250, company: '巨大機械', createdAt: '2026/03/07 16:00' },
-  { id: 80010, correctionDocNo: '202603050002', correctionStatus: 'SS', correctionType: '不拆單', orderNo: '400649806', orderSeq: '60', docSeqNo: '40064980660', vendorCode: '00010046', vendorName: '速聯國際(00010046)', purchaseOrg: 'GEM採購組織', materialNo: '7701-NIP0011-F01', productName: '鋁合金花鼓螺絲', orderDate: '2025/03/18', orderQty: 500, acceptQty: 0, company: '巨大機械', createdAt: '2026/03/05 08:30' },
-  { id: 80012, correctionDocNo: '202603140012', correctionStatus: 'DR', correctionType: '拆單', orderNo: '400649808', orderSeq: '80', docSeqNo: '40064980880', vendorCode: '00010059', vendorName: '金盛元工業(00010059)', purchaseOrg: 'GEM採購組織', materialNo: '9901-DRL0066-H01', productName: '碳纖維後撥鏈器', orderDate: '2025/03/22', orderQty: 480, acceptQty: 120, company: '巨大機械', createdAt: '2026/03/14 09:30', savedDeliveryRows: [{ expectedDelivery: '2025/07/02', vendorOriginalDate: '2025/07/02', newVendorDate: '2025/07/02', originalQty: 480, newQty: '200', splitOrderSeq: '80', splitNewMaterialNo: '' }, { expectedDelivery: '2025/07/02', vendorOriginalDate: '2025/07/02', newVendorDate: '2025/07/15', originalQty: 480, newQty: '280', splitOrderSeq: '90', splitNewMaterialNo: '' }], savedPeriodInput: '2' },
+  { id: 80001, correctionDocNo: '202603080004', correctionStatus: 'DR', correctionType: '銝???, orderNo: '400649723', orderSeq: '10', docSeqNo: '40064972310', vendorCode: '0001000734', vendorName: 'SHIMANOSIC(0001000734)', purchaseOrg: 'GEM?∟頃蝯?', materialNo: '1129-CSL0075-L01', productName: '蝣喟?蝬剖漣蝞?, orderDate: '2024/12/25', orderQty: 100, acceptQty: 0, company: '撌典之璈１', createdAt: '2026/03/08 10:20' },
+  { id: 80002, correctionDocNo: '202603080005', correctionStatus: 'DR', correctionType: '銝???, orderNo: '400649723', orderSeq: '10', docSeqNo: '40064972310', vendorCode: '0001000734', vendorName: 'SHIMANOSIC(0001000734)', purchaseOrg: 'GEM?∟頃蝯?', materialNo: '1129-CSL0075-L01', productName: '蝣喟?蝬剖漣蝞?, orderDate: '2024/12/25', orderQty: 100, acceptQty: 0, company: '撌典之璈１', createdAt: '2026/03/08 11:05' },
+  { id: 80003, correctionDocNo: '202603080006', correctionStatus: 'DR', correctionType: '銝???, orderNo: '400649723', orderSeq: '10', docSeqNo: '40064972310', vendorCode: '0001000734', vendorName: 'SHIMANOSIC(0001000734)', purchaseOrg: 'GEM?∟頃蝯?', materialNo: '1129-CSL0075-L01', productName: '蝣喟?蝬剖漣蝞?, orderDate: '2024/12/25', orderQty: 100, acceptQty: 0, company: '撌典之璈１', createdAt: '2026/03/08 11:30' },
+  { id: 80004, correctionDocNo: '202603090007', correctionStatus: 'V', correctionType: '銝???, orderNo: '400649801', orderSeq: '10', docSeqNo: '40064980110', vendorCode: '00010046', vendorName: '???(00010046)', purchaseOrg: 'GEM?∟頃蝯?', materialNo: '2101-CHN0099-A01', productName: '12??璇?, orderDate: '2025/03/05', orderQty: 300, acceptQty: 300, company: '撌典之璈１', createdAt: '2026/03/09 09:00' },
+  { id: 80005, correctionDocNo: '202603090008', correctionStatus: 'V', correctionType: '銝???, orderNo: '400649802', orderSeq: '20', docSeqNo: '40064980220', vendorCode: '00010053', vendorName: '銋誨蝎曉?(00010053)', purchaseOrg: 'GEM?∟頃蝯?', materialNo: '3301-FRK0055-B01', productName: '蝣喟?蝬剖???D??, orderDate: '2025/03/08', orderQty: 150, acceptQty: 150, company: '撌典之璈１', createdAt: '2026/03/09 09:15' },
+  { id: 80006, correctionDocNo: '202603090009', correctionStatus: 'V', correctionType: '銝???, orderNo: '400649803', orderSeq: '30', docSeqNo: '40064980330', vendorCode: '00010059', vendorName: '???極璆?00010059)', purchaseOrg: 'GEM?∟頃蝯?', materialNo: '4401-GRP0022-C01', productName: '蝡園??', orderDate: '2025/03/10', orderQty: 400, acceptQty: 0, company: '撌典之璈１', createdAt: '2026/03/09 10:00' },
+  { id: 80007, correctionDocNo: '202603090010', correctionStatus: 'B', correctionType: '銝???, orderNo: '400649804', orderSeq: '40', docSeqNo: '40064980440', vendorCode: '00010045', vendorName: '雿單蝎曉?(00010045)', purchaseOrg: 'GEM?∟頃蝯?', materialNo: '5501-WHL0088-D01', productName: '蝣?頛芰?敺憚', orderDate: '2025/03/12', orderQty: 80, acceptQty: 0, company: '撌典之璈１', createdAt: '2026/03/09 14:00' },
+  { id: 80008, correctionDocNo: '202603090011', correctionStatus: 'B', correctionType: '銝???, orderNo: '400649805', orderSeq: '50', docSeqNo: '40064980550', vendorCode: '00010012', vendorName: '?啁鋆賡?00010012)', purchaseOrg: 'GEM?∟頃蝯?', materialNo: '6601-BRK0044-E01', productName: '敺??頂蝯?, orderDate: '2025/03/15', orderQty: 200, acceptQty: 0, company: '撌典之璈１', createdAt: '2026/03/09 15:00' },
+  { id: 80009, correctionDocNo: '202603070003', correctionStatus: 'CP', correctionType: '銝???, orderNo: '400649808', orderSeq: '10', docSeqNo: '40064980810', vendorCode: '00010046', vendorName: '???(00010046)', purchaseOrg: 'GEM?∟頃蝯?', materialNo: '9901-STM0033-H01', productName: '??????, orderDate: '2025/02/20', orderQty: 250, acceptQty: 250, company: '撌典之璈１', createdAt: '2026/03/07 16:00' },
+  { id: 80010, correctionDocNo: '202603050002', correctionStatus: 'SS', correctionType: '銝???, orderNo: '400649806', orderSeq: '60', docSeqNo: '40064980660', vendorCode: '00010046', vendorName: '???(00010046)', purchaseOrg: 'GEM?∟頃蝯?', materialNo: '7701-NIP0011-F01', productName: '???曌蝯?, orderDate: '2025/03/18', orderQty: 500, acceptQty: 0, company: '撌典之璈１', createdAt: '2026/03/05 08:30' },
+  { id: 80012, correctionDocNo: '202603140012', correctionStatus: 'DR', correctionType: '?', orderNo: '400649808', orderSeq: '80', docSeqNo: '40064980880', vendorCode: '00010059', vendorName: '???極璆?00010059)', purchaseOrg: 'GEM?∟頃蝯?', materialNo: '9901-DRL0066-H01', productName: '蝣喟?蝬剖??仿???, orderDate: '2025/03/22', orderQty: 480, acceptQty: 120, company: '撌典之璈１', createdAt: '2026/03/14 09:30', savedDeliveryRows: [{ expectedDelivery: '2025/07/02', vendorOriginalDate: '2025/07/02', newVendorDate: '2025/07/02', originalQty: 480, newQty: '200', splitOrderSeq: '80', splitNewMaterialNo: '' }, { expectedDelivery: '2025/07/02', vendorOriginalDate: '2025/07/02', newVendorDate: '2025/07/15', originalQty: 480, newQty: '280', splitOrderSeq: '90', splitNewMaterialNo: '' }], savedPeriodInput: '2' },
 ];
 
-// ─── Tab 定義 ─────────────────────────────────────────────────────────────────
+// ??? Tab 摰儔 ?????????????????????????????????????????????????????????????????
 type TabKey = 'ALL' | 'CK' | CorrectionStatus;
 
 interface TabDef {
@@ -87,46 +89,44 @@ interface TabDef {
 
 const tabs: TabDef[] = [
   { key: 'ALL', label: 'All' },
-  { key: 'DR', label: '草稿(DR)', activeBadgeBg: 'bg-[rgba(255,171,0,0.16)]', activeBadgeText: 'text-[#b76e00]', statusBg: 'bg-[rgba(255,171,0,0.16)]', statusText: 'text-[#b76e00]' },
-  { key: 'V',  label: '廠商確認中(V)', activeBadgeBg: 'bg-[rgba(0,184,217,0.16)]', activeBadgeText: 'text-[#006c9c]', statusBg: 'bg-[rgba(0,94,184,0.16)]', statusText: 'text-[#00559c]' },
-  { key: 'B',  label: '採購確認中(B)', activeBadgeBg: 'bg-[rgba(142,51,255,0.16)]', activeBadgeText: 'text-[#5119b7]', statusBg: 'bg-[rgba(142,51,255,0.16)]', statusText: 'text-[#5119b7]' },
-  { key: 'CP', label: '單據已確認，資料處理中(CP)', activeBadgeBg: 'bg-[rgba(0,184,217,0.16)]', activeBadgeText: 'text-[#006c9c]', statusBg: 'bg-[rgba(0,184,217,0.16)]', statusText: 'text-[#006c9c]' },
-  { key: 'SS', label: '修正通過(SS)', activeBadgeBg: 'bg-[rgba(34,197,94,0.16)]', activeBadgeText: 'text-[#118d57]', statusBg: 'bg-[rgba(34,197,94,0.16)]', statusText: 'text-[#118d57]' },
-  { key: 'CL', label: '單據結案(CL)', activeBadgeBg: 'bg-[rgba(145,158,171,0.16)]', activeBadgeText: 'text-[#637381]', statusBg: 'bg-[rgba(145,158,171,0.16)]', statusText: 'text-[#637381]' },
+  { key: 'DR', label: '?阮(DR)', activeBadgeBg: 'bg-[rgba(255,171,0,0.16)]', activeBadgeText: 'text-[#b76e00]', statusBg: 'bg-[rgba(255,171,0,0.16)]', statusText: 'text-[#b76e00]' },
+  { key: 'V',  label: '撱?蝣箄?銝?V)', activeBadgeBg: 'bg-[rgba(0,184,217,0.16)]', activeBadgeText: 'text-[#006c9c]', statusBg: 'bg-[rgba(0,94,184,0.16)]', statusText: 'text-[#00559c]' },
+  { key: 'B',  label: '?∟頃蝣箄?銝?B)', activeBadgeBg: 'bg-[rgba(142,51,255,0.16)]', activeBadgeText: 'text-[#5119b7]', statusBg: 'bg-[rgba(142,51,255,0.16)]', statusText: 'text-[#5119b7]' },
+  { key: 'CP', label: '?格?撌脩Ⅱ隤?鞈???銝?CP)', activeBadgeBg: 'bg-[rgba(0,184,217,0.16)]', activeBadgeText: 'text-[#006c9c]', statusBg: 'bg-[rgba(0,184,217,0.16)]', statusText: 'text-[#006c9c]' },
+  { key: 'SS', label: '靽格迤??(SS)', activeBadgeBg: 'bg-[rgba(34,197,94,0.16)]', activeBadgeText: 'text-[#118d57]', statusBg: 'bg-[rgba(34,197,94,0.16)]', statusText: 'text-[#118d57]' },
+  { key: 'CL', label: '?格?蝯?(CL)', activeBadgeBg: 'bg-[rgba(145,158,171,0.16)]', activeBadgeText: 'text-[#637381]', statusBg: 'bg-[rgba(145,158,171,0.16)]', statusText: 'text-[#637381]' },
 ];
 
-// 歷史修正單專用 Tabs（僅 ALL / CK / CL）
-const historyTabs: TabDef[] = [
+// 甇瑕靽格迤?桀???Tabs嚗? ALL / CK / CL嚗?const historyTabs: TabDef[] = [
   { key: 'ALL', label: 'All' },
-  { key: 'CK', label: '已確認(CK)', activeBadgeBg: 'bg-[rgba(34,197,94,0.16)]', activeBadgeText: 'text-[#118d57]', statusBg: 'bg-[rgba(34,197,94,0.16)]', statusText: 'text-[#118d57]' },
-  { key: 'CL', label: '單據結案(CL)', activeBadgeBg: 'bg-[rgba(145,158,171,0.16)]', activeBadgeText: 'text-[#637381]', statusBg: 'bg-[rgba(145,158,171,0.16)]', statusText: 'text-[#637381]' },
+  { key: 'CK', label: '撌脩Ⅱ隤?CK)', activeBadgeBg: 'bg-[rgba(34,197,94,0.16)]', activeBadgeText: 'text-[#118d57]', statusBg: 'bg-[rgba(34,197,94,0.16)]', statusText: 'text-[#118d57]' },
+  { key: 'CL', label: '?格?蝯?(CL)', activeBadgeBg: 'bg-[rgba(145,158,171,0.16)]', activeBadgeText: 'text-[#637381]', statusBg: 'bg-[rgba(145,158,171,0.16)]', statusText: 'text-[#637381]' },
 ];
 
-// 歷史修正單假資料（3年以上，CK / CL）
-const historyCorrectionMockData: CorrectionOrderRow[] = [
-  { id: 70001, correctionDocNo: '202201050001', correctionStatus: 'CK' as CorrectionStatus, correctionType: '不拆單', orderNo: '400512345', orderSeq: '10', docSeqNo: '40051234510', vendorCode: '0001000734', vendorName: 'SHIMANOSIC(0001000734)', purchaseOrg: 'GEM採購組織', materialNo: '1129-CSL0075-L01', productName: '碳纖維座管', orderDate: '2021/12/01', orderQty: 200, acceptQty: 200, company: '巨大機械', createdAt: '2022/01/05 09:00' },
-  { id: 70002, correctionDocNo: '202201080002', correctionStatus: 'CK' as CorrectionStatus, correctionType: '不拆單', orderNo: '400512346', orderSeq: '20', docSeqNo: '40051234620', vendorCode: '00010046', vendorName: '速聯國際(00010046)', purchaseOrg: 'GEM採購組織', materialNo: '2101-CHN0099-A01', productName: '12速鏈條', orderDate: '2021/12/10', orderQty: 500, acceptQty: 500, company: '巨大機械', createdAt: '2022/01/08 10:30' },
-  { id: 70003, correctionDocNo: '202202100003', correctionStatus: 'CL' as CorrectionStatus, correctionType: '不拆單', orderNo: '400512347', orderSeq: '30', docSeqNo: '40051234730', vendorCode: '00010053', vendorName: '久廣精密(00010053)', purchaseOrg: 'GEM採購組織', materialNo: '3301-FRK0055-B01', productName: '碳纖維前叉-D型', orderDate: '2022/01/20', orderQty: 300, acceptQty: 0, company: '巨大機械', createdAt: '2022/02/10 14:00' },
-  { id: 70004, correctionDocNo: '202202150004', correctionStatus: 'CK' as CorrectionStatus, correctionType: '拆單', orderNo: '400512348', orderSeq: '40', docSeqNo: '40051234840', vendorCode: '00010059', vendorName: '金盛元工業(00010059)', purchaseOrg: 'GEM採購組織', materialNo: '4401-GRP0022-C01', productName: '競速握把套', orderDate: '2022/01/25', orderQty: 600, acceptQty: 300, company: '巨大機械', createdAt: '2022/02/15 09:15' },
-  { id: 70005, correctionDocNo: '202203200005', correctionStatus: 'CK' as CorrectionStatus, correctionType: '不拆單', orderNo: '400512349', orderSeq: '50', docSeqNo: '40051234950', vendorCode: '00010045', vendorName: '佳承精密(00010045)', purchaseOrg: 'GEM採購組織', materialNo: '5501-WHL0088-D01', productName: '碟煞輪組後輪', orderDate: '2022/02/28', orderQty: 120, acceptQty: 120, company: '巨大機械', createdAt: '2022/03/20 11:00' },
-  { id: 70006, correctionDocNo: '202204050006', correctionStatus: 'CL' as CorrectionStatus, correctionType: '不拆單', orderNo: '400512350', orderSeq: '60', docSeqNo: '40051235060', vendorCode: '00010012', vendorName: '台灣製造(00010012)', purchaseOrg: 'GEM採購組織', materialNo: '6601-BRK0044-E01', productName: '後碟煞系統', orderDate: '2022/03/10', orderQty: 400, acceptQty: 0, company: '巨大機械', createdAt: '2022/04/05 08:30' },
-  { id: 70007, correctionDocNo: '202205120007', correctionStatus: 'CK' as CorrectionStatus, correctionType: '不拆單', orderNo: '400512351', orderSeq: '70', docSeqNo: '40051235170', vendorCode: '0001000734', vendorName: 'SHIMANOSIC(0001000734)', purchaseOrg: 'GEM採購組織', materialNo: '7701-NIP0011-F01', productName: '鋁合金花鼓螺絲', orderDate: '2022/04/22', orderQty: 800, acceptQty: 800, company: '巨大機械', createdAt: '2022/05/12 13:45' },
-  { id: 70008, correctionDocNo: '202206080008', correctionStatus: 'CK' as CorrectionStatus, correctionType: '拆單', orderNo: '400512352', orderSeq: '80', docSeqNo: '40051235280', vendorCode: '00010046', vendorName: '速聯國際(00010046)', purchaseOrg: 'GEM採購組織', materialNo: '8801-SPK0033-G01', productName: '競速輻條組', orderDate: '2022/05/15', orderQty: 200, acceptQty: 200, company: '巨大機械', createdAt: '2022/06/08 10:00' },
-  { id: 70009, correctionDocNo: '202207150009', correctionStatus: 'CL' as CorrectionStatus, correctionType: '不拆單', orderNo: '400512353', orderSeq: '90', docSeqNo: '40051235390', vendorCode: '00010053', vendorName: '久廣精密(00010053)', purchaseOrg: 'GEM採購組織', materialNo: '9901-STM0033-H01', productName: '鋁合金龍頭', orderDate: '2022/06/20', orderQty: 150, acceptQty: 0, company: '巨大機械', createdAt: '2022/07/15 09:30' },
-  { id: 70010, correctionDocNo: '202208200010', correctionStatus: 'CK' as CorrectionStatus, correctionType: '不拆單', orderNo: '400512354', orderSeq: '10', docSeqNo: '40051235410', vendorCode: '00010059', vendorName: '金盛元工業(00010059)', purchaseOrg: 'GEM採購組織', materialNo: '1002-HDL0077-I01', productName: '碳纖維把手', orderDate: '2022/07/30', orderQty: 100, acceptQty: 100, company: '巨大機械', createdAt: '2022/08/20 14:20' },
-  { id: 70011, correctionDocNo: '202104010011', correctionStatus: 'CK' as CorrectionStatus, correctionType: '不拆單', orderNo: '400488001', orderSeq: '10', docSeqNo: '40048800110', vendorCode: '00010045', vendorName: '佳承精密(00010045)', purchaseOrg: 'GEM採購組織', materialNo: '2003-BBX0044-J01', productName: '鋁合金底架', orderDate: '2021/03/15', orderQty: 350, acceptQty: 350, company: '巨大機械', createdAt: '2021/04/01 09:00' },
-  { id: 70012, correctionDocNo: '202105200012', correctionStatus: 'CL' as CorrectionStatus, correctionType: '拆單', orderNo: '400488002', orderSeq: '20', docSeqNo: '40048800220', vendorCode: '00010012', vendorName: '台灣製造(00010012)', purchaseOrg: 'GEM採購組織', materialNo: '3004-CHN0055-K01', productName: '10速鏈條', orderDate: '2021/04/25', orderQty: 700, acceptQty: 0, company: '巨大機械', createdAt: '2021/05/20 11:00' },
-  { id: 70013, correctionDocNo: '202106100013', correctionStatus: 'CK' as CorrectionStatus, correctionType: '不拆單', orderNo: '400488003', orderSeq: '30', docSeqNo: '40048800330', vendorCode: '0001000734', vendorName: 'SHIMANOSIC(0001000734)', purchaseOrg: 'GEM採購組織', materialNo: '4005-FRK0066-L01', productName: '鋼製前叉', orderDate: '2021/05/30', orderQty: 250, acceptQty: 250, company: '巨大機械', createdAt: '2021/06/10 08:45' },
-  { id: 70014, correctionDocNo: '202107250014', correctionStatus: 'CK' as CorrectionStatus, correctionType: '不拆單', orderNo: '400488004', orderSeq: '40', docSeqNo: '40048800440', vendorCode: '00010046', vendorName: '速聯國際(00010046)', purchaseOrg: 'GEM採購組織', materialNo: '5006-GRP0077-M01', productName: '橡膠握把', orderDate: '2021/06/20', orderQty: 1000, acceptQty: 1000, company: '巨大機械', createdAt: '2021/07/25 15:30' },
-  { id: 70015, correctionDocNo: '202109050015', correctionStatus: 'CK' as CorrectionStatus, correctionType: '不拆單', orderNo: '400488005', orderSeq: '50', docSeqNo: '40048800550', vendorCode: '00010053', vendorName: '久廣精密(00010053)', purchaseOrg: 'GEM採購組織', materialNo: '6007-WHL0088-N01', productName: '鋁合金輪圈', orderDate: '2021/08/10', orderQty: 80, acceptQty: 80, company: '巨大機械', createdAt: '2021/09/05 10:00' },
-  { id: 70016, correctionDocNo: '202110150016', correctionStatus: 'CL' as CorrectionStatus, correctionType: '不拆單', orderNo: '400488006', orderSeq: '60', docSeqNo: '40048800660', vendorCode: '00010059', vendorName: '金盛元工業(00010059)', purchaseOrg: 'GEM採購組織', materialNo: '7008-BRK0099-O01', productName: '碟煞來令片', orderDate: '2021/09/15', orderQty: 500, acceptQty: 0, company: '巨大機械', createdAt: '2021/10/15 16:00' },
-  { id: 70017, correctionDocNo: '202111280017', correctionStatus: 'CK' as CorrectionStatus, correctionType: '拆單', orderNo: '400488007', orderSeq: '70', docSeqNo: '40048800770', vendorCode: '00010045', vendorName: '佳承精密(00010045)', purchaseOrg: 'GEM採購組織', materialNo: '8009-NUT0011-P01', productName: '快拆螺帽組', orderDate: '2021/10/20', orderQty: 2000, acceptQty: 2000, company: '巨大機械', createdAt: '2021/11/28 09:30' },
-  { id: 70018, correctionDocNo: '202112100018', correctionStatus: 'CK' as CorrectionStatus, correctionType: '不拆單', orderNo: '400488008', orderSeq: '80', docSeqNo: '40048800880', vendorCode: '00010012', vendorName: '台灣製造(00010012)', purchaseOrg: 'GEM採購組織', materialNo: '9010-SAD0022-Q01', productName: '競速車座', orderDate: '2021/11/25', orderQty: 90, acceptQty: 90, company: '巨大機械', createdAt: '2021/12/10 13:00' },
-  { id: 70019, correctionDocNo: '202009200019', correctionStatus: 'CL' as CorrectionStatus, correctionType: '不拆單', orderNo: '400455001', orderSeq: '10', docSeqNo: '40045500110', vendorCode: '0001000734', vendorName: 'SHIMANOSIC(0001000734)', purchaseOrg: 'GEM採購組織', materialNo: '1011-PDL0033-R01', productName: '卡踏踏板', orderDate: '2020/08/30', orderQty: 400, acceptQty: 0, company: '巨大機械', createdAt: '2020/09/20 08:00' },
-  { id: 70020, correctionDocNo: '202011050020', correctionStatus: 'CK' as CorrectionStatus, correctionType: '不拆單', orderNo: '400455002', orderSeq: '20', docSeqNo: '40045500220', vendorCode: '00010046', vendorName: '速聯國際(00010046)', purchaseOrg: 'GEM採購組織', materialNo: '2012-CST0044-S01', productName: '11速飛輪組', orderDate: '2020/10/15', orderQty: 180, acceptQty: 180, company: '巨大機械', createdAt: '2020/11/05 11:30' },
+// 甇瑕靽格迤?桀?鞈?嚗?撟港誑銝?CK / CL嚗?const historyCorrectionMockData: CorrectionOrderRow[] = [
+  { id: 70001, correctionDocNo: '202201050001', correctionStatus: 'CK' as CorrectionStatus, correctionType: '銝???, orderNo: '400512345', orderSeq: '10', docSeqNo: '40051234510', vendorCode: '0001000734', vendorName: 'SHIMANOSIC(0001000734)', purchaseOrg: 'GEM?∟頃蝯?', materialNo: '1129-CSL0075-L01', productName: '蝣喟?蝬剖漣蝞?, orderDate: '2021/12/01', orderQty: 200, acceptQty: 200, company: '撌典之璈１', createdAt: '2022/01/05 09:00' },
+  { id: 70002, correctionDocNo: '202201080002', correctionStatus: 'CK' as CorrectionStatus, correctionType: '銝???, orderNo: '400512346', orderSeq: '20', docSeqNo: '40051234620', vendorCode: '00010046', vendorName: '???(00010046)', purchaseOrg: 'GEM?∟頃蝯?', materialNo: '2101-CHN0099-A01', productName: '12??璇?, orderDate: '2021/12/10', orderQty: 500, acceptQty: 500, company: '撌典之璈１', createdAt: '2022/01/08 10:30' },
+  { id: 70003, correctionDocNo: '202202100003', correctionStatus: 'CL' as CorrectionStatus, correctionType: '銝???, orderNo: '400512347', orderSeq: '30', docSeqNo: '40051234730', vendorCode: '00010053', vendorName: '銋誨蝎曉?(00010053)', purchaseOrg: 'GEM?∟頃蝯?', materialNo: '3301-FRK0055-B01', productName: '蝣喟?蝬剖???D??, orderDate: '2022/01/20', orderQty: 300, acceptQty: 0, company: '撌典之璈１', createdAt: '2022/02/10 14:00' },
+  { id: 70004, correctionDocNo: '202202150004', correctionStatus: 'CK' as CorrectionStatus, correctionType: '?', orderNo: '400512348', orderSeq: '40', docSeqNo: '40051234840', vendorCode: '00010059', vendorName: '???極璆?00010059)', purchaseOrg: 'GEM?∟頃蝯?', materialNo: '4401-GRP0022-C01', productName: '蝡園??', orderDate: '2022/01/25', orderQty: 600, acceptQty: 300, company: '撌典之璈１', createdAt: '2022/02/15 09:15' },
+  { id: 70005, correctionDocNo: '202203200005', correctionStatus: 'CK' as CorrectionStatus, correctionType: '銝???, orderNo: '400512349', orderSeq: '50', docSeqNo: '40051234950', vendorCode: '00010045', vendorName: '雿單蝎曉?(00010045)', purchaseOrg: 'GEM?∟頃蝯?', materialNo: '5501-WHL0088-D01', productName: '蝣?頛芰?敺憚', orderDate: '2022/02/28', orderQty: 120, acceptQty: 120, company: '撌典之璈１', createdAt: '2022/03/20 11:00' },
+  { id: 70006, correctionDocNo: '202204050006', correctionStatus: 'CL' as CorrectionStatus, correctionType: '銝???, orderNo: '400512350', orderSeq: '60', docSeqNo: '40051235060', vendorCode: '00010012', vendorName: '?啁鋆賡?00010012)', purchaseOrg: 'GEM?∟頃蝯?', materialNo: '6601-BRK0044-E01', productName: '敺??頂蝯?, orderDate: '2022/03/10', orderQty: 400, acceptQty: 0, company: '撌典之璈１', createdAt: '2022/04/05 08:30' },
+  { id: 70007, correctionDocNo: '202205120007', correctionStatus: 'CK' as CorrectionStatus, correctionType: '銝???, orderNo: '400512351', orderSeq: '70', docSeqNo: '40051235170', vendorCode: '0001000734', vendorName: 'SHIMANOSIC(0001000734)', purchaseOrg: 'GEM?∟頃蝯?', materialNo: '7701-NIP0011-F01', productName: '???曌蝯?, orderDate: '2022/04/22', orderQty: 800, acceptQty: 800, company: '撌典之璈１', createdAt: '2022/05/12 13:45' },
+  { id: 70008, correctionDocNo: '202206080008', correctionStatus: 'CK' as CorrectionStatus, correctionType: '?', orderNo: '400512352', orderSeq: '80', docSeqNo: '40051235280', vendorCode: '00010046', vendorName: '???(00010046)', purchaseOrg: 'GEM?∟頃蝯?', materialNo: '8801-SPK0033-G01', productName: '蝡園撒璇?', orderDate: '2022/05/15', orderQty: 200, acceptQty: 200, company: '撌典之璈１', createdAt: '2022/06/08 10:00' },
+  { id: 70009, correctionDocNo: '202207150009', correctionStatus: 'CL' as CorrectionStatus, correctionType: '銝???, orderNo: '400512353', orderSeq: '90', docSeqNo: '40051235390', vendorCode: '00010053', vendorName: '銋誨蝎曉?(00010053)', purchaseOrg: 'GEM?∟頃蝯?', materialNo: '9901-STM0033-H01', productName: '??????, orderDate: '2022/06/20', orderQty: 150, acceptQty: 0, company: '撌典之璈１', createdAt: '2022/07/15 09:30' },
+  { id: 70010, correctionDocNo: '202208200010', correctionStatus: 'CK' as CorrectionStatus, correctionType: '銝???, orderNo: '400512354', orderSeq: '10', docSeqNo: '40051235410', vendorCode: '00010059', vendorName: '???極璆?00010059)', purchaseOrg: 'GEM?∟頃蝯?', materialNo: '1002-HDL0077-I01', productName: '蝣喟?蝬剜???, orderDate: '2022/07/30', orderQty: 100, acceptQty: 100, company: '撌典之璈１', createdAt: '2022/08/20 14:20' },
+  { id: 70011, correctionDocNo: '202104010011', correctionStatus: 'CK' as CorrectionStatus, correctionType: '銝???, orderNo: '400488001', orderSeq: '10', docSeqNo: '40048800110', vendorCode: '00010045', vendorName: '雿單蝎曉?(00010045)', purchaseOrg: 'GEM?∟頃蝯?', materialNo: '2003-BBX0044-J01', productName: '??????, orderDate: '2021/03/15', orderQty: 350, acceptQty: 350, company: '撌典之璈１', createdAt: '2021/04/01 09:00' },
+  { id: 70012, correctionDocNo: '202105200012', correctionStatus: 'CL' as CorrectionStatus, correctionType: '?', orderNo: '400488002', orderSeq: '20', docSeqNo: '40048800220', vendorCode: '00010012', vendorName: '?啁鋆賡?00010012)', purchaseOrg: 'GEM?∟頃蝯?', materialNo: '3004-CHN0055-K01', productName: '10??璇?, orderDate: '2021/04/25', orderQty: 700, acceptQty: 0, company: '撌典之璈１', createdAt: '2021/05/20 11:00' },
+  { id: 70013, correctionDocNo: '202106100013', correctionStatus: 'CK' as CorrectionStatus, correctionType: '銝???, orderNo: '400488003', orderSeq: '30', docSeqNo: '40048800330', vendorCode: '0001000734', vendorName: 'SHIMANOSIC(0001000734)', purchaseOrg: 'GEM?∟頃蝯?', materialNo: '4005-FRK0066-L01', productName: '?潸ˊ??', orderDate: '2021/05/30', orderQty: 250, acceptQty: 250, company: '撌典之璈１', createdAt: '2021/06/10 08:45' },
+  { id: 70014, correctionDocNo: '202107250014', correctionStatus: 'CK' as CorrectionStatus, correctionType: '銝???, orderNo: '400488004', orderSeq: '40', docSeqNo: '40048800440', vendorCode: '00010046', vendorName: '???(00010046)', purchaseOrg: 'GEM?∟頃蝯?', materialNo: '5006-GRP0077-M01', productName: '璈∟??⊥?', orderDate: '2021/06/20', orderQty: 1000, acceptQty: 1000, company: '撌典之璈１', createdAt: '2021/07/25 15:30' },
+  { id: 70015, correctionDocNo: '202109050015', correctionStatus: 'CK' as CorrectionStatus, correctionType: '銝???, orderNo: '400488005', orderSeq: '50', docSeqNo: '40048800550', vendorCode: '00010053', vendorName: '銋誨蝎曉?(00010053)', purchaseOrg: 'GEM?∟頃蝯?', materialNo: '6007-WHL0088-N01', productName: '???憚??, orderDate: '2021/08/10', orderQty: 80, acceptQty: 80, company: '撌典之璈１', createdAt: '2021/09/05 10:00' },
+  { id: 70016, correctionDocNo: '202110150016', correctionStatus: 'CL' as CorrectionStatus, correctionType: '銝???, orderNo: '400488006', orderSeq: '60', docSeqNo: '40048800660', vendorCode: '00010059', vendorName: '???極璆?00010059)', purchaseOrg: 'GEM?∟頃蝯?', materialNo: '7008-BRK0099-O01', productName: '蝣?靘誘??, orderDate: '2021/09/15', orderQty: 500, acceptQty: 0, company: '撌典之璈１', createdAt: '2021/10/15 16:00' },
+  { id: 70017, correctionDocNo: '202111280017', correctionStatus: 'CK' as CorrectionStatus, correctionType: '?', orderNo: '400488007', orderSeq: '70', docSeqNo: '40048800770', vendorCode: '00010045', vendorName: '雿單蝎曉?(00010045)', purchaseOrg: 'GEM?∟頃蝯?', materialNo: '8009-NUT0011-P01', productName: '敹急??箏蜇蝯?, orderDate: '2021/10/20', orderQty: 2000, acceptQty: 2000, company: '撌典之璈１', createdAt: '2021/11/28 09:30' },
+  { id: 70018, correctionDocNo: '202112100018', correctionStatus: 'CK' as CorrectionStatus, correctionType: '銝???, orderNo: '400488008', orderSeq: '80', docSeqNo: '40048800880', vendorCode: '00010012', vendorName: '?啁鋆賡?00010012)', purchaseOrg: 'GEM?∟頃蝯?', materialNo: '9010-SAD0022-Q01', productName: '蝡園?摨?, orderDate: '2021/11/25', orderQty: 90, acceptQty: 90, company: '撌典之璈１', createdAt: '2021/12/10 13:00' },
+  { id: 70019, correctionDocNo: '202009200019', correctionStatus: 'CL' as CorrectionStatus, correctionType: '銝???, orderNo: '400455001', orderSeq: '10', docSeqNo: '40045500110', vendorCode: '0001000734', vendorName: 'SHIMANOSIC(0001000734)', purchaseOrg: 'GEM?∟頃蝯?', materialNo: '1011-PDL0033-R01', productName: '?∟?頦', orderDate: '2020/08/30', orderQty: 400, acceptQty: 0, company: '撌典之璈１', createdAt: '2020/09/20 08:00' },
+  { id: 70020, correctionDocNo: '202011050020', correctionStatus: 'CK' as CorrectionStatus, correctionType: '銝???, orderNo: '400455002', orderSeq: '20', docSeqNo: '40045500220', vendorCode: '00010046', vendorName: '???(00010046)', purchaseOrg: 'GEM?∟頃蝯?', materialNo: '2012-CST0044-S01', productName: '11??頛芰?', orderDate: '2020/10/15', orderQty: 180, acceptQty: 180, company: '撌典之璈１', createdAt: '2020/11/05 11:30' },
 ];
 
-// ─── viewMode 對應 ────────────────────────────────────────────────────────────
+// ??? viewMode 撠? ????????????????????????????????????????????????????????????
 type ViewMode = 'edit' | 'vendorReview' | 'purchaserReview' | 'readonly';
 function getViewMode(status: CorrectionStatus): ViewMode {
   if (status === 'DR') return 'edit';
@@ -135,7 +135,7 @@ function getViewMode(status: CorrectionStatus): ViewMode {
   return 'readonly';
 }
 
-// ─── CorrectionOrderRow → OrderRow ───────────────────────────────────────────
+// ??? CorrectionOrderRow ??OrderRow ???????????????????????????????????????????
 function correctionRowToOrderRow(row: CorrectionOrderRow): OrderRow {
   return {
     id: row.id,
@@ -173,7 +173,7 @@ function correctionRowToOrderRow(row: CorrectionOrderRow): OrderRow {
   } as OrderRow;
 }
 
-// ─── 狀態 Badge ──────────────────────────────────────────────────────────────
+// ??? ???Badge ??????????????????????????????????????????????????????????????
 function StatusBadge({ status }: { status: CorrectionStatus }) {
   const tab = tabs.find(t => t.key === status);
   const bg = tab?.statusBg ?? 'bg-[rgba(145,158,171,0.16)]';
@@ -185,7 +185,7 @@ function StatusBadge({ status }: { status: CorrectionStatus }) {
   );
 }
 
-// ─── Tab Item ────────────────────────────────────────────────────────────────
+// ??? Tab Item ????????????????????????????????????????????????????????????????
 function TabItem({ tabDef, count, isActive, onClick }: { tabDef: TabDef; count?: number; isActive: boolean; onClick: () => void }) {
   const badgeBg = isActive && tabDef.activeBadgeBg ? tabDef.activeBadgeBg : 'bg-[rgba(145,158,171,0.16)]';
   const badgeText = isActive && tabDef.activeBadgeText ? tabDef.activeBadgeText : 'text-[#637381]';
@@ -220,155 +220,16 @@ function TabItem({ tabDef, count, isActive, onClick }: { tabDef: TabDef; count?:
   );
 }
 
-// ─── Draggable Column Header ─────────────────────────────────────────────────
 
-// ── 測量文字寬度（使用 DOM span，支援中文字型 fallback）──────────────────────
-function measureTextWidth(text: string, font = '14px "Public Sans", "Noto Sans JP", sans-serif'): number {
+
   let el = (measureTextWidth as any)._el as HTMLSpanElement | undefined;
   if (!el) {
-    el = document.createElement('span');
-    el.style.position = 'absolute';
-    el.style.visibility = 'hidden';
-    el.style.whiteSpace = 'nowrap';
-    el.style.left = '-9999px';
-    el.style.top = '-9999px';
-    document.body.appendChild(el);
-    (measureTextWidth as any)._el = el;
-  }
-  el.style.font = font;
-  el.textContent = text;
-  return el.offsetWidth;
-}
-
-const DraggableColumnHeader = ({
-  column, index, moveColumn, updateColumnWidth, autoFitWidth, sortConfig, onSort, isLast,
-}: {
-  column: CorrectionColumn;
-  index: number;
-  moveColumn: (dragKey: CorrectionColumnKey, hoverKey: CorrectionColumnKey) => void;
-  updateColumnWidth: (key: CorrectionColumnKey, width: number) => void;
-  autoFitWidth: (key: any) => void;
-  sortConfig: { key: CorrectionColumnKey | null; direction: 'asc' | 'desc' | null };
-  onSort: (key: CorrectionColumnKey) => void;
-  isLast?: boolean;
-}) => {
-  const [isHovered, setIsHovered] = useState(false);
-
-  // ── 自製 resize drag（可靠且支持 dblclick） ──
-  const [resizing, setResizing] = useState(false);
-  const resizeStartX = useRef(0);
-  const resizeStartW = useRef(0);
-
-  useEffect(() => {
-    if (!resizing) return;
-    const onMove = (e: MouseEvent) => {
-      const diff = e.clientX - resizeStartX.current;
-      const newW = Math.max(column.minWidth, resizeStartW.current + diff);
-      updateColumnWidth(column.key, newW);
-    };
-    const onUp = () => setResizing(false);
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
-    return () => {
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-    };
-  }, [resizing]);
-
-  const [{ isDragging }, drag] = useDrag({
-    type: 'correction-column',
-    item: () => ({ columnKey: column.key, index }),
-    collect: (monitor) => ({ isDragging: monitor.isDragging() }),
-  });
-
-  const [, drop] = useDrop({
-    accept: 'correction-column',
-    hover: (item: { columnKey: CorrectionColumnKey; index: number }) => {
-      if (item.index !== index) {
-        moveColumn(item.columnKey, column.key);
-        item.index = index;
-      }
-    },
-  });
-
-  const isSorted = sortConfig.key === column.key;
-  const sortDirection = isSorted ? sortConfig.direction : null;
-
-  return (
-    <div
-      className={`relative bg-[#f4f6f8] shrink-0 ${isLast ? '' : 'border-r border-[rgba(145,158,171,0.08)]'}`}
-      style={{ width: column.width, height: 56 }}
-    >
-      <div
-        ref={(node) => drag(drop(node))}
-        className={`h-full flex items-center justify-start px-[16px] cursor-pointer ${isDragging ? 'opacity-50' : ''}`}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-        onClick={(e) => {
-          if (e.target === e.currentTarget || ['P', 'svg', 'path'].includes((e.target as HTMLElement).tagName)) {
-            onSort(column.key);
-          }
-        }}
-      >
-        {isHovered && (
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="mr-[6px] shrink-0">
-            <circle cx="5" cy="3" r="1.5" fill="#919EAB" />
-            <circle cx="11" cy="3" r="1.5" fill="#919EAB" />
-            <circle cx="5" cy="8" r="1.5" fill="#919EAB" />
-            <circle cx="11" cy="8" r="1.5" fill="#919EAB" />
-            <circle cx="5" cy="13" r="1.5" fill="#919EAB" />
-            <circle cx="11" cy="13" r="1.5" fill="#919EAB" />
-          </svg>
-        )}
-        <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[24px] text-[#637381] text-[14px] whitespace-nowrap">
-          {column.label}
-        </p>
-        {sortDirection && (
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="ml-[6px] shrink-0">
-            {sortDirection === 'asc' ? (
-              <path d="M8 3L12 7H4L8 3Z" fill="#637381" />
-            ) : (
-              <path d="M8 13L4 9H12L8 13Z" fill="#637381" />
-            )}
-          </svg>
-        )}
-      </div>
-      {/* 欄寬調整 handle：拖拽調寬 或 雙擊自動最適 */}
-      {!isLast && (
-        <div
-          className="absolute right-0 top-0 bottom-0 w-[8px] cursor-col-resize hover:bg-[#1D7BF5] hover:bg-opacity-20 z-10 group transition-colors"
-          onMouseDown={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            if (e.detail >= 2) {
-              autoFitWidth(column.key);
-              return;
-            }
-            setResizing(true);
-            resizeStartX.current = e.clientX;
-            resizeStartW.current = column.width;
-          }}
-          title="拖拽調整欄位寬度；雙擊自動最適欄寬"
-        >
-          <div className="absolute right-[3px] top-0 bottom-0 w-[2px] bg-transparent group-hover:bg-[#1D7BF5] transition-colors" />
-        </div>
-      )}
-    </div>
-  );
-};
-
-// ─── 工具列 Divider ───────────────────────────────────────────────────────────
-function ToolbarDivider() {
   return (
     <div className="h-[28px] w-px bg-[rgba(99,115,129,0.32)] shrink-0 mx-[4px]" />
   );
 }
 
-// ─── 工具列 Action Button ─────────────────────────────────────────────────────
+// ??? 撌亙??Action Button ?????????????????????????????????????????????????????
 function ToolbarBtn({ label, onClick, disabled, title }: { label: string; onClick: () => void; disabled?: boolean; title?: string }) {
   return (
     <button
@@ -382,7 +243,7 @@ function ToolbarBtn({ label, onClick, disabled, title }: { label: string; onClic
   );
 }
 
-// ─── 通用選取工具列 ────────────────────────────────────────────────────────────
+// ??? ??詨?撌亙??????????????????????????????????????????????????????????????
 interface SelectionToolbarProps {
   selectedCount: number;
   isAllSelected: boolean;
@@ -390,12 +251,12 @@ interface SelectionToolbarProps {
   activeTab: TabKey;
   canView: boolean;
   onView: () => void;
-  onBulkSubmit: () => void;        // DR: 全部提交廠商
-  onEdit: () => void;              // DR: 編輯 (1 only)
+  onBulkSubmit: () => void;        // DR: ?券?漱撱?
+  onEdit: () => void;              // DR: 蝺刻摩 (1 only)
   canEdit: boolean;
-  onDelete: () => void;            // DR: 刪除
-  onBulkAgree: () => void;         // V:  全部同意
-  onBulkConfirm: () => void;       // B:  全部確認
+  onDelete: () => void;            // DR: ?芷
+  onBulkAgree: () => void;         // V:  ?券??
+  onBulkConfirm: () => void;       // B:  ?券蝣箄?
 }
 
 function SelectionToolbar({
@@ -408,7 +269,7 @@ function SelectionToolbar({
 }: SelectionToolbarProps) {
   return (
     <div className="flex items-center h-[48px] bg-[#d9e8f5] border-b border-[rgba(145,158,171,0.08)]">
-      {/* 左側：checkbox toggle（與表格 checkbox 對齊） */}
+      {/* 撌血嚗heckbox toggle嚗?銵冽 checkbox 撠?嚗?*/}
       <div
         className="flex items-center justify-center shrink-0"
         style={{ width: 56, minWidth: 56 }}
@@ -423,7 +284,7 @@ function SelectionToolbar({
         </button>
       </div>
 
-      {/* 計數文字 */}
+      {/* 閮?? */}
       <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-[#1c252e] leading-[24px] whitespace-nowrap mr-[4px]">
         {selectedCount} selected
       </span>
@@ -431,49 +292,49 @@ function SelectionToolbar({
       {/* Tab-specific actions */}
       {activeTab === 'DR' && (
         <>
-          <ToolbarBtn label="全部提交廠商" onClick={onBulkSubmit} />
+          <ToolbarBtn label="?券?漱撱?" onClick={onBulkSubmit} />
           <ToolbarDivider />
-          <ToolbarBtn label="編輯" onClick={onEdit} disabled={!canEdit} title={!canEdit ? '請選取修正單以編輯' : undefined} />
+          <ToolbarBtn label="蝺刻摩" onClick={onEdit} disabled={!canEdit} title={!canEdit ? '隢?耨甇?隞亦楊頛? : undefined} />
           <ToolbarDivider />
-          <ToolbarBtn label="刪除" onClick={onDelete} />
+          <ToolbarBtn label="?芷" onClick={onDelete} />
         </>
       )}
 
       {activeTab === 'V' && (
         <>
-          <ToolbarBtn label="檢視" onClick={onView} disabled={!canView} title={!canView ? '請選取修正單以檢視' : undefined} />
+          <ToolbarBtn label="瑼Ｚ?" onClick={onView} disabled={!canView} title={!canView ? '隢?耨甇?隞交炎閬? : undefined} />
           <ToolbarDivider />
-          <ToolbarBtn label="全部同意" onClick={onBulkAgree} />
+          <ToolbarBtn label="?券??" onClick={onBulkAgree} />
         </>
       )}
 
       {activeTab === 'B' && (
         <>
-          <ToolbarBtn label="檢視" onClick={onView} disabled={!canView} title={!canView ? '請選取修正單以檢視' : undefined} />
+          <ToolbarBtn label="瑼Ｚ?" onClick={onView} disabled={!canView} title={!canView ? '隢?耨甇?隞交炎閬? : undefined} />
           <ToolbarDivider />
-          <ToolbarBtn label="全部確認" onClick={onBulkConfirm} />
+          <ToolbarBtn label="?券蝣箄?" onClick={onBulkConfirm} />
         </>
       )}
 
       {(activeTab === 'CP' || activeTab === 'SS') && (
-        <ToolbarBtn label="檢視" onClick={onView} disabled={!canView} title={!canView ? '請選取修正單以檢視' : undefined} />
+        <ToolbarBtn label="瑼Ｚ?" onClick={onView} disabled={!canView} title={!canView ? '隢?耨甇?隞交炎閬? : undefined} />
       )}
 
       {(activeTab === 'CK' || activeTab === 'CL') && (
-        <ToolbarBtn label="檢視" onClick={onView} disabled={!canView} title={!canView ? '請選取修正單以檢視' : undefined} />
+        <ToolbarBtn label="瑼Ｚ?" onClick={onView} disabled={!canView} title={!canView ? '隢?耨甇?隞交炎閬? : undefined} />
       )}
 
       {activeTab === 'ALL' && (
-        <ToolbarBtn label="檢視" onClick={onView} disabled={!canView} title={!canView ? '請選取修正單以檢視' : undefined} />
+        <ToolbarBtn label="瑼Ｚ?" onClick={onView} disabled={!canView} title={!canView ? '隢?耨甇?隞交炎閬? : undefined} />
       )}
     </div>
   );
 }
 
-// ─── 主元件 ───────────────────────────────────────────────────────────────────
+// ??? 銝餃?隞????????????????????????????????????????????????????????????????????
 interface CorrectionListWithTabsProps {
   userRole?: string;
-  /** 歷史修正單模式：只顯示 CK/CL Tab、注入歷史假資料、唯讀不提供操作 */
+  /** 甇瑕靽格迤?格芋撘??芷＊蝷?CK/CL Tab?釣?交風?脣?鞈??霈銝?靘?雿?*/
   historyMode?: boolean;
 }
 
@@ -488,7 +349,7 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(100);
 
-  // ── Column / Filter / Sort state ───────────────────────────────────────────
+  // ?? Column / Filter / Sort state ???????????????????????????????????????????
   const [showColumnSelector, setShowColumnSelector] = useState(false);
   const [showFilterDialog, setShowFilterDialog] = useState(false);
   const [tempColumns, setTempColumns] = useState<CorrectionColumn[]>([]);
@@ -499,14 +360,14 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
 
   const [currentUserEmail] = useState<string>(() => localStorage.getItem('currentUserEmail') || 'default');
 
-  // ── 明細檢視（支援多張 1/x 導覽）────────────────────────────────────────
+  // ?? ?敦瑼Ｚ?嚗?游?撘?1/x 撠汗嚗????????????????????????????????????????
   const [detailRows, setDetailRows] = useState<CorrectionOrderRow[]>([]);
   const [detailIndex, setDetailIndex] = useState(0);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const showToast = (msg: string) => { setToastMsg(msg); setTimeout(() => setToastMsg(null), 3000); };
 
-  // ── 修正單號欄寬（可拖曳調整，持久化至 localStorage）────────────────────────
+  // ?? 靽格迤?株?甈祝嚗?隤踵嚗?銋???localStorage嚗????????????????????????
   const getDocNoWidthKey = useCallback(
     () => `correctionList_${currentUserEmail}_docNoWidth`,
     [currentUserEmail]
@@ -520,12 +381,12 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
     return DOCNO_COL_WIDTH;
   });
 
-  // docNoWidth 變更時寫入 localStorage
+  // docNoWidth 霈?神??localStorage
   useEffect(() => {
     try { localStorage.setItem(getDocNoWidthKey(), String(docNoWidth)); } catch { /* ignore */ }
   }, [docNoWidth, getDocNoWidthKey]);
 
-  // ── 修正單號欄寬拖曳調整 ─────────────────────────────────────────────────
+  // ?? 靽格迤?株?甈祝?隤踵 ?????????????????????????????????????????????????
   const [docNoResizing, setDocNoResizing] = useState(false);
   const docNoResizeStartX = useRef(0);
   const docNoResizeStartW = useRef(docNoWidth);
@@ -550,10 +411,10 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
     };
   }, [docNoResizing]);
 
-  // ── Horizontal drag scroll ─────────────────────────────────────────────────
+  // ?? Horizontal drag scroll ?????????????????????????????????????????????????
   const { scrollContainerRef, handleMouseDown, canDragScroll } = useHorizontalDragScroll();
 
-  // ── localStorage helpers ───────────────────────────────────────────────────
+  // ?? localStorage helpers ???????????????????????????????????????????????????
   const getStorageKey = useCallback((tab: string) => {
     const safeTab = tab.replace(/[^a-zA-Z0-9]/g, '_');
     return `correctionList_${currentUserEmail}_${safeTab}_columns`;
@@ -583,7 +444,7 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
     try { localStorage.setItem(getStorageKey(tab), JSON.stringify(cols)); } catch { /* ignore */ }
   }, [getStorageKey]);
 
-  // ── Columns state (per-tab, persisted) ─────────────────────────────────────
+  // ?? Columns state (per-tab, persisted) ?????????????????????????????????????
   const [columns, setColumns] = useState<CorrectionColumn[]>(() => loadColumnsFromStorage('ALL'));
 
   useEffect(() => {
@@ -601,7 +462,7 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
 
   const visibleColumns = useMemo(() => columns.filter(c => c.visible !== false), [columns]);
 
-  // ── Column drag / resize ───────────────────────────────────────────────────
+  // ?? Column drag / resize ???????????????????????????????????????????????????
   const moveColumn = useCallback((dragKey: CorrectionColumnKey, hoverKey: CorrectionColumnKey) => {
     setColumns(prev => {
       const dragIdx = prev.findIndex(c => c.key === dragKey);
@@ -617,7 +478,7 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
     setColumns(prev => prev.map(c => c.key === key ? { ...c, width } : c));
   }, []);
 
-    // ── Columns button handlers ────────────────────────────────────────────────
+    // ?? Columns button handlers ????????????????????????????????????????????????
   const handleColumnsClick = useCallback(() => {
     setTempColumns(JSON.parse(JSON.stringify(columns)));
     setShowColumnSelector(v => !v);
@@ -635,7 +496,7 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
     setShowColumnSelector(false);
   };
 
-  // ── Filters handlers ──────────────────────────────────────────────────────
+  // ?? Filters handlers ??????????????????????????????????????????????????????
   const handleFiltersClick = () => {
     setShowFilterDialog(v => !v);
     if (showColumnSelector) setShowColumnSelector(false);
@@ -645,7 +506,7 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
     setShowFilterDialog(false);
   };
 
-  // ── Sort handler ──────────────────────────────────────────────────────────
+  // ?? Sort handler ??????????????????????????????????????????????????????????
   const handleSort = useCallback((key: CorrectionColumnKey) => {
     setSortConfig(prev => {
       if (prev.key === key && prev.direction === 'asc') return { key, direction: 'desc' };
@@ -653,14 +514,14 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
     });
   }, []);
 
-  // ── Data merge: store + mock ──────────────────────────────────────────────
+  // ?? Data merge: store + mock ??????????????????????????????????????????????
   const allCorrectionOrders = useMemo(() => {
-    // 歷史模式：直接使用歷史假資料，不合併 store
+    // 甇瑕璅∪?嚗?乩蝙?冽風?脣?鞈?嚗??蔥 store
     if (historyMode) return historyCorrectionMockData;
     const storeIds = new Set(correctionOrders.map(o => o.id));
     const mock = correctionMockData.filter(o => !storeIds.has(o.id) && !deletedMockIds.has(o.id));
     const merged = [...correctionOrders, ...mock];
-    // 以 correctionDocNo 去重，確保 key 唯一
+    // 隞?correctionDocNo ?駁?嚗Ⅱ靽?key ?臭?
     const seen = new Set<string>();
     return merged.filter(o => {
       const k = o.correctionDocNo || String(o.id);
@@ -670,23 +531,22 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
     });
   }, [correctionOrders, deletedMockIds, historyMode]);
 
-  // ── 修正類型選項（動態從資料中收集，確保含已知類型）──────────────────────
+  // ?? 靽格迤憿??賊?嚗???鞈?銝剜??蝣箔??怠歇?仿?????????????????????????
   const correctionTypeOptions = useMemo(() => {
-    const known = ['不拆單', '刪單', '拆單'];
+    const known = ['銝???, '?芸', '?'];
     const fromData = allCorrectionOrders.map(o => o.correctionType ?? '').filter(Boolean);
     const all = [...new Set([...known, ...fromData])];
-    // DropdownSelect 格式：第一項為「全部」(value='')，其餘為各類型
-    return [
-      { value: '', label: '全部' },
+    // DropdownSelect ?澆?嚗洵銝???具?value='')嚗擗????    return [
+      { value: '', label: '?券' },
       ...all.map(t => ({ value: t, label: t })),
     ];
   }, [allCorrectionOrders]);
 
-  // ── 多關鍵字搜尋 ──────────────────────────────────────────────────────────
-  const splitKw = (s: string) => s.split(/[、,，]/).map(x => x.trim().toLowerCase()).filter(Boolean);
+  // ?? 憭??萄??? ??????????????????????????????????????????????????????????
+  const splitKw = (s: string) => s.split(/[??嚗/).map(x => x.trim().toLowerCase()).filter(Boolean);
   const matchAny = (val: string, kws: string[]) => kws.some(k => val.toLowerCase().includes(k));
 
-  // ── Tab + search filter ───────────────────────────────────────────────────
+  // ?? Tab + search filter ???????????????????????????????????????????????????
   const searchFilteredOrders = useMemo(() => {
     let result = allCorrectionOrders;
     if (activeTab !== 'ALL') result = result.filter(o => o.correctionStatus === activeTab);
@@ -704,7 +564,7 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
     return result;
   }, [allCorrectionOrders, activeTab, orderNoSearch, correctionDocNoSearch, correctionTypeSearch]);
 
-  // ── Advanced filter ───────────────────────────────────────────────────────
+  // ?? Advanced filter ???????????????????????????????????????????????????????
   const advancedFilteredOrders = useMemo(() => {
     if (appliedFilters.length === 0) return searchFilteredOrders;
     return searchFilteredOrders.filter(item =>
@@ -725,7 +585,7 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
     );
   }, [searchFilteredOrders, appliedFilters]);
 
-  // ── Sort ──────────────────────────────────────────────────────────────────
+  // ?? Sort ??????????????????????????????????????????????????????????????????
   const sortedOrders = useMemo(() => {
     if (!sortConfig.key || !sortConfig.direction) {
       if (activeTab === 'ALL') {
@@ -756,7 +616,7 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
     return sorted;
   }, [advancedFilteredOrders, sortConfig, activeTab]);
 
-  // ── Tab counts ────────────────────────────────────────────────────────────
+  // ?? Tab counts ????????????????????????????????????????????????????????????
   const activeTabs = historyMode ? historyTabs : tabs;
   const counts = useMemo(() => {
     const c: Record<string, number> = {};
@@ -767,14 +627,14 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
     return c;
   }, [allCorrectionOrders, activeTabs]);
 
-  // ── Pagination ────────────────────────────────────────────────────────────
+  // ?? Pagination ????????????????????????????????????????????????????????????
   const totalItems = sortedOrders.length;
   const paginatedOrders = useMemo(() => {
     const start = (page - 1) * perPage;
     return sortedOrders.slice(start, start + perPage);
   }, [sortedOrders, page, perPage]);
 
-  // ── Checkbox (all rows) ────────────────────────────────────────────────────
+  // ?? Checkbox (all rows) ????????????????????????????????????????????????????
   const toggleId = (id: number) => {
     setSelectedIds(prev => {
       const n = new Set(prev);
@@ -783,8 +643,7 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
     });
   };
 
-  // selectedIdsOnPage: 僅計算當頁已選取的
-  const selectedIdsOnPage = useMemo(
+  // selectedIdsOnPage: ??蝞?歇?詨???  const selectedIdsOnPage = useMemo(
     () => new Set(paginatedOrders.filter(o => selectedIds.has(o.id)).map(o => o.id)),
     [paginatedOrders, selectedIds]
   );
@@ -802,7 +661,7 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
     }
   };
 
-  // ── Tab change ────────────────────────────────────────────────────────────
+  // ?? Tab change ????????????????????????????????????????????????????????????
   const handleTabChange = (tab: TabKey) => {
     setActiveTab(tab);
     setPage(1);
@@ -810,35 +669,35 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
     setSortConfig({ key: null, direction: null });
   };
 
-  // ── Export helpers ─────────────────────────────────────────────────────────
+  // ?? Export helpers ?????????????????????????????????????????????????????????
   const dateSuffix = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  const tabLabel = activeTab === 'ALL' ? '全部' : activeTab;
+  const tabLabel = activeTab === 'ALL' ? '?券' : activeTab;
   const handleExportExcel = () => {
     const cols = visibleColumns.map(c => ({ key: c.key, label: c.label, width: c.width, minWidth: c.minWidth, visible: c.visible }));
     const rows = sortedOrders.map(o => ({ ...o, status: o.correctionStatus as any }));
-    exportOrdersExcel(rows as any, `修正單查詢_${tabLabel}_${dateSuffix}.xlsx`, cols as any);
+    exportOrdersExcel(rows as any, `靽格迤?格閰嗧${tabLabel}_${dateSuffix}.xlsx`, cols as any);
   };
   const handleExportCsv = () => {
     const cols = visibleColumns.map(c => ({ key: c.key, label: c.label, width: c.width, minWidth: c.minWidth, visible: c.visible }));
     const rows = sortedOrders.map(o => ({ ...o, status: o.correctionStatus as any }));
-    exportOrdersCsv(rows as any, `修正單查詢_${tabLabel}_${dateSuffix}.csv`, cols as any);
+    exportOrdersCsv(rows as any, `靽格迤?格閰嗧${tabLabel}_${dateSuffix}.csv`, cols as any);
   };
 
-  // ── Filter column options ─────────────────────────────────────────────────
+  // ?? Filter column options ?????????????????????????????????????????????????
   const filterColumnOptions = columns.map(c => ({ key: c.key, label: c.label }));
 
-  // ── 批次功能 Helpers ──────────────────────────────────────────────────────
+  // ?? ?寞活? Helpers ??????????????????????????????????????????????????????
   const getSelectedRows = () =>
     allCorrectionOrders.filter(o => selectedIdsOnPage.has(o.id));
 
-  // DR: 全部提交廠商
+  // DR: ?券?漱撱?
   const handleBulkSubmit = () => {
     const rows = getSelectedRows().filter(r => r.correctionStatus === 'DR');
     rows.forEach(row => {
       updateCorrectionOrder(row.id, row.correctionDocNo, { correctionStatus: 'V' });
       addCorrectionHistory(row.id, {
         date: nowDateStr(),
-        event: '批次提交廠商',
+        event: '?寞活?漱撱?',
         operator: operatorByRole(userRole as any),
         remark: '',
       });
@@ -846,13 +705,13 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
     const mockIds = [...selectedIdsOnPage].filter(id => !correctionOrders.some(o => o.id === id));
     if (mockIds.length > 0) setDeletedMockIds(prev => new Set([...prev, ...mockIds]));
     setSelectedIds(new Set());
-    showToast(`已批次提交 ${rows.length} 張修正單至廠商確認(V)`);
+    showToast(`撌脫甈⊥?鈭?${rows.length} 撘萎耨甇??喳??Ⅱ隤?V)`);
   };
 
-  // DR: 編輯（支援多張）
+  // DR: 蝺刻摩嚗?游?撘蛛?
   const handleBulkEdit = () => {
     if (selectedIdsOnPage.size === 0) return;
-    // 保持選取順序：依表格顯示順序排序
+    // 靽??詨???嚗?銵冽憿舐內????
     const selectedArr = paginatedOrders.filter(o => selectedIdsOnPage.has(o.id));
     if (selectedArr.length > 0) {
       setSelectedIds(new Set());
@@ -861,8 +720,7 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
     }
   };
 
-  // 通用批次刪除執行（確認後）
-  const executeBulkDelete = () => {
+  // ??寞活?芷?瑁?嚗Ⅱ隤?嚗?  const executeBulkDelete = () => {
     const ids = [...selectedIdsOnPage];
     const storeIds = ids.filter(id => correctionOrders.some(o => o.id === id));
     if (storeIds.length > 0) deleteCorrectionOrders(storeIds);
@@ -870,12 +728,11 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
     if (mockIds.length > 0) setDeletedMockIds(prev => new Set([...prev, ...mockIds]));
     setSelectedIds(new Set());
     setDeleteConfirmOpen(false);
-    const label = activeTab === 'DR' ? '草稿' : activeTab === 'ALL' ? '' : `${activeTab} 狀態`;
-    showToast(`已刪除 ${ids.length} 張${label}修正單`);
+    const label = activeTab === 'DR' ? '?阮' : activeTab === 'ALL' ? '' : `${activeTab} ??;
+    showToast(`撌脣??${ids.length} 撘?{label}靽格迤?害);
   };
 
-  // DR: 直接刪除；其他狀態：開啟確認對話框
-  const handleBulkDelete = () => {
+  // DR: ?湔?芷嚗隞?????蝣箄?撠店獢?  const handleBulkDelete = () => {
     if (activeTab === 'DR') {
       executeBulkDelete();
     } else {
@@ -883,57 +740,57 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
     }
   };
 
-  // V: 全部同意（→ SS，並回寫原訂單）
+  // V: ?券??嚗? SS嚗蒂?神???殷?
   const handleBulkAgree = () => {
     const rows = getSelectedRows().filter(r => r.correctionStatus === 'V');
     rows.forEach(row => {
-      // 執行訂單回寫
-      if (row.correctionType === '拆單' && row.savedDeliveryRows && row.savedDeliveryRows.length > 1) {
+      // ?瑁?閮?神
+      if (row.correctionType === '?' && row.savedDeliveryRows && row.savedDeliveryRows.length > 1) {
         executeSplitFromCorrection(row);
-      } else if (row.correctionType === '不拆單') {
+      } else if (row.correctionType === '銝???) {
         applyNonSplitCorrectionToOrder(row);
-      } else if (row.correctionType === '刪單') {
+      } else if (row.correctionType === '?芸') {
         applyDeleteCorrectionToOrder(row);
       }
-      // 修正單推進 SS
+      // 靽格迤?格??SS
       updateCorrectionOrder(row.id, row.correctionDocNo, { correctionStatus: 'SS' });
       addCorrectionHistory(row.id, {
         date: nowDateStr(),
-        event: '批次同意修正，資料已回寫原訂單 (→SS)',
+        event: '?寞活??靽格迤嚗??歇?神????(?S)',
         operator: operatorByRole(userRole as any),
-        remark: `修正類型：${row.correctionType}`,
+        remark: `靽格迤憿?嚗?{row.correctionType}`,
       });
     });
     setSelectedIds(new Set());
-    showToast(`已批次同意 ${rows.length} 張修正單，訂單已更新，狀態轉為 SS`);
+    showToast(`撌脫甈∪???${rows.length} 撘萎耨甇?嚗??桀歇?湔嚗?????SS`);
   };
 
-  // B: 全部確認（→ SS，並回寫原訂單）
+  // B: ?券蝣箄?嚗? SS嚗蒂?神???殷?
   const handleBulkConfirm = () => {
     const rows = getSelectedRows().filter(r => r.correctionStatus === 'B');
     rows.forEach(row => {
-      // 執行訂單回寫
-      if (row.correctionType === '拆單' && row.savedDeliveryRows && row.savedDeliveryRows.length > 1) {
+      // ?瑁?閮?神
+      if (row.correctionType === '?' && row.savedDeliveryRows && row.savedDeliveryRows.length > 1) {
         executeSplitFromCorrection(row);
-      } else if (row.correctionType === '不拆單') {
+      } else if (row.correctionType === '銝???) {
         applyNonSplitCorrectionToOrder(row);
-      } else if (row.correctionType === '刪單') {
+      } else if (row.correctionType === '?芸') {
         applyDeleteCorrectionToOrder(row);
       }
-      // 修正單推進 SS
+      // 靽格迤?格??SS
       updateCorrectionOrder(row.id, row.correctionDocNo, { correctionStatus: 'SS' });
       addCorrectionHistory(row.id, {
         date: nowDateStr(),
-        event: '批次採購確認，資料已回寫原訂單 (→SS)',
+        event: '?寞活?∟頃蝣箄?嚗??歇?神????(?S)',
         operator: operatorByRole(userRole as any),
-        remark: `修正類型：${row.correctionType}`,
+        remark: `靽格迤憿?嚗?{row.correctionType}`,
       });
     });
     setSelectedIds(new Set());
-    showToast(`已批次確認 ${rows.length} 張修正單，訂單已更新，狀態轉為 SS`);
+    showToast(`撌脫甈∠Ⅱ隤?${rows.length} 撘萎耨甇?嚗??桀歇?湔嚗?????SS`);
   };
 
-  // 通用：檢視（支援多張，任意狀態）
+  // ?嚗炎閬??舀憭撐嚗遙????
   const handleView = () => {
     if (selectedIdsOnPage.size === 0) return;
     const selectedArr = paginatedOrders.filter(o => selectedIdsOnPage.has(o.id));
@@ -944,14 +801,14 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
     }
   };
 
-  // ── Cell renderer ─────────────────────────────────────────────────────────
+  // ?? Cell renderer ?????????????????????????????????????????????????????????
   const getCellValue = (row: CorrectionOrderRow, key: CorrectionColumnKey) => {
     if (key === 'correctionStatus') return <StatusBadge status={row.correctionStatus} />;
-    // 單號序號 = 訂單號碼 + 訂單序號（自動計算）
+    // ?株?摨? = 閮?Ⅳ + 閮摨?嚗??蝞?
     if (key === 'docSeqNo') {
       const computed = (row.orderNo || '') + (row.orderSeq || '');
-      const display = computed || '—';
-      const isPlaceholder = display === '—';
+      const display = computed || '??;
+      const isPlaceholder = display === '??;
       return (
         <p className={`font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] truncate w-full ${isPlaceholder ? 'text-[#919eab]' : 'text-[#1c252e]'}`} title={display}>
           {display}
@@ -959,8 +816,8 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
       );
     }
     const value = row[key as keyof CorrectionOrderRow];
-    const display = value !== undefined && value !== null && String(value).trim() !== '' ? String(value) : '—';
-    const isPlaceholder = display === '—';
+    const display = value !== undefined && value !== null && String(value).trim() !== '' ? String(value) : '??;
+    const isPlaceholder = display === '??;
     return (
       <p
         className={`font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] truncate w-full ${isPlaceholder ? 'text-[#919eab]' : 'text-[#1c252e]'}`}
@@ -973,7 +830,7 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
 
   const totalWidth = visibleColumns.reduce((sum, c) => sum + c.width, 0) + 56 + docNoWidth;
 
-  // ── sticky-left style helpers ──────────────────────────────────────────────
+  // ?? sticky-left style helpers ??????????????????????????????????????????????
   const stickyCheckboxStyle: React.CSSProperties = { position: 'sticky', left: 0, zIndex: 4 };
   const stickyDocNoStyle: React.CSSProperties = {
     position: 'sticky',
@@ -984,7 +841,7 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
     boxShadow: '2px 0 4px -2px rgba(145,158,171,0.18)',
   };
 
-  // ── 明細頁：onSave / onSubmit（多張時不關閉明細頁）──────────────────────
+  // ?? ?敦??onSave / onSubmit嚗?撘菜?銝???蝝圈?嚗??????????????????????
   const handleDetailSave = (_idx: number, data: CorrectionFormData) => {
     const row = detailRows[detailIndex];
     if (!row) return;
@@ -1001,8 +858,8 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
       })),
       savedPeriodInput: data.periodInput,
     });
-    showToast(`已開立修正單為草稿(DR)狀態：${row.correctionDocNo} 號`);
-    // 單張時關閉；多張時留在明細頁（perOrderStatus 已追蹤狀態）
+    showToast(`撌脤?蝡耨甇??箄?蝔?DR)???${row.correctionDocNo} ?);
+    // ?桀撐????憭撐???冽?蝝圈?嚗erOrderStatus 撌脰蕭頩斤???
     if (detailRows.length <= 1) setDetailRows([]);
   };
 
@@ -1025,38 +882,34 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
     });
     const totalNewQty = data.deliveryRows.filter(r => !r.deleted).reduce((s, r) => s + (parseFloat(r.newQty) || 0), 0);
     showToast(totalNewQty === 0
-      ? `刪單修正單 ${row.correctionDocNo} 號��提交廠商，待廠商確認後執行刪單(V)`
-      : `修正單 ${row.correctionDocNo} 號已提交廠商，狀態轉為待廠商確認(V)`
+      ? `?芸靽格迤??${row.correctionDocNo} ?蕭嚙賣?鈭文???敺??Ⅱ隤??瑁??芸(V)`
+      : `靽格迤??${row.correctionDocNo} ?歇?漱撱?嚗????箏?撱?蝣箄?(V)`
     );
     if (detailRows.length <= 1) setDetailRows([]);
   };
 
-  // ── 明細頁：approve / disagree / returnToVendor ───────────────────────────
-  // ── 拆單修正單到達 SS 時，執行原訂單拆單作業 ──────────────────────────────
+  // ?? ?敦??approve / disagree / returnToVendor ???????????????????????????
+  // ?? ?靽格迤?桀??SS ???瑁????格??桐?璆???????????????????????????????
   const executeSplitFromCorrection = (corrRow: CorrectionOrderRow) => {
     const now = nowDateStr();
     const rows = corrRow.savedDeliveryRows;
     if (!rows || rows.length <= 1) return;
 
-    // 找到原訂單（若 store 中不存在，從修正單資料建構並加入 store）
-    let origOrder = storeOrders.find(
+    // ?曉???殷???store 銝凋?摮嚗?靽格迤?株??遣瑽蒂? store嚗?    let origOrder = storeOrders.find(
       o => o.orderNo === corrRow.orderNo && o.orderSeq === corrRow.orderSeq
     );
     if (!origOrder) {
-      // 優先從 extraCkOrders 查找完整原訂單資料
-      const extraSource = extraCkOrders.find(
+      // ?芸?敺?extraCkOrders ?交摰???株???      const extraSource = extraCkOrders.find(
         o => o.orderNo === corrRow.orderNo && o.orderSeq === corrRow.orderSeq
       );
-      // 次選：同訂單號的兄弟訂單（共享通用欄位如採購人員、單位、客戶品牌等）
-      const siblingOrder = !extraSource
+      // 甈⊿嚗?閮????閮嚗鈭恍甈?憒鞈潔犖?～雿恥?嗅???嚗?      const siblingOrder = !extraSource
         ? storeOrders.find(o => o.orderNo === corrRow.orderNo)
         : undefined;
 
       const reconstructedId = Date.now() + Math.floor(Math.random() * 100000);
       const reconstructed: OrderRow = {
-        // 若找到 extraCkOrders 完整資料，直接展開
-        ...(extraSource ? { ...extraSource } : {}),
-        // 兄弟訂單提供通用欄位（不覆蓋 extraSource 的值）
+        // ?交??extraCkOrders 摰鞈?嚗?亙???        ...(extraSource ? { ...extraSource } : {}),
+        // ??閮???甈?嚗?閬? extraSource ?潘?
         ...(siblingOrder && !extraSource ? {
           orderType: siblingOrder.orderType,
           purchaser: siblingOrder.purchaser,
@@ -1071,8 +924,7 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
           internalNote: siblingOrder.internalNote,
           materialPOContent: siblingOrder.materialPOContent,
         } : {}),
-        // 修正單本身的資料（最高優先，確保正確）
-        id: reconstructedId,
+        // 靽格迤?格頨怎?鞈?嚗?擃??蝣箔?甇?Ⅱ嚗?        id: reconstructedId,
         status: 'CK' as const,
         orderNo: corrRow.orderNo,
         orderDate: corrRow.orderDate,
@@ -1098,25 +950,23 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
       addStoreOrder(reconstructed);
       addStoreOrderHistory(reconstructedId, {
         date: now,
-        event: '訂單建立（由修正單拆單還原）',
-        operator: '系統',
-        remark: `原訂單 ${corrRow.orderNo}-${corrRow.orderSeq} 由修正單 ${corrRow.correctionDocNo} 拆單作業自動建立`,
+        event: '閮撱箇?嚗靽格迤?格??桅???',
+        operator: '蝟餌絞',
+        remark: `????${corrRow.orderNo}-${corrRow.orderSeq} ?曹耨甇? ${corrRow.correctionDocNo} ?雿平?芸?撱箇?`,
       });
       origOrder = reconstructed;
     }
 
-    // ── 拆單欄位對應表 ──────────────────────────────────────────────────────
-    // 修正單拆單欄位        → 一般訂單欄位
-    // ─────────────────────────────────────────
-    // 訂單序號 (splitOrderSeq)        → orderSeq
-    // 預計交期 (expectedDelivery)     → expectedDelivery
-    // 新交貨量 (newQty)               → orderQty
-    // 新廠商交期 (newVendorDate) → vendorDeliveryDate
-    // 新料號 (splitNewMaterialNo)     → materialNo
-    // 其餘欄位全部從原訂單同步
+    // ?? ?甈?撠?銵???????????????????????????????????????????????????????
+    // 靽格迤?格??格?雿?       ??銝?祈??格?雿?    // ?????????????????????????????????????????
+    // 閮摨? (splitOrderSeq)        ??orderSeq
+    // ??鈭斗? (expectedDelivery)     ??expectedDelivery
+    // ?唬漱鞎券? (newQty)               ??orderQty
+    // ?啣??漱??(newVendorDate) ??vendorDeliveryDate
+    // ?唳???(splitNewMaterialNo)     ??materialNo
+    // ?園?甈??券敺?閮?郊
 
-    // 第 1 筆：更新原訂單（orderSeq 不變）
-    const first = rows[0];
+    // 蝚?1 蝑??湔???殷?orderSeq 銝?嚗?    const first = rows[0];
     const firstQty = parseFloat(first.newQty) || origOrder.orderQty;
     const firstUpdate: Record<string, any> = {
       orderQty: firstQty,
@@ -1131,13 +981,13 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
     updateStoreOrderFields(origOrder.id, firstUpdate);
     addStoreOrderHistory(origOrder.id, {
       date: now,
-      event: '修正單拆單執行完成',
-      operator: '系統',
-      remark: `修正單 ${corrRow.correctionDocNo} 拆單執行，保留序號 ${first.splitOrderSeq || corrRow.orderSeq}，訂貨量 ${firstQty}`,
+      event: '靽格迤?格??桀銵???,
+      operator: '蝟餌絞',
+      remark: `靽格迤??${corrRow.correctionDocNo} ??瑁?嚗?????${first.splitOrderSeq || corrRow.orderSeq}嚗?鞎券? ${firstQty}`,
     });
 
-    // 第 2 筆起：各自新增為獨立訂單（CK 狀態）
-    // 僅覆蓋對應表中的 5 個欄位，其餘全部從原訂單同步
+    // 蝚?2 蝑絲嚗??芣憓?函?閮嚗K ???
+    // ?????”銝剔? 5 ??雿??園??券敺?閮?郊
     for (let i = 1; i < rows.length; i++) {
       const r = rows[i];
       if (r.deleted) continue;
@@ -1146,17 +996,14 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
       const newId = Date.now() + Math.floor(Math.random() * 100000) + i;
 
       const newOrder: OrderRow = {
-        ...origOrder,                            // 其餘全部從原單同步
-        id: newId,
+        ...origOrder,                            // ?園??券敺??桀?甇?        id: newId,
         status: 'CK',
-        orderSeq: newSeq,                        // 訂單序號
+        orderSeq: newSeq,                        // 閮摨?
         docSeqNo: origOrder.orderNo + newSeq,
-        expectedDelivery: r.expectedDelivery || origOrder.expectedDelivery,  // 預計交期
-        orderQty: qty,                           // 新交貨量 → 訂貨量
-        vendorDeliveryDate: r.newVendorDate,     // 新廠商交期 → 廠商可交貨日期
-        adjustmentType: undefined,
+        expectedDelivery: r.expectedDelivery || origOrder.expectedDelivery,  // ??鈭斗?
+        orderQty: qty,                           // ?唬漱鞎券? ??閮疏??        vendorDeliveryDate: r.newVendorDate,     // ?啣??漱????撱??臭漱鞎冽??        adjustmentType: undefined,
         scheduleLines: [{ index: 1, expectedDelivery: r.expectedDelivery || origOrder.expectedDelivery, deliveryDate: r.newVendorDate, quantity: qty }],
-        // 新料號 → 料號
+        // ?唳???????
         materialNo: (r.splitNewMaterialNo && r.splitNewMaterialNo !== origOrder.materialNo)
           ? r.splitNewMaterialNo
           : origOrder.materialNo,
@@ -1165,24 +1012,24 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
       addStoreOrder(newOrder);
       addStoreOrderHistory(newId, {
         date: now,
-        event: '訂單成立（修正單拆單產生）',
-        operator: '系統',
-        remark: `由修正單 ${corrRow.correctionDocNo} 拆單產生，原訂單 ${corrRow.orderNo}-${corrRow.orderSeq}`,
+        event: '閮??嚗耨甇???Ｙ?嚗?,
+        operator: '蝟餌絞',
+        remark: `?曹耨甇? ${corrRow.correctionDocNo} ??Ｙ?嚗?閮 ${corrRow.orderNo}-${corrRow.orderSeq}`,
       });
     }
   };
 
-  // ── 刪單修正單完成時，將原訂單轉為 CL 並寫入刪除碼 ─────────────────────
+  // ?? ?芸靽格迤?桀???嚗????株???CL 銝血神?亙?斤Ⅳ ?????????????????????
   const applyDeleteCorrectionToOrder = (corrRow: CorrectionOrderRow) => {
     const now = nowDateStr();
 
-    // 找原訂單（store 中）
+    // ?曉?閮嚗tore 銝哨?
     let origOrder = storeOrders.find(
       o => o.orderNo === corrRow.orderNo && o.orderSeq === corrRow.orderSeq
     );
 
     if (!origOrder) {
-      // 從 extraCkOrders 重建，再加入 store（以 CL 狀態）
+      // 敺?extraCkOrders ?遣嚗?? store嚗誑 CL ???
       const extraSource = extraCkOrders.find(
         o => o.orderNo === corrRow.orderNo && o.orderSeq === corrRow.orderSeq
       );
@@ -1233,43 +1080,41 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
       addStoreOrder(reconstructed);
       addStoreOrderHistory(reconstructedId, {
         date: now,
-        event: '刪單結案（由刪單修正單還原並關閉）',
-        operator: '系統',
-        remark: `修正單 ${corrRow.correctionDocNo} 刪單完成，訂單 ${corrRow.orderNo}-${corrRow.orderSeq} 轉為 CL`,
+        event: '?芸蝯?嚗?芸靽格迤?桅??蒂??嚗?,
+        operator: '蝟餌絞',
+        remark: `靽格迤??${corrRow.correctionDocNo} ?芸摰?嚗???${corrRow.orderNo}-${corrRow.orderSeq} 頧 CL`,
       });
     } else {
-      // 原訂單在 store → 直接更新狀態為 CL
+      // ???桀 store ???湔?湔?? CL
       updateStoreOrderStatus(
         origOrder.id,
         'CL',
         {
           date: now,
-          event: '刪單結案',
+          event: '?芸蝯?',
           operator: operatorByRole(userRole as any),
-          remark: `刪單修正單 ${corrRow.correctionDocNo} 完成，訂單轉為 CL`,
+          remark: `?芸靽格迤??${corrRow.correctionDocNo} 摰?嚗??株???CL`,
         },
         { deletionCode: corrRow.correctionDocNo }
       );
     }
   };
 
-  // ── 不拆單修正單到達 CP 時，回寫原訂單欄位 ─────────────────────────────
-  // 欄位對應（依圖說明）：
-  //   新料號 (newMaterialNo)                → materialNo
-  //   項次N-新廠商交期 (newVendorDate)      → scheduleLines[N].deliveryDate
-  //   項次N-新交貨量 (newQty)              → scheduleLines[N].quantity
-  //   訂貨量 (orderQty)                    → 所有有效項次 newQty 加總
-  //   廠商可交貨日期 (vendorDeliveryDate)   → 最後一筆(最晚)項次的 newVendorDate
+  // ?? 銝??桐耨甇??圈? CP ???神???格?雿??????????????????????????????
+  // 甈?撠?嚗??牧??嚗?  //   ?唳???(newMaterialNo)                ??materialNo
+  //   ?活N-?啣??漱??(newVendorDate)      ??scheduleLines[N].deliveryDate
+  //   ?活N-?唬漱鞎券? (newQty)              ??scheduleLines[N].quantity
+  //   閮疏??(orderQty)                    ???????甈?newQty ?蜇
+  //   撱??臭漱鞎冽??(vendorDeliveryDate)   ???敺?蝑?????活??newVendorDate
   const applyNonSplitCorrectionToOrder = (corrRow: CorrectionOrderRow) => {
     const now = nowDateStr();
     const rows = corrRow.savedDeliveryRows;
 
-    // 找到原訂單
-    let origOrder = storeOrders.find(
+    // ?曉????    let origOrder = storeOrders.find(
       o => o.orderNo === corrRow.orderNo && o.orderSeq === corrRow.orderSeq
     );
     if (!origOrder) {
-      // 找不到時從修正單資料還原基本訂單並加入 store
+      // ?曆??唳?敺耨甇?鞈????箸閮銝血???store
       const extraSource = extraCkOrders.find(
         o => o.orderNo === corrRow.orderNo && o.orderSeq === corrRow.orderSeq
       );
@@ -1319,20 +1164,20 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
       addStoreOrder(reconstructed);
       addStoreOrderHistory(reconstructedId, {
         date: now,
-        event: '訂單建立（由不拆單修正單還原）',
-        operator: '系統',
-        remark: `原訂單 ${corrRow.orderNo}-${corrRow.orderSeq} 由修正單 ${corrRow.correctionDocNo} 自動建立`,
+        event: '閮撱箇?嚗銝??桐耨甇???嚗?,
+        operator: '蝟餌絞',
+        remark: `????${corrRow.orderNo}-${corrRow.orderSeq} ?曹耨甇? ${corrRow.correctionDocNo} ?芸?撱箇?`,
       });
       origOrder = reconstructed;
     }
 
-    // 建構新 scheduleLines（過濾已刪除的項次）
+    // 撱箸???scheduleLines嚗?瞈曉歇?芷??甈∴?
     const validRows = rows ? rows.filter(r => !r.deleted) : [];
 
     const updates: Record<string, any> = {};
 
     if (validRows.length > 0) {
-      // scheduleLines：以修正單每筆項次的新廠商交期與新交貨量覆蓋
+      // scheduleLines嚗誑靽格迤?格?蝑?甈∠??啣??漱???唬漱鞎券?閬?
       const newScheduleLines = validRows.map((r, idx) => ({
         index: idx + 1,
         expectedDelivery: r.expectedDelivery || origOrder!.expectedDelivery,
@@ -1340,19 +1185,17 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
         quantity: parseFloat(r.newQty) || 0,
       }));
 
-      // orderQty = 所有有效項次 newQty 加總
+      // orderQty = ?????甈?newQty ?蜇
       const totalQty = newScheduleLines.reduce((sum, l) => sum + l.quantity, 0);
 
-      // vendorDeliveryDate = 最後一筆(最晚)項次的廠商交期
-      const lastVendorDate = newScheduleLines[newScheduleLines.length - 1].deliveryDate;
+      // vendorDeliveryDate = ?敺?蝑?????活???漱??      const lastVendorDate = newScheduleLines[newScheduleLines.length - 1].deliveryDate;
 
       updates.scheduleLines = newScheduleLines;
       updates.orderQty = totalQty;
       updates.vendorDeliveryDate = lastVendorDate;
     }
 
-    // 若修正單有新料號，覆蓋原訂單的料號
-    if (corrRow.newMaterialNo && corrRow.newMaterialNo !== origOrder.materialNo) {
+    // ?乩耨甇????嚗???閮????    if (corrRow.newMaterialNo && corrRow.newMaterialNo !== origOrder.materialNo) {
       updates.materialNo = corrRow.newMaterialNo;
     }
 
@@ -1362,8 +1205,8 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
 
     addStoreOrderHistory(origOrder.id, {
       date: now,
-      event: '修正單回寫完成（不拆單）',
-      operator: '系統',
+      event: '靽格迤?桀?撖怠???銝??殷?',
+      operator: '蝟餌絞',
       remark: '',
     });
   };
@@ -1371,43 +1214,40 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
   const handleDetailApprove = () => {
     const row = detailRows[detailIndex];
     if (!row) return;
-    // V → CP，B → CP（採購確認修正單）
-    const newStatus = row.correctionStatus === 'V' ? 'CP'
+    // V ??CP嚗 ??CP嚗鞈潛Ⅱ隤耨甇?嚗?    const newStatus = row.correctionStatus === 'V' ? 'CP'
       : row.correctionStatus === 'B' ? 'CP'
       : row.correctionStatus;
 
     if (newStatus === 'CP') {
-      // 執行訂單回寫，然後直接推進 SS
-      if (row.correctionType === '拆單' && row.savedDeliveryRows && row.savedDeliveryRows.length > 1) {
-        // 拆單：執行拆單作業
-        executeSplitFromCorrection(row);
-      } else if (row.correctionType === '不拆單') {
-        // 不拆單：回寫料號、scheduleLines、訂貨量、廠商可交貨日期
+      // ?瑁?閮?神嚗敺?交??SS
+      if (row.correctionType === '?' && row.savedDeliveryRows && row.savedDeliveryRows.length > 1) {
+        // ?嚗銵??桐?璆?        executeSplitFromCorrection(row);
+      } else if (row.correctionType === '銝???) {
+        // 銝??殷??神???cheduleLines??鞎券????鈭方疏?交?
         applyNonSplitCorrectionToOrder(row);
-      } else if (row.correctionType === '刪單') {
-        // 刪單：原訂單轉為 CL，寫入刪除碼
+      } else if (row.correctionType === '?芸') {
+        // ?芸嚗?閮頧 CL嚗神?亙?斤Ⅳ
         applyDeleteCorrectionToOrder(row);
       }
-      // 訂單回寫後，修正單直接推進 SS（修正通過）
-      updateCorrectionOrder(row.id, row.correctionDocNo, { correctionStatus: 'SS' });
+      // 閮?神敺?靽格迤?桃?交??SS嚗耨甇??嚗?      updateCorrectionOrder(row.id, row.correctionDocNo, { correctionStatus: 'SS' });
       addCorrectionHistory(row.id, {
         date: nowDateStr(),
-        event: '修正確認，資料已回寫原訂單 (→SS)',
+        event: '靽格迤蝣箄?嚗??歇?神????(?S)',
         operator: operatorByRole(userRole as any),
-        remark: `修正類型：${row.correctionType}`,
+        remark: `靽格迤憿?嚗?{row.correctionType}`,
       });
-      showToast(`修正確認完成（${row.correctionDocNo}），訂單已更新，狀態轉為 SS`);
+      showToast(`靽格迤蝣箄?摰?嚗?{row.correctionDocNo}嚗?閮撌脫?堆??????SS`);
     } else {
       if (newStatus !== row.correctionStatus) {
         updateCorrectionOrder(row.id, row.correctionDocNo, { correctionStatus: newStatus });
       }
       addCorrectionHistory(row.id, {
         date: nowDateStr(),
-        event: `修正確認`,
+        event: `靽格迤蝣箄?`,
         operator: operatorByRole(userRole as any),
         remark: '',
       });
-      showToast(`修正確認完成（${row.correctionDocNo}），狀態轉為 ${newStatus}`);
+      showToast(`靽格迤蝣箄?摰?嚗?{row.correctionDocNo}嚗??????${newStatus}`);
     }
 
     if (detailRows.length <= 1) setDetailRows([]);
@@ -1415,14 +1255,13 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
   const handleDetailDisagree = (reason: string, adjustedRows?: { expectedDelivery: string; vendorOriginalDate: string; newVendorDate: string; originalQty: number; newQty: string; deleted?: boolean; splitNewMaterialNo?: string }[], newMaterialNo?: string) => {
     const row = detailRows[detailIndex];
     if (!row) return;
-    // 狀態轉為 B（廠商不同意，待採購處理）
-    const newStatus = 'B' as const;
+    // ?????B嚗?????嚗??∟頃??嚗?    const newStatus = 'B' as const;
     const updates: Partial<CorrectionOrderRow> = { correctionStatus: newStatus };
-    // 若廠商變更了料號，將新料號寫入 newMaterialNo
+    // ?亙????港???嚗??唳??神??newMaterialNo
     if (newMaterialNo) {
       updates.newMaterialNo = newMaterialNo;
     }
-    // 若廠商選擇「調整交貨排程」，將廠商調整後的交貨排程寫入 savedDeliveryRows
+    // ?亙???矽?港漱鞎冽?蝔?撠??矽?游??漱鞎冽?蝔神??savedDeliveryRows
     if (adjustedRows && adjustedRows.length > 0) {
       updates.savedDeliveryRows = adjustedRows.map(r => ({
         expectedDelivery: r.expectedDelivery,
@@ -1435,45 +1274,41 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
       }));
       updates.savedPeriodInput = String(adjustedRows.filter(r => !r.deleted).length);
     }
-    // 若此列來自 mock data（不在 store 中），先加入 store 再更新
-    if (!correctionOrders.some(o => o.id === row.id)) {
+    // ?交迨????mock data嚗???store 銝哨?嚗?? store ???    if (!correctionOrders.some(o => o.id === row.id)) {
       addCorrectionOrder({ ...row, ...updates });
     } else {
       updateCorrectionOrder(row.id, row.correctionDocNo, updates);
     }
     addCorrectionHistory(row.id, {
       date: nowDateStr(),
-      event: '廠商調整修正單',
+      event: '撱?隤踵靽格迤??,
       operator: operatorByRole(userRole as any),
-      remark: `調整原因：${reason}`,
+      remark: `隤踵??嚗?{reason}`,
     });
-    showToast(`已提交調整修正單（${row.correctionDocNo}），狀態轉為 ${newStatus}`);
+    showToast(`撌脫?鈭方矽?港耨甇?嚗?{row.correctionDocNo}嚗??????${newStatus}`);
     if (detailRows.length <= 1) setDetailRows([]);
   };
   const handleDetailReturnToVendor = (reason: string) => {
     const row = detailRows[detailIndex];
     if (!row) return;
-    // 狀態退回 V（廠商待確認）
-    const newStatus = 'V' as const;
+    // ????V嚗???蝣箄?嚗?    const newStatus = 'V' as const;
     const updates: Partial<CorrectionOrderRow> = { correctionStatus: newStatus };
-    // 若此列來自 mock data（不在 store 中），先加入 store 再更新
-    if (!correctionOrders.some(o => o.id === row.id)) {
+    // ?交迨????mock data嚗???store 銝哨?嚗?? store ???    if (!correctionOrders.some(o => o.id === row.id)) {
       addCorrectionOrder({ ...row, ...updates });
     } else {
       updateCorrectionOrder(row.id, row.correctionDocNo, updates);
     }
     addCorrectionHistory(row.id, {
       date: nowDateStr(),
-      event: `退回廠商`,
+      event: `????,
       operator: operatorByRole(userRole as any),
-      remark: reason ? `退回原因：${reason}` : '',
+      remark: reason ? `?????${reason}` : '',
     });
-    showToast(`已退回廠商（${row.correctionDocNo}），狀態轉為 ${newStatus}`);
+    showToast(`撌脤????${row.correctionDocNo}嚗??????${newStatus}`);
     if (detailRows.length <= 1) setDetailRows([]);
   };
 
-  // B: 關閉單據（轉 CL）
-  const handleDetailCloseToCL = () => {
+  // B: ???格?嚗? CL嚗?  const handleDetailCloseToCL = () => {
     const row = detailRows[detailIndex];
     if (!row) return;
     const newStatus = 'CL' as const;
@@ -1485,22 +1320,21 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
     }
     addCorrectionHistory(row.id, {
       date: nowDateStr(),
-      event: `單據關閉`,
+      event: `?格???`,
       operator: operatorByRole(userRole as any),
       remark: '',
     });
 
-    // ── 刪單修正單結案：原訂單轉為 CL + 寫入刪除碼──────────────────────
-    if (row.correctionType === '刪單') {
+    // ?? ?芸靽格迤?桃?獢????株???CL + 撖怠?芷蝣潑??????????????????????
+    if (row.correctionType === '?芸') {
       applyDeleteCorrectionToOrder(row);
     }
 
-    showToast(`單據已關閉（${row.correctionDocNo}），狀態轉為 CL`);
+    showToast(`?格?撌脤???${row.correctionDocNo}嚗??????CL`);
     if (detailRows.length <= 1) setDetailRows([]);
   };
 
-  // V: 採購抽單（V→B）
-  const handleDetailWithdraw = () => {
+  // V: ?∟頃?賢嚗?嚗?  const handleDetailWithdraw = () => {
     const row = detailRows[detailIndex];
     if (!row) return;
     const newStatus = 'B' as const;
@@ -1512,15 +1346,15 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
     }
     addCorrectionHistory(row.id, {
       date: nowDateStr(),
-      event: '抽單 (V→B)',
+      event: '?賢 (V?)',
       operator: operatorByRole(userRole as any),
       remark: '',
     });
-    showToast(`已抽單（${row.correctionDocNo}），狀態轉為 B`);
+    showToast(`撌脫?殷?${row.correctionDocNo}嚗??????B`);
     if (detailRows.length <= 1) setDetailRows([]);
   };
 
-  // ── 多張編輯時，組建每張訂單各自的初始資料 map ──────────────────────────
+  // ?? 憭撐蝺刻摩??蝯遣瘥撐閮???憪???map ??????????????????????????
   const initialDataByOrderId = useMemo(() => {
     if (detailRows.length <= 1) return undefined;
     const map: Record<number, { newMaterialNo?: string; correctionNote?: string; savedDeliveryRows?: any[]; savedPeriodInput?: string }> = {};
@@ -1535,21 +1369,20 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
     return map;
   }, [detailRows]);
 
-  // ── 明細頁渲染（支援多張 1/x 導覽）──────────────────────────────────────
+  // ?? ?敦?葡???舀憭撐 1/x 撠汗嚗??????????????????????????????????????
   if (detailRows.length > 0) {
     const currentRow = detailRows[detailIndex];
     const vm = getViewMode(currentRow.correctionStatus);
     const ordersForDetail = detailRows.map(r => correctionRowToOrderRow(r));
     const isDrEdit = currentRow.correctionStatus === 'DR';
 
-    // ── 計算同訂單號下最高序號（用於拆單新項次序號計算）──────────────────
+    // ?? 閮????株?銝?擃????冽??圈?甈∪???蝞???????????????????
     const computeMaxSeqForOrder = (orderNo: string): number => {
       const seqs = storeOrders
         .filter(o => o.orderNo === orderNo)
         .map(o => parseInt(o.orderSeq, 10))
         .filter(n => !isNaN(n));
-      // 也查 correctionOrders 中同 orderNo 的序號
-      const corrSeqs = correctionOrders
+      // 銋 correctionOrders 銝剖? orderNo ????      const corrSeqs = correctionOrders
         .filter(c => c.orderNo === orderNo)
         .map(c => parseInt(c.orderSeq, 10))
         .filter(n => !isNaN(n));
@@ -1601,7 +1434,7 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
   const showToolbar = selectedIdsOnPage.size > 0;
 
 
-// ── 雙擊自動最適欄寬 ───────────────────────────────────────────────────────
+// ?? ???芸???拇?撖????????????????????????????????????????????????????????
   const autoFitWidth = (key: string) => {
     const col = columns.find(c => c.key === key);
     if (!col) return;
@@ -1622,19 +1455,18 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
     <DndProvider backend={HTML5Backend}>
       <div className="bg-white flex flex-col h-full relative rounded-[16px] shadow-[0px_0px_2px_0px_rgba(145,158,171,0.2),0px_12px_24px_-4px_rgba(145,158,171,0.12)] w-full overflow-hidden">
 
-        {/* ── 歷史修正單提示橫幅 ────────────────────────────────────── */}
+        {/* ?? 甇瑕靽格迤?格?蝷箸帖撟??????????????????????????????????????? */}
         {historyMode && (
           <div className="flex items-center gap-[8px] px-[20px] py-[10px] bg-[#fff7e6] border-b border-[#ffe4a0] shrink-0">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
               <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="#d97706" />
             </svg>
             <p className="text-[13px] text-[#92400e]" style={{ fontFamily: "'Public_Sans:Medium',sans-serif" }}>
-              本頁顯示 <strong>3 年以上</strong>（2022/12 以前）已確認（CK）或已關單（CL）的歷史修正單，僅供查詢，不提供編輯。
-            </p>
+              ?祇?憿舐內 <strong>3 撟港誑銝?/strong>嚗?022/12 隞亙?嚗歇蝣箄?嚗K嚗?撌脤??殷?CL嚗?甇瑕靽格迤?殷????亥岷嚗???蝺刻摩??            </p>
           </div>
         )}
 
-        {/* ── Tabs ──────────────────────────────────────────────────────── */}
+        {/* ?? Tabs ???????????????????????????????????????????????????????? */}
         <div className="relative shrink-0 w-full">
           <div className="flex flex-row items-center size-full">
             <div className="content-stretch flex gap-[40px] items-center px-[20px] py-0 relative w-full overflow-x-hidden">
@@ -1652,12 +1484,12 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
           </div>
         </div>
 
-        {/* ── 搜尋列 ───────────────────────────────────────────────────── */}
+        {/* ?? ????????????????????????????????????????????????????????? */}
         <div className="flex gap-[16px] items-center px-[20px] py-[20px] shrink-0">
-          <SearchField label="單號序號" value={orderNoSearch} onChange={(v) => { setOrderNoSearch(v); setPage(1); }} />
-          <SearchField label="修正單號" value={correctionDocNoSearch} onChange={(v) => { setCorrectionDocNoSearch(v); setPage(1); }} />
+          <SearchField label="?株?摨?" value={orderNoSearch} onChange={(v) => { setOrderNoSearch(v); setPage(1); }} />
+          <SearchField label="靽格迤?株?" value={correctionDocNoSearch} onChange={(v) => { setCorrectionDocNoSearch(v); setPage(1); }} />
           <DropdownSelect
-            label="修正類型"
+            label="靽格迤憿?"
             value={correctionTypeSearch}
             onChange={(v) => { setCorrectionTypeSearch(v); setPage(1); }}
             options={correctionTypeOptions}
@@ -1665,7 +1497,7 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
           />
         </div>
 
-        {/* ── Toolbar (Columns / Filters / Export) ────────────────────── */}
+        {/* ?? Toolbar (Columns / Filters / Export) ?????????????????????? */}
         <TableToolbar
           resultsCount={totalItems}
           showColumnSelector={showColumnSelector}
@@ -1694,7 +1526,7 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
           onExportCsv={handleExportCsv}
         />
 
-        {/* ── 選取工具列（scroll 容器外，保持全寬不被推出畫面） ─────── */}
+        {/* ?? ?詨?撌亙??scroll 摰孵憭?靽??典祝銝◤?典?恍嚗???????? */}
         {showToolbar && (
           <div className="shrink-0">
             <SelectionToolbar
@@ -1714,7 +1546,7 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
           </div>
         )}
 
-        {/* ── 進階表格 ──────────────────────────────────────────────────── */}
+        {/* ?? ?脤?銵冽 ???????????????????????????????????????????????????? */}
         <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
           <div
             ref={scrollContainerRef}
@@ -1723,16 +1555,16 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
           >
             <div style={{ minWidth: `${totalWidth}px` }}>
 
-              {/* 表頭（恆常顯示欄位標題，工具列已獨立至 scroll 外） */}
+              {/* 銵券嚗?撣賊＊蝷箸?雿?憿?撌亙?歇?函???scroll 憭? */}
               <div data-table-header="true" className="flex sticky top-0 z-10 border-b border-[rgba(145,158,171,0.08)]">
                 <>
-                  {/* Checkbox header — 有選取時隱藏，規範同 AdvancedOrderTable */}
+                  {/* Checkbox header ??????梯?嚗?蝭? AdvancedOrderTable */}
                   <div className="bg-[#f4f6f8] shrink-0 w-[56px] flex items-center justify-center border-r border-[rgba(145,158,171,0.08)]" style={stickyCheckboxStyle}>
                     {!showToolbar && (
                       <CheckboxIcon checked={isAllSelected} onClick={toggleAll} />
                     )}
                   </div>
-                  {/* 修正單號 header — 支援欄寬拖曳調整（sticky 欄，非 DraggableColumnHeader） */}
+                  {/* 靽格迤?株? header ???舀甈祝?隤踵嚗ticky 甈???DraggableColumnHeader嚗?*/}
                   <div
                     className="relative bg-[#f4f6f8] shrink-0 border-r border-[rgba(145,158,171,0.08)]"
                     style={{ width: docNoWidth, height: 56 }}
@@ -1742,7 +1574,7 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
                       onClick={() => handleSort('correctionDocNo')}
                     >
                       <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[24px] text-[#637381] text-[14px] whitespace-nowrap">
-                        修正單號
+                        靽格迤?株?
                       </p>
                       {sortConfig.key === 'correctionDocNo' && (
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="ml-[6px] shrink-0">
@@ -1752,7 +1584,7 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
                         </svg>
                       )}
                     </div>
-                    {/* 欄寬調整 handle：拖拽調寬 或 雙擊自動最適 */}
+                    {/* 甈祝隤踵 handle嚗??質矽撖??????芸????*/}
                     <div
                       className="absolute right-0 top-0 bottom-0 w-[8px] cursor-col-resize hover:bg-[#1D7BF5] hover:bg-opacity-20 z-10 group transition-colors"
                       onMouseDown={(e) => {
@@ -1766,7 +1598,7 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
                         docNoResizeStartX.current = e.clientX;
                         docNoResizeStartW.current = docNoWidth;
                       }}
-                      title="拖拽調整欄位寬度；雙擊自動最適欄寬"
+                      title="?隤踵甈?撖砍漲嚗?????拇?撖?
                     >
                       <div className="absolute right-[3px] top-0 bottom-0 w-[2px] bg-transparent group-hover:bg-[#1D7BF5] transition-colors" />
                     </div>
@@ -1782,13 +1614,15 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
                       sortConfig={sortConfig}
                       onSort={handleSort}
                       isLast={idx === visibleColumns.length - 1}
+                      isFiltered={!!appliedFilters?.some(f => f.column === col.key)}
+                      dragType="correction-column"
                     />
                   ))}
                   <div className="flex-1 bg-[#f4f6f8] min-w-0" />
                 </>
               </div>
 
-              {/* 資料列 */}
+              {/* 鞈???*/}
               {paginatedOrders.map(row => (
                 <div
                   key={row.correctionDocNo || `order-${row.id}`}
@@ -1801,7 +1635,7 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
                   >
                     <CheckboxIcon checked={selectedIds.has(row.id)} onClick={() => toggleId(row.id)} />
                   </div>
-                  {/* 修正單號 */}
+                  {/* 靽格迤?株? */}
                   <div
                     className="shrink-0 flex items-center justify-start px-[16px] border-r border-[rgba(145,158,171,0.08)] bg-white group-hover:bg-[#f6f7f8]"
                     style={stickyDocNoStyle}
@@ -1811,13 +1645,13 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
                       title={row.correctionDocNo}
                       onClick={() => { setDetailRows([row]); setDetailIndex(0); }}
                     >
-                      {row.correctionDocNo || '—'}
+                      {row.correctionDocNo || '??}
                     </button>
-                    {/* CP 頁籤：轉 SS 測試按鈕 */}
+                    {/* CP ?惜嚗? SS 皜祈岫?? */}
                     {activeTab === 'CP' && row.correctionStatus === 'CP' && (() => {
-                      const isDeleteOrder = row.correctionType === '刪單';
+                      const isDeleteOrder = row.correctionType === '?芸';
                       const targetStatus = isDeleteOrder ? 'CL' : 'SS';
-                      const targetLabel = isDeleteOrder ? '轉CL' : '轉SS';
+                      const targetLabel = isDeleteOrder ? '頧L' : '頧S';
                       return (
                         <button
                           className="ml-[6px] shrink-0 px-[6px] py-[1px] rounded-[4px] bg-[#005eb8] text-white text-[11px] leading-[18px] hover:bg-[#004a93] cursor-pointer whitespace-nowrap"
@@ -1832,14 +1666,14 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
                             }
                             addCorrectionHistory(row.id, {
                               date: nowDateStr(),
-                              event: `測試轉 ${targetStatus}`,
+                              event: `皜祈岫頧?${targetStatus}`,
                               operator: operatorByRole(userRole as any),
-                              remark: '手動測試轉換',
+                              remark: '??皜祈岫頧?',
                             });
-                            if (!isDeleteOrder && row.correctionType === '拆單' && row.savedDeliveryRows && row.savedDeliveryRows.length > 1) {
+                            if (!isDeleteOrder && row.correctionType === '?' && row.savedDeliveryRows && row.savedDeliveryRows.length > 1) {
                               executeSplitFromCorrection({ ...row, correctionStatus: 'SS' });
                             }
-                            showToast(`${row.correctionDocNo} 已轉為 ${targetStatus} 狀態`);
+                            showToast(`${row.correctionDocNo} 撌脰???${targetStatus} ??);
                           }}
                         >
                           {targetLabel}
@@ -1862,19 +1696,18 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
                 </div>
               ))}
 
-              {/* 空資料提示 */}
+              {/* 蝛箄???蝷?*/}
               {paginatedOrders.length === 0 && (
                 <div className="flex items-center justify-center py-[60px]">
                   <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[#919eab] text-[14px]">
-                    尚無修正單資料
-                  </p>
+                    撠靽格迤?株???                  </p>
                 </div>
               )}
             </div>
           </div>
         </div>
 
-        {/* ── 分頁 ─────────────────────────────────────────────────────── */}
+        {/* ?? ?? ??????????????????????????????????????????????????????? */}
         <div className="shrink-0">
           <PaginationControls
             currentPage={page}
@@ -1895,14 +1728,14 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
         </div>
       )}
 
-      {/* ── 批次刪除確認對話框 ───────────────────────────────────────────── */}
+      {/* ?? ?寞活?芷蝣箄?撠店獢?????????????????????????????????????????????? */}
       {deleteConfirmOpen && (
         <div className="fixed inset-0 z-[400] flex items-center justify-center" style={{ background: 'rgba(28,37,46,0.48)' }}>
           <div className="bg-white rounded-[16px] shadow-[0px_20px_40px_-4px_rgba(145,158,171,0.24)] w-[400px] max-w-[90vw] overflow-hidden">
             {/* Header */}
             <div className="flex items-center justify-between px-[24px] pt-[24px] pb-[16px]">
               <div className="flex items-center gap-[12px]">
-                {/* 警告 icon */}
+                {/* 霅血? icon */}
                 <div className="flex items-center justify-center w-[40px] h-[40px] rounded-full bg-[rgba(255,86,48,0.12)] shrink-0">
                   <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                     <path d="M10 2L18.66 17H1.34L10 2Z" stroke="#ff5630" strokeWidth="1.5" strokeLinejoin="round" fill="none" />
@@ -1911,7 +1744,7 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
                   </svg>
                 </div>
                 <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[16px] leading-[24px] text-[#1c252e]">
-                  確認批次刪除
+                  蝣箄??寞活?芷
                 </p>
               </div>
               <button
@@ -1927,13 +1760,10 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
             {/* Body */}
             <div className="px-[24px] pb-[8px]">
               <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[14px] leading-[22px] text-[#637381]">
-                您即將刪除已選取的
-                <span className="font-semibold text-[#1c252e] mx-[4px]">{selectedIdsOnPage.size}</span>
-                張修正單，此操作無法復原。
-              </p>
+                ?典撠?文歇?詨???                <span className="font-semibold text-[#1c252e] mx-[4px]">{selectedIdsOnPage.size}</span>
+                撘萎耨甇?嚗迨???⊥?敺拙???              </p>
               <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[14px] leading-[22px] text-[#ff5630] mt-[8px]">
-                請確認您已了解刪除後資料將無法恢復。
-              </p>
+                隢Ⅱ隤撌脖?閫??文?鞈?撠瘜敺押?              </p>
             </div>
 
             {/* Footer */}
@@ -1942,13 +1772,13 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
                 onClick={() => setDeleteConfirmOpen(false)}
                 className="h-[40px] px-[16px] rounded-[8px] border border-[rgba(145,158,171,0.32)] hover:bg-[rgba(145,158,171,0.08)] transition-colors"
               >
-                <span className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] leading-[24px] text-[#1c252e]">取消</span>
+                <span className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] leading-[24px] text-[#1c252e]">??</span>
               </button>
               <button
                 onClick={executeBulkDelete}
                 className="h-[40px] px-[16px] rounded-[8px] bg-[#ff5630] hover:bg-[#e04020] transition-colors"
               >
-                <span className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] leading-[24px] text-white">確認刪除</span>
+                <span className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] leading-[24px] text-white">蝣箄??芷</span>
               </button>
             </div>
           </div>
