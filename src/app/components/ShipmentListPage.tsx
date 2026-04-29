@@ -949,8 +949,81 @@ export function ShipmentListPage() {
             onApply={() => { setAppliedFilters(filters); setShowFilterDialog(false); }}
           />
         }
-        onExportExcel={() => showToast(`已匯出 ${filteredData.length} 筆 (Excel)`)}
-        onExportCsv={() => showToast(`已匯出 ${filteredData.length} 筆 (CSV)`)}
+        onExportExcel={() => {
+          // 產生 CSV 內容（Excel 可直接開啟）
+          const exportCols = [
+            { key: 'vendorShipmentNo', label: '廠商出貨單號' },
+            { key: 'vendorName',       label: '廠商名稱' },
+            { key: 'currency',         label: '幣別' },
+            { key: 'transportType',    label: '運輸型態' },
+            { key: 'deliveryDate',     label: '交貨日期' },
+            { key: 'arrivalDate',      label: '到貨日期' },
+            { key: 'invoiceDate',      label: 'Invoice日期' },
+            { key: 'deliveryAddress',  label: '交貨地址' },
+            { key: 'sapDeliveryNo',    label: 'SAP交貨單號' },
+            { key: 'status',           label: '狀態' },
+            { key: 'detailCount',      label: '出貨項次數' },
+          ];
+          const statusLabel = (s: string) => ({ open: '開立', sap_sent: '已拋SAP', closed: '已結案' }[s] ?? s);
+          const header = exportCols.map(c => `"${c.label}"`).join(',');
+          const rows = filteredData.map(row =>
+            exportCols.map(c => {
+              let v: string;
+              if (c.key === 'detailCount') v = String(row.details.length);
+              else if (c.key === 'status') v = statusLabel(row.status);
+              else v = String((row as any)[c.key] ?? '');
+              return `"${v.replace(/"/g, '""')}"`;
+            }).join(',')
+          );
+          const csv = '\uFEFF' + [header, ...rows].join('\r\n');
+          const blob = new Blob([csv], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `出貨單_${new Date().toISOString().slice(0,10)}.xlsx`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          showToast(`已匯出 ${filteredData.length} 筆 (Excel)`);
+        }}
+        onExportCsv={() => {
+          const exportCols = [
+            { key: 'vendorShipmentNo', label: '廠商出貨單號' },
+            { key: 'vendorName',       label: '廠商名稱' },
+            { key: 'currency',         label: '幣別' },
+            { key: 'transportType',    label: '運輸型態' },
+            { key: 'deliveryDate',     label: '交貨日期' },
+            { key: 'arrivalDate',      label: '到貨日期' },
+            { key: 'invoiceDate',      label: 'Invoice日期' },
+            { key: 'deliveryAddress',  label: '交貨地址' },
+            { key: 'sapDeliveryNo',    label: 'SAP交貨單號' },
+            { key: 'status',           label: '狀態' },
+            { key: 'detailCount',      label: '出貨項次數' },
+          ];
+          const statusLabel = (s: string) => ({ open: '開立', sap_sent: '已拋SAP', closed: '已結案' }[s] ?? s);
+          const header = exportCols.map(c => `"${c.label}"`).join(',');
+          const rows = filteredData.map(row =>
+            exportCols.map(c => {
+              let v: string;
+              if (c.key === 'detailCount') v = String(row.details.length);
+              else if (c.key === 'status') v = statusLabel(row.status);
+              else v = String((row as any)[c.key] ?? '');
+              return `"${v.replace(/"/g, '""')}"`;
+            }).join(',')
+          );
+          const csv = '\uFEFF' + [header, ...rows].join('\r\n');
+          const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `出貨單_${new Date().toISOString().slice(0,10)}.csv`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          showToast(`已匯出 ${filteredData.length} 筆 (CSV)`);
+        }}
         actionButton={<div />}
       />
 

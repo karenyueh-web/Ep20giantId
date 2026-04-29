@@ -1,15 +1,61 @@
 // 共用的 Table Toolbar 組件
-import { useState, useRef, useEffect, useCallback } from 'react';
+// ─ Columns / Filters popup 使用 createPortal 渲染到 body，避免父層 overflow:hidden 截斷 ─
+import { useState, useRef, useEffect, useLayoutEffect, useCallback, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 
+// ── PopupPortal：把 popup 渲染到 body，用 fixed 定位到按鈕下方靠右對齊 ──────
+function PopupPortal({
+  anchorRef,
+  children,
+}: {
+  anchorRef: React.RefObject<HTMLDivElement | null>;
+  children: ReactNode;
+}) {
+  // 同步計算初始位置（避免閃跳）
+  const calcPos = (): React.CSSProperties => {
+    const el = anchorRef.current;
+    if (!el) return { position: 'fixed', visibility: 'hidden' as const, zIndex: 9999 };
+    const rect = el.getBoundingClientRect();
+    return {
+      position: 'fixed',
+      top: rect.bottom + 6,
+      right: Math.max(0, window.innerWidth - rect.right),
+      zIndex: 9999,
+    };
+  };
+
+  const [style, setStyle] = useState<React.CSSProperties>(calcPos);
+
+  // useLayoutEffect 在繪製前執行，確保位置精確且無閃跳
+  useLayoutEffect(() => {
+    const update = () => setStyle(calcPos());
+    update();
+    window.addEventListener('scroll', update, true);
+    window.addEventListener('resize', update);
+    return () => {
+      window.removeEventListener('scroll', update, true);
+      window.removeEventListener('resize', update);
+    };
+  }, [anchorRef]);
+
+  return createPortal(
+    <div style={style} onMouseDown={e => e.stopPropagation()}>
+      {children}
+    </div>,
+    document.body,
+  );
+}
+
+// ── TableToolbar Props ────────────────────────────────────────────────────────
 interface TableToolbarProps {
   resultsCount: number;
   showColumnSelector: boolean;
   showFilterDialog: boolean;
   onColumnsClick: () => void;
   onFiltersClick: () => void;
-  columnsButton?: React.ReactNode;
-  filtersButton?: React.ReactNode;
-  actionButton?: React.ReactNode;
+  columnsButton?: ReactNode;
+  filtersButton?: ReactNode;
+  actionButton?: ReactNode;
   /** 提供此 callback 即自動顯示 Export 下拉選單中的「匯出 Excel」選項 */
   onExportExcel?: () => void;
   /** 提供此 callback 即自動顯示 Export 下拉選單中的「匯出 CSV」選項 */
@@ -36,10 +82,15 @@ export function TableToolbar({
 }: TableToolbarProps) {
   const hasExport = !!(onExportExcel || onExportCsv || onExportScheduleChange || onDownloadShipmentTemplate);
   const [showExportDropdown, setShowExportDropdown] = useState(false);
-  const exportRef = useRef<HTMLDivElement>(null);
 
+  // 每個按鈕區塊的 ref，用來計算 popup 定位
+  const columnsAnchorRef = useRef<HTMLDivElement>(null);
+  const filtersAnchorRef = useRef<HTMLDivElement>(null);
+  const exportAnchorRef  = useRef<HTMLDivElement>(null);
+
+  // 點擊外部關閉 export dropdown
   const handleClickOutside = useCallback((e: MouseEvent) => {
-    if (exportRef.current && !exportRef.current.contains(e.target as Node)) {
+    if (exportAnchorRef.current && !exportAnchorRef.current.contains(e.target as Node)) {
       setShowExportDropdown(false);
     }
   }, []);
@@ -58,10 +109,10 @@ export function TableToolbar({
       
       <div className="flex gap-[12px] relative items-center">
         {/* Columns 按鈕 */}
-        <div className="relative">
+        <div ref={columnsAnchorRef}>
           <button 
             className="flex items-center gap-[8px] h-[30px] px-[4px] rounded-[8px] hover:bg-[rgba(145,158,171,0.08)]"
-            onClick={onColumnsClick}
+            onClick={() => { if (showFilterDialog) onFiltersClick(); setShowExportDropdown(false); onColumnsClick(); }}
           >
             <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
               <path d="M2.25 4.5H15.75M6 8.25H12M8.25 12H9.75" stroke="#1C252E" strokeWidth="1.5" strokeLinecap="round"/>
@@ -70,19 +121,19 @@ export function TableToolbar({
               Columns
             </p>
           </button>
-          {/* 欄位選擇器彈窗 */}
-          {showColumnSelector && columnsButton && (
-            <div className="absolute left-0 top-[36px] z-50">
-              {columnsButton}
-            </div>
-          )}
         </div>
+        {/* Columns popup → Portal 到 body */}
+        {showColumnSelector && columnsButton && (
+          <PopupPortal anchorRef={columnsAnchorRef}>
+            {columnsButton}
+          </PopupPortal>
+        )}
         
         {/* Filters 按鈕 */}
-        <div className="relative">
+        <div ref={filtersAnchorRef}>
           <button 
             className="flex items-center gap-[8px] h-[30px] px-[4px] rounded-[8px] hover:bg-[rgba(145,158,171,0.08)]"
-            onClick={onFiltersClick}
+            onClick={() => { if (showColumnSelector) onColumnsClick(); setShowExportDropdown(false); onFiltersClick(); }}
           >
             <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
               <path d="M16.5 6.75H1.5M12 9.75V12.75M6 9.75V12.75M2.25 3.75H15.75V14.25C15.75 14.6478 15.592 15.0294 15.3107 15.3107C15.0294 15.592 14.6478 15 14.25 15H3.75C3.35218 15 2.97064 14.842 2.68934 14.5607C2.40804 14.2794 2.25 13.8978 2.25 13.5V3.75Z" stroke="#1C252E" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -91,20 +142,20 @@ export function TableToolbar({
               Filters
             </p>
           </button>
-          {/* Filter 彈窗 */}
-          {showFilterDialog && filtersButton && (
-            <div className="absolute left-0 top-[36px] z-50">
-              {filtersButton}
-            </div>
-          )}
         </div>
+        {/* Filters popup → Portal 到 body，靠右對齊 */}
+        {showFilterDialog && filtersButton && (
+          <PopupPortal anchorRef={filtersAnchorRef}>
+            {filtersButton}
+          </PopupPortal>
+        )}
 
         {/* ── 內建 Export 下拉選單（匯出 Excel / CSV）── */}
         {hasExport && (
-          <div className="relative" ref={exportRef}>
+          <div ref={exportAnchorRef}>
             <button
               className="flex items-center gap-[6px] h-[30px] px-[4px] rounded-[8px] hover:bg-[rgba(145,158,171,0.08)] transition-colors"
-              onClick={() => setShowExportDropdown(prev => !prev)}
+              onClick={() => { if (showFilterDialog) onFiltersClick(); if (showColumnSelector) onColumnsClick(); setShowExportDropdown(prev => !prev); }}
               title="匯出"
             >
               {/* Download icon */}
@@ -124,107 +175,92 @@ export function TableToolbar({
               </svg>
             </button>
 
+            {/* Export popup → Portal 到 body */}
             {showExportDropdown && (
-              <div className="absolute top-[calc(100%+4px)] right-0 w-[280px] bg-white rounded-[10px] shadow-[0px_0px_2px_0px_rgba(145,158,171,0.24),0px_20px_40px_-4px_rgba(145,158,171,0.24)] border border-[rgba(145,158,171,0.12)] py-[6px] z-[100]">
-                {/* 匯出 Excel */}
-                {onExportExcel && (
-                  <button
-                    className="w-full flex items-start gap-[10px] px-[14px] py-[10px] hover:bg-[rgba(145,158,171,0.06)] transition-colors text-left"
-                    onClick={() => { onExportExcel(); setShowExportDropdown(false); }}
-                  >
-                    <div className="mt-[2px] shrink-0">
-                      {/* Table icon (green) */}
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#118d57" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="3" y="3" width="18" height="18" rx="2" />
-                        <path d="M3 9h18M3 15h18M9 3v18M15 3v18" />
-                      </svg>
-                    </div>
-                    <div className="flex flex-col gap-[2px] min-w-0">
-                      <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#1c252e]">
-                        匯出 Excel
-                      </p>
-                      <p className="font-['Public_Sans:Regular',sans-serif] text-[11px] text-[#919eab]">
-                        依列表顯示欄位匯出 .xlsx 格式
-                      </p>
-                    </div>
-                  </button>
-                )}
-                {/* 匯出 CSV */}
-                {onExportCsv && (
-                  <button
-                    className="w-full flex items-start gap-[10px] px-[14px] py-[10px] hover:bg-[rgba(145,158,171,0.06)] transition-colors text-left"
-                    onClick={() => { onExportCsv(); setShowExportDropdown(false); }}
-                  >
-                    <div className="mt-[2px] shrink-0">
-                      {/* FileText icon (blue) */}
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#005eb8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                        <polyline points="14 2 14 8 20 8" />
-                        <line x1="16" y1="13" x2="8" y2="13" />
-                        <line x1="16" y1="17" x2="8" y2="17" />
-                        <polyline points="10 9 9 9 8 9" />
-                      </svg>
-                    </div>
-                    <div className="flex flex-col gap-[2px] min-w-0">
-                      <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#1c252e]">
-                        匯出 CSV
-                      </p>
-                      <p className="font-['Public_Sans:Regular',sans-serif] text-[11px] text-[#919eab]">
-                        依列表顯示欄位匯出 .csv 格式
-                      </p>
-                    </div>
-                  </button>
-                )}
-                {/* 下載變更檔案 */}
-                {onExportScheduleChange && (
-                  <button
-                    className="w-full flex items-start gap-[10px] px-[14px] py-[10px] hover:bg-[rgba(145,158,171,0.06)] transition-colors text-left"
-                    onClick={() => { onExportScheduleChange(); setShowExportDropdown(false); }}
-                  >
-                    <div className="mt-[2px] shrink-0">
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#005eb8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                        <polyline points="7 10 12 15 17 10" />
-                        <line x1="12" y1="15" x2="12" y2="3" />
-                      </svg>
-                    </div>
-                    <div className="flex flex-col gap-[2px] min-w-0">
-                      <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#1c252e]">
-                        下載變更檔案
-                      </p>
-                      <p className="font-['Public_Sans:Regular',sans-serif] text-[11px] text-[#919eab]">
-                        匯出生管排程變更用 .csv 檔案
-                      </p>
-                    </div>
-                  </button>
-                )}
-                {/* 下載出貨單範本 */}
-                {onDownloadShipmentTemplate && (
-                  <button
-                    className="w-full flex items-start gap-[10px] px-[14px] py-[10px] hover:bg-[rgba(145,158,171,0.06)] transition-colors text-left"
-                    onClick={() => { onDownloadShipmentTemplate(); setShowExportDropdown(false); }}
-                  >
-                    <div className="mt-[2px] shrink-0">
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#b76e00" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                        <polyline points="14 2 14 8 20 8"/>
-                        <line x1="16" y1="13" x2="8" y2="13"/>
-                        <line x1="16" y1="17" x2="8" y2="17"/>
-                        <polyline points="10 9 9 9 8 9"/>
-                        <polyline points="8 17 12 21 16 17"/>
-                      </svg>
-                    </div>
-                    <div className="flex flex-col gap-[2px] min-w-0">
-                      <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#1c252e]">
-                        下載出貨單範本
-                      </p>
-                      <p className="font-['Public_Sans:Regular',sans-serif] text-[11px] text-[#919eab]">
-                        依目前列表匯出可填寫的出貨單 .csv 範本
-                      </p>
-                    </div>
-                  </button>
-                )}
-              </div>
+              <PopupPortal anchorRef={exportAnchorRef}>
+                <div className="w-[280px] bg-white rounded-[10px] shadow-[0px_0px_2px_0px_rgba(145,158,171,0.24),0px_20px_40px_-4px_rgba(145,158,171,0.24)] border border-[rgba(145,158,171,0.12)] py-[6px]">
+                  {/* 匯出 Excel */}
+                  {onExportExcel && (
+                    <button
+                      className="w-full flex items-start gap-[10px] px-[14px] py-[10px] hover:bg-[rgba(145,158,171,0.06)] transition-colors text-left"
+                      onClick={() => { onExportExcel(); setShowExportDropdown(false); }}
+                    >
+                      <div className="mt-[2px] shrink-0">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#118d57" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="3" width="18" height="18" rx="2" />
+                          <path d="M3 9h18M3 15h18M9 3v18M15 3v18" />
+                        </svg>
+                      </div>
+                      <div className="flex flex-col gap-[2px] min-w-0">
+                        <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#1c252e]">匯出 Excel</p>
+                        <p className="font-['Public_Sans:Regular',sans-serif] text-[11px] text-[#919eab]">依列表顯示欄位匯出 .xlsx 格式</p>
+                      </div>
+                    </button>
+                  )}
+                  {/* 匯出 CSV */}
+                  {onExportCsv && (
+                    <button
+                      className="w-full flex items-start gap-[10px] px-[14px] py-[10px] hover:bg-[rgba(145,158,171,0.06)] transition-colors text-left"
+                      onClick={() => { onExportCsv(); setShowExportDropdown(false); }}
+                    >
+                      <div className="mt-[2px] shrink-0">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#005eb8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                          <polyline points="14 2 14 8 20 8" />
+                          <line x1="16" y1="13" x2="8" y2="13" />
+                          <line x1="16" y1="17" x2="8" y2="17" />
+                          <polyline points="10 9 9 9 8 9" />
+                        </svg>
+                      </div>
+                      <div className="flex flex-col gap-[2px] min-w-0">
+                        <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#1c252e]">匯出 CSV</p>
+                        <p className="font-['Public_Sans:Regular',sans-serif] text-[11px] text-[#919eab]">依列表顯示欄位匯出 .csv 格式</p>
+                      </div>
+                    </button>
+                  )}
+                  {/* 下載變更檔案 */}
+                  {onExportScheduleChange && (
+                    <button
+                      className="w-full flex items-start gap-[10px] px-[14px] py-[10px] hover:bg-[rgba(145,158,171,0.06)] transition-colors text-left"
+                      onClick={() => { onExportScheduleChange(); setShowExportDropdown(false); }}
+                    >
+                      <div className="mt-[2px] shrink-0">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#005eb8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                          <polyline points="7 10 12 15 17 10" />
+                          <line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                      </div>
+                      <div className="flex flex-col gap-[2px] min-w-0">
+                        <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#1c252e]">下載變更檔案</p>
+                        <p className="font-['Public_Sans:Regular',sans-serif] text-[11px] text-[#919eab]">匯出生管排程變更用 .csv 檔案</p>
+                      </div>
+                    </button>
+                  )}
+                  {/* 下載出貨單範本 */}
+                  {onDownloadShipmentTemplate && (
+                    <button
+                      className="w-full flex items-start gap-[10px] px-[14px] py-[10px] hover:bg-[rgba(145,158,171,0.06)] transition-colors text-left"
+                      onClick={() => { onDownloadShipmentTemplate(); setShowExportDropdown(false); }}
+                    >
+                      <div className="mt-[2px] shrink-0">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#b76e00" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                          <polyline points="14 2 14 8 20 8"/>
+                          <line x1="16" y1="13" x2="8" y2="13"/>
+                          <line x1="16" y1="17" x2="8" y2="17"/>
+                          <polyline points="10 9 9 9 8 9"/>
+                          <polyline points="8 17 12 21 16 17"/>
+                        </svg>
+                      </div>
+                      <div className="flex flex-col gap-[2px] min-w-0">
+                        <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#1c252e]">下載出貨單範本</p>
+                        <p className="font-['Public_Sans:Regular',sans-serif] text-[11px] text-[#919eab]">依目前列表匯出可填寫的出貨單 .csv 範本</p>
+                      </div>
+                    </button>
+                  )}
+                </div>
+              </PopupPortal>
             )}
           </div>
         )}

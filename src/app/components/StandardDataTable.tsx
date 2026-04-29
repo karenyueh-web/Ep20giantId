@@ -99,7 +99,7 @@ const DRAG_TYPE = 'std-col';
 
 // ── 可拖拉排序的表頭欄 ────────────────────────────────────────────────────────
 function DraggableColHeader<T extends { id: number }>({
-  col, index, moveCol, updateWidth, autoFitWidth, sortConfig, onSort, isLast,
+  col, index, moveCol, updateWidth, autoFitWidth, sortConfig, onSort, isLast, isFiltered,
 }: {
   col: StandardColumn<T>;
   index: number;
@@ -109,6 +109,7 @@ function DraggableColHeader<T extends { id: number }>({
   sortConfig: { key: string | null; dir: 'asc' | 'desc' | null };
   onSort: (key: string) => void;
   isLast?: boolean;
+  isFiltered?: boolean;
 }) {
   const [hovered, setHovered] = useState(false);
 
@@ -157,7 +158,7 @@ function DraggableColHeader<T extends { id: number }>({
 
   return (
     <div
-      className={`relative bg-[#f4f6f8] shrink-0 ${isLast ? '' : 'border-r border-[rgba(145,158,171,0.08)]'}`}
+      className={`relative shrink-0 ${isFiltered ? 'bg-[#fff8e1]' : 'bg-[#f4f6f8]'} ${isLast ? '' : 'border-r border-[rgba(145,158,171,0.08)]'}`}
       style={{ width: col.width, height: 56 }}
     >
       {/* 可拖拽排序的內容區 */}
@@ -521,6 +522,7 @@ export function StandardDataTable<T extends { id: number }>({
                   sortConfig={sortConfig}
                   onSort={handleSort}
                   isLast={idx === normalVisibleCols.length - 1}
+                  isFiltered={!!appliedFilters?.some(f => f.column === col.key)}
                 />
               ))}
               <div className="flex-1 bg-[#f4f6f8] min-w-0" />

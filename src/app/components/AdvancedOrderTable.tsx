@@ -722,7 +722,7 @@ function measureTextWidth(text: string, font = '14px "Public Sans", "Noto Sans J
 }
 
 const DraggableColumnHeader = ({
-  column, index, moveColumn, updateColumnWidth, autoFitWidth, sortConfig, onSort, isLast
+  column, index, moveColumn, updateColumnWidth, autoFitWidth, sortConfig, onSort, isLast, isFiltered
 }: {
   column: OrderColumn;
   index: number;
@@ -732,6 +732,7 @@ const DraggableColumnHeader = ({
   sortConfig: { key: OrderColumnKey | null; direction: 'asc' | 'desc' | null };
   onSort: (key: OrderColumnKey) => void;
   isLast?: boolean;
+  isFiltered?: boolean;
 }) => {
   const [isHovered, setIsHovered] = useState(false);
 
@@ -783,7 +784,7 @@ const DraggableColumnHeader = ({
 
   return (
     <div
-      className={`relative bg-[#f4f6f8] shrink-0 ${isLast ? '' : 'border-r border-[rgba(145,158,171,0.08)]'}`}
+      className={`relative shrink-0 ${isFiltered ? 'bg-[#fff8e1]' : 'bg-[#f4f6f8]'} ${isLast ? '' : 'border-r border-[rgba(145,158,171,0.08)]'}`}
       style={{ width: column.width, height: 56 }}
     >
       <div
@@ -1419,6 +1420,7 @@ export function AdvancedOrderTable({
                       setSortConfig({ key, direction });
                     }}
                     isLast={index === visibleColumns.length - 1}
+                    isFiltered={!!appliedFilters?.some(f => f.column === column.key)}
                   />
                 ))}
                 <div className="flex-1 bg-[#f4f6f8] min-w-0" />

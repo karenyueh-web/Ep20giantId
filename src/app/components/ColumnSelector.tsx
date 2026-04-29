@@ -19,9 +19,10 @@ export function ColumnSelector({
   const allSelected = visibleCount === columns.length;
   
   return (
-    <div 
+    <div
       className="relative bg-white rounded-[8px] shadow-[0px_0px_2px_0px_rgba(145,158,171,0.2),0px_12px_24px_0px_rgba(145,158,171,0.12)] w-[280px] max-h-[450px] overflow-hidden flex flex-col"
       onClick={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
     >
       {/* 標題 */}
       <div className="px-[16px] py-[12px] border-b border-[rgba(145,158,171,0.08)] flex items-center justify-between">
