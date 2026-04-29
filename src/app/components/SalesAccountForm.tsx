@@ -2,7 +2,6 @@ import svgPaths from "@/imports/svg-c0egreeez0";
 import { useState, useEffect } from 'react';
 import { SalesAccountDetailOverlay } from './SalesAccountDetailOverlay';
 import { PaginationControls } from './PaginationControls';
-import { ResizableTable, ColumnConfig } from './ResizableTable';
 import { DropdownSelect } from './DropdownSelect';
 import { AdvancedSalesTable, getSalesAccountColumns } from './AdvancedSalesTable';
 import { ColumnSelector } from './ColumnSelector';
@@ -300,69 +299,6 @@ export function SalesAccountForm({ selectedAccount, onCloseOverlay, onAccountCli
     setTempColumns(JSON.parse(JSON.stringify(columnsToUse)));
     setShowColumnSelector(!showColumnSelector);
   };
-
-  // 定义表格列配置
-  const columns: ColumnConfig[] = [
-    {
-      key: 'email',
-      label: '業務帳號',
-      defaultWidth: 180,
-      minWidth: 120,
-      align: 'center',
-      render: (value, row) => (
-        <button 
-          className="font-['Public_Sans:Regular',sans-serif] font-normal leading-[22px] relative shrink-0 text-[#005eb8] text-[14px] underline cursor-pointer hover:opacity-70 transition-opacity"
-          onClick={() => onAccountClick && onAccountClick(row as SalesAccount)}
-        >
-          {value}
-        </button>
-      )
-    },
-    {
-      key: 'name',
-      label: '業務姓名',
-      defaultWidth: 150,
-      minWidth: 80,
-      render: (value) => (
-        <p className="font-['Public_Sans:Medium','Noto_Sans_JP:Medium',sans-serif] font-medium leading-[18px] relative shrink-0 text-[#1c252e] text-[13px]">{value}</p>
-      )
-    },
-    {
-      key: 'role',
-      label: '業務角色',
-      defaultWidth: 100,
-      minWidth: 80
-    },
-    {
-      key: 'purchaseOrg',
-      label: '採購組織',
-      defaultWidth: 300,
-      minWidth: 150
-    },
-    {
-      key: 'purchaseGroup',
-      label: '採購群組',
-      defaultWidth: 140,
-      minWidth: 100,
-      align: 'center'
-    },
-    {
-      key: 'status',
-      label: '帳號狀態',
-      defaultWidth: 90,
-      minWidth: 70,
-      align: 'center',
-      render: (value: 'active' | 'inactive') => (
-        <div className={`content-stretch flex gap-[6px] h-[24px] items-center justify-center min-w-[24px] px-[6px] relative rounded-[6px] shrink-0 ${
-          value === 'active' ? 'bg-[rgba(34,197,94,0.16)]' : 'bg-[rgba(255,86,48,0.16)]'
-        }`}>
-          <p className={`font-['Public_Sans:Bold','Noto_Sans_SC:Bold','Noto_Sans_JP:Bold',sans-serif] font-bold leading-[20px] relative shrink-0 text-[12px] text-center ${
-            value === 'active' ? 'text-[#118d57]' : 'text-[#b71d18]'
-          }`}>{value === 'active' ? '啟用' : '停用'}</p>
-        </div>
-      )
-    }
-  ];
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
