@@ -2,6 +2,8 @@ import { useState, useCallback, useEffect, useMemo , useRef } from 'react';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { useHorizontalDragScroll } from './useHorizontalDragScroll';
+import { DraggableColumnHeader } from './table/DraggableColumnHeader';
+import { measureTextWidth } from './table/tableUtils';
 
 // 完全保留原有的 8 個欄位
 type GiantColumnKey = 'account' | 'name' | 'role' | 'sapAccount' | 'purchaseOrg' | 'purchaseGroup' | 'status' | 'email';
@@ -43,153 +45,6 @@ interface AdvancedGiantTableProps {
 }
 
 
-// ── 測量文字寬度（使用 DOM span，支援中文字型 fallback）──────────────────────
-function measureTextWidth(text: string, font = '14px "Public Sans", "Noto Sans JP", sans-serif'): number {
-  let el = (measureTextWidth as any)._el as HTMLSpanElement | undefined;
-  if (!el) {
-    el = document.createElement('span');
-    el.style.position = 'absolute';
-    el.style.visibility = 'hidden';
-    el.style.whiteSpace = 'nowrap';
-    el.style.left = '-9999px';
-    el.style.top = '-9999px';
-    document.body.appendChild(el);
-    (measureTextWidth as any)._el = el;
-  }
-  el.style.font = font;
-  el.textContent = text;
-  return el.offsetWidth;
-}
-
-const DraggableColumnHeader = ({ 
-  column, 
-  index, 
-  moveColumn, 
-  updateColumnWidth, autoFitWidth, sortConfig,
-  onSort,
-  isLast
-}: { 
-  column: Column; 
-  index: number; 
-  moveColumn: (dragKey: GiantColumnKey, hoverKey: GiantColumnKey) => void;
-  updateColumnWidth: (key: GiantColumnKey, width: number) => void;
-  autoFitWidth: (key: any) => void;
-  sortConfig: { key: GiantColumnKey | null; direction: 'asc' | 'desc' | null };
-  onSort: (key: GiantColumnKey) => void;
-  isLast?: boolean;
-}) => {
-  const [isHovered, setIsHovered] = useState(false);
-
-  // ── 自製 resize drag（可靠且支持 dblclick） ──
-  const [resizing, setResizing] = useState(false);
-  const resizeStartX = useRef(0);
-  const resizeStartW = useRef(0);
-
-  useEffect(() => {
-    if (!resizing) return;
-    const onMove = (e: MouseEvent) => {
-      const diff = e.clientX - resizeStartX.current;
-      const newW = Math.max(column.minWidth, resizeStartW.current + diff);
-      updateColumnWidth(column.key, newW);
-    };
-    const onUp = () => setResizing(false);
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
-    return () => {
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-    };
-  }, [resizing]);
-  
-  const [{ isDragging }, drag] = useDrag({
-    type: 'column',
-    item: () => ({ columnKey: column.key, index }),
-    collect: (monitor) => ({
-      isDragging: monitor.isDragging(),
-    }),
-  });
-
-  const [, drop] = useDrop({
-    accept: 'column',
-    hover: (item: { columnKey: GiantColumnKey; index: number }) => {
-      if (item.index !== index) {
-        moveColumn(item.columnKey, column.key);
-        item.index = index;
-      }
-    },
-  });
-
-  const isSorted = sortConfig.key === column.key;
-  const sortDirection = isSorted ? sortConfig.direction : null;
-
-  return (
-    <div
-      className={`relative bg-[#f4f6f8] shrink-0 ${isLast ? '' : 'border-r border-[rgba(145,158,171,0.08)]'}`}
-      style={{ width: column.width, height: 56 }}
-    >
-      <div
-        ref={(node) => drag(drop(node))}
-        className={`h-full flex items-center justify-start px-[16px] cursor-pointer ${
-          isDragging ? 'opacity-50' : ''
-        }`}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-        onClick={(e) => {
-          if (e.target === e.currentTarget || (e.target as HTMLElement).tagName === 'P' || (e.target as HTMLElement).tagName === 'svg' || (e.target as HTMLElement).tagName === 'path') {
-            onSort(column.key);
-          }
-        }}
-      >
-        {isHovered && (
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="mr-[6px] shrink-0">
-            <circle cx="5" cy="3" r="1.5" fill="#919EAB" />
-            <circle cx="11" cy="3" r="1.5" fill="#919EAB" />
-            <circle cx="5" cy="8" r="1.5" fill="#919EAB" />
-            <circle cx="11" cy="8" r="1.5" fill="#919EAB" />
-            <circle cx="5" cy="13" r="1.5" fill="#919EAB" />
-            <circle cx="11" cy="13" r="1.5" fill="#919EAB" />
-          </svg>
-        )}
-        <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[24px] text-[#637381] text-[14px] whitespace-nowrap">
-          {column.label}
-        </p>
-        {sortDirection && (
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="ml-[6px] shrink-0">
-            {sortDirection === 'asc' ? (
-              <path d="M8 3L12 7H4L8 3Z" fill="#637381" />
-            ) : (
-              <path d="M8 13L4 9H12L8 13Z" fill="#637381" />
-            )}
-          </svg>
-        )}
-      </div>
-      {/* 欄寬調整 handle：拖拽調寬 或 雙擊自動最適 */}
-      {!isLast && (
-        <div
-          className="absolute right-0 top-0 bottom-0 w-[8px] cursor-col-resize hover:bg-[#1D7BF5] hover:bg-opacity-20 z-10 group transition-colors"
-          onMouseDown={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            if (e.detail >= 2) {
-              autoFitWidth(column.key);
-              return;
-            }
-            setResizing(true);
-            resizeStartX.current = e.clientX;
-            resizeStartW.current = column.width;
-          }}
-          title="拖拽調整欄位寬度；雙擊自動最適欄寬"
-        >
-          <div className="absolute right-[3px] top-0 bottom-0 w-[2px] bg-transparent group-hover:bg-[#1D7BF5] transition-colors" />
-        </div>
-      )}
-    </div>
-  );
-};
 
 export function AdvancedGiantTable({ 
   data,
@@ -440,6 +295,8 @@ export function AdvancedGiantTable({
                     setSortConfig({ key, direction });
                   }}
                   isLast={index === visibleColumns.length - 1}
+                  isFiltered={!!appliedFilters?.some(f => f.column === column.key)}
+                  dragType="giant-column"
                 />
               ))}
               <div className="flex-1 bg-[#f4f6f8] min-w-0" />
