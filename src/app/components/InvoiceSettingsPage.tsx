@@ -22,6 +22,10 @@ import { SimpleDatePicker } from './SimpleDatePicker';
 import { DropdownSelect } from './DropdownSelect';
 
 
+// ── react-dnd drag types ──────────────────────────────────────────────────────
+const DRAG_TYPE_TRACK = 'invoice-track-col';
+const DRAG_TYPE_DEAD  = 'invoice-deadline-col';
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Mock 資料：字軌主檔
 interface TrackRecord {

@@ -29,6 +29,10 @@ import { MOCK_SHIPMENTS } from './ShipmentListPage';
 import type { ShipmentRow, ShipmentDetailItem } from './ShipmentListPage';
 import { ShipmentPrintPage, type PrintTab } from './ShipmentPrintPage';
 
+// ── react-dnd drag types ──────────────────────────────────────────────────────
+const DRAG_TYPE_ITEM = 'shipping-inquiry-item-col';
+const DRAG_TYPE_BOX  = 'shipping-inquiry-box-col';
+
 // ── 運輸型態 Label ───────────────────────────────────────────────────────────
 export const TRANSPORT_LABEL: Record<string, string> = {
   S: 'S 海運', A: 'A 空運', T: 'T 陸運', E: 'E 快遞',
