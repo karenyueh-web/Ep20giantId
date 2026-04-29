@@ -8,6 +8,8 @@ import { TableToolbar } from './TableToolbar';
 import { ColumnSelector } from './ColumnSelector';
 import { FilterDialog, type FilterCondition } from './FilterDialog';
 import { PaginationControls } from './PaginationControls';
+import { DraggableColumnHeader } from './table/DraggableColumnHeader';
+import { measureTextWidth } from './table/tableUtils';
 import { useOrderStore } from './OrderStoreContext';
 import type { OrderRow } from './AdvancedOrderTable';
 
@@ -188,132 +190,6 @@ function TabItem({ label, count, isActive, onClick, status }: TabItemProps) {
   );
 }
 
-// ── 可拖拉欄位表頭（完全對齊 HistoryOrderListWithTabs 模式）─────────────────
-const DRAG_TYPE = 'sched-col';
-
-
-// ── 測量文字寬度（使用 DOM span，支援中文字型 fallback）──────────────────────
-function measureTextWidth(text: string, font = '14px "Public Sans", "Noto Sans JP", sans-serif'): number {
-  let el = (measureTextWidth as any)._el as HTMLSpanElement | undefined;
-  if (!el) {
-    el = document.createElement('span');
-    el.style.position = 'absolute';
-    el.style.visibility = 'hidden';
-    el.style.whiteSpace = 'nowrap';
-    el.style.left = '-9999px';
-    el.style.top = '-9999px';
-    document.body.appendChild(el);
-    (measureTextWidth as any)._el = el;
-  }
-  el.style.font = font;
-  el.textContent = text;
-  return el.offsetWidth;
-}
-
-function DraggableColHeader({
-  col, index, moveCol, updateWidth, autoFitWidth, sortConfig, onSort, isLast,
-}: {
-  col: SchedCol; index: number;
-  moveCol: (drag: SchedColKey, hover: SchedColKey) => void;
-  updateWidth: (key: SchedColKey, w: number) => void;
-  autoFitWidth: (key: any) => void;
-  sortConfig: { key: SchedColKey | null; dir: 'asc' | 'desc' | null };
-  onSort: (key: SchedColKey) => void;
-  isLast?: boolean;
-}) {
-  const [hovered, setHovered] = useState(false);
-
-  // ── 自製 resize drag（可靠且支持 dblclick） ──
-  const [resizing, setResizing] = useState(false);
-  const resizeStartX = useRef(0);
-  const resizeStartW = useRef(0);
-
-  useEffect(() => {
-    if (!resizing) return;
-    const onMove = (e: MouseEvent) => {
-      const diff = e.clientX - resizeStartX.current;
-      const newW = Math.max(col.minWidth, resizeStartW.current + diff);
-      updateWidth(col.key, newW);
-    };
-    const onUp = () => setResizing(false);
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
-    return () => {
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-    };
-  }, [resizing]);
-  const [{ isDragging }, drag] = useDrag({
-    type: DRAG_TYPE,
-    item: () => ({ key: col.key, index }),
-    collect: m => ({ isDragging: m.isDragging() }),
-  });
-  const [, drop] = useDrop({
-    accept: DRAG_TYPE,
-    hover: (item: { key: SchedColKey; index: number }) => {
-      if (item.index !== index) { moveCol(item.key, col.key); item.index = index; }
-    },
-  });
-
-  const isSorted = sortConfig.key === col.key;
-
-  return (
-    <div
-      className={`relative bg-[#f4f6f8] shrink-0 ${isLast ? '' : 'border-r border-[rgba(145,158,171,0.08)]'}`}
-      style={{ width: col.width, height: 56 }}
-    >
-      <div
-        ref={node => drag(drop(node)) as any}
-        className={`h-full flex items-center px-[16px] cursor-pointer select-none ${isDragging ? 'opacity-50' : ''}`}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-        onClick={() => onSort(col.key)}
-      >
-        {hovered && (
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="mr-[6px] shrink-0">
-            <circle cx="5" cy="3" r="1.5" fill="#919EAB" /><circle cx="11" cy="3" r="1.5" fill="#919EAB" />
-            <circle cx="5" cy="8" r="1.5" fill="#919EAB" /><circle cx="11" cy="8" r="1.5" fill="#919EAB" />
-            <circle cx="5" cy="13" r="1.5" fill="#919EAB" /><circle cx="11" cy="13" r="1.5" fill="#919EAB" />
-          </svg>
-        )}
-        <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[24px] text-[#637381] text-[14px] whitespace-nowrap truncate">
-          {col.label}
-        </p>
-        {isSorted && (
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="ml-[6px] shrink-0">
-            {sortConfig.dir === 'asc'
-              ? <path d="M8 3L12 7H4L8 3Z" fill="#637381" />
-              : <path d="M8 13L4 9H12L8 13Z" fill="#637381" />}
-          </svg>
-        )}
-      </div>
-      {/* 欄寬調整 handle：拖拽調寬 或 雙擊自動最適 */}
-      {!isLast && (
-        <div
-          className="absolute right-0 top-0 bottom-0 w-[8px] cursor-col-resize hover:bg-[#1D7BF5] hover:bg-opacity-20 z-10 group transition-colors"
-          onMouseDown={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            if (e.detail >= 2) {
-              autoFitWidth(col.key);
-              return;
-            }
-            setResizing(true);
-            resizeStartX.current = e.clientX;
-            resizeStartW.current = col.width;
-          }}
-          title="拖拽調整欄位寬度；雙擊自動最適欄寬"
-        >
-          <div className="absolute right-[3px] top-0 bottom-0 w-[2px] bg-transparent group-hover:bg-[#1D7BF5] transition-colors" />
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ── 日期差異天數計算（dateA - dateB，正數=延後，負數=提前）─────────────────────
 function dateDiffDays(dateA: string, dateB: string): number | null {
@@ -660,12 +536,14 @@ export function OrderScheduleInquiryPage({ userRole: _userRole }: OrderScheduleI
             <div className="flex sticky top-0 z-10 border-b border-[rgba(145,158,171,0.08)]">
               {/* 可拖拉欄 */}
               {visibleColumns.map((col, idx) => (
-                <DraggableColHeader
-                  key={col.key} col={col} index={idx}
-                  moveCol={moveCol} updateWidth={updateWidth} autoFitWidth={autoFitWidth}
-                  sortConfig={sortConfig}
+                <DraggableColumnHeader
+                  key={col.key} column={col} index={idx}
+                  moveColumn={moveCol} updateColumnWidth={updateWidth} autoFitWidth={autoFitWidth}
+                  sortConfig={{ key: sortConfig.key, direction: sortConfig.dir }}
                   onSort={handleSort}
                   isLast={idx === visibleColumns.length - 1}
+                  isFiltered={!!appliedFilters?.some(f => f.column === col.key)}
+                  dragType="sched-col"
                 />
               ))}
               <div className="flex-1 bg-[#f4f6f8] min-w-0" />
