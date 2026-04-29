@@ -610,6 +610,44 @@ const isSomeSelected = selectedIds.size > 0 && !isAllSelected;
 
 > 以下規則由使用者確認，**適用全系統所有頁面**，實作時無需重複詢問。
 
+---
+
+### 5. 連結（Link）樣式
+
+> 所有可點擊的藍字連結（如單號序號、截止日期等）必須統一使用以下規範。
+
+| 屬性 | 規格 |
+|------|------|
+| 顏色 | `text-[#1677ff]` |
+| 底線 | `underline`（**常態顯示，非 hover 才出現**） |
+| Hover 顏色 | `hover:text-[#0958d9]`（加深） |
+| 過渡動畫 | `transition-colors` |
+| 參考來源 | `HistoryOrderListWithTabs.tsx` 單號序號欄（第 784 行） |
+
+#### 標準 className
+
+```tsx
+className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] text-[#1677ff] underline hover:text-[#0958d9] transition-colors cursor-pointer"
+```
+
+#### 使用範例
+
+```tsx
+<button
+  onClick={handleClick}
+  className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] text-[#1677ff] underline hover:text-[#0958d9] transition-colors cursor-pointer"
+>
+  40065100110
+</button>
+```
+
+> ⚠️ **禁止**：
+> - ❌ `text-[#1890ff]`（操作按鈕色，不適用連結）
+> - ❌ `text-[#005eb8]`（TAG/主色，不適用連結）
+> - ❌ `hover:underline`（底線必須常態顯示，不能只在 hover 顯示）
+
+---
+
 ### 1. TAB 樣式（頁籤切換）
 
 適用場景：所有頁面層級的 TAB 切換列（如「出貨明細查詢 / 裝箱明細查詢」、「基本資料 / 業務帳號 / 其他聯絡人」）。

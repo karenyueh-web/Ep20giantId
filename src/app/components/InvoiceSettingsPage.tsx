@@ -820,7 +820,7 @@ function DeadlineTab() {
       return (
         <div className="relative" ref={isEditing ? datePickerRef : undefined}>
           <button
-            className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] text-[#1890ff] hover:underline hover:opacity-80 transition-all cursor-pointer"
+            className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] text-[#1677ff] underline hover:text-[#0958d9] transition-colors cursor-pointer"
             onClick={() => setEditingId(isEditing ? null : row.id)}
           >
             {row.deadline || '—'}
