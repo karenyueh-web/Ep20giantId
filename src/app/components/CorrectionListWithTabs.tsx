@@ -29,7 +29,7 @@ const ACTION_COL_WIDTH = 148;
 // ─── Column 定義 ─────────────────────────────────────────────────────────────
 export type CorrectionColumnKey =
   | 'vendorName' | 'purchaseOrg' | 'correctionStatus' | 'correctionDocNo'
-  | 'correctionType' | 'orderNo' | 'orderSeq' | 'materialNo' | 'productName'
+  | 'correctionType' | 'docSeqNo' | 'orderNo' | 'orderSeq' | 'materialNo' | 'productName'
   | 'orderDate' | 'acceptQty' | 'orderQty' | 'company' | 'createdAt';
 
 export interface CorrectionColumn {
@@ -45,6 +45,7 @@ export const defaultCorrectionColumns: CorrectionColumn[] = [
   { key: 'purchaseOrg',       label: '採購組織',               width: 110, minWidth: 80 },
   { key: 'correctionStatus',  label: '修正單狀態',             width: 100, minWidth: 80 },
   { key: 'correctionType',    label: '修正類型',               width: 110, minWidth: 80 },
+  { key: 'docSeqNo',          label: '單號序號',               width: 160, minWidth: 120 },
   { key: 'orderNo',           label: '訂單號碼',               width: 120, minWidth: 100 },
   { key: 'orderSeq',          label: '訂單序號',               width: 80,  minWidth: 60 },
   { key: 'materialNo',        label: '料號',                   width: 160, minWidth: 100 },
@@ -555,7 +556,7 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
     if (activeTab !== 'ALL') result = result.filter(o => o.correctionStatus === activeTab);
     if (orderNoSearch.trim()) {
       const kws = splitKw(orderNoSearch);
-      result = result.filter(o => matchAny(o.orderNo, kws));
+      result = result.filter(o => matchAny((o.orderNo || '') + (o.orderSeq || ''), kws) || matchAny(o.orderNo, kws));
     }
     if (correctionDocNoSearch.trim()) {
       const kws = splitKw(correctionDocNoSearch);
@@ -572,7 +573,9 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
     if (appliedFilters.length === 0) return searchFilteredOrders;
     return searchFilteredOrders.filter(item =>
       appliedFilters.every(f => {
-        const raw = String(item[f.column as keyof CorrectionOrderRow] ?? '');
+        const raw = f.column === 'docSeqNo'
+          ? (item.orderNo || '') + (item.orderSeq || '')
+          : String(item[f.column as keyof CorrectionOrderRow] ?? '');
         const fv = f.value;
         switch (f.operator) {
           case 'contains':   return raw.toLowerCase().includes(fv.toLowerCase());

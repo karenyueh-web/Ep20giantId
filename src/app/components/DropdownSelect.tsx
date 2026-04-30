@@ -86,7 +86,7 @@ export function DropdownSelect({
             {/* Label */}
             <div className="absolute content-stretch flex items-center left-[14px] px-[2px] top-[-5px]">
               <div className="absolute bg-white h-[2px] left-0 right-0 top-[5px]" />
-              <p className={`font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[12px] relative shrink-0 ${error ? 'text-[#ff5630]' : 'text-[#637381]'} text-[12px]`}>
+              <p className={`font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[14px] relative shrink-0 ${error ? 'text-[#ff5630]' : 'text-[#637381]'} text-[13px]`}>
                 {label}
               </p>
             </div>
