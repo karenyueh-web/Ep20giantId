@@ -1,4 +1,4 @@
-﻿/**
+/**
  * ShipmentListPage — 出貨單管理 • 出貨單查詢
  *
  * 功能：
@@ -25,6 +25,7 @@ import { measureTextWidth } from './table/tableUtils';
 import { ShipmentInquiryDetailPage } from './ShipmentInquiryDetailPage';
 import { ShipmentPrintPage, type PrintTab } from './ShipmentPrintPage';
 import type { OrderRow } from './AdvancedOrderTable';
+import { useOrderStore } from './OrderStoreContext';
 
 // ── 型別定義 ─────────────────────────────────────────────────────────────────
 
@@ -493,6 +494,7 @@ function ResendSapModal({
 
 export function ShipmentListPage() {
   const { scrollContainerRef, handleMouseDown, canDragScroll } = useHorizontalDragScroll();
+  const { orders, updateOrderFields } = useOrderStore();
 
   // ── 明細頁導覽 ────────────────────────────────────────────────────────────
   const [detailShipment, setDetailShipment] = useState<ShipmentRow | null>(null);
@@ -694,6 +696,17 @@ export function ShipmentListPage() {
 
   const handleDeleteConfirm = () => {
     const count = selectedIds.size;
+    // 刪除前先還原在途量：每筆被刪出貨單的明細 shipQty 要從對應訂單的 inTransitQty 扣回
+    const toDelete = shipments.filter(r => selectedIds.has(r.id));
+    toDelete.forEach(ship => {
+      ship.details.forEach(d => {
+        const sourceOrder = orders.find(o => o.orderNo === d.orderNo && o.orderSeq === d.orderSeq);
+        if (sourceOrder) {
+          const restored = Math.max(0, (sourceOrder.inTransitQty ?? 0) - d.shipQty);
+          updateOrderFields(sourceOrder.id, { inTransitQty: restored });
+        }
+      });
+    });
     setShipments(prev => prev.filter(r => !selectedIds.has(r.id)));
     // 同步刪除 localStorage 中的使用者建立出貨單
     try {
@@ -730,7 +743,23 @@ export function ShipmentListPage() {
   };
 
   const handleDetailDeleted = (id: number) => {
+    // 還原在途量
+    const ship = shipments.find(r => r.id === id);
+    if (ship) {
+      ship.details.forEach(d => {
+        const sourceOrder = orders.find(o => o.orderNo === d.orderNo && o.orderSeq === d.orderSeq);
+        if (sourceOrder) {
+          const restored = Math.max(0, (sourceOrder.inTransitQty ?? 0) - d.shipQty);
+          updateOrderFields(sourceOrder.id, { inTransitQty: restored });
+        }
+      });
+    }
     setShipments(prev => prev.filter(r => r.id !== id));
+    // 同步刪除 localStorage
+    try {
+      const saved = JSON.parse(localStorage.getItem('createdShipments') || '[]') as { id: number }[];
+      localStorage.setItem('createdShipments', JSON.stringify(saved.filter(s => s.id !== id)));
+    } catch { /* ignore */ }
     setDetailShipment(null);
     setDetailOrders([]);
   };
