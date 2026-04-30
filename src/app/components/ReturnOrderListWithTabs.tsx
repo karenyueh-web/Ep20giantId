@@ -248,7 +248,7 @@ export function ReturnOrderListWithTabs({ userRole }: ReturnOrderListWithTabsPro
     setShowColumnSelector(!showColumnSelector);
   };
 
-  const handleApplyFilters = () => { setAppliedFilters(filters); setShowFilterDialog(false); };
+  const handleApplyFilters = (validFilters: typeof filters) => { setAppliedFilters(validFilters); setShowFilterDialog(false); };
 
   // ── 匯出 ─────────────────────────────────────────────────────────────────
   const showToast = (message: string) => {

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ShipmentPrintDocPage — 出貨單 • 列印單據
  *
  * 完全對齊 ShipmentShippingInquiryPage 設計系統標準：
@@ -281,7 +281,7 @@ function StickerTab({ config, onPrint }: { config: StickerTabConfig; onPrint: (t
             availableColumns={availableColsForFilter as any}
             onFiltersChange={setFilters}
             onClose={() => setShowFilterDialog(false)}
-            onApply={() => { setAppliedFilters(filters); setShowFilterDialog(false); }}
+            onApply={(vf) => { setAppliedFilters(vf); setShowFilterDialog(false); }}
           />
         }
         onExportExcel={() => showToast(`已匯出 ${filteredData.length} 筆 (Excel)`)}
@@ -587,7 +587,7 @@ function ShipmentDocTab({ onPrint }: { onPrint: (tab: PrintTab, availableTabs: P
             availableColumns={availableColsForFilter as any}
             onFiltersChange={setFilters}
             onClose={() => setShowFilterDialog(false)}
-            onApply={() => { setAppliedFilters(filters); setShowFilterDialog(false); }}
+            onApply={(vf) => { setAppliedFilters(vf); setShowFilterDialog(false); }}
           />
         }
         onExportExcel={() => showToast(`已匯出 ${filteredData.length} 筆 (Excel)`)}

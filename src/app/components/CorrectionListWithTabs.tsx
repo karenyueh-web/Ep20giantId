@@ -503,8 +503,8 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
     setShowFilterDialog(v => !v);
     if (showColumnSelector) setShowColumnSelector(false);
   };
-  const handleApplyFilters = () => {
-    setAppliedFilters(filters);
+  const handleApplyFilters = (validFilters: typeof filters) => {
+    setAppliedFilters(validFilters);
     setShowFilterDialog(false);
   };
 

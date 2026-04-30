@@ -324,7 +324,7 @@ export function ExchangeOrderListWithTabs({ userRole }: { userRole?: string }) {
     setShowColumnSelector(!showColumnSelector);
   };
 
-  const handleApplyFilters = () => { setAppliedFilters(filters); setShowFilterDialog(false); };
+  const handleApplyFilters = (validFilters: typeof filters) => { setAppliedFilters(validFilters); setShowFilterDialog(false); };
   const handleTabChange    = (tab: ExchangeStatus) => { setActiveTab(tab); setSelectedOrderIds(new Set()); };
 
   const getSelectedOrders = (): OrderRow[] => localData.filter(o => selectedOrderIds.has(o.id));

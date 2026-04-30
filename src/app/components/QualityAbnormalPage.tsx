@@ -163,8 +163,8 @@ export function QualityAbnormalPage() {
     setShowColumnSelector(false);
   };
 
-  const handleApplyFilters = () => {
-    setAppliedFilters(filters);
+  const handleApplyFilters = (validFilters: typeof filters) => {
+    setAppliedFilters(validFilters);
     setShowFilterDialog(false);
   };
 

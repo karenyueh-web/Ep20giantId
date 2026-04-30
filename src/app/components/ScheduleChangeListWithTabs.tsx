@@ -1,4 +1,4 @@
-﻿import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
+import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { AdvancedOrderTable, getOrderColumns, defaultOrderColumns } from './AdvancedOrderTable';
 import type { OrderRow, OrderColumn, ScheduleLine } from './AdvancedOrderTable';
 import { OrderDetail } from './OrderDetail';
@@ -584,7 +584,7 @@ export function ScheduleChangeListWithTabs({ userRole }: ScheduleChangeListWithT
   };
 
   // ── Filters ─────────────────────────────────────────────────────────────────
-  const handleApplyFilters = () => { setAppliedFilters(filters); setShowFilterDialog(false); };
+  const handleApplyFilters = (validFilters: typeof filters) => { setAppliedFilters(validFilters); setShowFilterDialog(false); };
 
   // ── Batch ────────────────────────────────────────────────────────────────────
   const getSelectedOrders = () => filteredOrders.filter(o => selectedOrderIds.has(o.id));

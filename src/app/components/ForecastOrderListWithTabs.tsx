@@ -145,8 +145,8 @@ export function ForecastOrderListWithTabs() {
     setShowFilterDialog(prev => !prev);
     setShowColumnSelector(false);
   };
-  const handleApplyFilters = () => {
-    setAppliedFilters(filters);
+  const handleApplyFilters = (validFilters: typeof filters) => {
+    setAppliedFilters(validFilters);
     setShowFilterDialog(false);
   };
 

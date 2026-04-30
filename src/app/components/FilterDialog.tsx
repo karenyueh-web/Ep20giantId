@@ -14,7 +14,7 @@ interface FilterDialogProps {
   availableColumns: { key: string; label: string }[];
   onFiltersChange: (filters: FilterCondition[]) => void;
   onClose: () => void;
-  onApply: () => void;
+  onApply: (validFilters: FilterCondition[]) => void;
 }
 
 // 操作符選項
@@ -173,7 +173,7 @@ export function FilterDialog({
   const handleApply = () => {
     const validFilters = localFilters.filter(f => f.column && f.operator);
     onFiltersChange(validFilters);
-    onApply();
+    onApply(validFilters);
   };
 
   return (

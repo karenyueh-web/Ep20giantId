@@ -448,8 +448,8 @@ export function VendorAccountReviewPageNew({
   };
 
   // 應用篩選條件
-  const handleApplyFilters = () => {
-    setAppliedFilters(filters);
+  const handleApplyFilters = (validFilters: typeof filters) => {
+    setAppliedFilters(validFilters);
     setShowFilterDialog(false);
   };
 

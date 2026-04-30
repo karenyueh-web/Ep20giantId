@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect , useRef } from 'react';
+﻿import { useState, useMemo, useCallback, useEffect , useRef } from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { useDrag, useDrop } from 'react-dnd';
@@ -517,7 +517,7 @@ export function OrderScheduleInquiryPage({ userRole: _userRole }: OrderScheduleI
             availableColumns={DEFAULT_COLS.map(c => ({ key: c.key, label: c.label }))}
             onFiltersChange={setFilters}
             onClose={() => setShowFilterDialog(false)}
-            onApply={() => { setAppliedFilters(filters); setShowFilterDialog(false); setPage(1); }}
+            onApply={(vf) => { setAppliedFilters(vf); setShowFilterDialog(false); setPage(1); }}
           />
         }
       />

@@ -374,8 +374,8 @@ export function OrderListWithTabs({ defaultTab = 'NP', userRole }: OrderListWith
   };
 
   // Filters handlers
-  const handleApplyFilters = () => {
-    setAppliedFilters(filters);
+  const handleApplyFilters = (validFilters: typeof filters) => {
+    setAppliedFilters(validFilters);
     setShowFilterDialog(false);
   };
 

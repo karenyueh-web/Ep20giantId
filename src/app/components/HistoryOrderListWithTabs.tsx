@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect , useRef } from 'react';
+﻿import { useState, useMemo, useCallback, useEffect , useRef } from 'react';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { useHorizontalDragScroll } from './useHorizontalDragScroll';
@@ -566,7 +566,7 @@ export function HistoryOrderListWithTabs() {
             availableColumns={availableColsForFilter as any}
             onFiltersChange={setFilters}
             onClose={() => setShowFilterDialog(false)}
-            onApply={() => { setAppliedFilters(filters); setShowFilterDialog(false); }}
+            onApply={(vf) => { setAppliedFilters(vf); setShowFilterDialog(false); }}
           />
         }
         onExportExcel={() => { exportOrdersExcel(filteredData, `歷史訂單_${new Date().toISOString().slice(0,10)}.xlsx`, columns as any); showToast(`已匯出 ${filteredData.length} 筆 (Excel)`); }}

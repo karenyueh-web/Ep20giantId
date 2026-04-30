@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ShipmentCreatePage — 出貨單管理 • 建立出貨單
  *
  * 出貨資格條件（兩種訂單來源均適用）：
@@ -1050,7 +1050,7 @@ export function ShipmentCreatePage({ userRole }: ShipmentCreatePageProps) {
             availableColumns={availableColumns.length > 0 ? availableColumns : getOrderColumns()}
             onFiltersChange={setFilters}
             onClose={() => setShowFilterDialog(false)}
-            onApply={() => { setAppliedFilters(filters); setShowFilterDialog(false); }}
+            onApply={(vf) => { setAppliedFilters(vf); setShowFilterDialog(false); }}
           />
         }
         actionButton={

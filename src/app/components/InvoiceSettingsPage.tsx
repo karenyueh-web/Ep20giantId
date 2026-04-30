@@ -1,4 +1,4 @@
-/**
+﻿/**
  * InvoiceSettingsPage — 發票設定
  *
  * 兩個 TAB：
@@ -401,7 +401,7 @@ function TrackTab() {
             availableColumns={TRACK_COLS_INIT.map(c => ({ key: c.key, label: c.label }))}
             onFiltersChange={setFilters}
             onClose={() => setShowFilterDialog(false)}
-            onApply={() => { setAppliedFilters(filters); setShowFilterDialog(false); setPage(1); }}
+            onApply={(vf) => { setAppliedFilters(vf); setShowFilterDialog(false); setPage(1); }}
           />
         }
       />
@@ -769,7 +769,7 @@ function DeadlineTab() {
             availableColumns={DEADLINE_COLS_INIT.map(c => ({ key: c.key, label: c.label }))}
             onFiltersChange={setFilters}
             onClose={() => setShowFilterDialog(false)}
-            onApply={() => { setAppliedFilters(filters); setShowFilterDialog(false); setPage(1); }}
+            onApply={(vf) => { setAppliedFilters(vf); setShowFilterDialog(false); setPage(1); }}
           />
         }
       />

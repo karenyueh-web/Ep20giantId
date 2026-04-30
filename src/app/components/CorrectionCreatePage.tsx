@@ -346,8 +346,8 @@ export function CorrectionCreatePage({ userRole, onNavigateToList }: CorrectionC
     if (showColumnSelector) setShowColumnSelector(false);
   };
 
-  const handleApplyFilters = () => {
-    setAppliedFilters(filters);
+  const handleApplyFilters = (validFilters: typeof filters) => {
+    setAppliedFilters(validFilters);
     setShowFilterDialog(false);
   };
 

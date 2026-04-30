@@ -1,4 +1,4 @@
-/**
+﻿/**
  * StandardDataTable — 專案標準表格元件
  *
  * 功能清單（符合表格系統規範）：
@@ -336,7 +336,7 @@ export function StandardDataTable<T extends { id: number }>({
             availableColumns={initialColumns.map(c => ({ key: c.key, label: c.label }))}
             onFiltersChange={setFilters}
             onClose={() => setShowFilterDialog(false)}
-            onApply={() => { setAppliedFilters(filters); setShowFilterDialog(false); setPage(1); }}
+            onApply={(vf) => { setAppliedFilters(vf); setShowFilterDialog(false); setPage(1); }}
           />
         }
       />

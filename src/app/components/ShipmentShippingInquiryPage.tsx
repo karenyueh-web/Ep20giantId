@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ShipmentShippingInquiryPage — 出貨單 • 出貨/裝箱明細
  *
  * TAB1：出貨明細查詢（項次維度）
@@ -570,7 +570,7 @@ function ItemInquiryTab({ shipments }: { shipments: ShipmentRow[] }) {
             availableColumns={availableColsForFilter as any}
             onFiltersChange={setFilters}
             onClose={() => setShowFilterDialog(false)}
-            onApply={() => { setAppliedFilters(filters); setShowFilterDialog(false); }}
+            onApply={(vf) => { setAppliedFilters(vf); setShowFilterDialog(false); }}
           />
         }
         onExportCsv={() => showToast(`已匯出 ${filteredData.length} 筆 (CSV)`)}
@@ -861,7 +861,7 @@ function BoxInquiryTab({ shipments, onPrint }: { shipments: ShipmentRow[]; onPri
             availableColumns={availableColsForFilter as any}
             onFiltersChange={setFilters}
             onClose={() => setShowFilterDialog(false)}
-            onApply={() => { setAppliedFilters(filters); setShowFilterDialog(false); }}
+            onApply={(vf) => { setAppliedFilters(vf); setShowFilterDialog(false); }}
           />
         }
         onExportCsv={() => showToast(`已匯出 ${filteredData.length} 筆 (CSV)`)}

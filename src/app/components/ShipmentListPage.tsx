@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ShipmentListPage — 出貨單管理 • 出貨單查詢
  *
  * 功能：
@@ -824,7 +824,7 @@ export function ShipmentListPage() {
             availableColumns={availableColsForFilter as any}
             onFiltersChange={setFilters}
             onClose={() => setShowFilterDialog(false)}
-            onApply={() => { setAppliedFilters(filters); setShowFilterDialog(false); }}
+            onApply={(vf) => { setAppliedFilters(vf); setShowFilterDialog(false); }}
           />
         }
         onExportExcel={() => {
