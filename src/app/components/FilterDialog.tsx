@@ -160,7 +160,11 @@ export function FilterDialog({
   };
 
   const removeFilter = (id: string) => {
-    if (localFilters.length <= 1) return;
+    if (localFilters.length <= 1) {
+      // 最後一筆：重設為空白篩選條件（而非禁止刪除）
+      setLocalFilters([{ id: Date.now().toString(), column: '', operator: 'contains', value: '' }]);
+      return;
+    }
     setLocalFilters(localFilters.filter(f => f.id !== id));
   };
 

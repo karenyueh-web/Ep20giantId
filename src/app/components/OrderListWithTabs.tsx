@@ -224,6 +224,8 @@ export function OrderListWithTabs({ defaultTab = 'NP', userRole }: OrderListWith
           if (filter.column === 'dayDiff') {
             const diff = computeRowDayDiff(item);
             rawValue = diff === null ? '-' : diff > 0 ? `+${diff}` : `${diff}`;
+          } else if (filter.column === 'docSeqNo') {
+            rawValue = (item.orderNo || '') + (item.orderSeq || '');
           } else {
             const v = item[filter.column as keyof OrderRow];
             rawValue = v !== undefined && v !== null ? String(v) : '';
@@ -674,6 +676,8 @@ export function OrderListWithTabs({ defaultTab = 'NP', userRole }: OrderListWith
           if (filter.column === 'dayDiff') {
             const diff = computeRowDayDiff(item);
             rawValue = diff === null ? '-' : diff > 0 ? `+${diff}` : `${diff}`;
+          } else if (filter.column === 'docSeqNo') {
+            rawValue = (item.orderNo || '') + (item.orderSeq || '');
           } else {
             const v = item[filter.column as keyof OrderRow];
             rawValue = v !== undefined && v !== null ? String(v) : '';

@@ -842,6 +842,7 @@ export function AdvancedOrderTable({
     const visibleColumns = columns.filter(col => col.visible !== false);
 
   // ── 取得篩選用的欄位值（包含計算欄位 dayDiff / prodSchedDayDiff）──
+  // 注意：docSeqNo 顯示值為 orderNo+orderSeq 拼接，須與畫面一致
   const getRowFilterValue = (row: OrderRow, column: string): string => {
     if (column === 'dayDiff') {
       const diff = computeRowDayDiff(row);
@@ -852,6 +853,9 @@ export function AdvancedOrderTable({
       const diff = computeProdSchedDayDiff(row);
       if (diff === null) return '-';
       return diff > 0 ? `+${diff}` : `${diff}`;
+    }
+    if (column === 'docSeqNo') {
+      return (row.orderNo || '') + (row.orderSeq || '');
     }
     const value = row[column as keyof OrderRow];
     return value !== undefined && value !== null ? String(value) : '';

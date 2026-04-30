@@ -1,4 +1,4 @@
-﻿/**
+/**
  * ShipmentCreatePage — 出貨單管理 • 建立出貨單
  *
  * 出貨資格條件（兩種訂單來源均適用）：
@@ -718,11 +718,14 @@ export function ShipmentCreatePage({ userRole }: ShipmentCreatePageProps) {
       result = result.filter(o => o.vendorCode === searchVendor);
     if (searchDocSeqNo.trim()) {
       const kw = searchDocSeqNo.trim().toLowerCase();
-      result = result.filter(o =>
-        (o.docSeqNo || '').toLowerCase().includes(kw) ||
-        (o.orderNo  || '').toLowerCase().includes(kw) ||
-        (o.orderSeq || '').toLowerCase().includes(kw)
-      );
+      result = result.filter(o => {
+        // 需同時比對「單號序號」顯示值（orderNo+orderSeq 拼接）及各別欄位
+        const concat = ((o.orderNo || '') + (o.orderSeq || '')).toLowerCase();
+        return concat.includes(kw) ||
+          (o.docSeqNo || '').toLowerCase().includes(kw) ||
+          (o.orderNo  || '').toLowerCase().includes(kw) ||
+          (o.orderSeq || '').toLowerCase().includes(kw);
+      });
     }
     if (searchMaterialNo.trim()) {
       const kw = searchMaterialNo.trim().toLowerCase();
@@ -736,8 +739,13 @@ export function ShipmentCreatePage({ userRole }: ShipmentCreatePageProps) {
     if (appliedFilters.length === 0) return filteredOrders.length;
     return filteredOrders.filter(item =>
       appliedFilters.every(f => {
-        const v = item[f.column as keyof OrderRow];
-        const raw = v != null ? String(v) : '';
+        let raw: string;
+        if (f.column === 'docSeqNo') {
+          raw = (item.orderNo || '') + (item.orderSeq || '');
+        } else {
+          const v = item[f.column as keyof OrderRow];
+          raw = v != null ? String(v) : '';
+        }
         switch (f.operator) {
           case 'contains':   return raw.toLowerCase().includes(f.value.toLowerCase());
           case 'equals':     return raw.toLowerCase() === f.value.toLowerCase();
