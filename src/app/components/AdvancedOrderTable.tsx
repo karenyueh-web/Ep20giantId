@@ -22,7 +22,7 @@ export type OrderColumnKey =
   // ── 訂單基本資料（Row 1） ──
   | 'orderType' | 'company' | 'purchaseOrg' | 'orderSeq' | 'docSeqNo'
   // ── 訂單基本資料（Row 2） ──
-  | 'purchaser' | 'orderQty' | 'acceptQty' | 'comparePrice' | 'unit'
+  | 'purchaser' | 'orderQty' | 'acceptQty' | 'comparePrice' | 'unit' | 'currency'
   // ── 訂單基本資料（Row 3） ──
   | 'leadtime' | 'vendorCode' | 'vendorName' | 'materialNo' | 'customerBrand' | 'vendorMaterialNo'
   // ── 品名 & 規格 ──
@@ -200,6 +200,7 @@ export const defaultOrderColumns: OrderColumn[] = [
   { key: 'acceptQty',            label: '驗收量',             width: 100,  minWidth: 80  },
   { key: 'comparePrice',         label: '比對單價',           width: 160,  minWidth: 120, visible: false },
   { key: 'unit',                 label: '單位',               width: 80,   minWidth: 60,  visible: false },
+  { key: 'currency',             label: '幣別',               width: 80,   minWidth: 60,  visible: false },
   // Row 3
   { key: 'leadtime',             label: 'leadtime',           width: 90,   minWidth: 70,  visible: false },
   { key: 'vendorCode',           label: '廠商編號',           width: 130,  minWidth: 100 },

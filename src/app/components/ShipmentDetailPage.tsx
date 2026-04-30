@@ -8,7 +8,7 @@
 
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { DeleteButton } from './ActionButtons';
-import { CurrencySelect } from './CurrencySelect';
+import { SAP_CURRENCIES } from '@/app/data/currencyData';
 import { CountrySelect } from './CountrySelect';
 import { DropdownSelect } from './DropdownSelect';
 import { SimpleDatePicker } from './SimpleDatePicker';
@@ -284,11 +284,19 @@ function InlineNumberInput({
   value,
   onChange,
   min = 0,
+  initialValue,
 }: {
   value: string;
   onChange: (v: string) => void;
   min?: number;
+  /** 如果訂單帶入的初始值 > 0，則不允許使用者改為 0 或空值 */
+  initialValue?: string;
 }) {
+  // 用 ref 鎖定 mount 時的初始值，後續編輯不影響此值
+  const initRef = useRef(initialValue);
+  const initNum = parseFloat(initRef.current ?? '0') || 0;
+  const mustBePositive = initNum > 0;
+
   return (
     <input
       type="text"
@@ -300,6 +308,15 @@ function InlineNumberInput({
         const parts = raw.split('.');
         const sanitized = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : raw;
         onChange(sanitized);
+      }}
+      onBlur={() => {
+        // 如果訂單帶入值 > 0，且使用者清空或設為 0，自動還原為初始值
+        if (mustBePositive) {
+          const cur = parseFloat(value) || 0;
+          if (cur <= 0) {
+            onChange(initRef.current!);
+          }
+        }
       }}
       onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
       className="w-full h-[32px] px-[8px] border border-[rgba(145,158,171,0.32)] rounded-[6px] font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#1c252e] outline-none focus:border-[#005eb8] transition-colors bg-white text-right"
@@ -389,7 +406,7 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
   const { orders, updateOrderFields } = useOrderStore();
   // ── 基本資訊（若為 CSV 匯入則優先使用 csvData 預填值）───────────────────
   const [vendorShipmentNo, setVendorShipmentNo] = useState(csvData?.vendorShipmentNo ?? '');
-  const [currency, setCurrency]         = useState(csvData?.currency ?? 'TWD');
+  const [currency, setCurrency]         = useState(csvData?.currency ?? selectedOrders[0]?.currency ?? 'TWD');
   const [transportType, setTransportType] = useState(csvData?.transportType ?? 'S');
   const [deliveryDate, setDeliveryDate] = useState(csvData?.deliveryDate ?? '');
   const [arrivalDate, setArrivalDate]   = useState(csvData?.arrivalDate ?? '');
@@ -778,9 +795,9 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
           </div>
         </div>
 
-        {/* Row 1：廠商出貨單號 | 幣別 | 運輸型態 | 發票日期 | 交貨日期 | 到貨日期 */}
-        <div className="flex gap-[16px] flex-wrap mb-[16px]">
-          <div style={{ flex: '1 1 160px', maxWidth: '200px' }}>
+        {/* Row 1：廠商出貨單號 | 幣別 | 運輸型態 | 交貨日期 | 到貨日期 */}
+        <div className="flex gap-[16px] mb-[16px]">
+          <div className="flex-1 min-w-0">
             <FloatingInput
               label="廠商出貨單號"
               value={vendorShipmentNo}
@@ -790,18 +807,32 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
               hasError={submitted && !vendorShipmentNo.trim()}
             />
           </div>
-          <div style={{ flex: '1 1 280px', minWidth: '280px' }}>
-            <CurrencySelect value={currency} onChange={setCurrency} />
+          <div className="flex-1 min-w-0">
+            <div className="h-[54px] relative rounded-[8px] w-full">
+              <div className="absolute border border-[rgba(145,158,171,0.2)] border-solid inset-0 pointer-events-none rounded-[8px]" />
+              <div className="flex flex-row items-center size-full">
+                <div className="flex items-center px-[14px] relative size-full">
+                  <p className="flex-1 font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[#1c252e] text-[15px] truncate">{(() => {
+                    const code = currency || 'TWD';
+                    const found = SAP_CURRENCIES.find(c => c.code === code);
+                    return found ? `${found.code} ${found.shortName}` : code;
+                  })()}</p>
+                  <div className="absolute flex items-center left-[14px] px-[2px] top-[-5px] pointer-events-none z-[4]">
+                    <div className="absolute bg-white h-[2px] left-0 right-0 top-[5px]" />
+                    <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[14px] relative shrink-0 text-[#637381] text-[13px]">幣別</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div style={{ flex: '1 1 140px', maxWidth: '180px' }}>
+          <div className="flex-1 min-w-0">
             <DropdownSelect label="運輸型態" value={transportType} onChange={setTransportType} options={TRANSPORT_OPTIONS} />
           </div>
-
-          <div style={{ flex: '1 1 140px', maxWidth: '180px' }}>
+          <div className="flex-1 min-w-0">
             <FloatingDateField label="交貨日期" value={deliveryDate} onChange={setDeliveryDate}
               required hasError={submitted && !deliveryDate} />
           </div>
-          <div style={{ flex: '1 1 140px', maxWidth: '180px' }}>
+          <div className="flex-1 min-w-0">
             <FloatingDateField label="到貨日期" value={arrivalDate} onChange={setArrivalDate} />
           </div>
         </div>
@@ -1007,12 +1038,12 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
 
                   {/* 淨重 */}
                   <div style={{ width: 90, minWidth: 90 }} className="px-[8px] shrink-0">
-                    <InlineNumberInput value={row.netWeight} onChange={v => updateRow(row.id, { netWeight: v })} />
+                    <InlineNumberInput value={row.netWeight} onChange={v => updateRow(row.id, { netWeight: v })} initialValue={row.netWeight} />
                   </div>
 
                   {/* 毛重 */}
                   <div style={{ width: 90, minWidth: 90 }} className="px-[8px] shrink-0">
-                    <InlineNumberInput value={row.grossWeight} onChange={v => updateRow(row.id, { grossWeight: v })} />
+                    <InlineNumberInput value={row.grossWeight} onChange={v => updateRow(row.id, { grossWeight: v })} initialValue={row.grossWeight} />
                   </div>
 
                   {/* 重量單位 */}
@@ -1066,7 +1097,7 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
           style={{ background: 'rgba(28,37,46,0.45)', backdropFilter: 'blur(4px)' }}
           onClick={e => { if (e.target === e.currentTarget) { setSubmitted(true); setValidationErrors([]); } }}
         >
-          <div className="bg-white rounded-[16px] shadow-[0px_24px_48px_rgba(0,0,0,0.20)] w-[420px] max-w-[90vw] overflow-hidden">
+          <div className="bg-white rounded-[16px] shadow-[0px_24px_48px_rgba(0,0,0,0.20)] w-[580px] max-w-[90vw] overflow-hidden">
             {/* header */}
             <div className="flex items-center gap-[10px] px-[24px] pt-[20px] pb-[16px] border-b border-[rgba(145,158,171,0.12)]">
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="shrink-0">

@@ -24,7 +24,6 @@ import { ShipmentDetailPage } from './ShipmentDetailPage';
 import { OrderDetail } from './OrderDetail';
 import { STORAGE_LOCATION_DATA } from './ShippingBasicSettingsPage';
 import { SAP_COUNTRIES } from '@/app/data/countryData';
-import { SAP_CURRENCIES } from '@/app/data/currencyData';
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -214,11 +213,14 @@ function parseAndValidateShipmentCsv(text: string, referenceOrders: OrderRow[]):
 
   // Header 必填驗證
   if (!header.vendorShipmentNo || header.vendorShipmentNo === '(請填入)') globalErrors.push('廠商出貨單號 為必填');
-  // 幣別：對抄 SAP_CURRENCIES 代碼白名單
+  // 幣別驗證：須與訂單幣別一致（幣別來自 SAP 訂單資料，不需白名單校驗）
   if (!header.currency || header.currency === '(請填入)') {
     globalErrors.push('幣別 為必填');
-  } else if (!SAP_CURRENCIES.some(c => c.code === header.currency)) {
-    globalErrors.push(`幣別代碼「${header.currency}」非系統有效幣別，請從幣別選單中確認正確代碼`);
+  } else {
+    const orderCurrency = referenceOrders[0]?.currency || 'TWD';
+    if (header.currency !== orderCurrency) {
+      globalErrors.push(`幣別不符：CSV 填入「${header.currency}」，但所選訂單的幣別為「${orderCurrency}」，請修正後重新上傳`);
+    }
   }
   if (!header.deliveryDate || header.deliveryDate === '(請填入)') {
     globalErrors.push('交貨日期 為必填');
@@ -844,6 +846,14 @@ export function ShipmentCreatePage({ userRole }: ShipmentCreatePageProps) {
       return;
     }
 
+    // 卡控：訂單須為同一幣別才能一起出貨
+    const currencies = new Set(selected.map(o => o.currency || 'TWD'));
+    if (currencies.size > 1) {
+      const currencyList = [...currencies].join('、');
+      showToast(`所選訂單包含不同幣別（${currencyList}），僅能選擇同一幣別的訂單建立出貨單`);
+      return;
+    }
+
     setDetailOrders(selected);
     setShowDetail(true);
   };
@@ -862,7 +872,9 @@ export function ShipmentCreatePage({ userRole }: ShipmentCreatePageProps) {
     const deliveryAddress = addrEntry?.addressZh ?? '';
 
     const headerRow1 = '廠商出貨單號,幣別,運輸型態,交貨日期,到貨日期,交貨地址';
-    const headerRow2 = `(請填入),(請填入),(請填入),(請填入),,${deliveryAddress}`;
+    // 幣別自動帶入（所有訂單已卡控同一幣別）
+    const autoCurrency = firstOrder?.currency || 'TWD';
+    const headerRow2 = `(請填入),${autoCurrency},(請填入),(請填入),,${deliveryAddress}`;
     // 自訂箱數移至每箱數量之後（欄位順序需與 parser 一致）
     const detailHeader = '出貨項次,訂單號碼,訂單序號,料號,訂單待交量(參考),出貨量,每箱數量,自訂箱數(以/分隔),淨重(個),毛重(個),重量單位,原產國家';
     const detailRows = filteredOrders.map((o, idx) => {

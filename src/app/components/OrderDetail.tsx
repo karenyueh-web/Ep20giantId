@@ -952,6 +952,7 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
                   { label: '未交量',       value: String(liveOrder?.undeliveredQty ?? 0) },
                   { label: '儲存地點代號', value: liveOrder?.storageLocationCode || '-' },
                   { label: '單項小記',     value: liveOrder?.lineItemNote || '-' },
+                  { label: '幣別',         value: liveOrder?.currency || '-' },
                 ].map(({ label, value }) => (
                   <div key={label} className="flex flex-col gap-[2px] flex-1">
                     <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[#1c252e]">{label}</p>
