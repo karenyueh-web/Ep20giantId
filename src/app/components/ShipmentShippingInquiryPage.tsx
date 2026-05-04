@@ -1,10 +1,10 @@
-﻿/**
+/**
  * ShipmentShippingInquiryPage — 出貨單 • 出貨/裝箱明細
  *
- * TAB1：出貨明細查詢（項次維度）
- *   - 每筆 = 一個出貨項次
- *   - 欄位涵蓋表頭資訊（廠商名稱、出貨單號、SAP送貨單號、幣別、運輸型態、交貨日期、到貨日期、出貨目的地）
- *   + 項次資訊（出貨項次、單號序號、採購組織、料號、品名、客戶料號、客戶訂單號碼、
+ * TAB1：出貨明細查詢（序號維度）
+ *   - 每筆 = 一個出貨序號
+ *   - 欄位涵蓋表頭資訊（廠商名稱、出貨單號、出貨單號、幣別、運輸型態、交貨日期、到貨日期、出貨目的地）
+ *   + 序號資訊（出貨序號、單號序號、採購組織、料號、品名、客戶料號、客戶訂單號碼、
  *               訂單待交、出貨量、每箱數量、總箱數、淨重、毛重、重量單位、原產國家、累計收料量）
  *
  * TAB2：裝箱明細查詢（箱子維度）
@@ -63,20 +63,20 @@ function getMadeIn(code: string): string {
 
 // ── 型別定義 ──────────────────────────────────────────────────────────────────
 
-/** TAB1 出貨明細列（項次維度） */
+/** TAB1 出貨明細列（序號維度） */
 export interface ShipmentItemRow {
   id: string; // `${shipment.id}-${detail.itemNo}`
   // 表頭資訊
   vendorName: string;         // 廠商名稱（不含編號）
-  vendorShipmentNo: string;   // 廠商出貨單號
-  sapDeliveryNo: string;      // SAP 送貨單號
+  vendorShipmentNo: string;   // 廠商出貨單
+  sapDeliveryNo: string;      // 出貨單號
   currency: string;           // 幣別
   transportType: string;      // 運輸型態
   deliveryDate: string;       // 交貨日期
   arrivalDate: string;        // 到貨日期
   deliveryAddress: string;    // 出貨目的地（交貨地址）
   // 項次資訊
-  itemNo: number;             // 出貨項次
+  itemNo: number;             // 出貨序號
   orderDocSeq: string;        // 單號序號（orderNo + orderSeq 合併）
   purchaseOrg: string;        // 採購組織（mock: 'GEM採購...'）
   materialNo: string;         // 料號
@@ -87,8 +87,8 @@ export interface ShipmentItemRow {
   shipQty: number;            // 出貨量
   qtyPerBox: number | string; // 每箱數量
   totalBoxes: number;         // 總箱數
-  netWeight: string;          // 淨重（個）
-  grossWeight: string;        // 毛重（個）
+  netWeight: string;          // 淨重
+  grossWeight: string;        // 毛重
   weightUnit: string;         // 重量單位
   countryOfOrigin: string;    // 原產國家 code（TW/CN...）
   receivedQty: number;        // 累計收料量
@@ -98,31 +98,33 @@ export interface ShipmentItemRow {
 export interface BoxLineRow {
   id: string; // `${shipment.id}-${detail.itemNo}-${box.boxNo}`
   // 箱本身
-  barcode: string;       // 外箱條碼（mock: 028xxxxxx$）
+  barcode: string;       // 外箱條碼
   boxQty: number;        // 本件數量
-  labelSeq: string;      // 貼標項次（N/總箱數 格式，如 1/4）
+  labelSeqNo: number;    // 貼標項次（箱號，如 1）
+  totalBoxes: number;    // 總箱數（如 4）
   // 所屬項次
-  itemNo: number;
-  orderDocSeq: string;   // 單號序號
-  purchaseOrg: string;
+  itemNo: number;        // 出貨序號
+  orderDocSeq: string;   // 單號序號（orderNo + orderSeq 合併）
+  orderNo: string;       // 訂單號碼
+  orderSeq: string;      // 訂單序號
   materialNo: string;
+  vendorMaterialNo: string; // 廠商料號
   productName: string;
-  customerMaterialNo: string;
-  customerOrderNo: string;
-  shipQty: number;       // 總數量（出貨量）
+  customerMaterialNo: string; // 客戶物料號碼
+  customerOrderNo: string;    // 客戶PO號碼
+  shipQty: number;       // 出貨量
   netWeight: string;
   grossWeight: string;
   weightUnit: string;
-  madeIn: string;        // Made in Taiwan etc.
+  countryOfOrigin: string; // 原產國家代碼（TW/CN...）
   // 所屬表頭
-  vendorName: string;
+  vendorName: string;      // 廠商簡稱
   vendorShipmentNo: string;
-  sapDeliveryNo: string;
-  deliveryDate: string;
-  deliveryAddress: string;
-  transportType: string;
-  purchaseOrgHeader: string;
-  storageLocation: string; // 儲存地點（mock: 空）
+  sapDeliveryNo: string;   // 出貨單號
+  deliveryDate: string;    // 交貨日期
+  deliveryAddress: string; // 出貨地址
+  storageLocation: string; // 儲存地點代碼
+  plantCode: string;       // 工廠代碼
 }
 
 // ── Mock 資料展開 ──────────────────────────────────────────────────────────────
@@ -166,7 +168,7 @@ export function buildItemRows(shipments: ShipmentRow[]): ShipmentItemRow[] {
 let _barcodeCounter = 1;
 function genBarcode(): string {
   const n = String(_barcodeCounter++).padStart(9, '0');
-  return `0${n}$`;
+  return `${n}$`;
 }
 
 export function buildBoxRows(shipments: ShipmentRow[]): BoxLineRow[] {
@@ -180,11 +182,14 @@ export function buildBoxRows(shipments: ShipmentRow[]): BoxLineRow[] {
           id: `${ship.id}-${d.itemNo}-${box.boxNo}`,
           barcode: genBarcode(),
           boxQty: box.qty,
-          labelSeq: `${box.boxNo}/${boxes.length}`,
+          labelSeqNo: box.boxNo,
+          totalBoxes: boxes.length,
           itemNo: d.itemNo,
           orderDocSeq: `${d.orderNo}${d.orderSeq}`,
-          purchaseOrg: 'GEM採購',
+          orderNo: d.orderNo,
+          orderSeq: d.orderSeq,
           materialNo: d.materialNo,
+          vendorMaterialNo: 'TEMPPRICE',
           productName: '',
           customerMaterialNo: '',
           customerOrderNo: '',
@@ -192,15 +197,14 @@ export function buildBoxRows(shipments: ShipmentRow[]): BoxLineRow[] {
           netWeight: d.netWeight,
           grossWeight: d.grossWeight,
           weightUnit: d.weightUnit,
-          madeIn: getMadeIn(d.countryOfOrigin),
+          countryOfOrigin: d.countryOfOrigin,
           vendorName: ship.vendorName.replace(/\(.*\)/, '').trim(),
           vendorShipmentNo: ship.vendorShipmentNo,
           sapDeliveryNo: ship.sapDeliveryNo,
           deliveryDate: ship.deliveryDate,
           deliveryAddress: ship.deliveryAddress,
-          transportType: ship.transportType,
-          purchaseOrgHeader: 'GEM採購',
           storageLocation: '',
+          plantCode: 'GTM1',
         });
       }
     }
@@ -239,14 +243,14 @@ export interface ItemCol {
 
 export const ITEM_DEFAULT_COLS: ItemCol[] = [
   { key: 'vendorName',         label: '廠商名稱',     width: 120, minWidth: 100, align: 'left' },
-  { key: 'vendorShipmentNo',   label: '廠商出貨單號', width: 140, minWidth: 110, align: 'left' },
-  { key: 'sapDeliveryNo',      label: 'SAP送貨單號', width: 130, minWidth: 100, align: 'left' },
+  { key: 'vendorShipmentNo',   label: '廠商出貨單', width: 140, minWidth: 110, align: 'left' },
+  { key: 'sapDeliveryNo',      label: '出貨單號', width: 130, minWidth: 100, align: 'left' },
   { key: 'currency',            label: '幣別',         width: 70,  minWidth: 60,  align: 'center' },
   { key: 'transportType',       label: '運輸型態',     width: 100, minWidth: 80,  align: 'center' },
   { key: 'deliveryDate',        label: '交貨日期',     width: 110, minWidth: 90,  align: 'center' },
   { key: 'arrivalDate',         label: '到貨日期',     width: 110, minWidth: 90,  align: 'center' },
   { key: 'deliveryAddress',     label: '出貨目的地',   width: 200, minWidth: 120, align: 'left', visible: false },
-  { key: 'itemNo',              label: '出貨項次',     width: 80,  minWidth: 60,  align: 'center' },
+  { key: 'itemNo',              label: '出貨序號',     width: 80,  minWidth: 60,  align: 'center' },
   { key: 'orderDocSeq',         label: '單號序號',     width: 140, minWidth: 110, align: 'left' },
   { key: 'purchaseOrg',         label: '採購組織',     width: 100, minWidth: 80,  align: 'left' },
   { key: 'materialNo',          label: '料號',         width: 160, minWidth: 120, align: 'left' },
@@ -257,8 +261,8 @@ export const ITEM_DEFAULT_COLS: ItemCol[] = [
   { key: 'shipQty',             label: '出貨量',       width: 80,  minWidth: 60,  align: 'right' },
   { key: 'qtyPerBox',           label: '每箱數量',     width: 88,  minWidth: 70,  align: 'right' },
   { key: 'totalBoxes',          label: '總箱數',       width: 80,  minWidth: 60,  align: 'right' },
-  { key: 'netWeight',           label: '淨重(個)',     width: 90,  minWidth: 70,  align: 'right' },
-  { key: 'grossWeight',         label: '毛重(個)',     width: 90,  minWidth: 70,  align: 'right' },
+  { key: 'netWeight',           label: '淨重',     width: 90,  minWidth: 70,  align: 'right' },
+  { key: 'grossWeight',         label: '毛重',     width: 90,  minWidth: 70,  align: 'right' },
   { key: 'weightUnit',          label: '重量單位',     width: 90,  minWidth: 70,  align: 'center' },
   { key: 'countryOfOrigin',     label: '原產國家',     width: 100, minWidth: 80,  align: 'center' },
   { key: 'receivedQty',         label: '累計收料量',   width: 100, minWidth: 80,  align: 'right' },
@@ -268,12 +272,12 @@ export const ITEM_DEFAULT_COLS: ItemCol[] = [
 // ── 欄位定義 TAB2 裝箱明細
 // ─────────────────────────────────────────────────────────────────────────────
 export type BoxColKey =
-  | 'barcode' | 'boxQty' | 'labelSeq'
-  | 'itemNo' | 'orderDocSeq' | 'purchaseOrg' | 'materialNo'
+  | 'barcode' | 'boxQty' | 'labelSeqNo' | 'totalBoxes'
+  | 'itemNo' | 'orderDocSeq' | 'orderNo' | 'orderSeq' | 'materialNo' | 'vendorMaterialNo'
   | 'productName' | 'customerMaterialNo' | 'customerOrderNo'
-  | 'shipQty' | 'netWeight' | 'grossWeight' | 'weightUnit' | 'madeIn'
+  | 'shipQty' | 'netWeight' | 'grossWeight' | 'weightUnit' | 'countryOfOrigin'
   | 'vendorName' | 'vendorShipmentNo' | 'sapDeliveryNo'
-  | 'deliveryDate' | 'deliveryAddress' | 'transportType' | 'storageLocation';
+  | 'deliveryDate' | 'deliveryAddress' | 'storageLocation' | 'plantCode';
 
 export interface BoxCol {
   key: BoxColKey;
@@ -286,32 +290,35 @@ export interface BoxCol {
 
 export const BOX_DEFAULT_COLS: BoxCol[] = [
   { key: 'barcode',            label: '條碼',         width: 140, minWidth: 110, align: 'left' },
-  { key: 'boxQty',             label: '本件數量',     width: 88,  minWidth: 70,  align: 'right' },
-  { key: 'labelSeq',           label: '貼標項次/總箱', width: 110, minWidth: 90,  align: 'center' },
-  { key: 'itemNo',             label: '出貨項次',     width: 80,  minWidth: 60,  align: 'center' },
-  { key: 'orderDocSeq',        label: '單號序號',     width: 140, minWidth: 110, align: 'left' },
-  { key: 'purchaseOrg',        label: '採購組織',     width: 100, minWidth: 80,  align: 'left' },
+  { key: 'vendorName',         label: '廠商簡稱',     width: 120, minWidth: 100, align: 'left' },
+  { key: 'vendorShipmentNo',   label: '廠商出貨單',   width: 140, minWidth: 110, align: 'left' },
   { key: 'materialNo',         label: '料號',         width: 160, minWidth: 120, align: 'left' },
-  { key: 'productName',        label: '品名',         width: 160, minWidth: 120, align: 'left', visible: false },
-  { key: 'customerMaterialNo', label: '客戶料號',     width: 120, minWidth: 90,  align: 'left', visible: false },
-  { key: 'customerOrderNo',    label: '客戶訂單號碼', width: 140, minWidth: 110, align: 'left', visible: false },
+  { key: 'vendorMaterialNo',   label: '廠商料號',     width: 120, minWidth: 90,  align: 'left' },
   { key: 'shipQty',            label: '出貨量',       width: 80,  minWidth: 60,  align: 'right' },
-  { key: 'netWeight',          label: '淨重(個)',     width: 90,  minWidth: 70,  align: 'right' },
-  { key: 'grossWeight',        label: '毛重(個)',     width: 90,  minWidth: 70,  align: 'right' },
+  { key: 'boxQty',             label: '本件數量',     width: 88,  minWidth: 70,  align: 'right' },
+  { key: 'labelSeqNo',         label: '貼標項次',     width: 80,  minWidth: 60,  align: 'center' },
+  { key: 'totalBoxes',         label: '總箱數',       width: 80,  minWidth: 60,  align: 'right' },
+  { key: 'itemNo',             label: '出貨序號',     width: 80,  minWidth: 60,  align: 'center' },
+  { key: 'orderDocSeq',        label: '單號序號',     width: 140, minWidth: 110, align: 'left' },
+  { key: 'orderNo',            label: '訂單號碼',     width: 130, minWidth: 100, align: 'left' },
+  { key: 'orderSeq',           label: '訂單序號',     width: 80,  minWidth: 60,  align: 'left' },
+  { key: 'productName',        label: '品名',         width: 160, minWidth: 120, align: 'left', visible: false },
+  { key: 'customerMaterialNo', label: '客戶物料號碼', width: 130, minWidth: 100, align: 'left', visible: false },
+  { key: 'customerOrderNo',    label: '客戶PO號碼',   width: 130, minWidth: 100, align: 'left', visible: false },
+  { key: 'netWeight',          label: '淨重',         width: 90,  minWidth: 70,  align: 'right' },
+  { key: 'grossWeight',        label: '毛重',         width: 90,  minWidth: 70,  align: 'right' },
   { key: 'weightUnit',         label: '重量單位',     width: 90,  minWidth: 70,  align: 'center' },
-  { key: 'madeIn',             label: '製造國',       width: 150, minWidth: 120, align: 'left' },
-  { key: 'vendorName',         label: '廠商名稱',     width: 120, minWidth: 100, align: 'left' },
-  { key: 'vendorShipmentNo',   label: '廠商出貨單號', width: 140, minWidth: 110, align: 'left' },
-  { key: 'sapDeliveryNo',      label: 'SAP送貨單號', width: 130, minWidth: 100, align: 'left' },
-  { key: 'deliveryDate',       label: '出貨日期',     width: 110, minWidth: 90,  align: 'center' },
-  { key: 'deliveryAddress',    label: '出貨目的地',   width: 200, minWidth: 120, align: 'left', visible: false },
-  { key: 'transportType',      label: '運輸型態',     width: 100, minWidth: 80,  align: 'center', visible: false },
-  { key: 'storageLocation',    label: '儲存地點',     width: 110, minWidth: 90,  align: 'left', visible: false },
+  { key: 'countryOfOrigin',    label: '原產國家',     width: 100, minWidth: 80,  align: 'center' },
+  { key: 'sapDeliveryNo',      label: '出貨單號',     width: 130, minWidth: 100, align: 'left' },
+  { key: 'deliveryDate',       label: '交貨日期',     width: 110, minWidth: 90,  align: 'center' },
+  { key: 'deliveryAddress',    label: '出貨地址',     width: 200, minWidth: 120, align: 'left', visible: false },
+  { key: 'storageLocation',    label: '儲存地點代碼', width: 120, minWidth: 90,  align: 'left', visible: false },
+  { key: 'plantCode',          label: '工廠代碼',     width: 100, minWidth: 80,  align: 'left', visible: false },
 ];
 
 // ── 共用儲存 key ──────────────────────────────────────────────────────────────
 const ITEM_STORAGE_KEY = 'shipmentItemInquiry_v1_cols';
-const BOX_STORAGE_KEY  = 'shipmentBoxInquiry_v1_cols';
+const BOX_STORAGE_KEY  = 'shipmentBoxInquiry_v2_cols';
 const CHECKBOX_W = 52;
 
 
@@ -357,20 +364,15 @@ function getItemCellValue(row: ShipmentItemRow, key: ItemColKey): React.ReactNod
 
 // ── 列 Cell 值 TAB2 ──────────────────────────────────────────────────────────
 function getBoxCellValue(row: BoxLineRow, key: BoxColKey): React.ReactNode {
-  if (key === 'transportType') {
-    const map: Record<string, { bg: string; text: string }> = {
-      S: { bg: 'rgba(0,120,212,0.10)',  text: '#0068b8' },
-      A: { bg: 'rgba(255,171,0,0.12)',  text: '#b76e00' },
-      T: { bg: 'rgba(34,197,94,0.12)',  text: '#118d57' },
-      E: { bg: 'rgba(145,85,255,0.10)', text: '#6b35c0' },
-    };
-    const cfg = map[row.transportType] ?? { bg: 'rgba(145,158,171,0.12)', text: '#637381' };
-    const label = TRANSPORT_LABEL[row.transportType] ?? row.transportType;
-    return <span className="inline-flex items-center px-[8px] py-[2px] rounded-[6px] text-[12px] font-semibold" style={{ backgroundColor: cfg.bg, color: cfg.text }}>{label}</span>;
-  }
   if (key === 'barcode') {
     return (
       <span className="font-['Public_Sans:Regular',sans-serif] text-[14px] text-[#1c252e] truncate block font-mono">{row.barcode}</span>
+    );
+  }
+  if (key === 'countryOfOrigin') {
+    const code = row.countryOfOrigin;
+    return (
+      <span className="font-['Public_Sans:Regular',sans-serif] text-[14px] text-[#1c252e]">{code || '—'}</span>
     );
   }
   const v = (row as any)[key];
@@ -529,8 +531,8 @@ function ItemInquiryTab({ shipments }: { shipments: ShipmentRow[] }) {
     <div className="flex flex-col h-full">
       {/* 搜尋列 */}
       <div className="shrink-0 flex gap-[16px] items-end flex-wrap px-[20px] pt-[16px] pb-[16px]">
-        <SearchField label="廠商出貨單號" value={searchVendorShipNo} onChange={setSearchVendorShipNo} />
-        <SearchField label="SAP送貨單號" value={searchSapNo} onChange={setSearchSapNo} />
+        <SearchField label="廠商出貨單" value={searchVendorShipNo} onChange={setSearchVendorShipNo} />
+        <SearchField label="出貨單號" value={searchSapNo} onChange={setSearchSapNo} />
         <SearchField label="單號序號" value={searchDocSeq} onChange={setSearchDocSeq} />
         <div className="flex-1 min-w-[180px] max-w-[260px]">
           <DropdownSelect
@@ -820,8 +822,8 @@ function BoxInquiryTab({ shipments, onPrint }: { shipments: ShipmentRow[]; onPri
     <div className="flex flex-col h-full">
       {/* 搜尋列 */}
       <div className="shrink-0 flex gap-[16px] items-end flex-wrap px-[20px] pt-[16px] pb-[16px]">
-        <SearchField label="廠商出貨單號" value={searchVendorShipNo} onChange={setSearchVendorShipNo} />
-        <SearchField label="SAP送貨單號" value={searchSapNo} onChange={setSearchSapNo} />
+        <SearchField label="廠商出貨單" value={searchVendorShipNo} onChange={setSearchVendorShipNo} />
+        <SearchField label="出貨單號" value={searchSapNo} onChange={setSearchSapNo} />
         <SearchField label="單號序號" value={searchDocSeq} onChange={setSearchDocSeq} />
         <div className="flex-1 min-w-[180px] max-w-[260px]">
           <DropdownSelect

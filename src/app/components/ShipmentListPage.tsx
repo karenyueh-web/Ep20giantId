@@ -3,7 +3,7 @@
  *
  * 功能：
  *   - 搜尋列：廠商(DropdownSelect)、單號序號(關鍵字)、交貨日期(起/迄)
- *   - 表格欄位：廠商出貨單號(連結)、幣別、運輸型態、交貨日期、到貨日期、交貨地址、出貨項次數
+ *   - 表格欄位：廠商出貨單(連結)、幣別、運輸型態、交貨日期、到貨日期、交貨地址、出貨序號數
  *   - 勾選後操作：刪除、重拋SAP
  *   - 標準表格系統（DnD拖拉+欄寬+Toolbar+分頁+多選）
  */
@@ -319,12 +319,12 @@ const DEFAULT_COLS: ShipCol[] = [
   { key: 'arrivalDate',     label: '到貨日期',   width: 120, minWidth: 100 },
   { key: 'deliveryAddress', label: '交貨地址',   width: 300, minWidth: 150 },
   { key: 'createdAt',       label: '開立時間',   width: 150, minWidth: 120 },
-  { key: 'detailCount',     label: '出貨項次數', width: 110, minWidth: 90  },
+  { key: 'detailCount',     label: '出貨序號數', width: 110, minWidth: 90  },
 ];
 
 const STORAGE_KEY = 'shipmentList_v2_cols';
 const CHECKBOX_W   = 52;
-const VENDOR_NO_W  = 160; // 廠商出貨單號 (sticky)
+const VENDOR_NO_W  = 160; // 廠商出貨單 (sticky)
 const VENDOR_COL_W = 200; // 廠商名稱 (sticky)
 
 
@@ -764,7 +764,7 @@ export function ShipmentListPage() {
     setDetailOrders([]);
   };
 
-  // ── 編輯儲存（刪除出貨項次後同步資料）────────────────────────────────────
+  // ── 編輯儲存（刪除出貨序號後同步資料）──────────────────────────────────────
   const handleEditSave = (shipmentId: number, updatedDetails: ShipmentRow['details']) => {
     setShipments(prev => prev.map(r =>
       r.id === shipmentId ? { ...r, details: updatedDetails } : r
@@ -821,7 +821,7 @@ export function ShipmentListPage() {
             searchable={true}
           />
         </div>
-        <SearchField label="廠商出貨單號" value={searchVendorShipNo} onChange={setSearchVendorShipNo} />
+        <SearchField label="廠商出貨單" value={searchVendorShipNo} onChange={setSearchVendorShipNo} />
         <SearchField label="單號序號" value={searchDocNo} onChange={setSearchDocNo} />
         <SearchField label="交貨日期(起)" value={deliveryDateFrom} onChange={setDeliveryDateFrom} type="date" />
         <SearchField label="交貨日期(迄)" value={deliveryDateTo} onChange={setDeliveryDateTo} type="date" />
@@ -859,7 +859,7 @@ export function ShipmentListPage() {
         onExportExcel={() => {
           // 產生 CSV 內容（Excel 可直接開啟）
           const exportCols = [
-            { key: 'vendorShipmentNo', label: '廠商出貨單號' },
+            { key: 'vendorShipmentNo', label: '廠商出貨單' },
             { key: 'vendorName',       label: '廠商名稱' },
             { key: 'currency',         label: '幣別' },
             { key: 'transportType',    label: '運輸型態' },
@@ -869,7 +869,7 @@ export function ShipmentListPage() {
             { key: 'deliveryAddress',  label: '交貨地址' },
             { key: 'sapDeliveryNo',    label: 'SAP交貨單號' },
             { key: 'status',           label: '狀態' },
-            { key: 'detailCount',      label: '出貨項次數' },
+            { key: 'detailCount',      label: '出貨序號數' },
           ];
           const statusLabel = (s: string) => ({ open: '開立', sap_sent: '已拋SAP', closed: '已結案' }[s] ?? s);
           const header = exportCols.map(c => `"${c.label}"`).join(',');
@@ -896,7 +896,7 @@ export function ShipmentListPage() {
         }}
         onExportCsv={() => {
           const exportCols = [
-            { key: 'vendorShipmentNo', label: '廠商出貨單號' },
+            { key: 'vendorShipmentNo', label: '廠商出貨單' },
             { key: 'vendorName',       label: '廠商名稱' },
             { key: 'currency',         label: '幣別' },
             { key: 'transportType',    label: '運輸型態' },
@@ -906,7 +906,7 @@ export function ShipmentListPage() {
             { key: 'deliveryAddress',  label: '交貨地址' },
             { key: 'sapDeliveryNo',    label: 'SAP交貨單號' },
             { key: 'status',           label: '狀態' },
-            { key: 'detailCount',      label: '出貨項次數' },
+            { key: 'detailCount',      label: '出貨序號數' },
           ];
           const statusLabel = (s: string) => ({ open: '開立', sap_sent: '已拋SAP', closed: '已結案' }[s] ?? s);
           const header = exportCols.map(c => `"${c.label}"`).join(',');
@@ -996,14 +996,14 @@ export function ShipmentListPage() {
                   <CheckboxIcon checked={isAllSelected} indeterminate={isSomeSelected} onChange={handleSelectAll} />
                 )}
               </div>
-              {/* 廠商出貨單號 sticky */}
+              {/* 廠商出貨單 sticky */}
               <div
                 className="flex items-center px-[16px] bg-[#f4f6f8] border-r border-[rgba(145,158,171,0.08)] shrink-0 cursor-pointer select-none"
                 style={{ width: VENDOR_NO_W, minWidth: VENDOR_NO_W, height: 56, position: 'sticky', left: CHECKBOX_W, zIndex: 19, boxShadow: '2px 0 4px -2px rgba(145,158,171,0.12)' }}
                 onClick={() => setSortConfig(s => ({ key: 'vendorShipmentNo' as ShipColKey, dir: s.key === 'vendorShipmentNo' && s.dir === 'asc' ? 'desc' : 'asc' }))}
               >
                 <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[24px] text-[#637381] text-[14px] whitespace-nowrap">
-                  廠商出貨單號
+                  廠商出貨單
                 </p>
               </div>
               {/* 廠商 */}
@@ -1045,7 +1045,7 @@ export function ShipmentListPage() {
                 >
                   <CheckboxIcon checked={selectedIds.has(row.id)} onChange={() => handleToggle(row.id)} />
                 </div>
-                {/* 廠商出貨單號（藍字連結） sticky */}
+                {/* 廠商出貨單（藍字連結） sticky */}
                 <div
                   className="flex items-center px-[16px] border-r border-[rgba(145,158,171,0.08)] shrink-0 bg-white group-hover:bg-[#f6f7f8]"
                   style={{ width: VENDOR_NO_W, minWidth: VENDOR_NO_W, position: 'sticky', left: CHECKBOX_W, zIndex: 3, boxShadow: '2px 0 4px -2px rgba(145,158,171,0.12)' }}

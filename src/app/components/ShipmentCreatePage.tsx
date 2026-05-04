@@ -146,13 +146,13 @@ function parseAndValidateShipmentCsv(text: string, referenceOrders: OrderRow[]):
   // ───────────────────────────────────────────────────────────────────────────
   // 以關鍵字偵測結構（不依賴空白行），解決 Excel 儲存時可能移除分隔空白的問題
   //
-  //  扮演 A：找「廠商出貨單號」所在列 → header 標題列
+  //  扮演 A：找「廠商出貨單」所在列 → header 標題列
   //  扮演 B：找「出貨次次」或「訂單號碼」所在列 → 明細標題列
   //  header 資料列 = header 標題列 的下一非空行
   //  明細資料 = 明細標題列之後的所有非空行
   // ───────────────────────────────────────────────────────────────────────────
 
-  let headerLabelIdx = -1; // 廠商出貨單號所在列（header 標題列）
+  let headerLabelIdx = -1; // 廠商出貨單所在列（header 標題列）
   let headerDataIdx  = -1; // header 資料列
   let detailLabelIdx = -1; // 出貨次次／訂單號碼所在列（明細標題列）
 
@@ -161,8 +161,8 @@ function parseAndValidateShipmentCsv(text: string, referenceOrders: OrderRow[]):
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith('#')) continue; // 跳過空行和說明列
 
-    // 偵測 header 標題列：含「廠商出貨單號」
-    if (headerLabelIdx === -1 && trimmed.includes('廠商出貨單號')) {
+    // 偵測 header 標題列：含「廠商出貨單」
+    if (headerLabelIdx === -1 && (trimmed.includes('廠商出貨單號') || trimmed.includes('廠商出貨單'))) {
       headerLabelIdx = i;
       // header 資料列 = 直接下一非空行
       for (let j = i + 1; j < rawLines.length; j++) {
@@ -191,7 +191,7 @@ function parseAndValidateShipmentCsv(text: string, referenceOrders: OrderRow[]):
     for (let i = offset + 1; i < rawLines.length; i++) {
       if (rawLines[i].trim() === '') { blankIdx = i; break; }
     }
-    if (blankIdx === -1) return { header: null, lines: [], globalErrors: ['CSV 格式錯誤：找不到標頭資料（需包含「廠商出貨單號」欄位標題）'] };
+    if (blankIdx === -1) return { header: null, lines: [], globalErrors: ['CSV 格式錯誤：找不到標頭資料（需包含「廠商出貨單」欄位標題）'] };
     headerDataIdx  = blankIdx - 1;
     detailLabelIdx = blankIdx + 1;
   }
@@ -212,7 +212,7 @@ function parseAndValidateShipmentCsv(text: string, referenceOrders: OrderRow[]):
   };
 
   // Header 必填驗證
-  if (!header.vendorShipmentNo || header.vendorShipmentNo === '(請填入)') globalErrors.push('廠商出貨單號 為必填');
+  if (!header.vendorShipmentNo || header.vendorShipmentNo === '(請填入)') globalErrors.push('廠商出貨單 為必填');
   // 幣別驗證：須與訂單幣別一致（幣別來自 SAP 訂單資料，不需白名單校驗）
   if (!header.currency || header.currency === '(請填入)') {
     globalErrors.push('幣別 為必填');
@@ -393,7 +393,7 @@ function CsvPreviewModal({
             {/* 基本資訊摘要格（6 欄位） */}
             <div className="bg-[#f4f6f8] rounded-[10px] px-[16px] py-[12px] grid grid-cols-3 gap-y-[10px] gap-x-[20px]">
               {([
-                ['廠商出貨單號', csvPreview.header.vendorShipmentNo || '—'],
+                ['廠商出貨單', csvPreview.header.vendorShipmentNo || '—'],
                 ['幣別',         csvPreview.header.currency || '—'],
                 ['運輸型態',
                   csvPreview.header.transportType === 'S' ? 'S 海運' :
@@ -501,7 +501,7 @@ function CsvPreviewModal({
                             : 'bg-[rgba(255,86,48,0.025)] hover:bg-[rgba(255,86,48,0.04)]'
                         }`}
                       >
-                        {/* 出貨項次 */}
+                        {/* 出貨序號 */}
                         <td className="px-[8px] py-[10px]">
                           <span className="text-[12px] text-[#637381] font-semibold">{line.itemNo || <Dash />}</span>
                         </td>
@@ -864,19 +864,19 @@ export function ShipmentCreatePage({ userRole }: ShipmentCreatePageProps) {
   const [showCsvModal, setShowCsvModal] = useState(false);
 
   const handleDownloadTemplate = () => {
-    const instructionRow = '# [說明] 廠商出貨單號、幣別、運輸型態、交貨日期 為必填欄位。交貨日期格式：YYYY/MM/DD。運輸型態：S=海運 A=空運 T=陸運。自訂箱數：以 / 分隔各箱數量（如 50/50/30），總和須等於出貨量；不填則依每箱數量自動分箱。';
+    const instructionRow = '# [說明] 廠商出貨單、幣別、運輸型態、交貨日期 為必填欄位。交貨日期格式：YYYY/MM/DD。運輸型態：S=海運 A=空運 T=陸運。自訂箱數：以 / 分隔各箱數量（如 50/50/30），總和須等於出貨量；不填則依每箱數量自動分箱。';
     // 以第一筆訂單儲存地點代號查詢交貨地址
     const firstOrder = filteredOrders[0];
     const sloc = firstOrder?.storageLocationCode ?? '';
     const addrEntry = sloc ? STORAGE_LOCATION_DATA.find(r => r.locationCode === sloc && r.addressZh) : undefined;
     const deliveryAddress = addrEntry?.addressZh ?? '';
 
-    const headerRow1 = '廠商出貨單號,幣別,運輸型態,交貨日期,到貨日期,交貨地址';
+    const headerRow1 = '廠商出貨單,幣別,運輸型態,交貨日期,到貨日期,交貨地址';
     // 幣別自動帶入（所有訂單已卡控同一幣別）
     const autoCurrency = firstOrder?.currency || 'TWD';
     const headerRow2 = `(請填入),${autoCurrency},(請填入),(請填入),,${deliveryAddress}`;
     // 自訂箱數移至每箱數量之後（欄位順序需與 parser 一致）
-    const detailHeader = '出貨項次,訂單號碼,訂單序號,料號,訂單待交量(參考),出貨量,每箱數量,自訂箱數(以/分隔),淨重(個),毛重(個),重量單位,原產國家';
+    const detailHeader = '出貨序號,訂單號碼,訂單序號,料號,訂單待交量(參考),出貨量,每箱數量,自訂箱數(以/分隔),淨重,毛重,重量單位,原產國家';
     const detailRows = filteredOrders.map((o, idx) => {
       const pq = calcUndeliveredQty(o.orderQty ?? 0, o.acceptQty ?? 0, o.inTransitQty ?? 0);
       // 欄位順序：項次,訂單,序號,料號,待交量,出貨量,每箱,自訂箱,淨重,毛重,重量單位,原產

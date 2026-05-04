@@ -2,7 +2,7 @@
  * ShipmentDetailPage — 開立出貨單明細
  *
  * 接收 ShipmentCreatePage 傳入的已選訂單，顯示：
- *   1. 基本資訊（廠商出貨單號、幣別、運輸型態、發票日期、交貨日期、到貨日期、交貨地址）
+ *   1. 基本資訊（廠商出貨單、幣別、運輸型態、發票日期、交貨日期、到貨日期、交貨地址）
  *   2. 出貨明細表格（可編輯出貨量、每箱數量、總箱數自動計算、淨重/毛重、原產國家）
  */
 
@@ -93,7 +93,7 @@ export interface ShipmentDetailPageProps {
   onConfirmSuccess?: (vendorShipmentNo: string) => void; // 確認出貨成功 callback
   // ─ 查詢模式（readOnly）──────────────────────
   readOnly?: boolean;         // 出貨單查詢明細（唯讀）
-  sapDeliveryNo?: string;     // SAP送貨單號（查詢模式顯示）
+  sapDeliveryNo?: string;     // 出貨單號（查詢模式顯示）
   createdAt?: string;         // 出貨單開立時間（YYYYMMDD HH:mm）
   onDelete?: () => void;      // 整單刪除 callback
 }
@@ -510,7 +510,7 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
     });
   });
 
-  // ── 箱數明細彈窗 ──────────────────────────────────────────────────────────
+  // ── 貼標項次明細彈窗 ──────────────────────────────────────────────────────────
   const [boxModalRowId, setBoxModalRowId] = useState<number | null>(null);
   const boxModalRow = rows.find(r => r.id === boxModalRowId) ?? null;
 
@@ -572,7 +572,7 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
     }));
   };
 
-  // ── 箱數明細儲存（箱數明細有更新 → 列表的 qtyPerBox 跟著覆蓋）───────────
+  // ── 貼標項次明細儲存（貼標項次明細有更新 → 列表的 qtyPerBox 跟著覆蓋）───────────
   const handleSaveBoxes = (rowId: number, newBoxes: BoxItem[]) => {
     const label = calcQtyPerBoxLabel(newBoxes);
     setRows(prev => prev.map(r => {
@@ -580,7 +580,7 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
       return { ...r, boxes: newBoxes, totalBoxes: newBoxes.length, qtyPerBox: label };
     }));
     setBoxModalRowId(null);
-    showToast('箱數明細已儲存');
+    showToast('貼標項次明細已儲存');
   };
 
   // ── 刪除明細列 ─────────────────────────────────────────────────────────
@@ -597,11 +597,11 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
     const errors: string[] = [];
 
     // 基本資訊
-    if (!vendorShipmentNo.trim()) errors.push('廠商出貨單號 為必填');
+    if (!vendorShipmentNo.trim()) errors.push('廠商出貨單 為必填');
     if (!deliveryDate)            errors.push('交貨日期 為必填');
     if (rows.length === 0)        errors.push('出貨明細不可為空');
 
-    // 廠商出貨單號重複驗證（同一廠商下不可重複，不同廠商可使用相同單號）
+    // 廠商出貨單重複驗證（同一廠商下不可重複，不同廠商可使用相同單號）
     if (vendorShipmentNo.trim()) {
       const currentVendorCode = selectedOrders[0]?.vendorCode ?? '';
       const existingNos = new Set<string>();
@@ -615,25 +615,25 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
           .forEach(s => existingNos.add(s.vendorShipmentNo));
       } catch { /* ignore */ }
       if (existingNos.has(vendorShipmentNo.trim())) {
-        errors.push(`廠商出貨單號「${vendorShipmentNo}」在該廠商下已存在，同一廠商不可重複開立`);
+        errors.push(`廠商出貨單「${vendorShipmentNo}」在該廠商下已存在，同一廠商不可重複開立`);
       }
     }
 
     // 明細逐筆檢查
     rows.forEach(r => {
       if (!r.shipQty || r.shipQty <= 0) {
-        errors.push(`出貨項次 ${r.itemNo}（${r.materialNo}）：出貨量 必須大於 0`);
+        errors.push(`出貨序號 ${r.itemNo}（${r.materialNo}）：出貨量 必須大於 0`);
       }
       const v = parseFloat(r.qtyPerBox);
       if (!r.qtyPerBox || isNaN(v) || v <= 0) {
-        errors.push(`出貨項次 ${r.itemNo}（${r.materialNo}）：每箱數量 必須大於 0`);
+        errors.push(`出貨序號 ${r.itemNo}（${r.materialNo}）：每箱數量 必須大於 0`);
       }
     });
 
-    // 總箱數卡控：全部出貨項次的總箱數相加不能大於 10,000 箱
+    // 總箱數卡控：全部出貨序號的總箱數相加不能大於 10,000 箱
     const grandTotalBoxes = rows.reduce((sum, r) => sum + r.totalBoxes, 0);
     if (grandTotalBoxes > 10000) {
-      errors.push(`出貨項次總箱數合計為 ${grandTotalBoxes.toLocaleString()} 箱，不可超過 10,000 箱`);
+      errors.push(`出貨序號總箱數合計為 ${grandTotalBoxes.toLocaleString()} 箱，不可超過 10,000 箱`);
     }
 
     if (errors.length > 0) {
@@ -746,7 +746,7 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
 
         {/* 標題列：← + 基本資訊 | 確認出貨 | 暫存 | 歷程 */}
         <div className="flex items-center justify-between mb-[20px]">
-          {/* 左側：← + 基本資訊 Tab + SAP送貨單號 + 開立時間（readOnly時顯示） */}
+          {/* 左側：← + 基本資訊 Tab + 出貨單號 + 開立時間（readOnly時顯示） */}
           <div className="flex items-center gap-[10px] flex-wrap">
             <div className="content-stretch flex gap-[10px] items-center relative shrink-0">
               <div onClick={onClose} className="overflow-clip relative shrink-0 size-[29px] cursor-pointer hover:opacity-70 transition-opacity" aria-label="返回">
@@ -761,11 +761,11 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
                 </div>
               </div>
             </div>
-            {/* SAP送貨單號 + 開立時間 */}
+            {/* 出貨單號 + 開立時間 */}
             {readOnly && sapDeliveryNo && (
               <div className="flex items-center gap-[16px]">
                 <div className="flex items-center gap-[4px]">
-                  <span className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#919eab]">SAP送貨單號:</span>
+                  <span className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#919eab]">出貨單號:</span>
                   <span className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#919eab]">{sapDeliveryNo}</span>
                 </div>
                 {createdAt && (
@@ -795,11 +795,11 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
           </div>
         </div>
 
-        {/* Row 1：廠商出貨單號 | 幣別 | 運輸型態 | 交貨日期 | 到貨日期 */}
+        {/* Row 1：廠商出貨單 | 幣別 | 運輸型態 | 交貨日期 | 到貨日期 */}
         <div className="flex gap-[16px] mb-[16px]">
           <div className="flex-1 min-w-0">
             <FloatingInput
-              label="廠商出貨單號"
+              label="廠商出貨單"
               value={vendorShipmentNo}
               onChange={setVendorShipmentNo}
               required
@@ -857,7 +857,7 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
             <ul className="flex flex-col gap-[4px] pl-[22px]">
               {vendorDateWarnings.map(w => (
                 <li key={w.itemNo} className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#B76E00] leading-[18px]">
-                  出貨項次 {w.itemNo}（{w.materialNo}）— 廠商答交日 {w.vendorDeliveryDate}，最早可出貨日為 {w.earliestDate}
+                  出貨序號 {w.itemNo}（{w.materialNo}）— 廠商答交日 {w.vendorDeliveryDate}，最早可出貨日為 {w.earliestDate}
                 </li>
               ))}
             </ul>
@@ -895,15 +895,15 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
               {/* Table header */}
               <div className="flex items-center py-[10px] border-b border-[rgba(145,158,171,0.16)] bg-[rgba(145,158,171,0.04)]">
                 {[
-                  { label: '出貨項次', w: 80,  align: 'left' },
+                  { label: '出貨序號', w: 80,  align: 'left' },
                   { label: '單號序號', w: 130, align: 'left' },
                   { label: '料號',     w: 140, align: 'left' },
                   { label: '訂單待交', w: 80,  align: 'right' },
                   { label: '*出貨量',  w: 80,  align: 'right', blue: true },
                   { label: '*每箱數量', w: 90,  align: 'right', blue: true },
                   { label: '總箱數',   w: 80,  align: 'center', blue: true },
-                  { label: '淨重(個)', w: 90,  align: 'right', blue: true },
-                  { label: '毛重(個)', w: 90,  align: 'right', blue: true },
+                  { label: '淨重', w: 90,  align: 'right', blue: true },
+                  { label: '毛重', w: 90,  align: 'right', blue: true },
                   { label: '重量單位', w: 100, align: 'center', blue: true },
                   { label: '原產國家', w: 110, align: 'center', blue: true },
                   { label: '',         w: 44,  align: 'center' },
@@ -937,7 +937,7 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
                   key={row.id}
                   className={`flex items-center py-[12px] border-b border-[rgba(145,158,171,0.08)] hover:bg-[rgba(145,158,171,0.04)] transition-colors ${idx % 2 === 1 ? 'bg-[rgba(145,158,171,0.02)]' : ''}`}
                 >
-                  {/* 出貨項次 */}
+                  {/* 出貨序號 */}
                   <div style={{ width: 80, minWidth: 80 }} className="pl-[16px] pr-[8px] shrink-0">
                     <span className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#637381]">
                       {row.itemNo}
@@ -1029,7 +1029,7 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
                       <button
                         onClick={() => setBoxModalRowId(row.id)}
                         className="font-['Public_Sans:SemiBold',sans-serif] text-[17px] text-[#005eb8] underline cursor-pointer hover:opacity-70 transition-opacity min-w-[40px] inline-block py-[4px]"
-                        title="點擊查看箱數明細"
+                        title="點擊查看貼標項次明細"
                       >{row.totalBoxes}</button>
                     ) : (
                       <span className="font-['Public_Sans:Regular',sans-serif] text-[17px] text-[#c4cdd6]">—</span>
@@ -1080,7 +1080,7 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
         </div>
       </div>
 
-      {/* ── 箱數明細彈窗 ───────────────────────────────────────────────────────── */}
+      {/* ── 貼標項次明細彈窗 ───────────────────────────────────────────────────────── */}
       {boxModalRow && (
         <BoxDetailModal
           row={boxModalRow}
@@ -1149,14 +1149,14 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
             {/* 基本資訊列表 */}
             <div className="px-[24px] pt-[16px] pb-[8px] flex flex-col gap-[10px]">
               {[
-                { label: '廠商出貨單號', value: vendorShipmentNo },
+                { label: '廠商出貨單', value: vendorShipmentNo },
                 { label: '廠商', value: selectedOrders[0]?.vendorName ?? '' },
                 { label: '幣別', value: currency },
                 { label: '運輸型態', value: TRANSPORT_OPTIONS.find(o => o.value === transportType)?.label ?? transportType },
                 { label: '交貨日期', value: deliveryDate },
                 { label: '到貨日期', value: arrivalDate || '—' },
                 { label: '交貨地址', value: deliveryAddress || '—' },
-                { label: '出貨項次數', value: `${rows.length} 筆` },
+                { label: '出貨序號數', value: `${rows.length} 筆` },
               ].map(item => (
                 <div key={item.label} className="flex items-baseline gap-[8px]">
                   <span className="font-['Public_Sans:Regular',sans-serif] text-[14px] text-[#637381] whitespace-nowrap min-w-[100px]">{item.label}</span>
@@ -1240,7 +1240,7 @@ function BoxDetailModal({
   const handleSave = () => {
     const total = localBoxes.reduce((sum, b) => sum + (b.qty || 0), 0);
     if (total !== row.shipQty) {
-      setBoxError(`箱數數量總和（${total}）必須等於出貨量（${row.shipQty}）`);
+      setBoxError(`貼標項次數量總和（${total}）必須等於出貨量（${row.shipQty}）`);
       return;
     }
     setBoxError(null);
@@ -1270,10 +1270,10 @@ function BoxDetailModal({
 
         {/* ── 標題 + 資訊欄 ── */}
         <div className="px-[24px] pb-[16px]">
-          <h3 className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[18px] text-[#1c252e] mb-[16px]">箱數明細</h3>
+          <h3 className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[18px] text-[#1c252e] mb-[16px]">貼標項次明細</h3>
           <div className="grid grid-cols-2 gap-x-[24px] gap-y-[8px]">
             {[
-              { label: '出貨項次', value: row.itemNo },
+              { label: '出貨序號', value: row.itemNo },
               { label: '訂單號碼', value: `${row.orderNo}-${row.orderSeq}` },
               { label: '料號',     value: row.materialNo },
               { label: '訂單待交', value: row.orderPendingQty },
@@ -1308,11 +1308,11 @@ function BoxDetailModal({
           </button>
         </div>
 
-        {/* ── 箱數列表 ── */}
+        {/* ── 貼標項次列表 ── */}
         <div className="border-t border-[rgba(145,158,171,0.16)] flex-1 overflow-hidden flex flex-col">
           {/* header */}
           <div className="flex items-center px-[24px] py-[10px] bg-[rgba(145,158,171,0.04)]">
-            <span style={{ width: 60 }} className="font-['Public_Sans:SemiBold',sans-serif] text-[17px] text-[#637381]">箱數</span>
+            <span style={{ width: 80 }} className="font-['Public_Sans:SemiBold',sans-serif] text-[17px] text-[#637381] whitespace-nowrap">貼標項次</span>
             <span style={{ flex: 1 }} className="font-['Public_Sans:SemiBold',sans-serif] text-[17px] text-[#637381]">數量</span>
             <span style={{ width: 48 }} className="font-['Public_Sans:SemiBold',sans-serif] text-[17px] text-[#637381] text-center">刪除</span>
           </div>
@@ -1321,7 +1321,7 @@ function BoxDetailModal({
             {localBoxes.map((box, idx) => (
               <div key={box.boxNo} className="flex items-center py-[10px] border-b border-[rgba(145,158,171,0.08)] last:border-0">
                 {/* 箱號 */}
-                <span style={{ width: 60 }} className="font-['Public_Sans:Regular',sans-serif] text-[19px] text-[#1c252e]">{box.boxNo}</span>
+                <span style={{ width: 80 }} className="font-['Public_Sans:Regular',sans-serif] text-[19px] text-[#1c252e]">{box.boxNo}</span>
                 {/* 數量（可編輯） */}
                 <div style={{ flex: 1 }}>
                   <input

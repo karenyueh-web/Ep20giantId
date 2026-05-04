@@ -1,4 +1,4 @@
-﻿/**
+/**
  * ShipmentPrintDocPage — 出貨單 • 列印單據
  *
  * 完全對齊 ShipmentShippingInquiryPage 設計系統標準：
@@ -59,18 +59,12 @@ interface PrintState {
 
 // ── Cell 渲染：BoxLineRow ─────────────────────────────────────────────────────
 function renderBoxCell(row: BoxLineRow, key: BoxColKey): React.ReactNode {
-  if (key === 'transportType') {
-    const map: Record<string, { bg: string; text: string }> = {
-      S: { bg: 'rgba(0,120,212,0.10)', text: '#0068b8' },
-      A: { bg: 'rgba(255,171,0,0.12)', text: '#b76e00' },
-      T: { bg: 'rgba(34,197,94,0.12)', text: '#118d57' },
-      E: { bg: 'rgba(145,85,255,0.10)', text: '#6b35c0' },
-    };
-    const cfg = map[row.transportType] ?? { bg: 'rgba(145,158,171,0.12)', text: '#637381' };
-    return <span className="inline-flex items-center px-[8px] py-[2px] rounded-[6px] text-[12px] font-semibold" style={{ backgroundColor: cfg.bg, color: cfg.text }}>{TRANSPORT_LABEL[row.transportType] ?? row.transportType}</span>;
-  }
   if (key === 'barcode') {
     return <span className="font-['Public_Sans:Regular',sans-serif] text-[14px] text-[#1c252e] truncate block font-mono">{row.barcode}</span>;
+  }
+  if (key === 'countryOfOrigin') {
+    const code = row.countryOfOrigin;
+    return <span className="font-['Public_Sans:Regular',sans-serif] text-[14px] text-[#1c252e]">{code || '—'}</span>;
   }
   const v = (row as any)[key];
   const s = v !== undefined && v !== null && String(v).trim() !== '' ? String(v) : '—';

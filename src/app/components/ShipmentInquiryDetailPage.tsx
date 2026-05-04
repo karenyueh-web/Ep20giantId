@@ -1,6 +1,6 @@
 /**
  * ShipmentInquiryDetailPage
- * 出貨單查詢 — 明細頁（查詢唯讀版 + 編輯模式：刪除出貨項次）
+ * 出貨單查詢 — 明細頁（查詢唯讀版 + 編輯模式：刪除出貨序號）
  */
 
 import { useState, useMemo } from 'react';
@@ -99,15 +99,15 @@ function ReadonlyField({ label, value, required }: { label: string; value: strin
 
 // ── Table 欄位定義 ────────────────────────────────────────────────────────────
 const TABLE_COLS = [
-  { key: 'itemNo',         label: '出貨項次', width: 80,  align: 'left' },
+  { key: 'itemNo',         label: '出貨序號', width: 80,  align: 'left' },
   { key: 'orderNo',        label: '單號序號', width: 130, align: 'left' },
   { key: 'materialNo',     label: '料號',     width: 140, align: 'left' },
   { key: 'orderPendingQty',label: '訂單待交', width: 80,  align: 'right' },
   { key: 'shipQty',        label: '*出貨量',  width: 80,  align: 'right' },
   { key: 'qtyPerBox',      label: '每箱數量', width: 90,  align: 'right' },
   { key: 'totalBoxes',     label: '*總箱數',  width: 80,  align: 'center' },
-  { key: 'netWeight',      label: '淨重(個)', width: 90,  align: 'right' },
-  { key: 'grossWeight',    label: '毛重(個)', width: 90,  align: 'right' },
+  { key: 'netWeight',      label: '淨重', width: 90,  align: 'right' },
+  { key: 'grossWeight',    label: '毛重', width: 90,  align: 'right' },
   { key: 'weightUnit',     label: '重量單位', width: 100, align: 'center' },
   { key: 'countryOfOrigin',label: '原產國家', width: 110, align: 'center' },
   { key: 'receivedQty',    label: '累計收料量', width: 100, align: 'right' },
@@ -162,7 +162,7 @@ export function ShipmentInquiryDetailPage({ shipment, onClose, onDelete, onEdit,
     // 卡控：不能刪光所有項次
     const remaining = shipment.details.filter(d => !markedForDeletion.has(d.itemNo));
     if (remaining.length === 0) {
-      showToast('至少須保留一個出貨項次');
+      showToast('至少須保留一個出貨序號');
       return;
     }
     // 組歷程記錄
@@ -172,7 +172,7 @@ export function ShipmentInquiryDetailPage({ shipment, onClose, onDelete, onEdit,
     const remarkLines = deletedItems.map(d => `項次${d.itemNo} ${d.orderNo}${d.orderSeq} ${d.materialNo} 出貨量${d.shipQty}`).join('；');
     const newEntry: HistoryEntry = {
       date: dateStr,
-      event: '刪除出貨項次',
+      event: '刪除出貨序號',
       operator: '廠商-OOO',
       remark: remarkLines,
     };
@@ -216,7 +216,7 @@ export function ShipmentInquiryDetailPage({ shipment, onClose, onDelete, onEdit,
         {/* 標題列 */}
         <div className="flex items-center justify-between mb-[20px]">
 
-          {/* 左側：← 返回 + 基本資訊 Tab + SAP送貨單號 + 開立時間 */}
+          {/* 左側：← 返回 + 基本資訊 Tab + 出貨單號 + 開立時間 */}
           <div className="flex items-center gap-[10px] flex-wrap">
             <div onClick={onClose} className="overflow-clip relative shrink-0 size-[29px] cursor-pointer hover:opacity-70 transition-opacity" aria-label="返回">
               <IconsSolidIcSolarMultipleForwardLeftBroken />
@@ -233,7 +233,7 @@ export function ShipmentInquiryDetailPage({ shipment, onClose, onDelete, onEdit,
             {shipment.sapDeliveryNo ? (
               <div className="flex items-center gap-[12px]">
                 <div className="flex items-center gap-[4px]">
-                  <span className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#919eab]">SAP送貨單號:</span>
+                  <span className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#919eab]">出貨單號:</span>
                   <span className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#919eab]">{shipment.sapDeliveryNo}</span>
                 </div>
                 {shipment.createdAt ? (
@@ -280,7 +280,7 @@ export function ShipmentInquiryDetailPage({ shipment, onClose, onDelete, onEdit,
                     setShowDeleteConfirm(true);
                   }}
                   disabled={hasReceived}
-                  title={hasReceived ? '出貨項次中有累計收料量，不可整單刪除' : undefined}
+                  title={hasReceived ? '出貨序號中有累計收料量，不可整單刪除' : undefined}
                   className={`h-[36px] min-w-[88px] px-[16px] rounded-[8px] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap ${
                     hasReceived
                       ? 'bg-[#919eab] text-white cursor-not-allowed'
@@ -302,7 +302,7 @@ export function ShipmentInquiryDetailPage({ shipment, onClose, onDelete, onEdit,
 
         {/* 基本資訊欄位：灰底唯讀 */}
         <div className="flex gap-[16px] flex-wrap mb-[16px]">
-          <ReadonlyField label="廠商出貨單號" value={shipment.vendorShipmentNo} required />
+          <ReadonlyField label="廠商出貨單" value={shipment.vendorShipmentNo} required />
           <ReadonlyField label="幣別" value={shipment.currency} />
           <ReadonlyField label="運輸型態" value={transportLabel} />
           <ReadonlyField label="交貨日期" value={shipment.deliveryDate} required />
@@ -538,13 +538,13 @@ export function ShipmentInquiryDetailPage({ shipment, onClose, onDelete, onEdit,
           entries={historyEntries}
           titleLabel="出貨歷程"
           correctionDocNo={shipment.vendorShipmentNo}
-          correctionDocNoLabel="廠商出貨單號"
+          correctionDocNoLabel="廠商出貨單"
           docSeqNo={shipment.sapDeliveryNo || undefined}
-          docSeqNoLabel="SAP出貨單號"
+          docSeqNoLabel="出貨單號"
         />
       )}
 
-      {/* ── 箱數明細彈窗（唯讀）─────────────────────────────────────────── */}
+      {/* ── 貼標項次明細彈窗（唯讀）───────────────────────────────────────────── */}
       {boxDetailRow && (
         <div
           className="fixed inset-0 z-[300] flex items-center justify-center"
@@ -557,10 +557,10 @@ export function ShipmentInquiryDetailPage({ shipment, onClose, onDelete, onEdit,
           >
             {/* 標題 + 資訊欄 */}
             <div className="px-[24px] pt-[20px] pb-[16px]">
-              <h3 className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[18px] text-[#1c252e] mb-[16px]">箱數明細</h3>
+              <h3 className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[18px] text-[#1c252e] mb-[16px]">貼標項次明細</h3>
               <div className="grid grid-cols-2 gap-x-[24px] gap-y-[8px]">
                 {[
-                  { label: '出貨項次', value: boxDetailRow.itemNo },
+                  { label: '出貨序號', value: boxDetailRow.itemNo },
                   { label: '單號序號', value: `${boxDetailRow.orderNo}${boxDetailRow.orderSeq}` },
                   { label: '料號', value: boxDetailRow.materialNo },
                   { label: '出貨量', value: boxDetailRow.shipQty },
@@ -575,16 +575,16 @@ export function ShipmentInquiryDetailPage({ shipment, onClose, onDelete, onEdit,
               </div>
             </div>
 
-            {/* 箱數列表 */}
+            {/* 貼標項次列表 */}
             <div className="border-t border-[rgba(145,158,171,0.16)] flex-1 overflow-hidden flex flex-col">
               <div className="flex items-center px-[24px] py-[10px] bg-[rgba(145,158,171,0.04)]">
-                <span style={{ width: 60 }} className="font-['Public_Sans:SemiBold',sans-serif] text-[17px] text-[#637381]">箱數</span>
+                <span style={{ width: 80 }} className="font-['Public_Sans:SemiBold',sans-serif] text-[17px] text-[#637381] whitespace-nowrap">貼標項次</span>
                 <span style={{ flex: 1 }} className="font-['Public_Sans:SemiBold',sans-serif] text-[17px] text-[#637381]">數量</span>
               </div>
               <div className="overflow-y-auto flex-1 custom-scrollbar px-[24px]">
                 {(boxDetailRow.boxes ?? []).map(box => (
                   <div key={box.boxNo} className="flex items-center py-[10px] border-b border-[rgba(145,158,171,0.08)] last:border-0">
-                    <span style={{ width: 60 }} className="font-['Public_Sans:Regular',sans-serif] text-[19px] text-[#1c252e]">{box.boxNo}</span>
+                    <span style={{ width: 80 }} className="font-['Public_Sans:Regular',sans-serif] text-[19px] text-[#1c252e]">{box.boxNo}</span>
                     <span style={{ flex: 1 }} className="font-['Public_Sans:Regular',sans-serif] text-[18px] text-[#1c252e]">{box.qty}</span>
                   </div>
                 ))}
