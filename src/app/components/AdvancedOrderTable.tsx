@@ -204,7 +204,7 @@ export const defaultOrderColumns: OrderColumn[] = [
   // Row 3
   { key: 'leadtime',             label: 'leadtime',           width: 90,   minWidth: 70,  visible: false },
   { key: 'vendorCode',           label: '廠商編號',           width: 130,  minWidth: 100 },
-  { key: 'vendorName',           label: '廠商名稱',           width: 200,  minWidth: 120 },
+  { key: 'vendorName',           label: '廠商簡稱(編號)',     width: 200,  minWidth: 120 },
   { key: 'materialNo',           label: '料號',               width: 200,  minWidth: 120 },
   { key: 'customerBrand',        label: '客戶品牌',           width: 100,  minWidth: 80,  visible: false },
   { key: 'vendorMaterialNo',     label: '廠商料號',           width: 180,  minWidth: 130, visible: false },

@@ -29,7 +29,7 @@ function OrderPreviewList({ orders }: { orders: OrderRow[] }) {
           <tr className="bg-[#f4f6f8]">
             <th className="px-[12px] py-[8px] text-left font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#637381]">訂單號碼</th>
             <th className="px-[12px] py-[8px] text-left font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#637381]">序號</th>
-            <th className="px-[12px] py-[8px] text-left font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#637381]">廠商名稱</th>
+            <th className="px-[12px] py-[8px] text-left font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#637381]">廠商簡稱(編號)</th>
             <th className="px-[12px] py-[8px] text-left font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#637381]">料號</th>
             <th className="px-[12px] py-[8px] text-left font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#637381]">預計交期</th>
           </tr>

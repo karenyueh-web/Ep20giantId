@@ -325,7 +325,7 @@ const DEFAULT_COLS: ShipCol[] = [
 const STORAGE_KEY = 'shipmentList_v2_cols';
 const CHECKBOX_W   = 52;
 const VENDOR_NO_W  = 160; // 廠商出貨單 (sticky)
-const VENDOR_COL_W = 200; // 廠商名稱 (sticky)
+const VENDOR_COL_W = 200; // 廠商簡稱(編號) (sticky)
 
 
 // ── Cell 渲染 ─────────────────────────────────────────────────────────────────
@@ -860,7 +860,7 @@ export function ShipmentListPage() {
           // 產生 CSV 內容（Excel 可直接開啟）
           const exportCols = [
             { key: 'vendorShipmentNo', label: '廠商出貨單' },
-            { key: 'vendorName',       label: '廠商名稱' },
+            { key: 'vendorName',       label: '廠商簡稱(編號)' },
             { key: 'currency',         label: '幣別' },
             { key: 'transportType',    label: '運輸型態' },
             { key: 'deliveryDate',     label: '交貨日期' },
@@ -897,7 +897,7 @@ export function ShipmentListPage() {
         onExportCsv={() => {
           const exportCols = [
             { key: 'vendorShipmentNo', label: '廠商出貨單' },
-            { key: 'vendorName',       label: '廠商名稱' },
+            { key: 'vendorName',       label: '廠商簡稱(編號)' },
             { key: 'currency',         label: '幣別' },
             { key: 'transportType',    label: '運輸型態' },
             { key: 'deliveryDate',     label: '交貨日期' },
@@ -1013,7 +1013,7 @@ export function ShipmentListPage() {
                 onClick={() => setSortConfig(s => ({ key: 'vendorShipmentNo' as ShipColKey, dir: s.key === 'vendorShipmentNo' && s.dir === 'asc' ? 'desc' : 'asc' }))}
               >
                 <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[24px] text-[#637381] text-[14px] whitespace-nowrap">
-                  廠商
+                  廠商簡稱(編號)
                 </p>
               </div>
               {/* 一般欄 DnD */}
@@ -1058,7 +1058,7 @@ export function ShipmentListPage() {
                     {row.vendorShipmentNo}
                   </button>
                 </div>
-                {/* 廠商名稱 */}
+                {/* 廠商簡稱(編號) */}
                 <div
                   className="flex items-center px-[16px] border-r border-[rgba(145,158,171,0.08)] shrink-0"
                   style={{ width: VENDOR_COL_W, minWidth: VENDOR_COL_W }}

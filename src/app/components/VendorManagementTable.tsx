@@ -62,7 +62,7 @@ export function VendorManagementTable({
   const { scrollContainerRef, handleMouseDown, canDragScroll } = useHorizontalDragScroll();
 
   const defaultColumns: Column[] = [
-    { key: 'name', label: '廠商名稱', width: 150, minWidth: 100 },
+    { key: 'name', label: '廠商簡稱(編號)', width: 170, minWidth: 120 },
     { key: 'fullName', label: '廠商完整名稱', width: 250, minWidth: 100 },
     { key: 'phone', label: '電話', width: 180, minWidth: 100 },
     { key: 'address', label: '地址', width: 300, minWidth: 150 },
@@ -197,7 +197,7 @@ export function VendorManagementTable({
 
   // 生成 localStorage key
   const getStorageKey = () => {
-    return `vendorManagement_${userEmail}_columns`;
+    return `vendorManagement_${userEmail}_columns_v2`;
   };
 
   // 從 localStorage 載入欄位設定
@@ -282,7 +282,7 @@ export function VendorManagementTable({
 
   // 多重篩選
   const filteredVendors = mockVendors.filter(vendor => {
-    // 廠商名稱篩選
+    // 廠商簡稱篩選
     const matchesVendorName = !vendorNameFilter || 
       vendor.name.toLowerCase().includes(vendorNameFilter.toLowerCase()) ||
       vendor.code.includes(vendorNameFilter);

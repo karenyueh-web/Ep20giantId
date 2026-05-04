@@ -49,7 +49,7 @@ export function exportOrdersCsv(orders: OrderRow[], filename?: string, columns?:
   } else {
     // Fallback: default commonly used columns
     headers = [
-      '訂單號碼', '訂單序號', '廠商名稱', '廠商編號', '料號', '品名',
+      '訂單號碼', '訂單序號', '廠商簡稱(編號)', '廠商編號', '料號', '品名',
       '訂單狀態', '訂貨量', '預計交期',
       '動作(同意/不同意/修改交期)', '新預計交期(YYYY/MM/DD)', '備註'
     ];
@@ -410,7 +410,7 @@ export function CsvImportOverlay({ allOrders, onConfirm, onClose }: CsvImportOve
                       <th className="px-[10px] py-[8px] text-left font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[11px] text-[#637381]">作</th>
                       <th className="px-[10px] py-[8px] text-left font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[11px] text-[#637381]">訂單號碼</th>
                       <th className="px-[10px] py-[8px] text-left font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[11px] text-[#637381]">序號</th>
-                      <th className="px-[10px] py-[8px] text-left font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[11px] text-[#637381]">廠商名稱</th>
+                      <th className="px-[10px] py-[8px] text-left font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[11px] text-[#637381]">廠商簡稱(編號)</th>
                       <th className="px-[10px] py-[8px] text-left font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[11px] text-[#637381]">料號</th>
                       <th className="px-[10px] py-[8px] text-left font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[11px] text-[#637381]">交期變更</th>
                       <th className="px-[10px] py-[8px] text-left font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[11px] text-[#637381]">備註</th>
@@ -896,7 +896,7 @@ export function exportOrdersExcel(orders: OrderRow[], filename?: string, columns
   } else {
     // Fallback: default commonly used columns
     const headers = [
-      '訂單號碼', '訂單序號', '廠商名稱', '廠商編號', '料號', '品名',
+      '訂單號碼', '訂單序號', '廠商簡稱(編號)', '廠商編號', '料號', '品名',
       '訂單狀態', '訂貨量', '已收量', '比對單價', '幣別', '單位',
       '預計交期', '廠商可交貨日期', '前置天數',
       '在途量', '未交量', '行項目備註',
@@ -1631,7 +1631,7 @@ function BRRow({ row, maxDeliveries = 2, isSplitOrder = false }: { row: BatchRep
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const BATCH_CORRECTION_HEADERS = [
-  '訂單號碼', '訂單序號', '廠商名稱', '廠商編號', '料號', '品名',
+  '訂單號碼', '訂單序號', '廠商簡稱(編號)', '廠商編號', '料號', '品名',
   '預計交期', '訂貨量', '交貨量', '驗收量', '在途量',
   '修正碼', '新廠商交期', '新交貨量', '新料號', '備註',
 ];
@@ -1666,7 +1666,7 @@ export function exportBatchCorrectionTemplate(orders: OrderRow[], filename?: str
 
 const BATCH_CORRECTION_ADJUST_HEADERS = [
   '訂單號碼', '訂單序號', '訂貨量', '驗收量', '在途量',
-  '廠商名稱', '廠商編號',
+  '廠商簡稱(編號)', '廠商編號',
   '修正碼',
   '料號', '新料號',
   '品名', '預計交期',
@@ -1675,7 +1675,7 @@ const BATCH_CORRECTION_ADJUST_HEADERS = [
 ];
 
 const BATCH_CORRECTION_SPLIT_HEADERS = [
-  '訂單號碼', '訂單序號', '廠商名稱', '廠商編號', '料號', '品名',
+  '訂單號碼', '訂單序號', '廠商簡稱(編號)', '廠商編號', '料號', '品名',
   '預計交期', '訂貨量', '驗收量', '在途量',
   '拆單數',
   '新廠商交期1', '交貨量1', '料號1',
@@ -1814,7 +1814,7 @@ export function parseBatchCorrectionAdjustCsv(content: string, allOrders: OrderR
     let remark: string;
 
     if (isNewFormatV3) {
-      // 最新格式：A訂單號碼 B訂單序號 C訂貨量 D驗收量 E在途量 F廠商名稱 G廠商編號 H修正碼
+      // 最新格式：A訂單號碼 B訂單序號 C訂貨量 D驗收量 E在途量 F廠商簡稱(編號) G廠商編號 H修正碼
       //                    I料號 J新料號 K品名 L預計交期 M新廠商交期1 N新交貨量1 O新廠商交期2 P新交貨量2
       orderQty      = (f[2] || '').trim();
       deliveryQty   = (f[2] || '').trim();
@@ -1835,7 +1835,7 @@ export function parseBatchCorrectionAdjustCsv(content: string, allOrders: OrderR
       if (date2 || qty2) schedules.push({ newVendorDate: date2, newQty: qty2 });
       remark = '';
     } else if (isNewFormatV2) {
-      // 中間版本（無料號）：A訂單號碼 B訂單序號 C訂貨量 D驗收量 E在途量 F廠商名稱 G廠商編號 H修正碼
+      // 中間版本（無料號）：A訂單號碼 B訂單序號 C訂貨量 D驗收量 E在途量 F廠商簡稱(編號) G廠商編號 H修正碼
       //                    I品名 J預計交期 K新廠商交期1 L新交貨量1 M新廠商交期2 N新交貨量2
       orderQty      = (f[2] || '').trim();
       deliveryQty   = (f[2] || '').trim(); // 同訂貨量
@@ -1856,7 +1856,7 @@ export function parseBatchCorrectionAdjustCsv(content: string, allOrders: OrderR
       if (date2 || qty2) schedules.push({ newVendorDate: date2, newQty: qty2 });
       remark = '';
     } else if (isNewFormat) {
-      // 舊新格式（有料號）：A訂單號碼 B訂單序號 C交貨量 D驗收量 E在途量 F廠商名稱 G廠商編號 H修正碼
+      // 舊新格式（有料號）：A訂單號碼 B訂單序號 C交貨量 D驗收量 E在途量 F廠商簡稱(編號) G廠商編號 H修正碼
       //                    I料號 J新料號1 K品名 L預計交期 M新廠商交期1 N新廠商交期2 O訂貨量 P新交貨量1 Q新交貨量2
       deliveryQty   = (f[2] || '').trim();
       acceptQty     = (f[3] || '').trim();

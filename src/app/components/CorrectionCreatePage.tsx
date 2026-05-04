@@ -886,7 +886,7 @@ export function CorrectionCreatePage({ userRole, onNavigateToList }: CorrectionC
           label="廠商(編號)"
           value={vendorSearch}
           onChange={setVendorSearch}
-          placeholder="輸入廠商名稱或編號"
+          placeholder="輸入廠商簡稱或編號"
         />
       </div>
 
@@ -986,7 +986,7 @@ export function CorrectionCreatePage({ userRole, onNavigateToList }: CorrectionC
             <div className="px-[24px] py-[16px] flex flex-col gap-0 max-h-[320px] overflow-y-auto">
               <div className="flex gap-[12px] px-[12px] py-[8px] bg-[#f4f6f8] rounded-[6px] mb-[4px]">
                 <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#637381] w-[160px] shrink-0">單號序號</p>
-                <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#637381] flex-1">廠商名稱</p>
+                <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#637381] flex-1">廠商簡稱(編號)</p>
                 <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#637381] w-[60px] shrink-0 text-right">訂貨量</p>
               </div>
               {pendingDeleteOrders.map((order, i) => (

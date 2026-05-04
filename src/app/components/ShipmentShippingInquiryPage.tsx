@@ -3,7 +3,7 @@
  *
  * TAB1：出貨明細查詢（序號維度）
  *   - 每筆 = 一個出貨序號
- *   - 欄位涵蓋表頭資訊（廠商名稱、出貨單號、出貨單號、幣別、運輸型態、交貨日期、到貨日期、出貨目的地）
+ *   - 欄位涵蓋表頭資訊（廠商簡稱、出貨單號、出貨單號、幣別、運輸型態、交貨日期、到貨日期、出貨目的地）
  *   + 序號資訊（出貨序號、單號序號、採購組織、料號、品名、客戶料號、客戶訂單號碼、
  *               訂單待交、出貨量、每箱數量、總箱數、淨重、毛重、重量單位、原產國家、累計收料量）
  *
@@ -67,7 +67,7 @@ function getMadeIn(code: string): string {
 export interface ShipmentItemRow {
   id: string; // `${shipment.id}-${detail.itemNo}`
   // 表頭資訊
-  vendorName: string;         // 廠商名稱（不含編號）
+  vendorName: string;         // 廠商簡稱（不含編號）
   vendorShipmentNo: string;   // 廠商出貨單
   sapDeliveryNo: string;      // 出貨單號
   currency: string;           // 幣別
@@ -135,7 +135,7 @@ export function buildItemRows(shipments: ShipmentRow[]): ShipmentItemRow[] {
     for (const d of ship.details) {
       rows.push({
         id: `${ship.id}-${d.itemNo}`,
-        vendorName: ship.vendorName.replace(/\(.*\)/, '').trim(),
+        vendorName: ship.vendorName,
         vendorShipmentNo: ship.vendorShipmentNo,
         sapDeliveryNo: ship.sapDeliveryNo,
         currency: ship.currency,
@@ -198,7 +198,7 @@ export function buildBoxRows(shipments: ShipmentRow[]): BoxLineRow[] {
           grossWeight: d.grossWeight,
           weightUnit: d.weightUnit,
           countryOfOrigin: d.countryOfOrigin,
-          vendorName: ship.vendorName.replace(/\(.*\)/, '').trim(),
+          vendorName: ship.vendorName,
           vendorShipmentNo: ship.vendorShipmentNo,
           sapDeliveryNo: ship.sapDeliveryNo,
           deliveryDate: ship.deliveryDate,
@@ -242,7 +242,7 @@ export interface ItemCol {
 }
 
 export const ITEM_DEFAULT_COLS: ItemCol[] = [
-  { key: 'vendorName',         label: '廠商名稱',     width: 120, minWidth: 100, align: 'left' },
+  { key: 'vendorName',         label: '廠商簡稱(編號)',   width: 140, minWidth: 110, align: 'left' },
   { key: 'vendorShipmentNo',   label: '廠商出貨單', width: 140, minWidth: 110, align: 'left' },
   { key: 'sapDeliveryNo',      label: '出貨單號', width: 130, minWidth: 100, align: 'left' },
   { key: 'currency',            label: '幣別',         width: 70,  minWidth: 60,  align: 'center' },
@@ -290,7 +290,7 @@ export interface BoxCol {
 
 export const BOX_DEFAULT_COLS: BoxCol[] = [
   { key: 'barcode',            label: '條碼',         width: 140, minWidth: 110, align: 'left' },
-  { key: 'vendorName',         label: '廠商簡稱',     width: 120, minWidth: 100, align: 'left' },
+  { key: 'vendorName',         label: '廠商簡稱(編號)',   width: 140, minWidth: 110, align: 'left' },
   { key: 'vendorShipmentNo',   label: '廠商出貨單',   width: 140, minWidth: 110, align: 'left' },
   { key: 'materialNo',         label: '料號',         width: 160, minWidth: 120, align: 'left' },
   { key: 'vendorMaterialNo',   label: '廠商料號',     width: 120, minWidth: 90,  align: 'left' },
@@ -317,7 +317,7 @@ export const BOX_DEFAULT_COLS: BoxCol[] = [
 ];
 
 // ── 共用儲存 key ──────────────────────────────────────────────────────────────
-const ITEM_STORAGE_KEY = 'shipmentItemInquiry_v1_cols';
+const ITEM_STORAGE_KEY = 'shipmentItemInquiry_v2_cols';
 const BOX_STORAGE_KEY  = 'shipmentBoxInquiry_v2_cols';
 const CHECKBOX_W = 52;
 

@@ -158,7 +158,7 @@ export default function VendorAccountManagementPageNew({
           columnsToUse = JSON.parse(saved);
         } else {
           const defaultColumns = [
-            { key: 'name', label: '廠商名稱', width: 150, minWidth: 100 },
+            { key: 'name', label: '廠商簡稱(編號)', width: 170, minWidth: 120 },
             { key: 'fullName', label: '廠商完整名稱', width: 250, minWidth: 100 },
             { key: 'phone', label: '電話', width: 180, minWidth: 100 },
             { key: 'address', label: '地址', width: 300, minWidth: 150 },
@@ -217,7 +217,7 @@ export default function VendorAccountManagementPageNew({
           {/* 搜索區域 */}
           <div className="relative shrink-0 w-full" style={{ borderBottom: 'none' }}>
             <div className="flex gap-[16px] items-center pl-[20px] pr-[8px] py-[20px]" style={{ borderBottom: 'none' }}>
-              <SearchField label="廠商名稱(編號)" value={vendorNameFilter} onChange={setVendorNameFilter} />
+              <SearchField label="廠商簡稱(編號)" value={vendorNameFilter} onChange={setVendorNameFilter} />
               <SearchField label="業務人員" value={salesPersonFilter} onChange={setSalesPersonFilter} />
             </div>
           </div>
@@ -242,7 +242,7 @@ export default function VendorAccountManagementPageNew({
               <FilterDialog 
                 filters={filters}
                 availableColumns={availableColumns.length > 0 ? availableColumns : [
-                  { key: 'name', label: '廠商名稱' },
+                  { key: 'name', label: '廠商簡稱(編號)' },
                   { key: 'fullName', label: '廠商完整名稱' },
                   { key: 'phone', label: '電話' },
                   { key: 'address', label: '地址' },

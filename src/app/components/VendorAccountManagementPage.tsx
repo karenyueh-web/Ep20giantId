@@ -225,7 +225,7 @@ function GiantVendorTable({ onVendorClick, onSalesClick }: { onVendorClick: () =
       <div className="relative shrink-0 w-full">
         <div className="flex flex-row items-center size-full">
           <div className="content-stretch flex gap-[16px] items-center pl-[20px] pr-[8px] py-[20px] relative w-full">
-            {/* 廠商名稱(編號) */}
+            {/* 廠商簡稱(編號) */}
             <div className="content-stretch flex flex-[1_0_0] flex-col items-start min-h-px min-w-px relative">
               <div className="h-[54px] relative rounded-[8px] shrink-0 w-full">
                 <div aria-hidden="true" className="absolute border border-[rgba(145,158,171,0.2)] border-solid inset-0 pointer-events-none rounded-[8px]"/>
@@ -255,7 +255,7 @@ function GiantVendorTable({ onVendorClick, onSalesClick }: { onVendorClick: () =
                     {/* Label - 始終顯示 */}
                     <div className="absolute content-stretch flex items-center left-[14px] px-[2px] top-[-5px]">
                       <div className="absolute bg-white h-[2px] left-0 right-0 top-[5px]"/>
-                      <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[12px] relative shrink-0 text-[#637381] text-[12px]">廠商名稱(編號)</p>
+                      <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[12px] relative shrink-0 text-[#637381] text-[12px]">廠商簡稱(編號)</p>
                     </div>
                   </div>
                 </div>
@@ -354,7 +354,7 @@ function GiantVendorTable({ onVendorClick, onSalesClick }: { onVendorClick: () =
               <div className="content-stretch flex gap-[8px] items-center p-[8px] relative rounded-[8px] shrink-0">
                 <div aria-hidden="true" className="absolute border border-[rgba(145,158,171,0.2)] border-dashed inset-0 pointer-events-none rounded-[8px]"/>
                 <div className="content-stretch flex font-semibold items-center leading-[22px] relative shrink-0 text-[#1c252e] text-[14px]">
-                  <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] relative shrink-0">廠商名稱</p>
+                  <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] relative shrink-0">廠商簡稱(編號)</p>
                   <p className="font-['Public_Sans:SemiBold',sans-serif] relative shrink-0"> :</p>
                 </div>
                 {/* Chip */}
@@ -401,7 +401,7 @@ function GiantVendorTable({ onVendorClick, onSalesClick }: { onVendorClick: () =
         <div className="content-stretch flex items-center relative shrink-0 min-w-max sticky top-0 z-10">
           <div className="bg-[#f4f6f8] content-stretch flex items-center relative shrink-0 w-[150px]">
             <div className="content-stretch flex gap-[4px] items-center justify-center p-[16px] relative shrink-0">
-              <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[24px] relative shrink-0 text-[#637381] text-[14px] text-center">廠商名稱</p>
+              <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[24px] relative shrink-0 text-[#637381] text-[14px] text-center">廠商簡稱(編號)</p>
             </div>
           </div>
           <div className="bg-[#f4f6f8] content-stretch flex items-center relative shrink-0 w-[150px]">
@@ -435,7 +435,7 @@ function GiantVendorTable({ onVendorClick, onSalesClick }: { onVendorClick: () =
         {currentData.map((vendor) => (
           <div key={vendor.id} className="min-h-[76px] relative shrink-0 min-w-max">
             <div className="content-stretch flex items-center overflow-clip relative size-full">
-              {/* 廠商名稱 */}
+              {/* 廠商簡稱(編號) */}
               <div className="content-stretch flex items-center overflow-clip relative shrink-0 w-[150px]">
                 <div className="content-stretch flex items-center py-[16px] relative shrink-0 w-[85px]">
                   <div className="content-stretch flex flex-col items-start justify-center overflow-clip px-[16px] relative shrink-0">
@@ -636,7 +636,7 @@ function VendorTable({ onVendorClick, onSalesClick }: { onVendorClick: () => voi
         <div className="content-stretch flex items-center overflow-clip relative shrink-0 min-w-max" data-name="Table/Order/Head">
           <div className="bg-[#f4f6f8] content-stretch flex items-center relative shrink-0" style={{ width: `${columnWidths.vendorName}px` }}>
             <div className="content-stretch flex gap-[4px] items-center justify-center p-[16px] relative shrink-0">
-              <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[24px] relative shrink-0 text-[#637381] text-[14px] text-center">廠商名稱</p>
+              <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[24px] relative shrink-0 text-[#637381] text-[14px] text-center">廠商簡稱(編號)</p>
             </div>
             <ResizeHandle columnKey="vendorName" />
           </div>
@@ -674,7 +674,7 @@ function VendorTable({ onVendorClick, onSalesClick }: { onVendorClick: () => voi
         {/* 表格數據行（只有一筆資料） */}
         <div className="h-[76px] relative shrink-0 min-w-max" data-name="Table/Order/Row">
           <div className="content-stretch flex items-center overflow-clip relative rounded-[inherit] size-full">
-            {/* 廠商名稱 */}
+            {/* 廠商簡稱(編號) */}
             <div className="content-stretch flex items-center overflow-clip relative shrink-0" style={{ width: `${columnWidths.vendorName}px` }}>
               <div className="content-stretch flex items-center py-[16px] relative shrink-0 w-full">
                 <div className="content-stretch flex flex-col items-start justify-center overflow-clip px-[16px] relative shrink-0 w-full">

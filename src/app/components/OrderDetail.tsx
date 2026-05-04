@@ -1037,7 +1037,7 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
               </div>
               <div className="flex flex-col gap-[2px] flex-1">
                 <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[#1c252e]">廠商(編號)</p>
-                <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[#637381]">{orderData?.vendor || '廠商名稱(00010000)'}</p>
+                <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[#637381]">{orderData?.vendor || '廠商簡稱(00010000)'}</p>
               </div>
               <div className="flex flex-col gap-[2px] flex-1">
                 <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[#1c252e]">料號</p>
