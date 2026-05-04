@@ -35,6 +35,7 @@ export interface ShipmentDetailItem {
   orderNo: string;
   orderSeq: string;
   materialNo: string;
+  vendorMaterialNo?: string; // 廠商料號
   orderPendingQty: number;
   shipQty: number;
   qtyPerBox: number | string;

@@ -99,18 +99,19 @@ function ReadonlyField({ label, value, required }: { label: string; value: strin
 
 // ── Table 欄位定義 ────────────────────────────────────────────────────────────
 const TABLE_COLS = [
-  { key: 'itemNo',         label: '出貨序號', width: 80,  align: 'left' },
-  { key: 'orderNo',        label: '單號序號', width: 130, align: 'left' },
-  { key: 'materialNo',     label: '料號',     width: 140, align: 'left' },
-  { key: 'orderPendingQty',label: '訂單待交', width: 80,  align: 'right' },
-  { key: 'shipQty',        label: '*出貨量',  width: 80,  align: 'right' },
-  { key: 'qtyPerBox',      label: '每箱數量', width: 90,  align: 'right' },
-  { key: 'totalBoxes',     label: '*總箱數',  width: 80,  align: 'center' },
-  { key: 'netWeight',      label: '淨重', width: 90,  align: 'right' },
-  { key: 'grossWeight',    label: '毛重', width: 90,  align: 'right' },
-  { key: 'weightUnit',     label: '重量單位', width: 100, align: 'center' },
-  { key: 'countryOfOrigin',label: '原產國家', width: 110, align: 'center' },
-  { key: 'receivedQty',    label: '累計收料量', width: 100, align: 'right' },
+  { key: 'itemNo',            label: '出貨序號', width: 80,  align: 'left' },
+  { key: 'orderNo',           label: '單號序號', width: 130, align: 'left' },
+  { key: 'materialNo',        label: '料號',     width: 140, align: 'left' },
+  { key: 'vendorMaterialNo',  label: '廠商料號', width: 120, align: 'left' },
+  { key: 'orderPendingQty',   label: '訂單待交', width: 80,  align: 'right' },
+  { key: 'shipQty',           label: '*出貨量',  width: 80,  align: 'right' },
+  { key: 'qtyPerBox',         label: '每箱數量', width: 90,  align: 'right' },
+  { key: 'totalBoxes',        label: '*總箱數',  width: 80,  align: 'center' },
+  { key: 'netWeight',         label: '淨重', width: 90,  align: 'right' },
+  { key: 'grossWeight',       label: '毛重', width: 90,  align: 'right' },
+  { key: 'weightUnit',        label: '重量單位', width: 100, align: 'center' },
+  { key: 'countryOfOrigin',   label: '原產國家', width: 110, align: 'center' },
+  { key: 'receivedQty',       label: '累計收料量', width: 100, align: 'right' },
 ];
 
 // ── 主元件 ────────────────────────────────────────────────────────────────────
@@ -391,6 +392,9 @@ export function ShipmentInquiryDetailPage({ shipment, onClose, onDelete, onEdit,
                   </div>
                   <div style={{ width: 140, minWidth: 140 }} className="px-[8px] text-left shrink-0">
                     <span className={`font-['Public_Sans:Regular',sans-serif] text-[13px] ${txtClrLight} truncate block`}>{row.materialNo}</span>
+                  </div>
+                  <div style={{ width: 120, minWidth: 120 }} className="px-[8px] text-left shrink-0">
+                    <span className={`font-['Public_Sans:Regular',sans-serif] text-[13px] ${txtClrLight} truncate block`}>{row.vendorMaterialNo || 'TEMPPRICE'}</span>
                   </div>
                   <div style={{ width: 80, minWidth: 80 }} className="px-[8px] text-right shrink-0">
                     <span className={`font-['Public_Sans:Regular',sans-serif] text-[13px] ${txtClrLight}`}>{row.orderPendingQty}</span>

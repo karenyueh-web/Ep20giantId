@@ -50,6 +50,7 @@ export interface ShipmentDetailRow {
   orderNo: string;
   orderSeq: string;
   materialNo: string;
+  vendorMaterialNo: string; // 廠商料號
   orderPendingQty: number;
   shipQty: number;
   qtyPerBox: string;       // 輸入值（原始）
@@ -448,6 +449,7 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
           orderNo: csvRow.orderNo,
           orderSeq: csvRow.orderSeq,
           materialNo: '',
+          vendorMaterialNo: 'TEMPPRICE',
           orderPendingQty: 0,
           shipQty,
           qtyPerBox: qtyPerBoxLabel,
@@ -497,6 +499,7 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
         orderNo: o.orderNo || '',
         orderSeq: o.orderSeq || '',
         materialNo: o.materialNo || '',
+        vendorMaterialNo: 'TEMPPRICE',
         orderPendingQty: calcUndeliveredQty(o.orderQty ?? 0, o.acceptQty ?? 0, o.inTransitQty ?? 0),
         shipQty,
         qtyPerBox: qtyPerBoxLabel,
@@ -890,7 +893,7 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
         {/* 白底 table 卡片 */}
         <div className="bg-white rounded-[12px] overflow-hidden shadow-[0px_0px_2px_0px_rgba(145,158,171,0.2),0px_4px_8px_-2px_rgba(145,158,171,0.12)]">
           <div className="w-full overflow-x-auto custom-scrollbar">
-            <div style={{ minWidth: '1048px' }}>
+            <div style={{ minWidth: '1168px' }}>
 
               {/* Table header */}
               <div className="flex items-center py-[10px] border-b border-[rgba(145,158,171,0.16)] bg-[rgba(145,158,171,0.04)]">
@@ -898,6 +901,7 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
                   { label: '出貨序號', w: 80,  align: 'left' },
                   { label: '單號序號', w: 130, align: 'left' },
                   { label: '料號',     w: 140, align: 'left' },
+                  { label: '廠商料號', w: 120, align: 'left' },
                   { label: '訂單待交', w: 80,  align: 'right' },
                   { label: '*出貨量',  w: 80,  align: 'right', blue: true },
                   { label: '*每箱數量', w: 90,  align: 'right', blue: true },
@@ -955,6 +959,13 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
                   <div style={{ width: 140, minWidth: 140 }} className="px-[8px] shrink-0">
                     <span className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#637381] truncate block">
                       {row.materialNo}
+                    </span>
+                  </div>
+
+                  {/* 廠商料號 */}
+                  <div style={{ width: 120, minWidth: 120 }} className="px-[8px] shrink-0">
+                    <span className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#637381] truncate block">
+                      {row.vendorMaterialNo || '—'}
                     </span>
                   </div>
 

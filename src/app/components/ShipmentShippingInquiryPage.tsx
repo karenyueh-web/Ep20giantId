@@ -80,6 +80,7 @@ export interface ShipmentItemRow {
   orderDocSeq: string;        // 單號序號（orderNo + orderSeq 合併）
   purchaseOrg: string;        // 採購組織（mock: 'GEM採購...'）
   materialNo: string;         // 料號
+  vendorMaterialNo: string;   // 廠商料號
   productName: string;        // 品名（mock 為空）
   customerMaterialNo: string; // 客戶料號（mock 為空）
   customerOrderNo: string;    // 客戶訂單號碼（mock 為空）
@@ -147,6 +148,7 @@ export function buildItemRows(shipments: ShipmentRow[]): ShipmentItemRow[] {
         orderDocSeq: `${d.orderNo}${d.orderSeq}`,
         purchaseOrg: 'GEM採購',
         materialNo: d.materialNo,
+        vendorMaterialNo: 'TEMPPRICE',
         productName: '',
         customerMaterialNo: '',
         customerOrderNo: '',
@@ -254,6 +256,7 @@ export const ITEM_DEFAULT_COLS: ItemCol[] = [
   { key: 'orderDocSeq',         label: '單號序號',     width: 140, minWidth: 110, align: 'left' },
   { key: 'purchaseOrg',         label: '採購組織',     width: 100, minWidth: 80,  align: 'left' },
   { key: 'materialNo',          label: '料號',         width: 160, minWidth: 120, align: 'left' },
+  { key: 'vendorMaterialNo',   label: '廠商料號',     width: 120, minWidth: 90,  align: 'left' },
   { key: 'productName',         label: '品名',         width: 160, minWidth: 120, align: 'left', visible: false },
   { key: 'customerMaterialNo',  label: '客戶料號',     width: 120, minWidth: 90,  align: 'left', visible: false },
   { key: 'customerOrderNo',     label: '客戶訂單號碼', width: 140, minWidth: 110, align: 'left', visible: false },
@@ -317,7 +320,7 @@ export const BOX_DEFAULT_COLS: BoxCol[] = [
 ];
 
 // ── 共用儲存 key ──────────────────────────────────────────────────────────────
-const ITEM_STORAGE_KEY = 'shipmentItemInquiry_v2_cols';
+const ITEM_STORAGE_KEY = 'shipmentItemInquiry_v3_cols';
 const BOX_STORAGE_KEY  = 'shipmentBoxInquiry_v2_cols';
 const CHECKBOX_W = 52;
 
