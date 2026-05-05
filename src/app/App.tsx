@@ -12,6 +12,7 @@ import { ShipmentListPage } from "@/app/components/ShipmentListPage";
 import { ShipmentShippingInquiryPage } from "@/app/components/ShipmentShippingInquiryPage";
 import { ShipmentPrintDocPage } from "@/app/components/ShipmentPrintDocPage";
 import { InvoiceSettingsPage } from "@/app/components/InvoiceSettingsPage";
+import { InvoiceCreatePage } from "@/app/components/InvoiceCreatePage";
 import { CorrectionCreatePage } from "@/app/components/CorrectionCreatePage";
 import { CorrectionListWithTabs } from "@/app/components/CorrectionListWithTabs";
 import { HistoryCorrectionListPage } from "@/app/components/HistoryCorrectionListPage";
@@ -267,6 +268,18 @@ export default function App() {
           </ResponsivePageLayout>
         );
       case 'invoice-create':
+        return (
+          <ResponsivePageLayout
+            currentPage={currentPage}
+            onPageChange={handlePageChange}
+            onLogout={handleLogout}
+            userRole={userRole}
+            title="開立發票"
+            breadcrumb="發票作業 • 開立發票"
+          >
+            <InvoiceCreatePage />
+          </ResponsivePageLayout>
+        );
       case 'invoice-list':
       case 'parts-maintain':
       case 'parts-quote':
