@@ -26,6 +26,7 @@ export interface InvoiceAcceptRow {
   purchaseOrg: string;      // 採購組織
   purchaseGroup: string;    // 採購群組
   customerPO: string;       // 客戶PO號碼（將來串其他資料庫帶入，目前留白）
+  plantCode: string;        // 工廠代碼
 }
 
 // ── 欄位定義 ──
@@ -63,6 +64,7 @@ export const DEFAULT_COLS: InvCol[] = [
   { key: 'purchaseOrg',   label: '採購組織',       width: 100, minWidth: 80  },
   { key: 'purchaseGroup', label: '採購群組',       width: 100, minWidth: 80  },
   { key: 'customerPO',    label: '客戶PO號碼',     width: 130, minWidth: 100 },
+  { key: 'plantCode',     label: '工廠代碼',       width: 100, minWidth: 80  },
 ];
 
 // ── 搜尋用下拉選項 ──
@@ -97,7 +99,7 @@ export const invoiceMockData: InvoiceAcceptRow[] = [
     deliveryNo: '1720580800', orderQty: 250, shipQty: 200, acceptQty: 198, returnQty: 2,
     claimDate: '2025/08/22', specification: 'SHIMANO BR-R9270 DURA-ACE CALIPER FRONT',
     outsourceNo: '', bondedType: '', companyCode: 'C001', purchaseOrg: '台灣廠生產採購組織',
-    purchaseGroup: 'P10', customerPO: '',
+    purchaseGroup: 'P10', customerPO: '', plantCode: 'AIP1',
   },
   {
     id: 2, vendorName: '華銘(0001000641)', orderNo: '4500100003', orderSeq: '20', orderType: 'Z2QB',
@@ -106,7 +108,7 @@ export const invoiceMockData: InvoiceAcceptRow[] = [
     deliveryNo: '1720580800', orderQty: 200, shipQty: 150, acceptQty: 150, returnQty: 0,
     claimDate: '2025/08/22', specification: 'SHIMANO CN-M9100 12-SPEED CHAIN',
     outsourceNo: '', bondedType: '', companyCode: 'C001', purchaseOrg: '台灣廠生產採購組織',
-    purchaseGroup: 'P10', customerPO: '',
+    purchaseGroup: 'P10', customerPO: '', plantCode: 'AIP2',
   },
   {
     id: 3, vendorName: '華銘(0001000641)', orderNo: '4500100004', orderSeq: '10', orderType: 'Z2QB',
@@ -115,7 +117,7 @@ export const invoiceMockData: InvoiceAcceptRow[] = [
     deliveryNo: '1720580800', orderQty: 100, shipQty: 80, acceptQty: 78, returnQty: 2,
     claimDate: '2025/08/22', specification: 'SHIMANO CS-R9200 12-SPEED 11-34T',
     outsourceNo: 'OS-2025-001', bondedType: '', companyCode: 'C001', purchaseOrg: '台灣廠生產採購組織',
-    purchaseGroup: 'P10', customerPO: '',
+    purchaseGroup: 'P10', customerPO: '', plantCode: 'DTC1',
   },
   // ── Shipment #4 (SHP-2025-0045, 佳承精密, closed, receivedQty=400) ──
   {
@@ -125,7 +127,7 @@ export const invoiceMockData: InvoiceAcceptRow[] = [
     deliveryNo: '1720580760', orderQty: 500, shipQty: 400, acceptQty: 400, returnQty: 0,
     claimDate: '2025/07/18', specification: 'GAVIA FONDO 1 700X28C TUBELESS READY',
     outsourceNo: '', bondedType: '', companyCode: 'C001', purchaseOrg: '台灣廠非生產採購組織',
-    purchaseGroup: 'P20', customerPO: '',
+    purchaseGroup: 'P20', customerPO: '', plantCode: 'DTE1',
   },
   // ── Shipment #6 (INV-20250610-001, 久廣精密, sap_sent) ──
   {
@@ -135,7 +137,7 @@ export const invoiceMockData: InvoiceAcceptRow[] = [
     deliveryNo: '1720580750', orderQty: 30, shipQty: 20, acceptQty: 20, returnQty: 0,
     claimDate: '2025/07/14', specification: 'PROPEL ADVANCED PRO FORK CARBON STEERER',
     outsourceNo: '', bondedType: '', companyCode: 'C001', purchaseOrg: '台灣廠生產採購組織',
-    purchaseGroup: 'P10', customerPO: '',
+    purchaseGroup: 'P10', customerPO: '', plantCode: 'DTG1',
   },
   {
     id: 6, vendorName: '久廣精密(0001000053)', orderNo: '4500300021', orderSeq: '10', orderType: 'Z2QB',
@@ -144,7 +146,7 @@ export const invoiceMockData: InvoiceAcceptRow[] = [
     deliveryNo: '1720580750', orderQty: 50, shipQty: 35, acceptQty: 33, returnQty: 2,
     claimDate: '2025/07/14', specification: 'SHIMANO RD-R9250 Di2 12-SPEED',
     outsourceNo: '', bondedType: '', companyCode: 'C001', purchaseOrg: '台灣廠生產採購組織',
-    purchaseGroup: 'P10', customerPO: '',
+    purchaseGroup: 'P10', customerPO: '', plantCode: 'DTI1',
   },
   {
     id: 7, vendorName: '久廣精密(0001000053)', orderNo: '4500300022', orderSeq: '10', orderType: 'Z2QB',
@@ -153,7 +155,7 @@ export const invoiceMockData: InvoiceAcceptRow[] = [
     deliveryNo: '1720580750', orderQty: 200, shipQty: 150, acceptQty: 148, returnQty: 2,
     claimDate: '2025/07/14', specification: 'STRATUS LITE GRIP 130MM BLACK',
     outsourceNo: 'OS-2025-002', bondedType: '', companyCode: 'C001', purchaseOrg: '台灣廠生產採購組織',
-    purchaseGroup: 'P10', customerPO: '',
+    purchaseGroup: 'P10', customerPO: '', plantCode: 'GTM1',
   },
   {
     id: 8, vendorName: '久廣精密(0001000053)', orderNo: '4500300023', orderSeq: '10', orderType: 'Z2QB',
@@ -162,7 +164,7 @@ export const invoiceMockData: InvoiceAcceptRow[] = [
     deliveryNo: '1720580750', orderQty: 100, shipQty: 80, acceptQty: 80, returnQty: 0,
     claimDate: '2025/07/14', specification: 'LOOK KEO 2 MAX CARBON PEDAL',
     outsourceNo: '', bondedType: '', companyCode: 'C001', purchaseOrg: '台灣廠生產採購組織',
-    purchaseGroup: 'P10', customerPO: '',
+    purchaseGroup: 'P10', customerPO: '', plantCode: 'GVM1',
   },
   // ── Shipment #10 (91775300, 華銘, closed, receivedQty=120) ──
   {
@@ -172,7 +174,7 @@ export const invoiceMockData: InvoiceAcceptRow[] = [
     deliveryNo: '1720580710', orderQty: 150, shipQty: 120, acceptQty: 120, returnQty: 0,
     claimDate: '2025/06/30', specification: 'CONTACT SL OD2 STEM 110MM -6DEG',
     outsourceNo: '', bondedType: '', companyCode: 'C001', purchaseOrg: '昆山廠生產採購組織',
-    purchaseGroup: 'P30', customerPO: '',
+    purchaseGroup: 'P30', customerPO: '', plantCode: 'AIP1',
   },
   // ── Shipment #11 (91775301, 華銘, sap_sent, partial received) ──
   {
@@ -182,7 +184,7 @@ export const invoiceMockData: InvoiceAcceptRow[] = [
     deliveryNo: '1720580820', orderQty: 250, shipQty: 200, acceptQty: 200, returnQty: 0,
     claimDate: '2025/07/28', specification: 'SLR 1 42 DISC WHEELSYSTEM FRONT 12X100',
     outsourceNo: '', bondedType: '', companyCode: 'C001', purchaseOrg: '昆山廠生產採購組織',
-    purchaseGroup: 'P30', customerPO: '',
+    purchaseGroup: 'P30', customerPO: '', plantCode: 'AIP2',
   },
   // ── Z3XD 訂單類型（對應 Shipment #1, #2, #7） ──
   {
@@ -192,7 +194,7 @@ export const invoiceMockData: InvoiceAcceptRow[] = [
     deliveryNo: '1720580792', orderQty: 60, shipQty: 50, acceptQty: 48, returnQty: 2,
     claimDate: '2025/07/26', specification: 'TCR ADVANCED SL DISC FRAME M CARBON/RED',
     outsourceNo: '', bondedType: '', companyCode: 'C001', purchaseOrg: '台灣廠生產採購組織',
-    purchaseGroup: 'P10', customerPO: '',
+    purchaseGroup: 'P10', customerPO: '', plantCode: 'DTC1',
   },
   {
     id: 12, vendorName: '華銘(0001000641)', orderNo: '4500100001', orderSeq: '20', orderType: 'Z3XD',
@@ -201,7 +203,7 @@ export const invoiceMockData: InvoiceAcceptRow[] = [
     deliveryNo: '1720580792', orderQty: 40, shipQty: 30, acceptQty: 28, returnQty: 2,
     claimDate: '2025/07/26', specification: 'SLR 0 CARBON 65 DISC WHEELSYSTEM REAR',
     outsourceNo: 'OS-2025-003', bondedType: '', companyCode: 'C001', purchaseOrg: '台灣廠生產採購組織',
-    purchaseGroup: 'P10', customerPO: '',
+    purchaseGroup: 'P10', customerPO: '', plantCode: 'DTE1',
   },
   {
     id: 13, vendorName: '金盛元工業(0001000059)', orderNo: '4500400030', orderSeq: '10', orderType: 'Z3XD',
@@ -210,6 +212,6 @@ export const invoiceMockData: InvoiceAcceptRow[] = [
     deliveryNo: '', orderQty: 600, shipQty: 500, acceptQty: 495, returnQty: 5,
     claimDate: '2025/07/24', specification: 'SHIMANO CN-M9100 12-SPEED CHAIN',
     outsourceNo: '', bondedType: '', companyCode: 'C001', purchaseOrg: '昆山廠生產採購組織',
-    purchaseGroup: 'P30', customerPO: '',
+    purchaseGroup: 'P30', customerPO: '', plantCode: 'GTM1',
   },
 ];
