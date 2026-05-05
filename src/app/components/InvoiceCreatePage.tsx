@@ -148,6 +148,10 @@ export function InvoiceCreatePage() {
 
   useEffect(() => { setPage(1); }, [sortedData.length]);
 
+  // ── 搜尋條件改變時清空選取（避免殘留看不見的選取項目）──
+  useEffect(() => { setSelectedIds(new Set()); }, [bondedSearch, purchaseOrgSearch, orderNoSearch, appliedFilters]);
+
+
   // ── 分頁 ──
   const paginatedData = useMemo(() => {
     const start = (page - 1) * perPage;
@@ -168,6 +172,37 @@ export function InvoiceCreatePage() {
     const next = new Set(selectedIds);
     next.has(id) ? next.delete(id) : next.add(id);
     setSelectedIds(next);
+  };
+
+  // ── 開立發票驗證 ──
+  const [invoiceError, setInvoiceError] = useState<string | null>(null);
+
+  const handleCreateInvoice = () => {
+    const selectedRows = invoiceMockData.filter(r => selectedIds.has(r.id));
+
+    // 1. 超過 250 筆
+    if (selectedRows.length > 250) {
+      setInvoiceError(`一次最多只能開立 250 筆驗收資料，目前已選取 ${selectedRows.length} 筆。`);
+      return;
+    }
+
+    // 2. 不同廠商
+    const vendors = new Set(selectedRows.map(r => r.vendorName));
+    if (vendors.size > 1) {
+      setInvoiceError('不能同時開立不同廠商的發票，請重新選取同一廠商的驗收資料。');
+      return;
+    }
+
+    // 3. 同時包含保稅與非保稅
+    const bondedSet = new Set(selectedRows.map(r => r.orderType.slice(-1).toUpperCase()));
+    if (bondedSet.has('B') && bondedSet.has('D')) {
+      setInvoiceError('不能同時開立保稅與非保稅的發票，請重新選取相同類型的驗收資料。');
+      return;
+    }
+
+    // 通過驗證 → 執行開立（目前顯示 Toast，後續串接實際流程）
+    showToast(`已開立 ${selectedRows.length} 筆發票`);
+    setSelectedIds(new Set());
   };
 
   // ── 自動最適欄寬 ──
@@ -256,6 +291,53 @@ export function InvoiceCreatePage() {
           <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-[#1c252e] leading-[24px] whitespace-nowrap mr-[4px]">
             {selectedIds.size} selected
           </span>
+          <span
+            onClick={handleCreateInvoice}
+            className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] text-[#004680] leading-[24px] whitespace-nowrap cursor-pointer select-none px-[10px] py-[16px] hover:opacity-70 transition-opacity"
+          >
+            開立發票
+          </span>
+        </div>
+      )}
+
+      {/* ── 開立發票驗證錯誤 Dialog ── */}
+      {invoiceError && (
+        <div
+          className="fixed inset-0 z-[300] bg-[rgba(145,158,171,0.4)] flex items-center justify-center p-[20px]"
+          onClick={() => setInvoiceError(null)}
+        >
+          <div
+            className="bg-white rounded-[16px] shadow-[-40px_40px_80px_0px_rgba(145,158,171,0.24)] flex flex-col overflow-hidden"
+            style={{ width: 420 }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="px-[24px] pt-[24px] pb-[20px]">
+              <div className="flex items-center gap-[12px] mb-[12px]">
+                <div className="w-[44px] h-[44px] rounded-full bg-[rgba(255,171,0,0.12)] flex items-center justify-center shrink-0">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#b76e00" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/>
+                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                  </svg>
+                </div>
+                <div>
+                  <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[16px] text-[#1c252e]">無法開立發票</p>
+                  <p className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#637381] mt-[2px]">請調整選取資料後再試</p>
+                </div>
+              </div>
+              <p className="font-['Public_Sans:Regular',sans-serif] text-[14px] text-[#637381] leading-[22px]">
+                {invoiceError}
+              </p>
+            </div>
+            <div className="flex items-center justify-end px-[24px] py-[16px] border-t border-[rgba(145,158,171,0.12)]">
+              <button
+                onClick={() => setInvoiceError(null)}
+                className="h-[36px] px-[24px] rounded-[8px] bg-[#1c252e] hover:bg-[#454f5b] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-white transition-colors"
+              >
+                確認
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
