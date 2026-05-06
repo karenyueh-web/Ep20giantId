@@ -34,7 +34,7 @@ function getCellValue(row: InvoiceAcceptRow, key: InvColKey): React.ReactNode {
 }
 
 // ── 主元件 ────────────────────────────────────────────────────────────────────
-export function InvoiceCreatePage() {
+export function InvoiceCreatePage({ onOpenDetail }: { onOpenDetail?: (rows: InvoiceAcceptRow[], bondedType: string, currency: string) => void }) {
   const { scrollContainerRef, handleMouseDown, canDragScroll } = useHorizontalDragScroll();
 
   const [currentUserEmail] = useState<string>(() => localStorage.getItem('currentUserEmail') || 'default');
@@ -200,9 +200,17 @@ export function InvoiceCreatePage() {
       return;
     }
 
-    // 通過驗證 → 執行開立（目前顯示 Toast，後續串接實際流程）
-    showToast(`已開立 ${selectedRows.length} 筆發票`);
-    setSelectedIds(new Set());
+    // 通過驗證 → 導航到發票明細頁
+    const bondedChar = selectedRows[0].orderType.slice(-1).toUpperCase();
+    const bondedType = bondedChar === 'B' ? '保稅' : '非保稅';
+    const currency = 'TWD'; // 目前預設 TWD，將來可從資料帶入
+
+    if (onOpenDetail) {
+      onOpenDetail(selectedRows, bondedType, currency);
+    } else {
+      showToast(`已開立 ${selectedRows.length} 筆發票`);
+      setSelectedIds(new Set());
+    }
   };
 
   // ── 自動最適欄寬 ──

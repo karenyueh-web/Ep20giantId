@@ -13,6 +13,7 @@ import { ShipmentShippingInquiryPage } from "@/app/components/ShipmentShippingIn
 import { ShipmentPrintDocPage } from "@/app/components/ShipmentPrintDocPage";
 import { InvoiceSettingsPage } from "@/app/components/InvoiceSettingsPage";
 import { InvoiceCreatePage } from "@/app/components/InvoiceCreatePage";
+import { InvoiceDetailPage } from "@/app/components/InvoiceDetailPage";
 import { CorrectionCreatePage } from "@/app/components/CorrectionCreatePage";
 import { CorrectionListWithTabs } from "@/app/components/CorrectionListWithTabs";
 import { HistoryCorrectionListPage } from "@/app/components/HistoryCorrectionListPage";
@@ -45,6 +46,8 @@ export default function App() {
     company: string;
     epCode: string;
   } | null>(null);
+  // ── 開立發票明細 state ──
+  const [invoiceDetail, setInvoiceDetail] = useState<{ rows: any[]; bondedType: string; currency: string } | null>(null);
 
   const handleLoginSuccess = (role: UserRole) => {
     setIsLoggedIn(true);
@@ -268,6 +271,25 @@ export default function App() {
           </ResponsivePageLayout>
         );
       case 'invoice-create':
+        if (invoiceDetail) {
+          return (
+            <ResponsivePageLayout
+              currentPage={currentPage}
+              onPageChange={handlePageChange}
+              onLogout={handleLogout}
+              userRole={userRole}
+              title="開立發票"
+              breadcrumb="發票作業 • 開立發票"
+            >
+              <InvoiceDetailPage
+                selectedRows={invoiceDetail.rows}
+                bondedType={invoiceDetail.bondedType}
+                currency={invoiceDetail.currency}
+                onClose={() => setInvoiceDetail(null)}
+              />
+            </ResponsivePageLayout>
+          );
+        }
         return (
           <ResponsivePageLayout
             currentPage={currentPage}
@@ -277,7 +299,7 @@ export default function App() {
             title="開立發票"
             breadcrumb="發票作業 • 開立發票"
           >
-            <InvoiceCreatePage />
+            <InvoiceCreatePage onOpenDetail={(rows, bondedType, currency) => setInvoiceDetail({ rows, bondedType, currency })} />
           </ResponsivePageLayout>
         );
       case 'invoice-list':
