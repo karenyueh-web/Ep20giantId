@@ -63,11 +63,11 @@ export interface InvoiceDetailPageProps {
   currency: string;     // 'TWD' | 'USD' 等
 }
 
-// ── 稅率選項（台灣，對應「稅碼」欄位，用於計算發票稅額）──
+// ── 稅率選項（台灣，對應「稅率」欄位）──
 export const TAX_RATE_OPTIONS = [
-  { value: '0.05', label: '5%' },
-  { value: '0',    label: '0% (零稅率)' },
-  { value: 'free', label: '免稅' },
+  { value: '5',  label: '5%'  },
+  { value: '0',  label: '0%'  },
+  { value: '10', label: '10%' },
 ];
 
 // ── 發票聯式選項（台灣買方）──

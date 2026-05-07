@@ -108,8 +108,10 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency 
   const [taxCode,     setTaxCode]     = useState('0');
 
   // ── 稅率 ──
-  const [taxRateValue, setTaxRateValue] = useState('');
-  const taxRate = taxRateValue === 'free' ? 0 : (parseFloat(taxRateValue) || 0);
+  // 台灣保稅驗證：稅率鎖定 0％
+  const isTaiwanBonded = !isOverseas && bondedType === '保稅';
+  const [taxRateValue, setTaxRateValue] = useState(() => isTaiwanBonded ? '0' : '5');
+  const taxRate = parseFloat(taxRateValue) / 100 || 0;
 
   // ── 品名 tooltip hover state ──
   const [hoveredProductRowId, setHoveredProductRowId] = useState<number | null>(null);
@@ -129,8 +131,9 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency 
 
   // ── 稅率變更時重算全部 ──
   const handleTaxRateChange = (val: string) => {
+    if (isTaiwanBonded) return;  // 台灣保稅不得調整
     setTaxRateValue(val);
-    const rate = val === 'free' ? 0 : (parseFloat(val) || 0);
+    const rate = parseFloat(val) / 100 || 0;
     setRows(prev => prev.map(r => recalcRow(r, rate)));
   };
 
@@ -220,7 +223,7 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency 
           </div>
         </div>
 
-        {/* 表單：Row 2 — 發票號碼 + 發票日期 + [發票聯式 | 稅碼] */}
+        {/* 表單：Row 2 — 發票號碼 + 發票日期 + 稅率 + [發票聯式 | 稅碼] */}
         <div className="flex gap-[16px]">
           <div className="flex-1 min-w-0">
             <FloatingInput label="發票號碼" value={invoiceNo} onChange={setInvoiceNo}
@@ -229,6 +232,20 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency 
           <div className="flex-1 min-w-0">
             <FloatingDateField label="發票日期" value={invoiceDate} onChange={setInvoiceDate}
               required hasError={submitted && !invoiceDate} />
+          </div>
+          {/* 稅率（台灣保稅：鎖定 0%；其他：可選） */}
+          <div className="flex-1 min-w-0">
+            {isTaiwanBonded ? (
+              <FloatingInput label="稅率" value="0%" onChange={() => {}} disabled />
+            ) : (
+              <DropdownSelect
+                label="稅率"
+                value={taxRateValue}
+                onChange={handleTaxRateChange}
+                options={TAX_RATE_OPTIONS}
+                searchable={false}
+              />
+            )}
           </div>
           <div className="flex-1 min-w-0">
             {isOverseas ? (
@@ -366,7 +383,7 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency 
                         const parts = raw.split('.'); const sanitized = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : raw;
                         updateUnitPrice(row.id, sanitized);
                       }}
-                      className="w-full h-[32px] px-[6px] border border-[rgba(0,94,184,0.4)] rounded-[6px] text-[14px] text-[#1c252e] outline-none focus:border-[#005eb8] focus:ring-2 focus:ring-[rgba(0,94,184,0.12)] bg-white text-right transition-colors"
+                      className="w-full h-[32px] px-[6px] border border-[rgba(0,94,184,0.4)] rounded-[6px] text-[14px] text-[#1c252e] outline-none focus:border-[#005eb8] focus:ring-2 focus:ring-[rgba(0,94,184,0.12)] bg-white text-left transition-colors"
                     />
                   </div>
                   {/* 單項稅額 */}
