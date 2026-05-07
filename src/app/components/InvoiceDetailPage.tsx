@@ -13,8 +13,8 @@ import { SimpleDatePicker } from './SimpleDatePicker';
 import IconsSolidIcSolarMultipleForwardLeftBroken from '@/imports/IconsSolidIcSolarMultipleForwardLeftBroken';
 import {
   type InvoiceDetailRow, type InvoiceDetailPageProps,
-  TAX_RATE_OPTIONS, INVOICE_TYPE_OPTIONS,
-  toInvoiceDetailRows, recalcRow,
+  TAX_RATE_OPTIONS, INVOICE_TYPE_OPTIONS, TAX_CODE_OPTIONS,
+  toInvoiceDetailRows, recalcRow, resolveBuyer, isOverseasBuyer,
 } from './invoiceDetailData';
 
 // ── FloatingInput（與 ShipmentDetailPage 一致）──────────────────────────────
@@ -97,10 +97,15 @@ function FloatingDateField({
 export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency }: InvoiceDetailPageProps) {
 
   // ── 基本資訊 state ──
-  const [buyerName] = useState('巨大機械工業股份有限公司幼獅分公司(29183302)');
-  const [invoiceNo, setInvoiceNo] = useState('');
+  const [buyerName] = useState(() => resolveBuyer(selectedRows[0]?.plantCode ?? ''));
+  const isOverseas   = isOverseasBuyer(selectedRows[0]?.plantCode ?? '');
+
+  const [invoiceNo,   setInvoiceNo]   = useState('');
   const [invoiceDate, setInvoiceDate] = useState('');
+  // 台灣買方：發票聯式（預設 21）
   const [invoiceType, setInvoiceType] = useState('21');
+  // 海外買方：VAT 稅碼（預設 0%）
+  const [taxCode,     setTaxCode]     = useState('0');
 
   // ── 稅率 ──
   const [taxRateValue, setTaxRateValue] = useState('');
@@ -208,36 +213,52 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency 
         </div>
 
         {/* 表單：Row 1 — 買方 + 發票總額 */}
-        <div className="border border-[rgba(145,158,171,0.2)] rounded-[8px] mb-[16px]">
-          <div className="flex border-b border-[rgba(145,158,171,0.12)]">
-            <div className="flex-[6] px-[16px] py-[14px] border-r border-[rgba(145,158,171,0.12)]">
-              <p className="text-[12px] font-semibold text-[#637381] mb-[4px]">
-                <span className="text-[#ff5630] mr-[2px]">*</span>買方
-              </p>
-              <p className="text-[15px] text-[#1c252e] font-['Public_Sans:Regular',sans-serif]">{buyerName}</p>
-            </div>
-            <div className="flex-[4] px-[16px] py-[14px]">
-              <p className="text-[12px] font-semibold text-[#637381] mb-[4px]">發票總額</p>
-              <p className="text-[20px] font-semibold text-[#005eb8] font-['Public_Sans:SemiBold',sans-serif]">
-                {totals.inTax > 0 ? `NT$ ${totals.inTax.toLocaleString()}` : '—'}
-              </p>
-            </div>
+        <div className="flex gap-[16px] mb-[16px]">
+          {/* 買方（唯讀，有必填星號） */}
+          <div className="flex-[6] min-w-0">
+            <FloatingInput label="買方" value={buyerName} onChange={() => {}} required disabled />
           </div>
+          {/* 發票總額（唯讀，顯示計算值） */}
+          <div className="flex-[4] min-w-0">
+            <FloatingInput
+              label="發票總額"
+              value={totals.inTax > 0 ? totals.inTax.toLocaleString() : ''}
+              onChange={() => {}}
+              disabled
+            />
+          </div>
+        </div>
 
-          {/* Row 2 — 發票號碼 + 日期 + 聯式 */}
-          <div className="flex gap-[16px] px-[16px] py-[14px]">
-            <div className="flex-1 min-w-0">
-              <FloatingInput label="發票號碼" value={invoiceNo} onChange={setInvoiceNo}
-                required hasError={submitted && !invoiceNo.trim()} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <FloatingDateField label="發票日期" value={invoiceDate} onChange={setInvoiceDate}
-                required hasError={submitted && !invoiceDate} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <DropdownSelect label="發票聯式" value={invoiceType} onChange={setInvoiceType}
-                options={INVOICE_TYPE_OPTIONS} />
-            </div>
+        {/* 表單：Row 2 — 發票號碼 + 發票日期 + [發票聯式 | 稅碼] */}
+        <div className="flex gap-[16px]">
+          <div className="flex-1 min-w-0">
+            <FloatingInput label="發票號碼" value={invoiceNo} onChange={setInvoiceNo}
+              required hasError={submitted && !invoiceNo.trim()} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <FloatingDateField label="發票日期" value={invoiceDate} onChange={setInvoiceDate}
+              required hasError={submitted && !invoiceDate} />
+          </div>
+          <div className="flex-1 min-w-0">
+            {isOverseas ? (
+              /* 海外買方 → VAT 稅碼，預設 0% */
+              <DropdownSelect
+                label="稅碼"
+                value={taxCode}
+                onChange={setTaxCode}
+                options={TAX_CODE_OPTIONS}
+                searchable={false}
+              />
+            ) : (
+              /* 台灣買方 → 發票聯式，預設 21 */
+              <DropdownSelect
+                label="發票聯式"
+                value={invoiceType}
+                onChange={setInvoiceType}
+                options={INVOICE_TYPE_OPTIONS}
+                searchable={false}
+              />
+            )}
           </div>
         </div>
       </div>
@@ -281,17 +302,13 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency 
                 className="w-[16px] h-[16px] accent-[#005eb8]" />
               <span className="text-[13px] text-[#637381] font-['Public_Sans:Regular',sans-serif] whitespace-nowrap">單價=驗收價</span>
             </label>
-            <div className="min-w-[140px]">
-              <DropdownSelect label="" value={taxRateValue} onChange={handleTaxRateChange}
-                options={TAX_RATE_OPTIONS} placeholder="請選稅額" searchable={false} />
-            </div>
           </div>
         </div>
 
         {/* 表格卡片 */}
         <div className="bg-white rounded-[12px] overflow-hidden shadow-[0px_0px_2px_0px_rgba(145,158,171,0.2),0px_4px_8px_-2px_rgba(145,158,171,0.12)]">
           <div className="w-full overflow-x-auto custom-scrollbar">
-            <div style={{ minWidth: `${totalWidth}px` }}>
+            <div style={{ minWidth: `${totalWidth}px`, paddingTop: '1px' }}>
 
               {/* 表頭 */}
               <div className="flex items-center py-[10px] border-b border-[rgba(145,158,171,0.16)] bg-[rgba(145,158,171,0.04)]">
@@ -318,7 +335,7 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency 
               {/* 資料列 */}
               {rows.map((row, idx) => (
                 <div key={row.id}
-                  className={`flex items-center py-[12px] border-b border-[rgba(145,158,171,0.08)] hover:bg-[rgba(145,158,171,0.04)] transition-colors ${idx % 2 === 1 ? 'bg-[rgba(145,158,171,0.02)]' : ''}`}>
+                  className={`flex items-center py-[12px] hover:bg-[rgba(145,158,171,0.04)] transition-colors ${idx % 2 === 1 ? 'bg-[rgba(145,158,171,0.02)]' : ''} ${idx === 0 ? '' : 'border-t border-[rgba(145,158,171,0.08)]'}`}>
                   {/* # */}
                   <div style={{ width: 50, minWidth: 50 }} className="pl-[16px] pr-[8px] shrink-0 text-center">
                     <span className="text-[13px] text-[#637381]">{idx + 1}</span>

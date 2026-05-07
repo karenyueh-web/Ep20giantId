@@ -1,4 +1,4 @@
-﻿import { useState, useMemo, useCallback, useEffect , useRef } from 'react';
+import { useState, useMemo, useCallback, useEffect , useRef } from 'react';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { useHorizontalDragScroll } from './useHorizontalDragScroll';
@@ -387,7 +387,6 @@ export function HistoryOrderListWithTabs() {
   const [orderTypeSearch, setOrderTypeSearch] = useState('');
 
   useEffect(() => {
-    if (!showColumnSelector) return;
     try { localStorage.setItem(storageKey, JSON.stringify(columns)); } catch { /* */ }
   }, [columns]);
 

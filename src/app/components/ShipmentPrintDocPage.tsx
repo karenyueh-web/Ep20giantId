@@ -140,7 +140,6 @@ function StickerTab({ config, onPrint }: { config: StickerTabConfig; onPrint: (t
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!showColumnSelector) return;
     try { localStorage.setItem(config.storageKey, JSON.stringify(columns)); } catch { /* */ }
   }, [columns]);
 
@@ -452,7 +451,6 @@ function ShipmentDocTab({ onPrint }: { onPrint: (tab: PrintTab, availableTabs: P
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!showColumnSelector) return;
     try { localStorage.setItem(DOC_TAB_KEY, JSON.stringify(columns)); } catch { /* */ }
   }, [columns]);
 

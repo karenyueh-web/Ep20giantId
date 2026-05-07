@@ -428,7 +428,6 @@ function ItemInquiryTab({ shipments }: { shipments: ShipmentRow[] }) {
   const [searchVendor, setSearchVendor] = useState('');
 
   useEffect(() => {
-    if (!showColumnSelector) return;
     try { localStorage.setItem(ITEM_STORAGE_KEY, JSON.stringify(columns)); } catch { /* */ }
   }, [columns]);
 
@@ -704,7 +703,6 @@ function BoxInquiryTab({ shipments, onPrint }: { shipments: ShipmentRow[]; onPri
   const [searchVendor, setSearchVendor] = useState('');
 
   useEffect(() => {
-    if (!showColumnSelector) return;
     try { localStorage.setItem(BOX_STORAGE_KEY, JSON.stringify(columns)); } catch { /* */ }
   }, [columns]);
 

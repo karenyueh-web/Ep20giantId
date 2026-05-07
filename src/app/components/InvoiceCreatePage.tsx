@@ -73,9 +73,8 @@ export function InvoiceCreatePage({ onOpenDetail }: { onOpenDetail?: (rows: Invo
   const [purchaseOrgSearch, setPurchaseOrgSearch] = useState('');
   const [orderNoSearch, setOrderNoSearch] = useState('');
 
-  // ── localStorage 同步 ──
+  // ── localStorage 同步（columns 任何變更都立即儲存，包含拖拉排序、調寬）──
   useEffect(() => {
-    if (!showColumnSelector) return;
     try { localStorage.setItem(storageKey, JSON.stringify(columns)); } catch { /* */ }
   }, [columns]);
 

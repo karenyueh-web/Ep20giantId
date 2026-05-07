@@ -551,7 +551,6 @@ export function ShipmentListPage() {
   const [deliveryDateTo, setDeliveryDateTo] = useState('');
 
   useEffect(() => {
-    if (!showColumnSelector) return;
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(columns)); } catch { /* */ }
   }, [columns]);
 
