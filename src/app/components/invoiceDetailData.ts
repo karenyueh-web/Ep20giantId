@@ -37,7 +37,7 @@ export const TAX_RATE_OPTIONS = [
 // ── 發票聯式選項 ──
 export const INVOICE_TYPE_OPTIONS = [
   { value: '21', label: '21 三聯式、電子計算機統一發票' },
-  { value: '22', label: '22 二聯式、電子計算機統一發票' },
+  { value: '22', label: '22 二聯式、收銀機統一發票' },
   { value: '25', label: '25 三聯式、收銀機統一發票' },
 ];
 
