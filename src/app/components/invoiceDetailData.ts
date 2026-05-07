@@ -84,22 +84,27 @@ export const TAX_CODE_OPTIONS = [
   { value: '10', label: '10% VAT tax - Goods & Service' },
 ];
 
-// ── 從驗收資料轉換為發票明細列 ──
-export function toInvoiceDetailRows(rows: InvoiceAcceptRow[]): InvoiceDetailRow[] {
-  return rows.map((r, idx) => ({
-    id: r.id,
-    acceptNo: r.acceptNo,
-    acceptSeq: r.acceptSeq,
-    orderNo: `${r.orderNo}-${r.orderSeq}`,
-    materialNo: r.materialNo,
-    acceptQty: r.acceptQty,
-    acceptPrice: 0,       // 驗收價，目前 mock 資料未帶，預設 0
-    unitPrice: '',         // 使用者手動輸入
-    itemTax: 0,
-    subtotalExTax: 0,
-    subtotalInTax: 0,
-    productName: r.specification || '',
-  }));
+// ── 從驗收資料轉換為發票明細列（單價預設 = 驗收價）──
+export function toInvoiceDetailRows(rows: InvoiceAcceptRow[], taxRate = 0): InvoiceDetailRow[] {
+  return rows.map((r) => {
+    const acceptPrice = 0;      // 驗收價，目前 mock 資料未帶，預設 0
+    const unitPrice   = String(acceptPrice);  // 單價預設 = 驗收價
+    const base = {
+      id: r.id,
+      acceptNo:       r.acceptNo,
+      acceptSeq:      r.acceptSeq,
+      orderNo:        `${r.orderNo}-${r.orderSeq}`,
+      materialNo:     r.materialNo,
+      acceptQty:      r.acceptQty,
+      acceptPrice,
+      unitPrice,
+      itemTax:        0,
+      subtotalExTax:  0,
+      subtotalInTax:  0,
+      productName:    r.specification || '',
+    };
+    return recalcRow(base, taxRate);
+  });
 }
 
 // ── 重新計算單列金額 ──

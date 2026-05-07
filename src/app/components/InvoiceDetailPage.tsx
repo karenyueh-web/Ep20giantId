@@ -111,11 +111,11 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency 
   const [taxRateValue, setTaxRateValue] = useState('');
   const taxRate = taxRateValue === 'free' ? 0 : (parseFloat(taxRateValue) || 0);
 
-  // ── 單價=驗收價 checkbox ──
-  const [priceEqualsAccept, setPriceEqualsAccept] = useState(false);
+  // ── 品名 tooltip hover state ──
+  const [hoveredProductRowId, setHoveredProductRowId] = useState<number | null>(null);
 
-  // ── 明細列 ──
-  const [rows, setRows] = useState<InvoiceDetailRow[]>(() => toInvoiceDetailRows(selectedRows));
+  // ── 明細列（單價預設 = 驗收價）──
+  const [rows, setRows] = useState<InvoiceDetailRow[]>(() => toInvoiceDetailRows(selectedRows, taxRate));
 
   // ── 更新單價 ──
   const updateUnitPrice = (id: number, val: string) => {
@@ -132,15 +132,6 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency 
     setTaxRateValue(val);
     const rate = val === 'free' ? 0 : (parseFloat(val) || 0);
     setRows(prev => prev.map(r => recalcRow(r, rate)));
-  };
-
-  // ── 單價=驗收價 ──
-  const handlePriceEqualsAccept = () => {
-    const next = !priceEqualsAccept;
-    setPriceEqualsAccept(next);
-    if (next) {
-      setRows(prev => prev.map(r => recalcRow({ ...r, unitPrice: String(r.acceptPrice) }, taxRate)));
-    }
   };
 
   // ── 合計 ──
@@ -169,15 +160,15 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency 
   const TABLE_COLS = [
     { label: '#',      w: 50,  align: 'center' as const },
     { label: '驗收單號', w: 130, align: 'left' as const },
-    { label: '驗收項次', w: 80,  align: 'center' as const },
+    { label: '驗收項次', w: 80,  align: 'left' as const },
     { label: '訂單號碼', w: 150, align: 'left' as const },
     { label: '料號',     w: 150, align: 'left' as const },
-    { label: '驗收量',   w: 80,  align: 'right' as const },
-    { label: '驗收價',   w: 90,  align: 'right' as const },
-    { label: '單價',     w: 90,  align: 'right' as const, orange: true },
-    { label: '單項稅額', w: 90,  align: 'right' as const, orange: true },
-    { label: '未稅小計', w: 100, align: 'right' as const },
-    { label: '含稅小計', w: 100, align: 'right' as const },
+    { label: '驗收量',   w: 80,  align: 'left' as const },
+    { label: '驗收價',   w: 90,  align: 'left' as const },
+    { label: '單價',     w: 90,  align: 'left' as const, blue: true },
+    { label: '單項稅額', w: 90,  align: 'left' as const, blue: true },
+    { label: '未稅小計', w: 100, align: 'left' as const },
+    { label: '含稅小計', w: 100, align: 'left' as const },
     { label: '品名',     w: 200, align: 'left' as const },
     { label: '',         w: 50,  align: 'center' as const },
   ];
@@ -270,23 +261,32 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency 
         <div className="flex items-center justify-between mb-[12px]">
           <div className="flex items-center gap-[12px]">
             {/* 保稅|幣別 TAG */}
-            <div
-              className="h-[48px] min-w-[48px] relative rounded-[8px] shrink-0"
-              style={{ backgroundColor: '#d9e8f5' }}
-            >
-              <div
-                aria-hidden="true"
-                className="absolute border border-solid inset-0 pointer-events-none rounded-[8px]"
-                style={{ borderColor: '#a3c4e0' }}
-              />
-              <div className="flex flex-row items-center justify-center min-w-[inherit] size-full">
-                <div className="flex items-center justify-center min-w-[inherit] px-[14px]">
-                  <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold leading-[22px] text-[15px] text-center whitespace-nowrap text-[#005eb8]">
-                    {bondedType} | {currency}
-                  </p>
+            {(() => {
+              const isBonded = bondedType === '保稅';
+              const bg     = isBonded ? '#d9e8f5' : '#ede7f6';
+              const border = isBonded ? '#a3c4e0' : '#b39ddb';
+              const text   = isBonded ? '#005eb8' : '#6c3fc5';
+              return (
+                <div
+                  className="h-[48px] min-w-[48px] relative rounded-[8px] shrink-0"
+                  style={{ backgroundColor: bg }}
+                >
+                  <div
+                    aria-hidden="true"
+                    className="absolute border border-solid inset-0 pointer-events-none rounded-[8px]"
+                    style={{ borderColor: border }}
+                  />
+                  <div className="flex flex-row items-center justify-center min-w-[inherit] size-full">
+                    <div className="flex items-center justify-center min-w-[inherit] px-[14px]">
+                      <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold leading-[22px] text-[15px] text-center whitespace-nowrap"
+                        style={{ color: text }}>
+                        {bondedType} | {currency}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
+              );
+            })()}
             <div className="h-[48px] min-h-[48px] relative shrink-0">
               <div aria-hidden="true" className="absolute border-[#1c252e] border-b-2 border-solid inset-0 pointer-events-none" />
               <div className="flex items-center justify-center h-full px-[4px]">
@@ -295,14 +295,8 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency 
             </div>
             </div>
 
-          {/* 右側操作 */}
-          <div className="flex items-center gap-[12px]">
-            <label className="flex items-center gap-[6px] cursor-pointer select-none">
-              <input type="checkbox" checked={priceEqualsAccept} onChange={handlePriceEqualsAccept}
-                className="w-[16px] h-[16px] accent-[#005eb8]" />
-              <span className="text-[13px] text-[#637381] font-['Public_Sans:Regular',sans-serif] whitespace-nowrap">單價=驗收價</span>
-            </label>
-          </div>
+          {/* 右側留空 */}
+          <div />
         </div>
 
         {/* 表格卡片 */}
@@ -315,7 +309,7 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency 
                 {TABLE_COLS.map((col, i) => (
                   <div key={i} style={{ width: col.w, minWidth: col.w, flex: `0 0 ${col.w}px` }}
                     className={`${i === 0 ? 'pl-[16px] pr-[8px]' : 'px-[8px]'} font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] leading-[20px] ${
-                      (col as any).orange ? 'text-[#ff6b00]' :
+                      (col as any).blue ? 'text-[#005eb8]' :
                       col.align === 'right' ? 'text-right text-[#637381]' :
                       col.align === 'center' ? 'text-center text-[#637381]' :
                       'text-[#637381]'
@@ -338,31 +332,31 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency 
                   className={`flex items-center py-[12px] hover:bg-[rgba(145,158,171,0.04)] transition-colors ${idx % 2 === 1 ? 'bg-[rgba(145,158,171,0.02)]' : ''} ${idx === 0 ? '' : 'border-t border-[rgba(145,158,171,0.08)]'}`}>
                   {/* # */}
                   <div style={{ width: 50, minWidth: 50 }} className="pl-[16px] pr-[8px] shrink-0 text-center">
-                    <span className="text-[13px] text-[#637381]">{idx + 1}</span>
+                    <span className="text-[14px] text-[#637381]">{idx + 1}</span>
                   </div>
                   {/* 驗收單號 */}
                   <div style={{ width: 130, minWidth: 130 }} className="px-[8px] shrink-0">
-                    <span className="text-[13px] text-[#637381] truncate block">{row.acceptNo}</span>
+                    <span className="text-[14px] text-[#637381] truncate block">{row.acceptNo}</span>
                   </div>
                   {/* 驗收項次 */}
-                  <div style={{ width: 80, minWidth: 80 }} className="px-[8px] shrink-0 text-center">
-                    <span className="text-[13px] text-[#637381]">{row.acceptSeq}</span>
+                  <div style={{ width: 80, minWidth: 80 }} className="px-[8px] shrink-0">
+                    <span className="text-[14px] text-[#637381]">{row.acceptSeq}</span>
                   </div>
                   {/* 訂單號碼 */}
                   <div style={{ width: 150, minWidth: 150 }} className="px-[8px] shrink-0">
-                    <span className="text-[13px] text-[#637381] truncate block">{row.orderNo}</span>
+                    <span className="text-[14px] text-[#637381] truncate block">{row.orderNo}</span>
                   </div>
                   {/* 料號 */}
                   <div style={{ width: 150, minWidth: 150 }} className="px-[8px] shrink-0">
-                    <span className="text-[13px] text-[#637381] truncate block">{row.materialNo}</span>
+                    <span className="text-[14px] text-[#637381] truncate block">{row.materialNo}</span>
                   </div>
                   {/* 驗收量 */}
-                  <div style={{ width: 80, minWidth: 80 }} className="px-[8px] shrink-0 text-right">
-                    <span className="text-[13px] text-[#1c252e]">{row.acceptQty}</span>
+                  <div style={{ width: 80, minWidth: 80 }} className="px-[8px] shrink-0">
+                    <span className="text-[14px] text-[#1c252e]">{row.acceptQty}</span>
                   </div>
                   {/* 驗收價 */}
-                  <div style={{ width: 90, minWidth: 90 }} className="px-[8px] shrink-0 text-right">
-                    <span className="text-[13px] text-[#1c252e]">{row.acceptPrice}</span>
+                  <div style={{ width: 90, minWidth: 90 }} className="px-[8px] shrink-0">
+                    <span className="text-[14px] text-[#1c252e]">{row.acceptPrice}</span>
                   </div>
                   {/* 單價（可輸入） */}
                   <div style={{ width: 90, minWidth: 90 }} className="px-[8px] shrink-0">
@@ -372,24 +366,43 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency 
                         const parts = raw.split('.'); const sanitized = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : raw;
                         updateUnitPrice(row.id, sanitized);
                       }}
-                      className="w-full h-[32px] px-[6px] border border-[rgba(255,107,0,0.4)] rounded-[6px] text-[13px] text-[#1c252e] outline-none focus:border-[#ff6b00] bg-white text-right transition-colors"
+                      className="w-full h-[32px] px-[6px] border border-[rgba(0,94,184,0.4)] rounded-[6px] text-[14px] text-[#1c252e] outline-none focus:border-[#005eb8] focus:ring-2 focus:ring-[rgba(0,94,184,0.12)] bg-white text-right transition-colors"
                     />
                   </div>
                   {/* 單項稅額 */}
-                  <div style={{ width: 90, minWidth: 90 }} className="px-[8px] shrink-0 text-right">
-                    <span className="text-[13px] text-[#1c252e]">{row.itemTax.toLocaleString()}</span>
+                  <div style={{ width: 90, minWidth: 90 }} className="px-[8px] shrink-0">
+                    <span className="text-[14px] text-[#1c252e]">{row.itemTax.toLocaleString()}</span>
                   </div>
                   {/* 未稅小計 */}
-                  <div style={{ width: 100, minWidth: 100 }} className="px-[8px] shrink-0 text-right">
-                    <span className="text-[13px] text-[#1c252e]">{row.subtotalExTax.toLocaleString()}</span>
+                  <div style={{ width: 100, minWidth: 100 }} className="px-[8px] shrink-0">
+                    <span className="text-[14px] text-[#1c252e]">{row.subtotalExTax.toLocaleString()}</span>
                   </div>
                   {/* 含稅小計 */}
-                  <div style={{ width: 100, minWidth: 100 }} className="px-[8px] shrink-0 text-right">
-                    <span className="text-[13px] text-[#1c252e] font-semibold">{row.subtotalInTax.toLocaleString()}</span>
+                  <div style={{ width: 100, minWidth: 100 }} className="px-[8px] shrink-0">
+                    <span className="text-[14px] text-[#1c252e] font-semibold">{row.subtotalInTax.toLocaleString()}</span>
                   </div>
                   {/* 品名 */}
-                  <div style={{ width: 200, minWidth: 200 }} className="px-[8px] shrink-0">
-                    <span className="text-[13px] text-[#637381] truncate block">{row.productName}</span>
+                  <div
+                    style={{ width: 200, minWidth: 200 }}
+                    className="px-[8px] shrink-0 relative"
+                    onMouseEnter={() => setHoveredProductRowId(row.id)}
+                    onMouseLeave={() => setHoveredProductRowId(null)}
+                  >
+                    <span className="text-[14px] text-[#637381] truncate block max-w-full overflow-hidden">{row.productName}</span>
+                    {hoveredProductRowId === row.id && row.productName && (
+                      <div
+                        className="absolute bottom-full left-1/2 -translate-x-1/2 mb-[6px] z-[200] pointer-events-none"
+                        style={{ filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.15))' }}
+                      >
+                        <div className="bg-[#1c252e] text-white rounded-[8px] px-[10px] py-[6px] whitespace-nowrap font-['Public_Sans:Regular',sans-serif] text-[13px] leading-[20px]">
+                          {row.productName}
+                        </div>
+                        {/* 小三角 */}
+                        <div className="flex justify-center">
+                          <div style={{ width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid #1c252e' }} />
+                        </div>
+                      </div>
+                    )}
                   </div>
                   {/* 刪除 */}
                   <div style={{ width: 50, minWidth: 50 }} className="px-[4px] shrink-0 flex justify-center">
