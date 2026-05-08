@@ -108,6 +108,8 @@ export interface OrderRow {
   deletionCode?: string;
   // ── 儲存地點代碼（SAP 開單時設定） ──
   storageLocationCode?: string;
+  // ── 工廠代號 ──
+  plantCode?: string;
 }
 
 interface AdvancedOrderTableProps {
@@ -245,7 +247,7 @@ export const orderMockData: OrderRow[] = [
     expectedDelivery: '2026/03/02', deliveryQty: 100,
     inTransitQty: 0, undeliveredQty: 100, lineItemNote: '3334', agreedDate: '/',
     internalNote: '2305,24SU_COSPEED_G_ER(限GEM採購可改)', materialPOContent: 'DISCONTINUED, CHANGE TO 1560-CROSSC-0008',
-    gbdOrderNo: 'GBD-2025-001234', statisticalDeliveryDate: '2025/05/20', storageLocationCode: '2020',
+    gbdOrderNo: 'GBD-2025-001234', statisticalDeliveryDate: '2025/05/20', storageLocationCode: '2020', plantCode: 'GTM1',
   },
   {
     id: 2, status: 'NP',
@@ -258,7 +260,7 @@ export const orderMockData: OrderRow[] = [
     expectedDelivery: '2026/03/02', deliveryQty: 50,
     inTransitQty: 10, undeliveredQty: 40, lineItemNote: '24000', agreedDate: '/',
     internalNote: '', materialPOContent: '',
-    gbdOrderNo: 'GBD-2025-001235', statisticalDeliveryDate: '2025/05/22', storageLocationCode: '2110',
+    gbdOrderNo: 'GBD-2025-001235', statisticalDeliveryDate: '2025/05/22', storageLocationCode: '2110', plantCode: 'GTM1',
   },
   {
     id: 3, status: 'NP',
@@ -271,7 +273,7 @@ export const orderMockData: OrderRow[] = [
     expectedDelivery: '2026/03/02', deliveryQty: 80,
     inTransitQty: 0, undeliveredQty: 80, lineItemNote: '231200', agreedDate: '/',
     internalNote: '', materialPOContent: 'LIMITED QTY - PRIORITY ORDER',
-    gbdOrderNo: 'GBD-2025-001236', statisticalDeliveryDate: '2025/05/25', storageLocationCode: '2020',
+    gbdOrderNo: 'GBD-2025-001236', statisticalDeliveryDate: '2025/05/25', storageLocationCode: '2020', plantCode: 'GTM2',
   },
   {
     id: 4, status: 'V', vendorDeliveryDate: '2025/05/14',
@@ -555,7 +557,7 @@ export const orderMockData: OrderRow[] = [
     expectedDelivery: '2026/04/20', deliveryQty: 200,
     inTransitQty: 30, undeliveredQty: 120, lineItemNote: '116000', agreedDate: '2026/04/13',
     internalNote: '測試資料：今日(4/15) >= 最早可開立日(4/13) → 應出現', materialPOContent: '',
-    gbdOrderNo: 'GBD-2026-TEST001', statisticalDeliveryDate: '2026/04/20', storageLocationCode: '2020',
+    gbdOrderNo: 'GBD-2026-TEST001', statisticalDeliveryDate: '2026/04/20', storageLocationCode: '2020', plantCode: 'GTM1',
   },
   {
     id: 33, status: 'CK', vendorDeliveryDate: '2026/04/22',
@@ -568,7 +570,7 @@ export const orderMockData: OrderRow[] = [
     expectedDelivery: '2026/04/22', deliveryQty: 150,
     inTransitQty: 20, undeliveredQty: 130, lineItemNote: '1470000', agreedDate: '2026/04/15',
     internalNote: '測試資料：今日(4/15) = 最早可開立日(4/15) → 應出現', materialPOContent: '',
-    gbdOrderNo: 'GBD-2026-TEST002', statisticalDeliveryDate: '2026/04/22', storageLocationCode: '2110',
+    gbdOrderNo: 'GBD-2026-TEST002', statisticalDeliveryDate: '2026/04/22', storageLocationCode: '2110', plantCode: 'GTM1',
   },
   {
     id: 34, status: 'CK', vendorDeliveryDate: '2026/04/25',

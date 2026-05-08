@@ -46,6 +46,11 @@ export interface ShipmentDetailItem {
   weightUnit: string;
   countryOfOrigin: string;
   receivedQty?: number;  // 累計收料量（倉庫進貨時回傳）
+  // ── 列印送貨單用 ──
+  storageLocationCode?: string; // 儲存地點（從原始訂單帶入）
+  productName?: string;          // 品名（暫用 materialNo）
+  company?: string;              // 客戶名稱（從訂單 OrderRow.company 帶入）
+  plantCode?: string;            // 工廠代號（從訂單 OrderRow.plantCode 帶入）
 }
 
 /** 出貨單列 */
@@ -93,8 +98,8 @@ export const MOCK_SHIPMENTS: ShipmentRow[] = [
     sapDeliveryNo: '1720580792',
     createdAt: '2025/06/10 09:30',
     details: [
-      { itemNo: 10, orderNo: '4500100001', orderSeq: '10', materialNo: '2201-FRM0641-A01', orderPendingQty: 50, shipQty: 50, qtyPerBox: 25, totalBoxes: 2, boxes: mkBoxes(50,25), netWeight: '2.5', grossWeight: '3.0', weightUnit: 'KG', countryOfOrigin: 'TW' },
-      { itemNo: 20, orderNo: '4500100001', orderSeq: '20', materialNo: '3301-WHL0641-A02', orderPendingQty: 32, shipQty: 30, qtyPerBox: 10, totalBoxes: 3, boxes: mkBoxes(30,10), netWeight: '1.8', grossWeight: '2.2', weightUnit: 'KG', countryOfOrigin: 'TW' },
+      { itemNo: 10, orderNo: '4500100001', orderSeq: '10', materialNo: '2201-FRM0641-A01', orderPendingQty: 50, shipQty: 50, qtyPerBox: 25, totalBoxes: 2, boxes: mkBoxes(50,25), netWeight: '2.5', grossWeight: '3.0', weightUnit: 'KG', countryOfOrigin: 'TW', storageLocationCode: '2020', productName: '2201-FRM0641-A01', company: '巨大機械', plantCode: 'GTM1' },
+      { itemNo: 20, orderNo: '4500100001', orderSeq: '20', materialNo: '3301-WHL0641-A02', orderPendingQty: 32, shipQty: 30, qtyPerBox: 10, totalBoxes: 3, boxes: mkBoxes(30,10), netWeight: '1.8', grossWeight: '2.2', weightUnit: 'KG', countryOfOrigin: 'TW', storageLocationCode: '2020', productName: '3301-WHL0641-A02', company: '巨大機械', plantCode: 'GTM1' },
     ],
     status: 'open',
   },
@@ -111,7 +116,7 @@ export const MOCK_SHIPMENTS: ShipmentRow[] = [
     deliveryAddress: '桃園市龜山區文化二路29號',
     sapDeliveryNo: '1720580793',
     details: [
-      { itemNo: 10, orderNo: '4500100002', orderSeq: '10', materialNo: '4401-STM0641-B01', orderPendingQty: 100, shipQty: 100, qtyPerBox: 20, totalBoxes: 5, boxes: mkBoxes(100,20), netWeight: '1.2', grossWeight: '1.5', weightUnit: 'KG', countryOfOrigin: 'TW' },
+      { itemNo: 10, orderNo: '4500100002', orderSeq: '10', materialNo: '4401-STM0641-B01', orderPendingQty: 100, shipQty: 100, qtyPerBox: 20, totalBoxes: 5, boxes: mkBoxes(100,20), netWeight: '1.2', grossWeight: '1.5', weightUnit: 'KG', countryOfOrigin: 'TW', storageLocationCode: '2020', productName: '4401-STM0641-B01', company: '巨大機械', plantCode: 'GTM1' },
     ],
     status: 'open',
   },
@@ -501,7 +506,7 @@ export function ShipmentListPage() {
   const [detailShipment, setDetailShipment] = useState<ShipmentRow | null>(null);
   const [detailOrders, setDetailOrders] = useState<OrderRow[]>([]);
   // ── 列印頁導覽 ────────────────────────────────────────────────────────────
-  const [printState, setPrintState] = useState<{ vendorShipmentNo: string; tab: PrintTab } | null>(null);
+  const [printState, setPrintState] = useState<{ shipment: ShipmentRow; tab: PrintTab } | null>(null);
 
   // ── 欄位管理 ──────────────────────────────────────────────────────────────
   const loadCols = (): ShipCol[] => {
@@ -787,7 +792,8 @@ export function ShipmentListPage() {
   if (printState) {
     return (
       <ShipmentPrintPage
-        vendorShipmentNo={printState.vendorShipmentNo}
+        vendorShipmentNo={printState.shipment.vendorShipmentNo}
+        shipment={printState.shipment}
         initialTab={printState.tab}
         onBack={() => setPrintState(null)}
       />
@@ -801,7 +807,7 @@ export function ShipmentListPage() {
         onClose={() => { setDetailShipment(null); setDetailOrders([]); }}
         onDelete={() => handleDetailDeleted(detailShipment.id)}
         onEditSave={(updatedDetails) => handleEditSave(detailShipment.id, updatedDetails)}
-        onPrint={(tab) => setPrintState({ vendorShipmentNo: detailShipment.vendorShipmentNo, tab })}
+        onPrint={(tab) => setPrintState({ shipment: detailShipment, tab })}
       />
     );
   }

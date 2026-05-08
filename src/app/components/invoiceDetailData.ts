@@ -109,9 +109,9 @@ export function toInvoiceDetailRows(rows: InvoiceAcceptRow[], taxRate = 0): Invo
 
 // ── 重新計算單列金額 ──
 export function recalcRow(row: InvoiceDetailRow, taxRate: number): InvoiceDetailRow {
-  const price = parseFloat(row.unitPrice) || 0;
-  const subtotalExTax = row.acceptQty * price;
-  const itemTax = Math.round(subtotalExTax * taxRate);
-  const subtotalInTax = subtotalExTax + itemTax;
+  const price         = parseFloat(row.unitPrice) || 0;
+  const subtotalExTax = Math.round(row.acceptQty * price);             // 四捨五入
+  const itemTax       = Math.round(subtotalExTax * taxRate);           // 四捨五入
+  const subtotalInTax = Math.round(subtotalExTax + itemTax);           // 四捨五入
   return { ...row, subtotalExTax, itemTax, subtotalInTax };
 }

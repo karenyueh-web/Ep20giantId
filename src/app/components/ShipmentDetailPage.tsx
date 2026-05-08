@@ -60,6 +60,11 @@ export interface ShipmentDetailRow {
   grossWeight: string;
   weightUnit: string;
   countryOfOrigin: string;
+  // ── 列印送貨單用 ──
+  storageLocationCode?: string;
+  productName?: string;
+  company?: string;
+  plantCode?: string;
 }
 
 /** CSV 匯入時的預填資料（由 ShipmentCreatePage 的 handleConfirmUpload 傳入） */
@@ -509,6 +514,11 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
         grossWeight:     csvRow?.grossWeight     ?? '0',
         weightUnit:      csvRow?.weightUnit      ?? 'KG',
         countryOfOrigin: csvRow?.countryOfOrigin ?? '',
+        // 列印送貨單用
+        storageLocationCode: o.storageLocationCode ?? '',
+        productName: o.materialNo || '',
+        company: o.company ?? '',
+        plantCode: o.plantCode ?? '',
       };
     });
   });
@@ -683,6 +693,12 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
         weightUnit: r.weightUnit,
         countryOfOrigin: r.countryOfOrigin,
         receivedQty: 0,
+        // 列印送貨單用
+        storageLocationCode: r.storageLocationCode ?? '',
+        productName: r.materialNo || '',
+        company: r.company ?? '',
+        plantCode: r.plantCode ?? '',
+        vendorMaterialNo: r.vendorMaterialNo,
       })),
       status: 'open' as const,
     };
