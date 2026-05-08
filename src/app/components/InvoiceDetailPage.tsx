@@ -467,8 +467,8 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency 
                   <div style={{ width: 80, minWidth: 80 }} className="px-[8px] shrink-0">
                     <span className="text-[14px] text-[#637381]">{row.acceptSeq}</span>
                   </div>
-                  {/* 訂單號碼 */}
-                  <div style={{ width: 150, minWidth: 150 }} className="px-[8px] shrink-0">
+                  {/* 訂單號碼-序號 */}
+                  <div style={{ width: 160, minWidth: 160 }} className="px-[8px] shrink-0">
                     <span className="text-[14px] text-[#637381] truncate block">{row.orderNo}</span>
                   </div>
                   {/* 料號 */}
