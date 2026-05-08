@@ -8,8 +8,11 @@
 
 import { useState, useMemo } from 'react';
 import { DeleteButton } from './ActionButtons';
+import { PaginationControls } from './PaginationControls';
+import { CheckboxIcon } from './CheckboxIcon';
 import { DropdownSelect } from './DropdownSelect';
 import { SimpleDatePicker } from './SimpleDatePicker';
+import { invoiceMockData } from './invoiceCreateData';
 import IconsSolidIcSolarMultipleForwardLeftBroken from '@/imports/IconsSolidIcSolarMultipleForwardLeftBroken';
 import {
   type InvoiceDetailRow, type InvoiceDetailPageProps,
@@ -115,6 +118,8 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency 
 
   // ── 品名 tooltip hover state ──
   const [hoveredProductRowId, setHoveredProductRowId] = useState<number | null>(null);
+  // ── 金額欄 tooltip hover state（rowId + 欄名） ──
+  const [hoveredAmountCell, setHoveredAmountCell] = useState<{ id: number; col: 'tax' | 'exTax' | 'inTax' } | null>(null);
 
   // ── 明細列（單價預設 = 驗收價）──
   const [rows, setRows] = useState<InvoiceDetailRow[]>(() => toInvoiceDetailRows(selectedRows, taxRate));
@@ -148,6 +153,68 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const showToast = (msg: string) => { setToastMessage(msg); setTimeout(() => setToastMessage(null), 3000); };
 
+  // ── 新增明細 Dialog state ──
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [dialogOrderNo,  setDialogOrderNo]  = useState('');
+  const [dialogOrderSeq, setDialogOrderSeq] = useState('');
+  const [dialogMaterial, setDialogMaterial] = useState('');
+  const [dialogSelected, setDialogSelected] = useState<Set<number>>(new Set());
+  const [dialogPage,         setDialogPage]         = useState(1);
+  const [dialogItemsPerPage, setDialogItemsPerPage] = useState(100);
+
+  // 來源候選資料：同廠商 + 同保稅類別 + 排除已加入的 id
+  const existingIds = useMemo(() => new Set(rows.map(r => r.id)), [rows]);
+  const vendorName  = selectedRows[0]?.vendorName ?? '';
+
+  const candidateRows = useMemo(() => {
+    return invoiceMockData.filter(r =>
+      r.vendorName   === vendorName &&
+      r.bondedType   === (selectedRows[0]?.bondedType ?? '') &&
+      !existingIds.has(r.id)
+    );
+  }, [existingIds, vendorName, selectedRows]);
+
+  const filteredCandidates = useMemo(() => {
+    const q1 = dialogOrderNo.trim().toLowerCase();
+    const q2 = dialogOrderSeq.trim().toLowerCase();
+    const q3 = dialogMaterial.trim().toLowerCase();
+    return candidateRows.filter(r =>
+      (!q1 || r.orderNo.toLowerCase().includes(q1)) &&
+      (!q2 || r.orderSeq.toLowerCase().includes(q2)) &&
+      (!q3 || r.materialNo.toLowerCase().includes(q3))
+    );
+  }, [candidateRows, dialogOrderNo, dialogOrderSeq, dialogMaterial]);
+
+  const dialogTotalPages = Math.max(1, Math.ceil(filteredCandidates.length / dialogItemsPerPage));
+  const dialogPagedRows  = filteredCandidates.slice((dialogPage - 1) * dialogItemsPerPage, dialogPage * dialogItemsPerPage);
+
+  const isDialogAllSelected  = dialogPagedRows.length > 0 && dialogPagedRows.every(r => dialogSelected.has(r.id));
+  const isDialogSomeSelected = dialogSelected.size > 0 && !isDialogAllSelected;
+
+  const toggleDialogRow = (id: number) =>
+    setDialogSelected(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
+
+  const toggleDialogAll = () => {
+    if (isDialogAllSelected) {
+      setDialogSelected(prev => { const s = new Set(prev); dialogPagedRows.forEach(r => s.delete(r.id)); return s; });
+    } else {
+      setDialogSelected(prev => { const s = new Set(prev); dialogPagedRows.forEach(r => s.add(r.id)); return s; });
+    }
+  };
+
+  const handleAddSelected = () => {
+    const toAdd = filteredCandidates.filter(r => dialogSelected.has(r.id));
+    const newRows = toInvoiceDetailRows(toAdd, taxRate);
+    setRows(prev => [...prev, ...newRows]);
+    setDialogSelected(new Set());
+    setAddDialogOpen(false);
+    setDialogOrderNo('');
+    setDialogOrderSeq('');
+    setDialogMaterial('');
+    setDialogPage(1);
+    showToast(`已新增 ${toAdd.length} 筆驗收明細`);
+  };
+
   // ── 確認出貨的提交驗證（placeholder）──
   const [submitted, setSubmitted] = useState(false);
   const handleConfirm = () => {
@@ -164,14 +231,14 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency 
     { label: '#',      w: 50,  align: 'center' as const },
     { label: '驗收單號', w: 130, align: 'left' as const },
     { label: '驗收項次', w: 80,  align: 'left' as const },
-    { label: '訂單號碼', w: 150, align: 'left' as const },
+    { label: '訂單號碼-序號', w: 160, align: 'left' as const },
     { label: '料號',     w: 150, align: 'left' as const },
     { label: '驗收量',   w: 80,  align: 'left' as const },
     { label: '驗收價',   w: 90,  align: 'left' as const },
     { label: '單價',     w: 90,  align: 'left' as const, blue: true },
-    { label: '單項稅額', w: 90,  align: 'left' as const, blue: true },
-    { label: '未稅小計', w: 100, align: 'left' as const },
-    { label: '含稅小計', w: 100, align: 'left' as const },
+    { label: '單項稅額', w: 130, align: 'left' as const },
+    { label: '未稅小計', w: 130, align: 'left' as const },
+    { label: '含稅小計', w: 130, align: 'left' as const },
     { label: '品名',     w: 200, align: 'left' as const },
     { label: '',         w: 50,  align: 'center' as const },
   ];
@@ -199,8 +266,14 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency 
             </div>
           </div>
           <div className="flex items-center gap-[12px]">
+            <button
+              onClick={() => showToast('草稿已暫存')}
+              className="h-[40px] w-[120px] rounded-[8px] border border-[rgba(145,158,171,0.32)] bg-white text-[#1c252e] hover:bg-[#f4f6f8] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
+            >
+              暫存
+            </button>
             <button onClick={handleConfirm}
-              className="h-[36px] bg-[#005eb8] hover:bg-[#004a94] text-white rounded-[8px] px-[20px] text-[14px] font-semibold font-['Public_Sans:SemiBold',sans-serif] transition-colors whitespace-nowrap">
+              className="h-[40px] w-[120px] bg-[#005eb8] hover:bg-[#004a94] text-white rounded-[8px] text-[14px] font-semibold font-['Public_Sans:SemiBold',sans-serif] transition-colors whitespace-nowrap">
               確認開立
             </button>
           </div>
@@ -310,10 +383,45 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency 
                 <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[28px] text-[#1c252e] text-[18px] whitespace-nowrap">發票明細</p>
               </div>
             </div>
-            </div>
 
-          {/* 右側留空 */}
-          <div />
+            {/* 未稅合計 + 含稅合計（緊靠 Tab 右側，橫向） */}
+            {rows.length > 0 && (
+              <div className="flex items-center gap-[16px] ml-[8px]">
+                <div className="w-[1px] h-[28px] bg-[rgba(145,158,171,0.24)] shrink-0" />
+                <div className="flex items-center gap-[6px]">
+                  <span className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#637381] whitespace-nowrap">明細數量</span>
+                  <span className="font-['Public_Sans:SemiBold',sans-serif] text-[14px] text-[#1c252e] whitespace-nowrap">{rows.length}</span>
+                </div>
+                <div className="w-[1px] h-[28px] bg-[rgba(145,158,171,0.24)] shrink-0" />
+                <div className="flex items-center gap-[6px]">
+                  <span className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#637381] whitespace-nowrap">未稅合計</span>
+                  <span className="font-['Public_Sans:SemiBold',sans-serif] text-[14px] text-[#1c252e] whitespace-nowrap">{totals.exTax.toLocaleString()}</span>
+                </div>
+                <div className="w-[1px] h-[28px] bg-[rgba(145,158,171,0.24)] shrink-0" />
+                <div className="flex items-center gap-[6px]">
+                  <span className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#637381] whitespace-nowrap">稅額合計</span>
+                  <span className="font-['Public_Sans:SemiBold',sans-serif] text-[14px] text-[#1c252e] whitespace-nowrap">{totals.tax.toLocaleString()}</span>
+                </div>
+                <div className="w-[1px] h-[28px] bg-[rgba(145,158,171,0.24)] shrink-0" />
+                <div className="flex items-center gap-[6px]">
+                  <span className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#637381] whitespace-nowrap">含稅合計</span>
+                  <span className="font-['Public_Sans:SemiBold',sans-serif] text-[14px] text-[#005eb8] whitespace-nowrap">{totals.inTax.toLocaleString()}</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 右側：新增驗收資料按鈕 */}
+          <button
+            onClick={() => setAddDialogOpen(true)}
+            title="新增驗收資料"
+            className="w-[40px] h-[40px] rounded-full bg-[#1D7BF5] hover:bg-[#1262cc] flex items-center justify-center shrink-0 transition-colors shadow-[0px_4px_8px_rgba(29,123,245,0.32)]"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+          </button>
         </div>
 
         {/* 表格卡片 */}
@@ -369,11 +477,11 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency 
                   </div>
                   {/* 驗收量 */}
                   <div style={{ width: 80, minWidth: 80 }} className="px-[8px] shrink-0">
-                    <span className="text-[14px] text-[#1c252e]">{row.acceptQty}</span>
+                    <span className="text-[14px] text-[#1c252e]">{row.acceptQty.toLocaleString()}</span>
                   </div>
                   {/* 驗收價 */}
                   <div style={{ width: 90, minWidth: 90 }} className="px-[8px] shrink-0">
-                    <span className="text-[14px] text-[#1c252e]">{row.acceptPrice}</span>
+                    <span className="text-[14px] text-[#1c252e]">{row.acceptPrice.toLocaleString()}</span>
                   </div>
                   {/* 單價（可輸入） */}
                   <div style={{ width: 90, minWidth: 90 }} className="px-[8px] shrink-0">
@@ -387,16 +495,64 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency 
                     />
                   </div>
                   {/* 單項稅額 */}
-                  <div style={{ width: 90, minWidth: 90 }} className="px-[8px] shrink-0">
-                    <span className="text-[14px] text-[#1c252e]">{row.itemTax.toLocaleString()}</span>
+                  <div
+                    style={{ width: 130, minWidth: 130 }}
+                    className="px-[8px] shrink-0 relative"
+                    onMouseEnter={() => setHoveredAmountCell({ id: row.id, col: 'tax' })}
+                    onMouseLeave={() => setHoveredAmountCell(null)}
+                  >
+                    <span className="text-[14px] text-[#1c252e] truncate block">{row.itemTax.toLocaleString()}</span>
+                    {hoveredAmountCell?.id === row.id && hoveredAmountCell.col === 'tax' && (
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-[6px] z-[200] pointer-events-none"
+                        style={{ filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.15))' }}>
+                        <div className="bg-[#1c252e] text-white rounded-[8px] px-[10px] py-[6px] whitespace-nowrap font-['Public_Sans:Regular',sans-serif] text-[13px] leading-[20px]">
+                          {row.itemTax.toLocaleString()}
+                        </div>
+                        <div className="flex justify-center">
+                          <div style={{ width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid #1c252e' }} />
+                        </div>
+                      </div>
+                    )}
                   </div>
                   {/* 未稅小計 */}
-                  <div style={{ width: 100, minWidth: 100 }} className="px-[8px] shrink-0">
-                    <span className="text-[14px] text-[#1c252e]">{row.subtotalExTax.toLocaleString()}</span>
+                  <div
+                    style={{ width: 130, minWidth: 130 }}
+                    className="px-[8px] shrink-0 relative"
+                    onMouseEnter={() => setHoveredAmountCell({ id: row.id, col: 'exTax' })}
+                    onMouseLeave={() => setHoveredAmountCell(null)}
+                  >
+                    <span className="text-[14px] text-[#1c252e] truncate block">{row.subtotalExTax.toLocaleString()}</span>
+                    {hoveredAmountCell?.id === row.id && hoveredAmountCell.col === 'exTax' && (
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-[6px] z-[200] pointer-events-none"
+                        style={{ filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.15))' }}>
+                        <div className="bg-[#1c252e] text-white rounded-[8px] px-[10px] py-[6px] whitespace-nowrap font-['Public_Sans:Regular',sans-serif] text-[13px] leading-[20px]">
+                          {row.subtotalExTax.toLocaleString()}
+                        </div>
+                        <div className="flex justify-center">
+                          <div style={{ width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid #1c252e' }} />
+                        </div>
+                      </div>
+                    )}
                   </div>
                   {/* 含稅小計 */}
-                  <div style={{ width: 100, minWidth: 100 }} className="px-[8px] shrink-0">
-                    <span className="text-[14px] text-[#1c252e] font-semibold">{row.subtotalInTax.toLocaleString()}</span>
+                  <div
+                    style={{ width: 130, minWidth: 130 }}
+                    className="px-[8px] shrink-0 relative"
+                    onMouseEnter={() => setHoveredAmountCell({ id: row.id, col: 'inTax' })}
+                    onMouseLeave={() => setHoveredAmountCell(null)}
+                  >
+                    <span className="text-[14px] text-[#1c252e] font-semibold truncate block">{row.subtotalInTax.toLocaleString()}</span>
+                    {hoveredAmountCell?.id === row.id && hoveredAmountCell.col === 'inTax' && (
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-[6px] z-[200] pointer-events-none"
+                        style={{ filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.15))' }}>
+                        <div className="bg-[#1c252e] text-white rounded-[8px] px-[10px] py-[6px] whitespace-nowrap font-['Public_Sans:Regular',sans-serif] text-[13px] leading-[20px]">
+                          {row.subtotalInTax.toLocaleString()}
+                        </div>
+                        <div className="flex justify-center">
+                          <div style={{ width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid #1c252e' }} />
+                        </div>
+                      </div>
+                    )}
                   </div>
                   {/* 品名 */}
                   <div
@@ -428,25 +584,163 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency 
                 </div>
               ))}
 
-              {/* 合計列 */}
-              {rows.length > 0 && (
-                <div className="flex items-center py-[12px] bg-[rgba(145,158,171,0.04)] border-t border-[rgba(145,158,171,0.16)]">
-                  <div style={{ width: 50 + 130 + 80 + 150 + 150 + 80 + 90 + 90 }} className="shrink-0" />
-                  <div style={{ width: 90, minWidth: 90 }} className="px-[8px] text-right shrink-0">
-                    <span className="text-[13px] text-[#637381] font-semibold">合計</span>
-                  </div>
-                  <div style={{ width: 100, minWidth: 100 }} className="px-[8px] text-right shrink-0">
-                    <span className="text-[13px] text-[#1c252e] font-semibold">{totals.exTax.toLocaleString()}</span>
-                  </div>
-                  <div style={{ width: 100, minWidth: 100 }} className="px-[8px] text-right shrink-0">
-                    <span className="text-[13px] text-[#005eb8] font-semibold">{totals.inTax.toLocaleString()}</span>
-                  </div>
-                </div>
-              )}
+
             </div>
           </div>
         </div>
       </div>
+
+      {/* ── 新增發票明細 Dialog ─────────────────────────────────────── */}
+      {addDialogOpen && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center" style={{ background: 'rgba(22,28,36,0.48)' }}>
+          <div className="bg-white rounded-[16px] shadow-[0px_24px_48px_rgba(0,0,0,0.24)] flex flex-col overflow-hidden"
+            style={{ width: 'min(960px, 92vw)', height: 'min(680px, 88vh)' }}>
+
+            {/* Dialog Header */}
+            <div className="flex items-start justify-between px-[24px] pt-[20px] pb-[12px] shrink-0">
+              <div className="flex flex-col gap-[4px]">
+                {/* 返回箭頭 + 標題 */}
+                <div className="flex items-center gap-[8px]">
+                  <button onClick={() => { setAddDialogOpen(false); setDialogSelected(new Set()); }}
+                    className="shrink-0 size-[28px] flex items-center justify-center rounded-full hover:bg-[rgba(145,158,171,0.12)] transition-colors">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#637381" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="15 18 9 12 15 6" />
+                    </svg>
+                  </button>
+                  <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[18px] text-[#1c252e]">新增發票明細</p>
+                  {/* 條件 TAG */}
+                  <div className="flex items-center gap-[4px] ml-[4px]">
+                    {[bondedType || '全部', selectedRows[0]?.purchaseOrg, selectedRows[0]?.plantCode]
+                      .filter(Boolean)
+                      .map((tag, i) => (
+                        <span key={i} className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#005eb8]">
+                          {i > 0 && <span className="text-[#c4cdd6] mx-[4px]">|</span>}
+                          {tag}
+                        </span>
+                      ))}
+                  </div>
+                </div>
+                {/* 結果數 */}
+                <p className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#637381] pl-[36px]">
+                  {filteredCandidates.length} results
+                </p>
+              </div>
+              {/* 搜尋欄 */}
+              <div className="flex items-center gap-[10px] pt-[8px]">
+                {[
+                  { label: '訂單號碼', value: dialogOrderNo, set: setDialogOrderNo },
+                  { label: '訂單序號', value: dialogOrderSeq, set: setDialogOrderSeq },
+                  { label: '料號',     value: dialogMaterial, set: setDialogMaterial },
+                ].map(({ label, value, set }) => (
+                  <div key={label} className="relative w-[150px] h-[40px]">
+                    {/* border */}
+                    <div className="absolute inset-0 rounded-[8px] border border-[rgba(145,158,171,0.32)] pointer-events-none" />
+                    {/* floating label */}
+                    <div className="absolute flex items-center left-[12px] px-[2px] top-[-6px] z-10">
+                      <div className="absolute bg-white h-[2px] left-0 right-0 top-[6px]" />
+                      <span className="relative text-[11px] font-semibold text-[#637381] whitespace-nowrap leading-[12px]">{label}</span>
+                    </div>
+                    <input value={value} onChange={e => { set(e.target.value); setDialogPage(1); }}
+                      className="absolute inset-0 w-full h-full rounded-[8px] px-[12px] pt-[8px] text-[13px] text-[#1c252e] outline-none bg-transparent"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Selection Toolbar */}
+            {dialogSelected.size > 0 && (
+              <div className="mx-[24px] mb-[8px] flex items-center gap-[12px] px-[12px] h-[44px] rounded-[8px] bg-[#e8f1fb] shrink-0">
+                <CheckboxIcon checked={isDialogAllSelected} indeterminate={isDialogSomeSelected} onChange={toggleDialogAll} />
+                <span className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#1c252e]">{dialogSelected.size} selected</span>
+                <div className="w-[1px] h-[20px] bg-[rgba(145,158,171,0.32)]" />
+                <button onClick={handleAddSelected}
+                  className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#005eb8] hover:text-[#004a94] transition-colors">
+                  新增發票明細
+                </button>
+              </div>
+            )}
+
+            {/* Table — 純縱向捲動，欄位自適應 */}
+            <div className="flex-1 overflow-y-auto min-h-0">
+              <div>
+                {/* 表頭 */}
+                <div className="flex items-center py-[10px] mx-[24px] border-b border-[rgba(145,158,171,0.16)] bg-[rgba(145,158,171,0.04)] sticky top-0 z-10">
+                  {dialogSelected.size > 0
+                    ? <div style={{ width: 40, minWidth: 40 }} className="shrink-0" />
+                    : <div style={{ width: 40, minWidth: 40 }} className="pl-[4px] shrink-0 flex justify-center">
+                        <CheckboxIcon checked={isDialogAllSelected} indeterminate={isDialogSomeSelected} onChange={toggleDialogAll} />
+                      </div>
+                  }
+                  {[['收料日期',90],['訂單號碼',110],['訂單序號',60],['預計交期',90],['可請款日',90],['訂貨量',70],['未收量',70],['驗收量',70]]
+                    .reduce<React.ReactNode[]>((acc, [l, w], i) => {
+                      // 在「訂單序號」後插入「料號（flex-1）」
+                      if (i === 2) {
+                        acc.push(
+                          <div key="seq" style={{ width: w as number, minWidth: w as number }} className="px-[8px] shrink-0">
+                            <span className="font-['Public_Sans:SemiBold',sans-serif] text-[12px] text-[#637381] uppercase tracking-wide whitespace-nowrap">{l}</span>
+                          </div>,
+                          <div key="mat" className="flex-1 min-w-0 px-[8px]">
+                            <span className="font-['Public_Sans:SemiBold',sans-serif] text-[12px] text-[#637381] uppercase tracking-wide whitespace-nowrap">料號</span>
+                          </div>
+                        );
+                      } else {
+                        acc.push(
+                          <div key={l as string} style={{ width: w as number, minWidth: w as number }} className="px-[8px] shrink-0">
+                            <span className="font-['Public_Sans:SemiBold',sans-serif] text-[12px] text-[#637381] uppercase tracking-wide whitespace-nowrap">{l}</span>
+                          </div>
+                        );
+                      }
+                      return acc;
+                    }, [])}
+                </div>
+
+                {/* 空狀態 */}
+                {dialogPagedRows.length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-[60px] gap-[8px]">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c4cdd6" strokeWidth="1.5"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+                    <p className="font-['Public_Sans:Regular',sans-serif] text-[14px] text-[#919eab]">沒有符合條件的驗收資料</p>
+                  </div>
+                )}
+
+                {/* 資料列 */}
+                {dialogPagedRows.map((r) => (
+                  <div key={r.id}
+                    onClick={() => toggleDialogRow(r.id)}
+                    className={`flex items-center py-[14px] mx-[24px] cursor-pointer transition-colors border-t border-[rgba(145,158,171,0.08)] ${
+                      dialogSelected.has(r.id) ? 'bg-[rgba(0,94,184,0.04)]' : 'hover:bg-[rgba(145,158,171,0.04)]'
+                    }`}>
+                    <div style={{ width: 40, minWidth: 40 }} className="pl-[4px] shrink-0 flex justify-center"
+                      onClick={e => e.stopPropagation()}>
+                      <CheckboxIcon checked={dialogSelected.has(r.id)} onChange={() => toggleDialogRow(r.id)} />
+                    </div>
+                    <div style={{ width: 90, minWidth: 90 }} className="px-[8px] shrink-0"><span className="text-[14px] text-[#1c252e]">{r.receiveDate}</span></div>
+                    <div style={{ width: 110, minWidth: 110 }} className="px-[8px] shrink-0"><span className="text-[14px] text-[#1c252e] truncate block">{r.orderNo}</span></div>
+                    <div style={{ width: 60, minWidth: 60 }} className="px-[8px] shrink-0"><span className="text-[14px] text-[#1c252e]">{r.orderSeq}</span></div>
+                    <div className="flex-1 min-w-0 px-[8px]"><span className="text-[14px] text-[#1c252e] truncate block">{r.materialNo}</span></div>
+                    <div style={{ width: 90, minWidth: 90 }} className="px-[8px] shrink-0"><span className="text-[14px] text-[#1c252e]">{r.claimDate}</span></div>
+                    <div style={{ width: 90, minWidth: 90 }} className="px-[8px] shrink-0"><span className="text-[14px] text-[#1c252e]">{r.claimDate}</span></div>
+                    <div style={{ width: 70, minWidth: 70 }} className="px-[8px] shrink-0"><span className="text-[14px] text-[#1c252e]">{r.orderQty.toLocaleString()}</span></div>
+                    <div style={{ width: 70, minWidth: 70 }} className="px-[8px] shrink-0"><span className="text-[14px] text-[#1c252e]">{(r.orderQty - r.acceptQty).toLocaleString()}</span></div>
+                    <div style={{ width: 70, minWidth: 70 }} className="px-[8px] shrink-0"><span className="text-[14px] text-[#1c252e]">{r.acceptQty.toLocaleString()}</span></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Footer: 系統標準分頁 */}
+            <div className="border-t border-[rgba(145,158,171,0.12)] shrink-0">
+              <PaginationControls
+                currentPage={dialogPage}
+                totalItems={filteredCandidates.length}
+                itemsPerPage={dialogItemsPerPage}
+                onPageChange={setDialogPage}
+                onItemsPerPageChange={(n) => { setDialogItemsPerPage(n); setDialogPage(1); }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Toast */}
       {toastMessage && (
