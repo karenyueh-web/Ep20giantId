@@ -24,6 +24,7 @@ import { PaginationControls } from './PaginationControls';
 import { DraggableColumnHeader } from './table/DraggableColumnHeader';
 import { measureTextWidth } from './table/tableUtils';
 import { MOCK_SHIPMENTS } from './ShipmentListPage';
+import type { ShipmentRow } from './ShipmentListPage';
 import {
   buildBoxRows, buildItemRows,
   BOX_DEFAULT_COLS, ITEM_DEFAULT_COLS,
@@ -54,6 +55,7 @@ const MAIN_TABS: { id: MainTab; label: string }[] = [
 interface PrintState {
   initialTab: PrintTab;
   tabs: PrintTab[];
+  shipment?: ShipmentRow;
 }
 
 
@@ -416,7 +418,7 @@ function StickerTab({ config, onPrint }: { config: StickerTabConfig; onPrint: (t
 // ═══════════════════════════════════════════════════════════════════════════════
 const DOC_TAB_KEY = 'printDoc_docTab_v1';
 
-function ShipmentDocTab({ onPrint }: { onPrint: (tab: PrintTab, availableTabs: PrintTab[]) => void }) {
+function ShipmentDocTab({ onPrint }: { onPrint: (tab: PrintTab, availableTabs: PrintTab[], shipment?: ShipmentRow) => void }) {
   const allRows = useMemo(() => buildItemRows(MOCK_SHIPMENTS), []);
 
   const [searchVendorShipNo, setSearchVendorShipNo] = useState('');
@@ -596,9 +598,19 @@ function ShipmentDocTab({ onPrint }: { onPrint: (tab: PrintTab, availableTabs: P
             </button>
           </div>
           <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-[#1c252e] leading-[24px] whitespace-nowrap mr-[4px]">{selectedIds.size} selected</span>
-          <span onClick={() => onPrint('zh-shipment', ['zh-shipment', 'en-shipment'])} className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] text-[#004680] leading-[24px] whitespace-nowrap cursor-pointer select-none px-[10px] py-[16px] hover:opacity-70 transition-opacity">列印中文出貨單</span>
+          <span onClick={() => {
+              const selectedRows = allRows.filter(r => selectedIds.has(r.id));
+              const firstVsNo = selectedRows[0]?.vendorShipmentNo;
+              const shipment = firstVsNo ? MOCK_SHIPMENTS.find(s => s.vendorShipmentNo === firstVsNo) : undefined;
+              onPrint('zh-shipment', ['zh-shipment', 'en-shipment'], shipment);
+            }} className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] text-[#004680] leading-[24px] whitespace-nowrap cursor-pointer select-none px-[10px] py-[16px] hover:opacity-70 transition-opacity">列印中文出貨單</span>
           <span className="text-[rgba(145,158,171,0.4)] select-none">|</span>
-          <span onClick={() => onPrint('en-shipment', ['zh-shipment', 'en-shipment'])} className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] text-[#004680] leading-[24px] whitespace-nowrap cursor-pointer select-none px-[10px] py-[16px] hover:opacity-70 transition-opacity">列印英文出貨單</span>
+          <span onClick={() => {
+              const selectedRows = allRows.filter(r => selectedIds.has(r.id));
+              const firstVsNo = selectedRows[0]?.vendorShipmentNo;
+              const shipment = firstVsNo ? MOCK_SHIPMENTS.find(s => s.vendorShipmentNo === firstVsNo) : undefined;
+              onPrint('en-shipment', ['zh-shipment', 'en-shipment'], shipment);
+            }} className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] text-[#004680] leading-[24px] whitespace-nowrap cursor-pointer select-none px-[10px] py-[16px] hover:opacity-70 transition-opacity">列印英文出貨單</span>
         </div>
       )}
 
@@ -698,14 +710,15 @@ export function ShipmentPrintDocPage() {
   const [printState, setPrintState] = useState<PrintState | null>(null);
 
   // onPrint 同時傳入可用的 PrintTab 列表（由 StickerTab 依 config 決定）
-  const handlePrint = useCallback((tab: PrintTab, availableTabs: PrintTab[]) => {
-    setPrintState({ initialTab: tab, tabs: availableTabs });
+  const handlePrint = useCallback((tab: PrintTab, availableTabs: PrintTab[], shipment?: ShipmentRow) => {
+    setPrintState({ initialTab: tab, tabs: availableTabs, shipment });
   }, []);
 
   if (printState) {
     return (
       <ShipmentPrintPage
-        vendorShipmentNo={MOCK_SHIPMENTS[0]?.vendorShipmentNo ?? '—'}
+        vendorShipmentNo={printState.shipment?.vendorShipmentNo ?? MOCK_SHIPMENTS[0]?.vendorShipmentNo ?? '—'}
+        shipment={printState.shipment}
         initialTab={printState.initialTab}
         tabs={printState.tabs}
         onBack={() => setPrintState(null)}
