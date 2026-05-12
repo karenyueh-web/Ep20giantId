@@ -6,7 +6,8 @@
  *   ─ 預覽區：白底 A4 比例卡片；中文出貨單 TAB 已實作真實文件，其他 TAB 保留佔位
  */
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import QRCode from 'qrcode';
 import IconsSolidIcSolarMultipleForwardLeftBroken from '@/imports/IconsSolidIcSolarMultipleForwardLeftBroken';
 import type { ShipmentRow, ShipmentDetailItem } from './ShipmentListPage';
 import { MOCK_VENDORS } from './VendorManagementTable';
@@ -45,48 +46,95 @@ export function ShipmentPrintPage({ vendorShipmentNo, shipment, onBack, initialT
   const isSticker = activeTab.includes('sticker');
 
   const handlePrint = () => {
-    window.print();
+    const printArea = document.querySelector('.print-area');
+    if (!printArea) { window.print(); return; }
+
+    // ① Clone 列印區域
+    const cloned = printArea.cloneNode(true) as HTMLElement;
+
+    // ② Canvas（QR Code）轉成 <img>
+    const canvases = printArea.querySelectorAll('canvas');
+    const clonedCanvases = cloned.querySelectorAll('canvas');
+    canvases.forEach((canvas, i) => {
+      const img = document.createElement('img');
+      img.src = (canvas as HTMLCanvasElement).toDataURL('image/png');
+      img.style.cssText = (canvas as HTMLElement).style.cssText;
+      img.width  = canvas.width;
+      img.height = canvas.height;
+      clonedCanvases[i]?.replaceWith(img);
+    });
+
+    // ③ 修改 cloned 的 inline style
+    cloned.querySelectorAll('.shipment-doc-wrapper').forEach(el => {
+      const e = el as HTMLElement;
+      e.style.padding = '0';
+      e.style.margin = '0';
+      e.style.border = 'none';
+      e.style.boxShadow = 'none';
+      e.style.borderRadius = '0';
+      e.style.maxWidth = '100%';
+      e.style.width = '100%';
+    });
+    cloned.querySelectorAll('[data-no-print]').forEach(el => {
+      const e = el as HTMLElement;
+      e.style.marginTop = 'auto';
+      e.style.marginBottom = '0';
+    });
+
+    // ④ 建立隱藏 iframe（不會被彈窗攔截）
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:0;height:0;border:none;';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (!doc) { document.body.removeChild(iframe); return; }
+
+    const htmlContent = `<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <title> </title>
+  <style>
+    @page { size: A4 portrait; margin: 12mm; }
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: white; font-family: 'Noto Sans TC','Noto Sans JP','微軟正黑體',sans-serif; }
+    table  { border-collapse: collapse; width: 100%; }
+    td, th { border: 1px solid #333; padding: 3px 5px; font-size: 13px; vertical-align: middle; }
+    .shipment-page-block {
+      page-break-after: always;
+      break-after: page;
+      min-height: 273mm;
+      display: flex;
+      flex-direction: column;
+    }
+    .shipment-page-block:last-child {
+      page-break-after: auto;
+      break-after: auto;
+      min-height: 0;
+    }
+    [data-no-print] { display: flex; }
+  </style>
+</head>
+<body>${cloned.innerHTML}</body>
+</html>`;
+
+    doc.open();
+    doc.write(htmlContent);
+    doc.close();
+
+    // ⑤ 等渲染完成後列印，列印結束移除 iframe
+    setTimeout(() => {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+      setTimeout(() => { document.body.removeChild(iframe); }, 500);
+    }, 300);
   };
 
   return (
     <>
-      {/* ── @media print 全域 CSS ── */}
-      <style>{`
-        @page { size: A4 portrait; margin: 12mm; }
 
-        @media print {
-          /* 隱藏全部，讓 visibility 可被子層覆蓋 */
-          body * { visibility: hidden !important; }
 
-          /* 列印區域及其所有子節點設為可見 */
-          .print-area,
-          .print-area * { visibility: visible !important; }
-
-          /* 固定在頁面左上角，撐滿整頁 */
-          .print-area {
-            position: fixed !important;
-            inset: 0 !important;
-            padding: 0 !important;
-            margin: 0 !important;
-            background: white !important;
-            display: block !important;
-            overflow: visible !important;
-          }
-
-          /* 移除預覽卡片的裝飾，撐滿寬度 */
-          .shipment-doc-wrapper {
-            box-shadow: none !important;
-            border: none !important;
-            border-radius: 0 !important;
-            max-width: 100% !important;
-            width: 100% !important;
-            margin: 0 !important;
-            padding: 8mm !important;
-          }
-        }
-      `}</style>
-
-      <div className="bg-white flex flex-col h-full relative rounded-[16px] shadow-[0px_0px_2px_0px_rgba(145,158,171,0.2),0px_12px_24px_0px_rgba(145,158,171,0.12)] w-full overflow-hidden">
+      <div className="print-wrapper bg-white flex flex-col h-full relative rounded-[16px] shadow-[0px_0px_2px_0px_rgba(145,158,171,0.2),0px_12px_24px_0px_rgba(145,158,171,0.12)] w-full overflow-hidden">
 
         {/* ── 工具列（no-print）──────────────────────────────────────────── */}
         <div className="shrink-0 border-b border-[rgba(145,158,171,0.08)] relative no-print">
@@ -156,7 +204,22 @@ function PrintPreviewArea({ isSticker, activeTab, shipment }: { isSticker: boole
         </div>
       );
     }
-    // 無資料時的提示
+    return (
+      <div className="flex flex-col items-center justify-center h-[300px] gap-[12px]">
+        <p className="font-['Public_Sans:Regular',sans-serif] text-[14px] text-[#919eab]">請先從列表選取出貨單後再列印</p>
+      </div>
+    );
+  }
+
+  // 英文出貨單
+  if (activeTab === 'en-shipment') {
+    if (shipment) {
+      return (
+        <div className="flex flex-col items-center gap-[24px] w-full">
+          <EnShipmentDoc shipment={shipment} />
+        </div>
+      );
+    }
     return (
       <div className="flex flex-col items-center justify-center h-[300px] gap-[12px]">
         <p className="font-['Public_Sans:Regular',sans-serif] text-[14px] text-[#919eab]">請先從列表選取出貨單後再列印</p>
@@ -193,6 +256,30 @@ function PrintPreviewArea({ isSticker, activeTab, shipment }: { isSticker: boole
   );
 }
 
+// ── QR Code Canvas 元件 ───────────────────────────────────────────────────────
+function QrCodeCanvas({ value, size = 62 }: { value: string; size?: number }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    if (!canvasRef.current) return;
+    if (!value) return;
+    QRCode.toCanvas(canvasRef.current, value, {
+      width: size,
+      margin: 1,
+      color: { dark: '#000000', light: '#ffffff' },
+    }).catch(console.error);
+  }, [value, size]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      width={size}
+      height={size}
+      style={{ display: 'block', flexShrink: 0 }}
+    />
+  );
+}
+
 // ── 中文出貨單（送貨單）HTML 模板 ────────────────────────────────────────────
 function ZhShipmentDoc({ shipment }: { shipment: ShipmentRow }) {
   const vendorFull = MOCK_VENDORS.find(v => v.code === shipment.vendorCode)?.fullName
@@ -203,7 +290,7 @@ function ZhShipmentDoc({ shipment }: { shipment: ShipmentRow }) {
   const totalBoxes = shipment.details.reduce((s, d) => s + d.totalBoxes, 0);
 
   // ── 分頁設定 ──────────────────────────────────────────────────────────────
-  const ROWS_PER_PAGE = 10; // 每頁最多幾筆明細
+  const ROWS_PER_PAGE = 15; // 每頁最多幾筆明細
   const pages: ShipmentDetailItem[][] = [];
   for (let i = 0; i < shipment.details.length; i += ROWS_PER_PAGE) {
     pages.push(shipment.details.slice(i, i + ROWS_PER_PAGE));
@@ -256,65 +343,61 @@ function ZhShipmentDoc({ shipment }: { shipment: ShipmentRow }) {
       {pages.map((pageRows, pageIndex) => {
         const isFirstPage = pageIndex === 0;
         const isLastPage  = pageIndex === pages.length - 1;
-        const emptyRows   = Math.max(0, ROWS_PER_PAGE - pageRows.length);
         const pageQty     = pageRows.reduce((s, d) => s + d.shipQty, 0);
         const pageBoxes   = pageRows.reduce((s, d) => s + d.totalBoxes, 0);
 
         return (
-          <div
-            key={pageIndex}
-            style={{ pageBreakAfter: isLastPage ? 'auto' : 'always', breakAfter: isLastPage ? 'auto' : 'page' }}
-          >
-            {/* ─ 文件表頭（第一頁顯示）─ */}
-            {isFirstPage && (
-              <>
-                {/* ① 公司名稱 */}
-                <div style={{ textAlign: 'center', fontSize: '18px', fontWeight: 'bold', textDecoration: 'underline', marginBottom: '10px', letterSpacing: '1px' }}>
-                  {vendorFull}
-                </div>
+          <div key={pageIndex} className="shipment-page-block">
+            {/* ─ 文件表頭（每頁皆顯示）─ */}
+            <>
+              {/* ① 公司名稱 */}
+              <div style={{ textAlign: 'center', fontSize: '18px', fontWeight: 'bold', textDecoration: 'underline', marginBottom: '10px', letterSpacing: '1px' }}>
+                {vendorFull}
+              </div>
 
-                {/* ②③ 工廠/日期（左）+ QR（右）+ 送貨單（絕對置中）*/}
-                <div style={{ position: 'relative', display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'stretch' }}>
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <div style={{ fontSize: '14px' }}>工廠:{plantCode}</div>
-                      <div style={{ fontSize: '14px', textAlign: 'right' }}>廠商出貨單號: {shipment.vendorShipmentNo}</div>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ fontSize: '14px' }}>日期：{shipment.deliveryDate}</div>
-                      <div style={{ fontSize: '14px', textAlign: 'right' }}>進項交貨單號: {shipment.sapDeliveryNo || '—'}</div>
-                    </div>
+              {/* ②③ 工廠/日期（左）+ QR（右）+ 送貨單（絕對置中）*/}
+              <div style={{ position: 'relative', display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'stretch' }}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <div style={{ fontSize: '14px' }}>工廠:{plantCode}</div>
+                    <div style={{ fontSize: '14px', textAlign: 'right' }}>廠商出貨單號: {shipment.vendorShipmentNo}</div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <div style={{ width: '58px', height: '58px', border: '1px solid #333', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', color: '#999', flexShrink: 0 }}>QR Code</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ fontSize: '14px' }}>日期：{shipment.deliveryDate}</div>
+                    <div style={{ fontSize: '14px', textAlign: 'right' }}>進項交貨單號: {shipment.sapDeliveryNo || '—'}</div>
                   </div>
-                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, textAlign: 'center', fontSize: '18px', fontWeight: 'bold', letterSpacing: '2px', pointerEvents: 'none' }}>送貨單</div>
                 </div>
-              </>
-            )}
+                {/* 每頁都顯示 QR Code */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '66px' }}>
+                  <QrCodeCanvas value={shipment.sapDeliveryNo || shipment.vendorShipmentNo} size={62} />
+                </div>
+                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, textAlign: 'center', fontSize: '18px', fontWeight: 'bold', letterSpacing: '2px', pointerEvents: 'none' }}>送貨單</div>
+              </div>
+            </>
 
             {/* ─ 表格（每頁） ─ */}
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <TableHeader />
 
-              {/* 明細資料列 */}
-              {pageRows.map((d: ShipmentDetailItem, i: number) => (
-                <tr key={i}>
-                  <td style={{ ...td, wordBreak: 'break-all' }}>{d.orderNo}-{d.orderSeq}</td>
-                  <td style={{ ...td, wordBreak: 'break-all' }}>{d.materialNo}</td>
-                  <td style={td}>{d.productName || d.materialNo}</td>
-                  <td style={{ ...td, textAlign: 'right'  }}>{d.shipQty}</td>
-                  <td style={{ ...td, textAlign: 'right'  }}>{d.totalBoxes}</td>
-                  <td style={{ ...td, textAlign: 'center' }}>{d.storageLocationCode || ''}</td>
-                  <td style={td}>{d.vendorMaterialNo || ''}</td>
-                  <td style={td}></td>
-                </tr>
-              ))}
-
-              {/* 空白補列（填滿至 ROWS_PER_PAGE）*/}
-              {Array.from({ length: emptyRows }).map((_, i) => (
-                <tr key={`e${i}`}>{[0,1,2,3,4,5,6,7].map(j => <td key={j} style={etd}></td>)}</tr>
-              ))}
+              {/* 明細資料列（每 5 筆加粗底框線） */}
+              {pageRows.map((d: ShipmentDetailItem, i: number) => {
+                const isFifthRow = (i + 1) % 5 === 0;
+                const rowTd: React.CSSProperties = isFifthRow
+                  ? { ...td, borderBottom: '2.5px solid #000' }
+                  : td;
+                return (
+                  <tr key={i}>
+                    <td style={{ ...rowTd, wordBreak: 'break-all' }}>{d.orderNo}-{d.orderSeq}</td>
+                    <td style={{ ...rowTd, wordBreak: 'break-all' }}>{d.materialNo}</td>
+                    <td style={rowTd}>{d.productName || d.materialNo}</td>
+                    <td style={{ ...rowTd, textAlign: 'right'  }}>{d.shipQty}</td>
+                    <td style={{ ...rowTd, textAlign: 'right'  }}>{d.totalBoxes}</td>
+                    <td style={{ ...rowTd, textAlign: 'center' }}>{d.storageLocationCode || ''}</td>
+                    <td style={rowTd}>{d.vendorMaterialNo || ''}</td>
+                    <td style={rowTd}></td>
+                  </tr>
+                );
+              })}
 
               {/* 小計（每頁結尾）*/}
               <tr>
@@ -333,10 +416,6 @@ function ZhShipmentDoc({ shipment }: { shipment: ShipmentRow }) {
                     <td style={{ ...td, textAlign: 'right', fontWeight: 'bold' }}>{totalBoxes}</td>
                     <td style={td}></td><td style={td}></td><td style={td}></td>
                   </tr>
-                  {/* 合計後空白列 */}
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <tr key={`lp${i}`}>{[0,1,2,3,4,5,6,7].map(j => <td key={j} style={etd}></td>)}</tr>
-                  ))}
                   {/* C：運送方式 */}
                   <tr>
                     <td style={{ ...td, textAlign: 'center', writingMode: 'vertical-rl', letterSpacing: '4px', verticalAlign: 'middle' }} rowSpan={4}>運送方式</td>
@@ -357,6 +436,200 @@ function ZhShipmentDoc({ shipment }: { shipment: ShipmentRow }) {
                 </>
               )}
             </table>
+
+            {/* ─ 分頁符號（非最後頁顯示，列印時隱藏）─ */}
+            {!isLastPage && (
+              <div
+                data-no-print="true"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '12px',
+                  margin: '20px 0', color: '#aaa', fontSize: '13px',
+                }}
+              >
+                <div style={{ flex: 1, height: '1px', background: 'repeating-linear-gradient(to right, #ccc 0, #ccc 6px, transparent 6px, transparent 12px)' }} />
+                <span style={{ padding: '2px 14px', color: '#777', fontSize: '13px', letterSpacing: '1px', whiteSpace: 'nowrap' }}>
+                  {pageIndex + 1} / {pages.length}
+                </span>
+                <div style={{ flex: 1, height: '1px', background: 'repeating-linear-gradient(to right, #ccc 0, #ccc 6px, transparent 6px, transparent 12px)' }} />
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+
+// ── 英文出貨單（Delivery Sheet）HTML 模板 ──────────────────────────────────────
+function EnShipmentDoc({ shipment }: { shipment: ShipmentRow }) {
+  const vendorFull = MOCK_VENDORS.find(v => v.code === shipment.vendorCode)?.fullName
+    ?? shipment.vendorName.replace(/\(.*\)/, '').trim();
+  const plantCode = shipment.details[0]?.plantCode ?? '';
+  const company   = shipment.details[0]?.company   ?? '';
+  const totalQty   = shipment.details.reduce((s, d) => s + d.shipQty, 0);
+  const totalBoxes = shipment.details.reduce((s, d) => s + d.totalBoxes, 0);
+
+  // ── 分頁設定 ──────────────────────────────────────────────────────────────
+  const ROWS_PER_PAGE = 15;
+  const pages: ShipmentDetailItem[][] = [];
+  for (let i = 0; i < shipment.details.length; i += ROWS_PER_PAGE) {
+    pages.push(shipment.details.slice(i, i + ROWS_PER_PAGE));
+  }
+  if (pages.length === 0) pages.push([]);
+
+  // ── 樣式常數 ──────────────────────────────────────────────────────────────
+  const border = '1px solid #333';
+  const td: React.CSSProperties  = { border, padding: '3px 5px', fontSize: '13px', verticalAlign: 'middle' };
+  const th: React.CSSProperties  = { ...td, fontWeight: 'bold', background: '#f0f0f0', textAlign: 'center' };
+
+  // ── 共用：A + B 表頭列（每頁重複） ────────────────────────────────────────
+  const TableHeader = () => (
+    <>
+      {/* A：Customer info */}
+      <tr>
+        <td style={{ ...td }} colSpan={2}>Customer:{company}</td>
+        <td style={{ ...td }} colSpan={2}>Cust shipment country :</td>
+        <td style={{ ...td }} colSpan={4}>Address : {shipment.deliveryAddress}</td>
+      </tr>
+      {/* B：Column headers */}
+      <tr>
+        <th style={{ ...th, width: '17%' }}>Purchase order</th>
+        <th style={{ ...th, width: '18%' }}>Part no</th>
+        <th style={{ ...th, width: '17%' }}>Part short name</th>
+        <th style={{ ...th, width: '8%', whiteSpace: 'nowrap' }}>Ship qty</th>
+        <th style={{ ...th, width: '6%', whiteSpace: 'nowrap' }}>Carton qty</th>
+        <th style={{ ...th, width: '10%' }}>Location</th>
+        <th style={{ ...th, width: '13%' }}>Vender part no.</th>
+        <th style={{ ...th, width: '11%' }}>Cus order No.</th>
+      </tr>
+    </>
+  );
+
+  return (
+    <div
+      className="shipment-doc-wrapper"
+      style={{
+        width: '100%', maxWidth: '660px', margin: '0 auto',
+        background: 'white', padding: '20px 24px',
+        fontFamily: "'Noto Sans TC','Noto Sans JP','微軟正黑體',sans-serif",
+        fontSize: '12px', color: '#000',
+        border: '1px solid rgba(145,158,171,0.2)',
+        borderRadius: '8px',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+        boxSizing: 'border-box',
+      }}
+    >
+      {pages.map((pageRows, pageIndex) => {
+        const isLastPage  = pageIndex === pages.length - 1;
+        const pageQty     = pageRows.reduce((s, d) => s + d.shipQty, 0);
+        const pageBoxes   = pageRows.reduce((s, d) => s + d.totalBoxes, 0);
+
+        return (
+          <div key={pageIndex} className="shipment-page-block">
+            {/* ─ Document header (every page) ─ */}
+            <>
+              {/* ① Company name */}
+              <div style={{ textAlign: 'center', fontSize: '18px', fontWeight: 'bold', textDecoration: 'underline', marginBottom: '10px', letterSpacing: '1px' }}>
+                {vendorFull}
+              </div>
+
+              {/* ②③ Plant/Date (left) + QR (right) + Delivery sheet (centered) */}
+              <div style={{ position: 'relative', display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'stretch' }}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <div style={{ fontSize: '14px' }}>Plant:{plantCode}</div>
+                    <div style={{ fontSize: '14px', textAlign: 'right' }}>Vender ship no:{shipment.vendorShipmentNo}</div>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ fontSize: '14px' }}>Onboard date : {shipment.deliveryDate}</div>
+                    <div style={{ fontSize: '14px', textAlign: 'right' }}>Inbound Delivery:{shipment.sapDeliveryNo || '—'}</div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '66px' }}>
+                  <QrCodeCanvas value={shipment.sapDeliveryNo || shipment.vendorShipmentNo} size={62} />
+                </div>
+                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, textAlign: 'center', fontSize: '18px', fontWeight: 'bold', letterSpacing: '0px', pointerEvents: 'none' }}>Delivery sheet</div>
+              </div>
+            </>
+
+            {/* ─ Table (per page) ─ */}
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <TableHeader />
+
+              {/* Data rows (thick border every 5 rows) */}
+              {pageRows.map((d: ShipmentDetailItem, i: number) => {
+                const isFifthRow = (i + 1) % 5 === 0;
+                const rowTd: React.CSSProperties = isFifthRow
+                  ? { ...td, borderBottom: '2.5px solid #000' }
+                  : td;
+                return (
+                  <tr key={i}>
+                    <td style={{ ...rowTd, wordBreak: 'break-all' }}>{d.orderNo}-{d.orderSeq}</td>
+                    <td style={{ ...rowTd, wordBreak: 'break-all' }}>{d.materialNo}</td>
+                    <td style={rowTd}>{d.productName || d.materialNo}</td>
+                    <td style={{ ...rowTd, textAlign: 'right'  }}>{d.shipQty}</td>
+                    <td style={{ ...rowTd, textAlign: 'right'  }}>{d.totalBoxes}</td>
+                    <td style={{ ...rowTd, textAlign: 'center' }}>{d.storageLocationCode || ''}</td>
+                    <td style={rowTd}>{d.vendorMaterialNo || ''}</td>
+                    <td style={rowTd}></td>
+                  </tr>
+                );
+              })}
+
+              {/* Subtotal (every page) */}
+              <tr>
+                <td style={{ ...td, textAlign: 'right', fontWeight: 'bold' }} colSpan={3}>Subtotal</td>
+                <td style={{ ...td, textAlign: 'right', fontWeight: 'bold' }}>{pageQty}</td>
+                <td style={{ ...td, textAlign: 'right', fontWeight: 'bold' }}>{pageBoxes}</td>
+                <td style={td}></td><td style={td}></td><td style={td}></td>
+              </tr>
+
+              {/* Total + Ship type (last page only) */}
+              {isLastPage && (
+                <>
+                  <tr>
+                    <td style={{ ...td, textAlign: 'right', fontWeight: 'bold' }} colSpan={3}>Total</td>
+                    <td style={{ ...td, textAlign: 'right', fontWeight: 'bold' }}>{totalQty}</td>
+                    <td style={{ ...td, textAlign: 'right', fontWeight: 'bold' }}>{totalBoxes}</td>
+                    <td style={td}></td><td style={td}></td><td style={td}></td>
+                  </tr>
+                  <tr>
+                    <td style={{ ...td, textAlign: 'center', verticalAlign: 'middle', lineHeight: '1.2', fontSize: '12px' }} rowSpan={4}><div>Ship</div><div>type</div></td>
+                    <td style={{ ...td, height: '26px' }}>1  Sea</td>
+                    <td style={{ ...td, textAlign: 'center', verticalAlign: 'top', padding: 0 }} colSpan={2} rowSpan={4}>
+                      <div style={{ borderBottom: '1px solid #333', height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Receiver signature</div>
+                    </td>
+                    <td style={{ ...td, textAlign: 'center', verticalAlign: 'top', padding: 0 }} colSpan={2} rowSpan={4}>
+                      <div style={{ borderBottom: '1px solid #333', height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Remark</div>
+                    </td>
+                    <td style={{ ...td, textAlign: 'center', verticalAlign: 'top', padding: 0 }} colSpan={2} rowSpan={4}>
+                      <div style={{ borderBottom: '1px solid #333', height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Shipping approved</div>
+                    </td>
+                  </tr>
+                  <tr><td style={td}>2  Air</td></tr>
+                  <tr><td style={td}>3  Truck</td></tr>
+                  <tr><td style={td}>4</td></tr>
+                </>
+              )}
+            </table>
+
+            {/* ─ Page separator (hidden during print) ─ */}
+            {!isLastPage && (
+              <div
+                data-no-print="true"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '12px',
+                  margin: '20px 0', color: '#aaa', fontSize: '13px',
+                }}
+              >
+                <div style={{ flex: 1, height: '1px', background: 'repeating-linear-gradient(to right, #ccc 0, #ccc 6px, transparent 6px, transparent 12px)' }} />
+                <span style={{ padding: '2px 14px', color: '#777', fontSize: '13px', letterSpacing: '1px', whiteSpace: 'nowrap' }}>
+                  {pageIndex + 1} / {pages.length}
+                </span>
+                <div style={{ flex: 1, height: '1px', background: 'repeating-linear-gradient(to right, #ccc 0, #ccc 6px, transparent 6px, transparent 12px)' }} />
+              </div>
+            )}
           </div>
         );
       })}

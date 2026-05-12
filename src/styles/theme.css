@@ -363,3 +363,5 @@
 *:focus-visible {
   outline: none !important;
 }
+
+/* ── 列印樣式由各頁面元件的 inline <style> 標籤各自管理 ──────────────────── */
