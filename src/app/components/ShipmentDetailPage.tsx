@@ -65,6 +65,7 @@ export interface ShipmentDetailRow {
   productName?: string;
   company?: string;
   plantCode?: string;
+  specification?: string; // 規格（品名規格描述，來自原始訂單）
 }
 
 /** CSV 匯入時的預填資料（由 ShipmentCreatePage 的 handleConfirmUpload 傳入） */
@@ -519,6 +520,7 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
         productName: o.materialNo || '',
         company: o.company ?? '',
         plantCode: o.plantCode ?? '',
+        specification: o.specification ?? '',
       };
     });
   });
@@ -699,6 +701,7 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
         company: r.company ?? '',
         plantCode: r.plantCode ?? '',
         vendorMaterialNo: r.vendorMaterialNo,
+        specification: r.specification ?? '',
       })),
       status: 'open' as const,
     };

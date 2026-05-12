@@ -126,6 +126,7 @@ export interface BoxLineRow {
   deliveryAddress: string; // 出貨地址
   storageLocation: string; // 儲存地點代碼
   plantCode: string;       // 工廠代碼
+  specification: string;   // 規格（品名規格描述）
 }
 
 // ── Mock 資料展開 ──────────────────────────────────────────────────────────────
@@ -205,8 +206,9 @@ export function buildBoxRows(shipments: ShipmentRow[]): BoxLineRow[] {
           sapDeliveryNo: ship.sapDeliveryNo,
           deliveryDate: ship.deliveryDate,
           deliveryAddress: ship.deliveryAddress,
-          storageLocation: '',
-          plantCode: 'GTM1',
+          storageLocation: d.storageLocationCode || '',
+          plantCode: d.plantCode || 'GTM1',
+          specification: d.specification || '',
         });
       }
     }

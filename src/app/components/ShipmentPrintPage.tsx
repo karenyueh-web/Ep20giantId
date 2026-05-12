@@ -10,6 +10,7 @@ import { useState, useEffect, useRef } from 'react';
 import QRCode from 'qrcode';
 import IconsSolidIcSolarMultipleForwardLeftBroken from '@/imports/IconsSolidIcSolarMultipleForwardLeftBroken';
 import type { ShipmentRow, ShipmentDetailItem } from './ShipmentListPage';
+import type { BoxLineRow } from './ShipmentShippingInquiryPage';
 import { MOCK_VENDORS } from './VendorManagementTable';
 
 // ── TAB 定義 ─────────────────────────────────────────────────────────────────
@@ -31,6 +32,7 @@ const PRINT_TABS: TabItem[] = [
 interface ShipmentPrintPageProps {
   vendorShipmentNo: string;
   shipment?: ShipmentRow;
+  selectedBoxRows?: BoxLineRow[];
   onBack: () => void;
   initialTab?: PrintTab;
   /** 限制可顯示的 TAB，預設全部 */
@@ -38,7 +40,7 @@ interface ShipmentPrintPageProps {
 }
 
 // ── 主元件 ───────────────────────────────────────────────────────────────────
-export function ShipmentPrintPage({ vendorShipmentNo, shipment, onBack, initialTab = 'zh-shipment', tabs }: ShipmentPrintPageProps) {
+export function ShipmentPrintPage({ vendorShipmentNo, shipment, selectedBoxRows, onBack, initialTab = 'zh-shipment', tabs }: ShipmentPrintPageProps) {
   const availableTabs = tabs ? PRINT_TABS.filter(t => tabs.includes(t.id)) : PRINT_TABS;
   const resolvedInitial = availableTabs.find(t => t.id === initialTab)?.id ?? availableTabs[0]?.id ?? 'zh-shipment';
   const [activeTab, setActiveTab] = useState<PrintTab>(resolvedInitial);
@@ -95,7 +97,7 @@ export function ShipmentPrintPage({ vendorShipmentNo, shipment, onBack, initialT
   <meta charset="UTF-8" />
   <title> </title>
   <style>
-    @page { size: A4 portrait; margin: 12mm; }
+    @page { size: A4 portrait; margin: ${isSticker ? '0mm' : '12mm'}; }
     *, *::before, *::after { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; background: white; font-family: 'Noto Sans TC','Noto Sans JP','微軟正黑體',sans-serif; }
     table  { border-collapse: collapse; width: 100%; }
@@ -185,7 +187,7 @@ export function ShipmentPrintPage({ vendorShipmentNo, shipment, onBack, initialT
 
         {/* ── 預覽區 ──────────────────────────────────────────────────────── */}
         <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar bg-[#f4f6f8] px-[32px] py-[28px] print-area">
-          <PrintPreviewArea isSticker={isSticker} activeTab={activeTab} shipment={shipment} />
+          <PrintPreviewArea isSticker={isSticker} activeTab={activeTab} shipment={shipment} selectedBoxRows={selectedBoxRows} />
         </div>
       </div>
     </>
@@ -193,7 +195,7 @@ export function ShipmentPrintPage({ vendorShipmentNo, shipment, onBack, initialT
 }
 
 // ── 預覽區路由 ────────────────────────────────────────────────────────────────
-function PrintPreviewArea({ isSticker, activeTab, shipment }: { isSticker: boolean; activeTab: PrintTab; shipment?: ShipmentRow }) {
+function PrintPreviewArea({ isSticker, activeTab, shipment, selectedBoxRows }: { isSticker: boolean; activeTab: PrintTab; shipment?: ShipmentRow; selectedBoxRows?: BoxLineRow[] }) {
 
   // 中文出貨單：有資料就顯示真實文件
   if (activeTab === 'zh-shipment') {
@@ -217,6 +219,29 @@ function PrintPreviewArea({ isSticker, activeTab, shipment }: { isSticker: boole
       return (
         <div className="flex flex-col items-center gap-[24px] w-full">
           <EnShipmentDoc shipment={shipment} />
+        </div>
+      );
+    }
+    return (
+      <div className="flex flex-col items-center justify-center h-[300px] gap-[12px]">
+        <p className="font-['Public_Sans:Regular',sans-serif] text-[14px] text-[#919eab]">請先從列表選取出貨單後再列印</p>
+      </div>
+    );
+  }
+
+  // 中文外箱貼紙
+  if (activeTab === 'zh-sticker') {
+    // 優先使用已傳入的 selectedBoxRows，否則從 shipment 自動展開
+    const boxRows = (selectedBoxRows && selectedBoxRows.length > 0)
+      ? selectedBoxRows
+      : shipment
+        ? expandShipmentToBoxRows(shipment)
+        : [];
+
+    if (boxRows.length > 0) {
+      return (
+        <div className="flex flex-col items-center gap-[24px] w-full">
+          <ZhStickerDoc boxRows={boxRows} />
         </div>
       );
     }
@@ -637,6 +662,260 @@ function EnShipmentDoc({ shipment }: { shipment: ShipmentRow }) {
   );
 }
 
+
+// ── 從出貨單展開為箱級別資料（本地輕量版，避免 import 副作用）───────────────
+let _stickerBarcodeCounter = 1;
+function expandShipmentToBoxRows(ship: ShipmentRow): BoxLineRow[] {
+  _stickerBarcodeCounter = 1;
+  const rows: BoxLineRow[] = [];
+  for (const d of ship.details) {
+    const boxes = d.boxes ?? [];
+    for (const box of boxes) {
+      const bc = String(_stickerBarcodeCounter++).padStart(10, '0') + 'S';
+      rows.push({
+        id: `${ship.id}-${d.itemNo}-${box.boxNo}`,
+        barcode: bc,
+        boxQty: box.qty,
+        labelSeqNo: box.boxNo,
+        totalBoxes: boxes.length,
+        itemNo: d.itemNo,
+        orderDocSeq: `${d.orderNo}${d.orderSeq}`,
+        orderNo: d.orderNo,
+        orderSeq: d.orderSeq,
+        materialNo: d.materialNo,
+        vendorMaterialNo: d.vendorMaterialNo || 'TEMPPRICE',
+        productName: d.productName || '',
+        customerMaterialNo: '',
+        customerOrderNo: '',
+        shipQty: d.shipQty,
+        netWeight: d.netWeight,
+        grossWeight: d.grossWeight,
+        weightUnit: d.weightUnit,
+        countryOfOrigin: d.countryOfOrigin,
+        vendorName: ship.vendorName,
+        vendorShipmentNo: ship.vendorShipmentNo,
+        sapDeliveryNo: ship.sapDeliveryNo,
+        deliveryDate: ship.deliveryDate,
+        deliveryAddress: ship.deliveryAddress,
+        storageLocation: d.storageLocationCode || '',
+        plantCode: d.plantCode || 'GTM1',
+        specification: d.specification || '',
+      });
+    }
+  }
+  return rows;
+}
+
+// ── 原產國家 → Made in XX 轉換 ────────────────────────────────────────────────
+const COUNTRY_MADE_IN: Record<string, string> = {
+  TW: 'Made in Taiwan', CN: 'Made in China', JP: 'Made in Japan',
+  US: 'Made in USA', DE: 'Made in Germany', KR: 'Made in Korea',
+  IT: 'Made in Italy', FR: 'Made in France', VN: 'Made in Vietnam',
+  TH: 'Made in Thailand', MY: 'Made in Malaysia', ID: 'Made in Indonesia',
+};
+function getMadeIn(code: string): string {
+  return COUNTRY_MADE_IN[code] ?? (code ? `Made in ${code}` : '—');
+}
+
+// ── 中文外箱貼紙文件 ──────────────────────────────────────────────────────────
+// A4 = 210mm × 297mm → 切成 2×3 = 6 等分區塊
+// 每區塊之間留 4mm 間距，頁面邊距 5mm
+// 區塊寬 = (210 - 5*2 - 4) / 2 = 98mm
+// 區塊高 = (297 - 5*2 - 4*2) / 3 = 93mm
+// 貼紙置入區塊中，填滿整個區塊
+
+const STICKER_PAGE_MARGIN  = '5mm';
+const STICKER_GAP          = '4mm';
+const STICKER_COL_W        = '98mm';   // (210 - 10 - 4) / 2
+const STICKER_ROW_H        = '93mm';   // (297 - 10 - 8) / 3
+
+function ZhStickerDoc({ boxRows }: { boxRows: BoxLineRow[] }) {
+  const STICKERS_PER_PAGE = 6; // 2 columns × 3 rows
+  const pages: BoxLineRow[][] = [];
+  for (let i = 0; i < boxRows.length; i += STICKERS_PER_PAGE) {
+    pages.push(boxRows.slice(i, i + STICKERS_PER_PAGE));
+  }
+  if (pages.length === 0) pages.push([]);
+
+  return (
+    <div
+      className="shipment-doc-wrapper"
+      style={{
+        width: '210mm', margin: '0 auto', background: 'white',
+        fontFamily: "'Noto Sans TC','Noto Sans JP','微軟正黑體',sans-serif",
+        fontSize: '10px', color: '#000', boxSizing: 'border-box',
+      }}
+    >
+      {pages.map((pageStickers, pageIdx) => {
+        const isLastPage = pageIdx === pages.length - 1;
+        // 補足空格到 6 張
+        const cells = [...pageStickers];
+        while (cells.length < STICKERS_PER_PAGE) cells.push(null as any);
+
+        return (
+          <div key={pageIdx} className="shipment-page-block">
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: `${STICKER_COL_W} ${STICKER_COL_W}`,
+              gridTemplateRows: `${STICKER_ROW_H} ${STICKER_ROW_H} ${STICKER_ROW_H}`,
+              gap: STICKER_GAP,
+              width: '210mm',
+              height: '297mm',
+              padding: STICKER_PAGE_MARGIN,
+              boxSizing: 'border-box',
+            }}>
+              {cells.map((row, idx) => (
+                <div key={idx} style={{
+                  width: '100%', height: '100%', overflow: 'hidden',
+                  display: 'flex', alignItems: 'stretch', justifyContent: 'stretch',
+                }}>
+                  {row ? <SingleSticker row={row} /> : <div style={{ width: '100%', height: '100%' }} />}
+                </div>
+              ))}
+            </div>
+
+            {/* 分頁符號（非最後頁顯示，列印時隱藏） */}
+            {!isLastPage && (
+              <div
+                data-no-print="true"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '12px',
+                  margin: '12px 0', color: '#aaa', fontSize: '13px',
+                }}
+              >
+                <div style={{ flex: 1, height: '1px', background: 'repeating-linear-gradient(to right, #ccc 0, #ccc 6px, transparent 6px, transparent 12px)' }} />
+                <span style={{ padding: '2px 14px', color: '#777', fontSize: '13px', letterSpacing: '1px', whiteSpace: 'nowrap' }}>
+                  {pageIdx + 1} / {pages.length}
+                </span>
+                <div style={{ flex: 1, height: '1px', background: 'repeating-linear-gradient(to right, #ccc 0, #ccc 6px, transparent 6px, transparent 12px)' }} />
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── 單張貼紙 ──────────────────────────────────────────────────────────────────
+function SingleSticker({ row }: { row: BoxLineRow }) {
+  // 格式組合
+  const stickerShipNo = `${row.vendorShipmentNo}-${String(row.itemNo).padStart(5, '0')}`;
+  const stickerStorage = `${row.storageLocation} ${row.plantCode}`.trim();
+  const stickerOrderNo = `${row.orderNo}-${String(row.orderSeq).padStart(6, '0')}`;
+  const madeIn = getMadeIn(row.countryOfOrigin);
+
+  const border = '1px solid #000';
+  const cellBase: React.CSSProperties = {
+    border, padding: '1px 4px', fontSize: '9px', verticalAlign: 'middle',
+    lineHeight: '1.3', wordBreak: 'break-all', overflow: 'hidden',
+  };
+  const labelStyle: React.CSSProperties = { ...cellBase, fontWeight: 'normal', whiteSpace: 'nowrap', color: '#333', width: '22%' };
+  const valueStyle: React.CSSProperties = { ...cellBase, fontWeight: 'normal' };
+
+  return (
+    <table style={{
+      width: '100%', height: '100%', borderCollapse: 'collapse',
+      tableLayout: 'fixed', border: '2px solid #000',
+    }}>
+      <colgroup>
+        <col style={{ width: '22%' }} />
+        <col style={{ width: '28%' }} />
+        <col style={{ width: '22%' }} />
+        <col style={{ width: '28%' }} />
+      </colgroup>
+      <tbody>
+        {/* Row 1: 出貨單號 + 出貨日 */}
+        <tr>
+          <td style={labelStyle}>出貨單號</td>
+          <td style={{ ...valueStyle, fontWeight: 'bold', fontSize: '9px' }}>{stickerShipNo}</td>
+          <td style={labelStyle}>出貨日</td>
+          <td style={valueStyle}>{row.deliveryDate}</td>
+        </tr>
+
+        {/* Row 2: 料號（粗體） */}
+        <tr>
+          <td style={labelStyle}>料號</td>
+          <td style={{ ...valueStyle, fontWeight: 'bold', fontSize: '10px' }} colSpan={3}>{row.materialNo}</td>
+        </tr>
+
+        {/* Row 3: 品名規格描述（全寬） */}
+        <tr>
+          <td style={{ ...valueStyle, fontSize: '8.5px', color: '#222' }} colSpan={4}>
+            {row.specification || row.productName || ''}
+          </td>
+        </tr>
+
+        {/* Row 4: 客戶料號 | 淨重 */}
+        <tr>
+          <td style={labelStyle}>客戶料號</td>
+          <td style={valueStyle}>{row.customerMaterialNo || ''}</td>
+          <td style={labelStyle}>淨重</td>
+          <td style={valueStyle}>{row.netWeight}{row.netWeight ? 'kg' : ''}</td>
+        </tr>
+
+        {/* Row 5: 客戶訂單號碼 | 毛重 */}
+        <tr>
+          <td style={labelStyle}>客戶訂單號碼</td>
+          <td style={valueStyle}>{row.customerOrderNo || ''}</td>
+          <td style={labelStyle}>毛重</td>
+          <td style={valueStyle}>{row.grossWeight}{row.grossWeight ? 'kg' : ''}</td>
+        </tr>
+
+        {/* Row 6: 廠商料號 */}
+        <tr>
+          <td style={labelStyle}>廠商料號</td>
+          <td style={valueStyle} colSpan={3}>{row.vendorMaterialNo || ''}</td>
+        </tr>
+
+        {/* Row 7: 廠商名稱 | 儲存地點 */}
+        <tr>
+          <td style={labelStyle}>廠商名稱</td>
+          <td style={valueStyle}>{row.vendorName.replace(/\(.*\)/, '').trim()}</td>
+          <td style={labelStyle}>儲存地點</td>
+          <td style={valueStyle}>{stickerStorage}</td>
+        </tr>
+
+        {/* Row 8: 出貨目的地 */}
+        <tr>
+          <td style={labelStyle}>出貨目的地</td>
+          <td style={{ ...valueStyle, fontSize: '8px' }} colSpan={3}>{row.deliveryAddress}</td>
+        </tr>
+
+        {/* Row 9: 訂單號碼 */}
+        <tr>
+          <td style={labelStyle}>訂單號碼</td>
+          <td style={{ ...valueStyle, fontWeight: 'bold' }} colSpan={3}>{stickerOrderNo}</td>
+        </tr>
+
+        {/* Row 10-11: QR Code + 數量區 */}
+        <tr>
+          <td style={{ ...cellBase, padding: 0, textAlign: 'center', verticalAlign: 'top' }} rowSpan={2}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '2px' }}>
+              <QrCodeCanvas value={row.barcode || row.sapDeliveryNo} size={48} />
+              <div style={{ fontSize: '7px', marginTop: '1px', wordBreak: 'break-all', lineHeight: '1.1' }}>{row.barcode}</div>
+            </div>
+          </td>
+          <td style={{ ...labelStyle, textAlign: 'center', fontWeight: 'bold' }}>總數量</td>
+          <td style={{ ...labelStyle, textAlign: 'center', fontWeight: 'bold' }}>總件數</td>
+          <td style={{ ...labelStyle, textAlign: 'center', fontWeight: 'bold' }}>本件數量</td>
+        </tr>
+        <tr>
+          <td style={{ ...valueStyle, textAlign: 'center', fontSize: '14px', fontWeight: 'bold' }}>{row.shipQty}</td>
+          <td style={{ ...valueStyle, textAlign: 'center', fontSize: '14px', fontWeight: 'bold' }}>{row.labelSeqNo}/{row.totalBoxes}</td>
+          <td style={{ ...valueStyle, textAlign: 'center', fontSize: '14px', fontWeight: 'bold' }}>{row.boxQty}</td>
+        </tr>
+
+        {/* Row 12: Made in XX */}
+        <tr>
+          <td style={{ ...cellBase, textAlign: 'center', fontSize: '10px', fontWeight: 'bold', letterSpacing: '0.5px' }} colSpan={4}>
+            {madeIn}
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  );
+}
 
 
 // ── 保留原有骨架元件（其他 TAB 用） ──────────────────────────────────────────

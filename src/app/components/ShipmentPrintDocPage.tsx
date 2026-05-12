@@ -56,6 +56,7 @@ interface PrintState {
   initialTab: PrintTab;
   tabs: PrintTab[];
   shipment?: ShipmentRow;
+  selectedBoxRows?: BoxLineRow[];
 }
 
 
@@ -104,7 +105,7 @@ interface StickerTabConfig {
   showStoButton: boolean;
 }
 
-function StickerTab({ config, onPrint }: { config: StickerTabConfig; onPrint: (tab: PrintTab, availableTabs: PrintTab[]) => void }) {
+function StickerTab({ config, onPrint }: { config: StickerTabConfig; onPrint: (tab: PrintTab, availableTabs: PrintTab[], shipment?: ShipmentRow, boxRows?: BoxLineRow[]) => void }) {
   const [showStoPage, setShowStoPage] = useState(false);
   const allRows = useMemo(() => buildBoxRows(MOCK_SHIPMENTS), []);
 
@@ -308,7 +309,8 @@ function StickerTab({ config, onPrint }: { config: StickerTabConfig; onPrint: (t
               const availableTabs: PrintTab[] = config.showEnglishSticker
                 ? ['zh-sticker', 'en-sticker']
                 : ['zh-sticker'];
-              onPrint('zh-sticker', availableTabs);
+              const selectedRows = allRows.filter(r => selectedIds.has(r.id));
+              onPrint('zh-sticker', availableTabs, undefined, selectedRows);
             }}
             className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] text-[#004680] leading-[24px] whitespace-nowrap cursor-pointer select-none px-[10px] py-[16px] hover:opacity-70 transition-opacity"
           >中文外箱貼紙</span>
@@ -316,7 +318,10 @@ function StickerTab({ config, onPrint }: { config: StickerTabConfig; onPrint: (t
             <>
               <span className="text-[rgba(145,158,171,0.4)] select-none">|</span>
               <span
-                onClick={() => onPrint('en-sticker', ['zh-sticker', 'en-sticker'])}
+                onClick={() => {
+                  const selectedRows = allRows.filter(r => selectedIds.has(r.id));
+                  onPrint('en-sticker', ['zh-sticker', 'en-sticker'], undefined, selectedRows);
+                }}
                 className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] text-[#004680] leading-[24px] whitespace-nowrap cursor-pointer select-none px-[10px] py-[16px] hover:opacity-70 transition-opacity"
               >英文外箱貼紙</span>
             </>
@@ -710,8 +715,8 @@ export function ShipmentPrintDocPage() {
   const [printState, setPrintState] = useState<PrintState | null>(null);
 
   // onPrint 同時傳入可用的 PrintTab 列表（由 StickerTab 依 config 決定）
-  const handlePrint = useCallback((tab: PrintTab, availableTabs: PrintTab[], shipment?: ShipmentRow) => {
-    setPrintState({ initialTab: tab, tabs: availableTabs, shipment });
+  const handlePrint = useCallback((tab: PrintTab, availableTabs: PrintTab[], shipment?: ShipmentRow, boxRows?: BoxLineRow[]) => {
+    setPrintState({ initialTab: tab, tabs: availableTabs, shipment, selectedBoxRows: boxRows });
   }, []);
 
   if (printState) {
@@ -719,6 +724,7 @@ export function ShipmentPrintDocPage() {
       <ShipmentPrintPage
         vendorShipmentNo={printState.shipment?.vendorShipmentNo ?? MOCK_SHIPMENTS[0]?.vendorShipmentNo ?? '—'}
         shipment={printState.shipment}
+        selectedBoxRows={printState.selectedBoxRows}
         initialTab={printState.initialTab}
         tabs={printState.tabs}
         onBack={() => setPrintState(null)}
