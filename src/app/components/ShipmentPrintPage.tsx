@@ -79,57 +79,56 @@ export function ShipmentPrintPage({ vendorShipmentNo, shipment, selectedBoxRows,
     });
     cloned.querySelectorAll('[data-no-print]').forEach(el => {
       const e = el as HTMLElement;
-      e.style.marginTop = 'auto';
-      e.style.marginBottom = '0';
+      e.style.display = 'none';
     });
 
-    // ④ 建立隱藏 iframe（不會被彈窗攔截）
+    // ④ 組裝列印 HTML（所有條件式先抽離為變數，避免 template literal parse error）
+    const pageMargin     = isSticker ? '0mm' : '12mm';
+    const pageBlockCss   = isSticker
+      ? 'height: 297mm; overflow: hidden;'
+      : 'min-height: 273mm; display: flex; flex-direction: column;';
+    const pageBlockLastCss = isSticker ? 'height: 297mm;' : 'min-height: 0;';
+    const bodyInner      = cloned.innerHTML;
+
+    const htmlContent = [
+      '<!DOCTYPE html>',
+      '<html lang="zh-TW">',
+      '<head>',
+      '  <meta charset="UTF-8" />',
+      '  <title> </title>',
+      '  <style>',
+      '    @page { size: A4 portrait; margin: ' + pageMargin + '; }',
+      '    *, *::before, *::after { box-sizing: border-box; }',
+      '    html, body { margin: 0; padding: 0; background: white; font-family: sans-serif; }',
+      '    table { border-collapse: collapse; width: 100%; }',
+      '    td, th { border: 1px solid #333; padding: 3px 5px; font-size: 13px; vertical-align: middle; }',
+      '    .shipment-page-block { page-break-after: always; break-after: page; ' + pageBlockCss + ' }',
+      '    .shipment-page-block:last-child { page-break-after: auto; break-after: auto; ' + pageBlockLastCss + ' }',
+      '    [data-no-print] { display: none; }',
+      '  </style>',
+      '</head>',
+      '<body>' + bodyInner + '</body>',
+      '</html>',
+    ].join('\n');
+
+
+    // ⑤ 建立 A4 尺寸的隱藏 iframe（給予真實尺寸讓瀏覽器正確計算 mm 單位）
     const iframe = document.createElement('iframe');
-    iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:0;height:0;border:none;';
+    iframe.style.cssText = 'position:fixed;left:-10000px;top:0;width:794px;height:1123px;border:none;pointer-events:none;';
     document.body.appendChild(iframe);
 
     const doc = iframe.contentDocument || iframe.contentWindow?.document;
     if (!doc) { document.body.removeChild(iframe); return; }
 
-    const htmlContent = `<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-  <meta charset="UTF-8" />
-  <title> </title>
-  <style>
-    @page { size: A4 portrait; margin: ${isSticker ? '0mm' : '12mm'}; }
-    *, *::before, *::after { box-sizing: border-box; }
-    html, body { margin: 0; padding: 0; background: white; font-family: 'Noto Sans TC','Noto Sans JP','微軟正黑體',sans-serif; }
-    table  { border-collapse: collapse; width: 100%; }
-    td, th { border: 1px solid #333; padding: 3px 5px; font-size: 13px; vertical-align: middle; }
-    .shipment-page-block {
-      page-break-after: always;
-      break-after: page;
-      min-height: 273mm;
-      display: flex;
-      flex-direction: column;
-    }
-    .shipment-page-block:last-child {
-      page-break-after: auto;
-      break-after: auto;
-      min-height: 0;
-    }
-    [data-no-print] { display: flex; }
-  </style>
-</head>
-<body>${cloned.innerHTML}</body>
-</html>`;
-
     doc.open();
     doc.write(htmlContent);
     doc.close();
 
-    // ⑤ 等渲染完成後列印，列印結束移除 iframe
     setTimeout(() => {
       iframe.contentWindow?.focus();
       iframe.contentWindow?.print();
-      setTimeout(() => { document.body.removeChild(iframe); }, 500);
-    }, 300);
+      setTimeout(() => { document.body.removeChild(iframe); }, 1000);
+    }, 400);
   };
 
   return (
@@ -718,16 +717,18 @@ function getMadeIn(code: string): string {
 }
 
 // ── 中文外箱貼紙文件 ──────────────────────────────────────────────────────────
-// A4 = 210mm × 297mm → 切成 2×3 = 6 等分區塊
-// 每區塊之間留 4mm 間距，頁面邊距 5mm
-// 區塊寬 = (210 - 5*2 - 4) / 2 = 98mm
-// 區塊高 = (297 - 5*2 - 4*2) / 3 = 93mm
-// 貼紙置入區塊中，填滿整個區塊
+// A4 = 210mm × 297mm，2 欄 × 3 列 = 6 張貼紙
+// 每張貼紙 80mm × 80mm 正方形（實際列印 8cm × 8cm）
+// 上下邊距 10mm，左右邊距 12mm，欄間距 25mm，列間距 19mm
+// 總寬 = 12 + 80 + 25 + 80 + 12 = 209mm（A4 210mm 內）
+// 總高 = 10 + 80 + 19 + 80 + 19 + 80 + 10 = 298mm（A4 297mm 內）
 
-const STICKER_PAGE_MARGIN  = '5mm';
-const STICKER_GAP          = '4mm';
-const STICKER_COL_W        = '98mm';   // (210 - 10 - 4) / 2
-const STICKER_ROW_H        = '93mm';   // (297 - 10 - 8) / 3
+const STICKER_PADDING_V    = '10mm';   // 上下邊距
+const STICKER_PADDING_H    = '12mm';   // 左右邊距
+const STICKER_COL_GAP      = '25mm';   // 欄間距（水平）
+const STICKER_ROW_GAP      = '19mm';   // 列間距（垂直）
+const STICKER_COL_W        = '80mm';   // 8cm 正方形
+const STICKER_ROW_H        = '80mm';   // 8cm 正方形
 
 function ZhStickerDoc({ boxRows }: { boxRows: BoxLineRow[] }) {
   const STICKERS_PER_PAGE = 6; // 2 columns × 3 rows
@@ -758,10 +759,11 @@ function ZhStickerDoc({ boxRows }: { boxRows: BoxLineRow[] }) {
               display: 'grid',
               gridTemplateColumns: `${STICKER_COL_W} ${STICKER_COL_W}`,
               gridTemplateRows: `${STICKER_ROW_H} ${STICKER_ROW_H} ${STICKER_ROW_H}`,
-              gap: STICKER_GAP,
+              columnGap: STICKER_COL_GAP,
+              rowGap: STICKER_ROW_GAP,
               width: '210mm',
               height: '297mm',
-              padding: STICKER_PAGE_MARGIN,
+              padding: `${STICKER_PADDING_V} ${STICKER_PADDING_H}`,
               boxSizing: 'border-box',
             }}>
               {cells.map((row, idx) => (
@@ -807,10 +809,10 @@ function SingleSticker({ row }: { row: BoxLineRow }) {
 
   const border = '1px solid #000';
   const cellBase: React.CSSProperties = {
-    border, padding: '1px 4px', fontSize: '9px', verticalAlign: 'middle',
+    border, padding: '1px 4px', fontSize: '11px', verticalAlign: 'middle',
     lineHeight: '1.3', wordBreak: 'break-all', overflow: 'hidden',
   };
-  const labelStyle: React.CSSProperties = { ...cellBase, fontWeight: 'normal', whiteSpace: 'nowrap', color: '#333', width: '22%' };
+  const labelStyle: React.CSSProperties = { ...cellBase, fontWeight: 'normal', whiteSpace: 'nowrap', color: '#333', width: '26%' };
   const valueStyle: React.CSSProperties = { ...cellBase, fontWeight: 'normal' };
 
   return (
@@ -819,16 +821,16 @@ function SingleSticker({ row }: { row: BoxLineRow }) {
       tableLayout: 'fixed', border: '2px solid #000',
     }}>
       <colgroup>
-        <col style={{ width: '22%' }} />
-        <col style={{ width: '28%' }} />
-        <col style={{ width: '22%' }} />
-        <col style={{ width: '28%' }} />
+        <col style={{ width: '26%' }} />
+        <col style={{ width: '30%' }} />
+        <col style={{ width: '20%' }} />
+        <col style={{ width: '24%' }} />
       </colgroup>
       <tbody>
         {/* Row 1: 出貨單號 + 出貨日 */}
         <tr>
           <td style={labelStyle}>出貨單號</td>
-          <td style={{ ...valueStyle, fontWeight: 'bold', fontSize: '9px' }}>{stickerShipNo}</td>
+          <td style={{ ...valueStyle, fontSize: '11px' }}>{stickerShipNo}</td>
           <td style={labelStyle}>出貨日</td>
           <td style={valueStyle}>{row.deliveryDate}</td>
         </tr>
@@ -836,12 +838,12 @@ function SingleSticker({ row }: { row: BoxLineRow }) {
         {/* Row 2: 料號（粗體） */}
         <tr>
           <td style={labelStyle}>料號</td>
-          <td style={{ ...valueStyle, fontWeight: 'bold', fontSize: '10px' }} colSpan={3}>{row.materialNo}</td>
+          <td style={{ ...valueStyle, fontWeight: 'bold', fontSize: '11px' }} colSpan={3}>{row.materialNo}</td>
         </tr>
 
-        {/* Row 3: 品名規格描述（全寬） */}
+        {/* Row 3: 品名規格描述（全寬，空值時保留固定高度） */}
         <tr>
-          <td style={{ ...valueStyle, fontSize: '8.5px', color: '#222' }} colSpan={4}>
+          <td style={{ ...valueStyle, fontSize: '10px', color: '#222', height: '20.44px' }} colSpan={4}>
             {row.specification || row.productName || ''}
           </td>
         </tr>
@@ -879,36 +881,36 @@ function SingleSticker({ row }: { row: BoxLineRow }) {
         {/* Row 8: 出貨目的地 */}
         <tr>
           <td style={labelStyle}>出貨目的地</td>
-          <td style={{ ...valueStyle, fontSize: '8px' }} colSpan={3}>{row.deliveryAddress}</td>
+          <td style={{ ...valueStyle, fontSize: '11px' }} colSpan={3}>{row.deliveryAddress}</td>
         </tr>
 
         {/* Row 9: 訂單號碼 */}
         <tr>
           <td style={labelStyle}>訂單號碼</td>
-          <td style={{ ...valueStyle, fontWeight: 'bold' }} colSpan={3}>{stickerOrderNo}</td>
+          <td style={{ ...valueStyle }} colSpan={3}>{stickerOrderNo}</td>
         </tr>
 
-        {/* Row 10-11: QR Code + 數量區 */}
+        {/* Row 10-11-12: QR Code（獨立，跨3行） + 數量區 + Made in */}
         <tr>
-          <td style={{ ...cellBase, padding: 0, textAlign: 'center', verticalAlign: 'top' }} rowSpan={2}>
+          <td style={{ ...cellBase, padding: 0, textAlign: 'center', verticalAlign: 'middle' }} rowSpan={3}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '2px' }}>
-              <QrCodeCanvas value={row.barcode || row.sapDeliveryNo} size={48} />
-              <div style={{ fontSize: '7px', marginTop: '1px', wordBreak: 'break-all', lineHeight: '1.1' }}>{row.barcode}</div>
+              <div style={{ fontSize: '12px', marginBottom: '1px', whiteSpace: 'nowrap', lineHeight: '1.1', textAlign: 'center' }}>{row.barcode}</div>
+              <QrCodeCanvas value={row.barcode || row.sapDeliveryNo} size={65} />
             </div>
           </td>
-          <td style={{ ...labelStyle, textAlign: 'center', fontWeight: 'bold' }}>總數量</td>
-          <td style={{ ...labelStyle, textAlign: 'center', fontWeight: 'bold' }}>總件數</td>
-          <td style={{ ...labelStyle, textAlign: 'center', fontWeight: 'bold' }}>本件數量</td>
+          <td style={{ ...labelStyle, textAlign: 'center' }}>總數量</td>
+          <td style={{ ...labelStyle, textAlign: 'center' }}>總件數</td>
+          <td style={{ ...labelStyle, textAlign: 'center' }}>本件數量</td>
         </tr>
         <tr>
-          <td style={{ ...valueStyle, textAlign: 'center', fontSize: '14px', fontWeight: 'bold' }}>{row.shipQty}</td>
-          <td style={{ ...valueStyle, textAlign: 'center', fontSize: '14px', fontWeight: 'bold' }}>{row.labelSeqNo}/{row.totalBoxes}</td>
-          <td style={{ ...valueStyle, textAlign: 'center', fontSize: '14px', fontWeight: 'bold' }}>{row.boxQty}</td>
+          <td style={{ ...valueStyle, textAlign: 'center', fontSize: '11px' }}>{row.shipQty}</td>
+          <td style={{ ...valueStyle, textAlign: 'center', fontSize: '11px' }}>{row.labelSeqNo}/{row.totalBoxes}</td>
+          <td style={{ ...valueStyle, textAlign: 'center', fontSize: '11px' }}>{row.boxQty}</td>
         </tr>
 
-        {/* Row 12: Made in XX */}
+        {/* Row 12: Made in XX（只合併右邊三欄，QR Code 獨立） */}
         <tr>
-          <td style={{ ...cellBase, textAlign: 'center', fontSize: '10px', fontWeight: 'bold', letterSpacing: '0.5px' }} colSpan={4}>
+          <td style={{ ...cellBase, textAlign: 'center', fontSize: '11px', letterSpacing: '0.5px' }} colSpan={3}>
             {madeIn}
           </td>
         </tr>

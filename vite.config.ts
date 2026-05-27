@@ -50,4 +50,9 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    // SPA fallback：讓所有路徑都回傳 index.html，解決 F5 重整空白頁問題
+    historyApiFallback: true,
+  },
 })
+
