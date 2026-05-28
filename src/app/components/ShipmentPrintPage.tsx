@@ -251,6 +251,28 @@ function PrintPreviewArea({ isSticker, activeTab, shipment, selectedBoxRows }: {
     );
   }
 
+  // 英文外箱貼紙
+  if (activeTab === 'en-sticker') {
+    const boxRows = (selectedBoxRows && selectedBoxRows.length > 0)
+      ? selectedBoxRows
+      : shipment
+        ? expandShipmentToBoxRows(shipment)
+        : [];
+
+    if (boxRows.length > 0) {
+      return (
+        <div className="flex flex-col items-center gap-[24px] w-full">
+          <EnStickerDoc boxRows={boxRows} />
+        </div>
+      );
+    }
+    return (
+      <div className="flex flex-col items-center justify-center h-[300px] gap-[12px]">
+        <p className="font-['Public_Sans:Regular',sans-serif] text-[14px] text-[#919eab]">請先從列表選取出貨單後再列印</p>
+      </div>
+    );
+  }
+
   // 其他 TAB 保留毛玻璃佔位
   const tabLabel = PRINT_TABS.find(t => t.id === activeTab)?.label ?? '';
   const cardCount = isSticker ? 4 : 2;
@@ -705,6 +727,195 @@ function expandShipmentToBoxRows(ship: ShipmentRow): BoxLineRow[] {
   return rows;
 }
 
+// ── 英文外箱貼紙文件 ──────────────────────────────────────────────────────────
+function EnStickerDoc({ boxRows }: { boxRows: BoxLineRow[] }) {
+  const STICKERS_PER_PAGE = 6;
+  const pages: BoxLineRow[][] = [];
+  for (let i = 0; i < boxRows.length; i += STICKERS_PER_PAGE) {
+    pages.push(boxRows.slice(i, i + STICKERS_PER_PAGE));
+  }
+  if (pages.length === 0) pages.push([]);
+
+  return (
+    <div
+      className="shipment-doc-wrapper"
+      style={{
+        width: '210mm', margin: '0 auto', background: 'white',
+        fontFamily: "'Noto Sans TC','Noto Sans JP','微軟正黑體',sans-serif",
+        fontSize: '10px', color: '#000', boxSizing: 'border-box',
+      }}
+    >
+      {pages.map((pageStickers, pageIdx) => {
+        const isLastPage = pageIdx === pages.length - 1;
+        const cells = [...pageStickers];
+        while (cells.length < STICKERS_PER_PAGE) cells.push(null as any);
+
+        return (
+          <div key={pageIdx} className="shipment-page-block">
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: `${STICKER_COL_W} ${STICKER_COL_W}`,
+              gridTemplateRows: `${STICKER_ROW_H} ${STICKER_ROW_H} ${STICKER_ROW_H}`,
+              columnGap: STICKER_COL_GAP,
+              rowGap: STICKER_ROW_GAP,
+              width: '210mm',
+              height: '297mm',
+              padding: `${STICKER_PADDING_V} ${STICKER_PADDING_H}`,
+              boxSizing: 'border-box',
+            }}>
+              {cells.map((row, idx) => (
+                <div key={idx} style={{
+                  width: '100%', height: '100%', overflow: 'hidden',
+                  display: 'flex', alignItems: 'stretch', justifyContent: 'stretch',
+                }}>
+                  {row ? <SingleEnSticker row={row} /> : <div style={{ width: '100%', height: '100%' }} />}
+                </div>
+              ))}
+            </div>
+
+            {!isLastPage && (
+              <div
+                data-no-print="true"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '12px',
+                  margin: '12px 0', color: '#aaa', fontSize: '13px',
+                }}
+              >
+                <div style={{ flex: 1, height: '1px', background: 'repeating-linear-gradient(to right, #ccc 0, #ccc 6px, transparent 6px, transparent 12px)' }} />
+                <span style={{ padding: '2px 14px', color: '#777', fontSize: '13px', letterSpacing: '1px', whiteSpace: 'nowrap' }}>
+                  {pageIdx + 1} / {pages.length}
+                </span>
+                <div style={{ flex: 1, height: '1px', background: 'repeating-linear-gradient(to right, #ccc 0, #ccc 6px, transparent 6px, transparent 12px)' }} />
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── 單張英文貼紙 ──────────────────────────────────────────────────────────────
+function SingleEnSticker({ row }: { row: BoxLineRow }) {
+  const itemNoStr = String(row.itemNo);
+  const itemNoPadded = itemNoStr.padStart(5, '0');
+  const stickerShipNo = `${row.vendorShipmentNo}-${itemNoStr}(${itemNoPadded})`;
+  const stickerStorage = `${row.storageLocation} ${row.plantCode}`.trim();
+  const stickerOrderNo = `${row.orderNo}-${String(row.orderSeq).padStart(6, '0')}`;
+  const madeIn = getMadeIn(row.countryOfOrigin);
+
+  const border = '1px solid #000';
+  const cellBase: React.CSSProperties = {
+    border, padding: '1px 4px', fontSize: '11px', verticalAlign: 'middle',
+    lineHeight: '1.3', wordBreak: 'break-all', overflow: 'hidden',
+  };
+  const labelStyle: React.CSSProperties = { ...cellBase, fontWeight: 'normal', whiteSpace: 'nowrap', color: '#333', width: '26%' };
+  const valueStyle: React.CSSProperties = { ...cellBase, fontWeight: 'normal' };
+
+  return (
+    <table style={{
+      width: '100%', height: '100%', borderCollapse: 'collapse',
+      tableLayout: 'fixed', border: '2px solid #000',
+    }}>
+      <colgroup>
+        <col style={{ width: '26%' }} />
+        <col style={{ width: '30%' }} />
+        <col style={{ width: '20%' }} />
+        <col style={{ width: '24%' }} />
+      </colgroup>
+      <tbody>
+        {/* Row 1: Ship no. + Ship dt */}
+        <tr>
+          <td style={labelStyle}>Ship no.</td>
+          <td style={{ ...valueStyle, fontSize: '11px' }}>{stickerShipNo}</td>
+          <td style={labelStyle}>Ship dt</td>
+          <td style={valueStyle}>{row.deliveryDate}</td>
+        </tr>
+
+        {/* Row 2: Part no.（粗體） */}
+        <tr>
+          <td style={labelStyle}>Part no.</td>
+          <td style={{ ...valueStyle, fontWeight: 'bold', fontSize: '11px' }} colSpan={3}>{row.materialNo}</td>
+        </tr>
+
+        {/* Row 3: 品名規格描述（全寬，空值時保留固定高度） */}
+        <tr>
+          <td style={{ ...valueStyle, fontSize: '10px', color: '#222', height: '20.44px' }} colSpan={4}>
+            {row.specification || row.productName || ''}
+          </td>
+        </tr>
+
+        {/* Row 4: Cust Part no | N.W. : */}
+        <tr>
+          <td style={labelStyle}>Cust Part no</td>
+          <td style={valueStyle}>{row.customerMaterialNo || ''}</td>
+          <td style={labelStyle}>N.W. :</td>
+          <td style={valueStyle}>{row.netWeight}{row.netWeight ? 'kg' : ''}</td>
+        </tr>
+
+        {/* Row 5: Cust order no | G.W. : */}
+        <tr>
+          <td style={labelStyle}>Cust order no</td>
+          <td style={valueStyle}>{row.customerOrderNo || ''}</td>
+          <td style={labelStyle}>G.W. :</td>
+          <td style={valueStyle}>{row.grossWeight}{row.grossWeight ? 'kg' : ''}</td>
+        </tr>
+
+        {/* Row 6: Vend part no */}
+        <tr>
+          <td style={labelStyle}>Vend part no</td>
+          <td style={valueStyle} colSpan={3}>{row.vendorMaterialNo || ''}</td>
+        </tr>
+
+        {/* Row 7: Vend name | S. Loc */}
+        <tr>
+          <td style={labelStyle}>Vend name</td>
+          <td style={valueStyle}>{row.vendorName.replace(/\(.*\)/, '').trim()}</td>
+          <td style={labelStyle}>S. Loc</td>
+          <td style={valueStyle}>{stickerStorage}</td>
+        </tr>
+
+        {/* Row 8: Destination */}
+        <tr>
+          <td style={labelStyle}>Destination</td>
+          <td style={{ ...valueStyle, fontSize: '11px' }} colSpan={3}>{row.deliveryAddress}</td>
+        </tr>
+
+        {/* Row 9: order no. */}
+        <tr>
+          <td style={labelStyle}>order no.</td>
+          <td style={{ ...valueStyle }} colSpan={3}>{stickerOrderNo}</td>
+        </tr>
+
+        {/* Row 10-11-12: QR Code（跨3行）+ 數量區 + Made in */}
+        <tr>
+          <td style={{ ...cellBase, padding: 0, textAlign: 'center', verticalAlign: 'middle' }} rowSpan={3}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '2px' }}>
+              <div style={{ fontSize: '12px', marginBottom: '1px', whiteSpace: 'nowrap', lineHeight: '1.1', textAlign: 'center' }}>{row.barcode}</div>
+              <QrCodeCanvas value={row.barcode || row.sapDeliveryNo} size={65} />
+            </div>
+          </td>
+          <td style={{ ...labelStyle, textAlign: 'center' }}>Total qty</td>
+          <td style={{ ...labelStyle, textAlign: 'center' }}>Cartons</td>
+          <td style={{ ...labelStyle, textAlign: 'center' }}>Qty</td>
+        </tr>
+        <tr>
+          <td style={{ ...valueStyle, textAlign: 'center', fontSize: '11px' }}>{row.shipQty}</td>
+          <td style={{ ...valueStyle, textAlign: 'center', fontSize: '11px' }}>{row.labelSeqNo}/{row.totalBoxes}</td>
+          <td style={{ ...valueStyle, textAlign: 'center', fontSize: '11px' }}>{row.boxQty}</td>
+        </tr>
+
+        {/* Row 12: Made in XX */}
+        <tr>
+          <td style={{ ...cellBase, textAlign: 'center', fontSize: '11px', letterSpacing: '0.5px' }} colSpan={3}>
+            {madeIn}
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  );
+}
+
 // ── 原產國家 → Made in XX 轉換 ────────────────────────────────────────────────
 const COUNTRY_MADE_IN: Record<string, string> = {
   TW: 'Made in Taiwan', CN: 'Made in China', JP: 'Made in Japan',
@@ -802,7 +1013,9 @@ function ZhStickerDoc({ boxRows }: { boxRows: BoxLineRow[] }) {
 // ── 單張貼紙 ──────────────────────────────────────────────────────────────────
 function SingleSticker({ row }: { row: BoxLineRow }) {
   // 格式組合
-  const stickerShipNo = `${row.vendorShipmentNo}-${String(row.itemNo).padStart(5, '0')}`;
+  const itemNoStr = String(row.itemNo);
+  const itemNoPadded = itemNoStr.padStart(5, '0');
+  const stickerShipNo = `${row.vendorShipmentNo}-${itemNoStr}(${itemNoPadded})`;
   const stickerStorage = `${row.storageLocation} ${row.plantCode}`.trim();
   const stickerOrderNo = `${row.orderNo}-${String(row.orderSeq).padStart(6, '0')}`;
   const madeIn = getMadeIn(row.countryOfOrigin);
