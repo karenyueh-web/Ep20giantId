@@ -14,6 +14,7 @@ import { ShipmentPrintDocPage } from "@/app/components/ShipmentPrintDocPage";
 import { InvoiceSettingsPage } from "@/app/components/InvoiceSettingsPage";
 import { InvoiceCreatePage } from "@/app/components/InvoiceCreatePage";
 import { InvoiceDetailPage } from "@/app/components/InvoiceDetailPage";
+import { InvoiceListPage } from "@/app/components/InvoiceListPage";
 import { CorrectionCreatePage } from "@/app/components/CorrectionCreatePage";
 import { CorrectionListWithTabs } from "@/app/components/CorrectionListWithTabs";
 import { HistoryCorrectionListPage } from "@/app/components/HistoryCorrectionListPage";
@@ -303,6 +304,19 @@ export default function App() {
           </ResponsivePageLayout>
         );
       case 'invoice-list':
+        return (
+          <ResponsivePageLayout
+            currentPage={currentPage}
+            onPageChange={handlePageChange}
+            onLogout={handleLogout}
+            userRole={userRole}
+            title="發票查詢"
+            breadcrumb="發票作業 • 發票查詢"
+          >
+            <InvoiceListPage />
+          </ResponsivePageLayout>
+        );
+
       case 'parts-maintain':
       case 'parts-quote':
       case 'parts-sample':

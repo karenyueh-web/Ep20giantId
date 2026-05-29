@@ -19,6 +19,9 @@ import {
   TAX_RATE_OPTIONS, INVOICE_TYPE_OPTIONS, TAX_CODE_OPTIONS,
   toInvoiceDetailRows, recalcRow, resolveBuyer, isOverseasBuyer,
 } from './invoiceDetailData';
+import {
+  appendInvoiceRecord, generateInvoiceId, resolveTaxCode, initInvoiceStore,
+} from './invoiceStore';
 
 // ── FloatingInput（與 ShipmentDetailPage 一致）──────────────────────────────
 function FloatingInput({
@@ -98,6 +101,9 @@ function FloatingDateField({
 
 // ── 主元件 ───────────────────────────────────────────────────────────────────
 export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency }: InvoiceDetailPageProps) {
+
+  // ── 初始化 invoice store（若 localStorage 無資料則寫入 mock）──
+  initInvoiceStore();
 
   // ── 基本資訊 state ──
   const [buyerName] = useState(() => resolveBuyer(selectedRows[0]?.plantCode ?? ''));
@@ -215,8 +221,43 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency 
     showToast(`已新增 ${toAdd.length} 筆驗收明細`);
   };
 
-  // ── 確認出貨的提交驗證（placeholder）──
+  // ── 提交驗證狀態 ──
   const [submitted, setSubmitted] = useState(false);
+
+  // ── 暫存（儲存為草稿 DR）──
+  const handleSaveDraft = () => {
+    setSubmitted(true);
+    if (!invoiceNo.trim()) {
+      showToast('請填寫發票號碼');
+      return;
+    }
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const createdAt = `${now.getFullYear()}/${pad(now.getMonth()+1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    const taxCode = resolveTaxCode(invoiceNo, invoiceDate);
+    appendInvoiceRecord({
+      id: generateInvoiceId(),
+      invoiceNo: invoiceNo.trim(),
+      invoiceDate,
+      status: 'DR',
+      buyerName,
+      invoiceType: isOverseas ? '' : invoiceType,
+      taxRate: taxRateValue,
+      taxCode,
+      taxAmount: totals.tax,
+      totalAmount: totals.inTax,
+      currency,
+      bondedType,
+      vendorName: selectedRows[0]?.vendorName ?? '',
+      execNote: '',
+      detailCount: rows.length,
+      createdAt,
+      rows,
+    });
+    showToast('草稿已暫存，可至發票查詢查閱');
+  };
+
+  // ── 確認開立（placeholder，後續補充）──
   const handleConfirm = () => {
     setSubmitted(true);
     if (!invoiceNo.trim() || !invoiceDate) {
@@ -267,7 +308,7 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency 
           </div>
           <div className="flex items-center gap-[12px]">
             <button
-              onClick={() => showToast('草稿已暫存')}
+              onClick={handleSaveDraft}
               className="h-[40px] w-[120px] rounded-[8px] border border-[rgba(145,158,171,0.32)] bg-white text-[#1c252e] hover:bg-[#f4f6f8] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
             >
               暫存
@@ -279,14 +320,15 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency 
           </div>
         </div>
 
-        {/* 表單：Row 1 — 買方 + 發票總額 */}
-        <div className="flex gap-[16px] mb-[16px]">
-          {/* 買方（唯讀，有必填星號） */}
-          <div className="flex-[6] min-w-0">
+        {/* 表單：4-column grid，Row 1 與 Row 2 欄位切齊 */}
+        <div className="grid grid-cols-4 gap-[16px]">
+          {/* Row 1 */}
+          {/* 買方（col 1-2，唯讀，有必填星號） */}
+          <div className="col-span-2 min-w-0">
             <FloatingInput label="買方" value={buyerName} onChange={() => {}} required disabled />
           </div>
-          {/* 發票總額（唯讀，顯示計算值） */}
-          <div className="flex-[4] min-w-0">
+          {/* 發票總額（col 3-4，唯讀，顯示計算值） */}
+          <div className="col-span-2 min-w-0">
             <FloatingInput
               label="發票總額"
               value={totals.inTax > 0 ? totals.inTax.toLocaleString() : ''}
@@ -294,20 +336,20 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency 
               disabled
             />
           </div>
-        </div>
 
-        {/* 表單：Row 2 — 發票號碼 + 發票日期 + 稅率 + [發票聯式 | 稅碼] */}
-        <div className="flex gap-[16px]">
-          <div className="flex-1 min-w-0">
+          {/* Row 2 */}
+          {/* 發票號碼（col 1） */}
+          <div className="min-w-0">
             <FloatingInput label="發票號碼" value={invoiceNo} onChange={setInvoiceNo}
               required hasError={submitted && !invoiceNo.trim()} />
           </div>
-          <div className="flex-1 min-w-0">
+          {/* 發票日期（col 2） */}
+          <div className="min-w-0">
             <FloatingDateField label="發票日期" value={invoiceDate} onChange={setInvoiceDate}
               required hasError={submitted && !invoiceDate} />
           </div>
-          {/* 稅率（台灣保稅：鎖定 0%；其他：可選） */}
-          <div className="flex-1 min-w-0">
+          {/* 稅率（col 3，台灣保稅：鎖定 0%；其他：可選） */}
+          <div className="min-w-0">
             {isTaiwanBonded ? (
               <FloatingInput label="稅率" value="0%" onChange={() => {}} disabled />
             ) : (
@@ -320,7 +362,8 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency 
               />
             )}
           </div>
-          <div className="flex-1 min-w-0">
+          {/* 發票聯式 / 稅碼（col 4） */}
+          <div className="min-w-0">
             {isOverseas ? (
               /* 海外買方 → VAT 稅碼，預設 0% */
               <DropdownSelect
