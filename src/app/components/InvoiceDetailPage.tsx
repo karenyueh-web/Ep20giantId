@@ -100,26 +100,29 @@ function FloatingDateField({
 }
 
 // ── 主元件 ───────────────────────────────────────────────────────────────────
-export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency }: InvoiceDetailPageProps) {
+export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency, existingRecord }: InvoiceDetailPageProps) {
+
+  // ── 是否為檢視既有發票模式 ──
+  const isViewMode = !!existingRecord;
 
   // ── 初始化 invoice store（若 localStorage 無資料則寫入 mock）──
   initInvoiceStore();
 
   // ── 基本資訊 state ──
-  const [buyerName] = useState(() => resolveBuyer(selectedRows[0]?.plantCode ?? ''));
-  const isOverseas   = isOverseasBuyer(selectedRows[0]?.plantCode ?? '');
+  const [buyerName] = useState(() => existingRecord ? existingRecord.buyerName : resolveBuyer(selectedRows[0]?.plantCode ?? ''));
+  const isOverseas   = existingRecord ? !existingRecord.invoiceType : isOverseasBuyer(selectedRows[0]?.plantCode ?? '');
 
-  const [invoiceNo,   setInvoiceNo]   = useState('');
-  const [invoiceDate, setInvoiceDate] = useState('');
+  const [invoiceNo,   setInvoiceNo]   = useState(existingRecord?.invoiceNo ?? '');
+  const [invoiceDate, setInvoiceDate] = useState(existingRecord?.invoiceDate ?? '');
   // 台灣買方：發票聯式（預設 21）
-  const [invoiceType, setInvoiceType] = useState('21');
+  const [invoiceType, setInvoiceType] = useState(existingRecord?.invoiceType || '21');
   // 海外買方：VAT 稅碼（預設 0%）
-  const [taxCode,     setTaxCode]     = useState('0');
+  const [taxCode,     setTaxCode]     = useState(existingRecord?.taxCode || '0');
 
   // ── 稅率 ──
   // 台灣保稅驗證：稅率鎖定 0％
   const isTaiwanBonded = !isOverseas && bondedType === '保稅';
-  const [taxRateValue, setTaxRateValue] = useState(() => isTaiwanBonded ? '0' : '5');
+  const [taxRateValue, setTaxRateValue] = useState(() => existingRecord ? existingRecord.taxRate : (isTaiwanBonded ? '0' : '5'));
   const taxRate = parseFloat(taxRateValue) / 100 || 0;
 
   // ── 品名 tooltip hover state ──
@@ -128,7 +131,7 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency 
   const [hoveredAmountCell, setHoveredAmountCell] = useState<{ id: number; col: 'tax' | 'exTax' | 'inTax' } | null>(null);
 
   // ── 明細列（單價預設 = 驗收價）──
-  const [rows, setRows] = useState<InvoiceDetailRow[]>(() => toInvoiceDetailRows(selectedRows, taxRate));
+  const [rows, setRows] = useState<InvoiceDetailRow[]>(() => existingRecord ? existingRecord.rows : toInvoiceDetailRows(selectedRows, taxRate));
 
   // ── 更新單價 ──
   const updateUnitPrice = (id: number, val: string) => {

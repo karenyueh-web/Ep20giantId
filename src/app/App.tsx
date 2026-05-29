@@ -15,6 +15,7 @@ import { InvoiceSettingsPage } from "@/app/components/InvoiceSettingsPage";
 import { InvoiceCreatePage } from "@/app/components/InvoiceCreatePage";
 import { InvoiceDetailPage } from "@/app/components/InvoiceDetailPage";
 import { InvoiceListPage } from "@/app/components/InvoiceListPage";
+import type { InvoiceRecord } from "@/app/components/invoiceStore";
 import { CorrectionCreatePage } from "@/app/components/CorrectionCreatePage";
 import { CorrectionListWithTabs } from "@/app/components/CorrectionListWithTabs";
 import { HistoryCorrectionListPage } from "@/app/components/HistoryCorrectionListPage";
@@ -49,6 +50,8 @@ export default function App() {
   } | null>(null);
   // ── 開立發票明細 state ──
   const [invoiceDetail, setInvoiceDetail] = useState<{ rows: any[]; bondedType: string; currency: string } | null>(null);
+  // ── 從發票查詢點擊查看的發票記錄 ──
+  const [viewingInvoice, setViewingInvoice] = useState<InvoiceRecord | null>(null);
 
   const handleLoginSuccess = (role: UserRole) => {
     setIsLoggedIn(true);
@@ -304,6 +307,26 @@ export default function App() {
           </ResponsivePageLayout>
         );
       case 'invoice-list':
+        if (viewingInvoice) {
+          return (
+            <ResponsivePageLayout
+              currentPage={currentPage}
+              onPageChange={(p) => { setViewingInvoice(null); handlePageChange(p); }}
+              onLogout={handleLogout}
+              userRole={userRole}
+              title="發票明細"
+              breadcrumb="發票作業 • 發票查詢 • 發票明細"
+            >
+              <InvoiceDetailPage
+                selectedRows={[]}
+                bondedType={viewingInvoice.bondedType}
+                currency={viewingInvoice.currency}
+                onClose={() => setViewingInvoice(null)}
+                existingRecord={viewingInvoice}
+              />
+            </ResponsivePageLayout>
+          );
+        }
         return (
           <ResponsivePageLayout
             currentPage={currentPage}
@@ -313,7 +336,7 @@ export default function App() {
             title="發票查詢"
             breadcrumb="發票作業 • 發票查詢"
           >
-            <InvoiceListPage />
+            <InvoiceListPage onViewInvoice={(record) => setViewingInvoice(record)} />
           </ResponsivePageLayout>
         );
 

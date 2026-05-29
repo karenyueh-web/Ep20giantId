@@ -55,6 +55,7 @@ function getTabBadgeStyle(status: InvoiceStatus | undefined, isActive: boolean) 
 // ── 欄位定義 ──────────────────────────────────────────────────────────────────
 
 type InvListColKey =
+  | 'status'
   | 'invoiceDate'
   | 'taxCode'
   | 'taxRate'
@@ -76,6 +77,7 @@ interface InvListCol {
 }
 
 const DEFAULT_COLS: InvListCol[] = [
+  { key: 'status',       label: '發票狀態',   width: 130, minWidth: 100 },
   { key: 'invoiceDate',  label: '發票日期',   width: 120, minWidth: 100 },
   { key: 'taxCode',      label: '稅碼',       width: 80,  minWidth: 60  },
   { key: 'taxRate',      label: '稅率',       width: 70,  minWidth: 60  },
@@ -90,7 +92,7 @@ const DEFAULT_COLS: InvListCol[] = [
 ];
 
 const INVOICE_NO_W  = 150; // sticky 發票號碼欄
-const STATUS_W      = 130; // 發票狀態欄
+// STATUS_W 已移入 DEFAULT_COLS（key: 'status'）
 const STORAGE_KEY   = 'invoiceList_v1_cols';
 
 // ── 稅率顯示 ──────────────────────────────────────────────────────────────────
@@ -101,13 +103,16 @@ function formatTaxRate(v: string): string {
 
 // ── 發票聯式顯示 ──────────────────────────────────────────────────────────────
 const INVOICE_TYPE_MAP: Record<string, string> = {
-  '21': '21 三聯式',
-  '22': '22 二聯式',
-  '25': '25 三聯式收銀機',
+  '21': '21 三聯式、電子計算機統一發票',
+  '22': '22 二聯式收銀機統一發票',
+  '25': '25 三聯式收銀機統一發票',
 };
 
 // ── Cell 渲染 ─────────────────────────────────────────────────────────────────
 function getCellValue(row: InvoiceRecord, key: InvListColKey): React.ReactNode {
+  if (key === 'status') {
+    return <StatusBadge status={row.status} />;
+  }
   if (key === 'taxAmount' || key === 'totalAmount') {
     const n = row[key];
     return (
@@ -264,7 +269,11 @@ function InvoiceNoFilterField({
 }
 
 // ── 主元件 ────────────────────────────────────────────────────────────────────
-export function InvoiceListPage() {
+export interface InvoiceListPageProps {
+  onViewInvoice?: (record: InvoiceRecord) => void;
+}
+
+export function InvoiceListPage({ onViewInvoice }: InvoiceListPageProps = {}) {
   const { scrollContainerRef, handleMouseDown, canDragScroll } = useHorizontalDragScroll();
 
   // ── 初始化資料 ──
@@ -414,7 +423,7 @@ export function InvoiceListPage() {
     return counts;
   }, [records]);
 
-  const totalWidth = INVOICE_NO_W + STATUS_W + visibleColumns.reduce((s, c) => s + c.width, 0);
+  const totalWidth = INVOICE_NO_W + visibleColumns.reduce((s, c) => s + c.width, 0);
 
   const handleSort = (key: string) => {
     setSortConfig(s => ({ key: key as any, dir: s.key === key && s.dir === 'asc' ? 'desc' : 'asc' }));
@@ -543,13 +552,7 @@ export function InvoiceListPage() {
               >
                 <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[24px] text-[#637381] text-[14px] whitespace-nowrap">發票號碼</p>
               </div>
-              {/* 發票狀態 */}
-              <div
-                className="flex items-center px-[16px] bg-[#f4f6f8] border-r border-[rgba(145,158,171,0.08)] shrink-0"
-                style={{ width: STATUS_W, minWidth: STATUS_W }}
-              >
-                <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[24px] text-[#637381] text-[14px] whitespace-nowrap">發票狀態</p>
-              </div>
+
               {/* 其他欄位 DnD */}
               {visibleColumns.map((col, idx) => (
                 <DraggableColumnHeader
@@ -584,17 +587,12 @@ export function InvoiceListPage() {
                   <p
                     className="font-['Public_Sans:Regular',sans-serif] text-[14px] text-[#1677ff] hover:text-[#0958d9] underline truncate w-full cursor-pointer transition-colors"
                     title={row.invoiceNo}
+                    onClick={() => onViewInvoice?.(row)}
                   >
                     {row.invoiceNo}
                   </p>
                 </div>
-                {/* 發票狀態 */}
-                <div
-                  className="flex items-center px-[16px] border-r border-[rgba(145,158,171,0.08)] shrink-0"
-                  style={{ width: STATUS_W, minWidth: STATUS_W }}
-                >
-                  <StatusBadge status={row.status} />
-                </div>
+
                 {/* 其他欄位 */}
                 {visibleColumns.map((col, ci) => (
                   <div
