@@ -78,31 +78,22 @@ export function DropdownSelect({
           aria-hidden="true" 
           className={`absolute border ${error ? 'border-[#ff5630]' : 'border-[rgba(145,158,171,0.2)]'} border-solid inset-0 pointer-events-none rounded-[8px]`} 
         />
-        <div className="flex flex-row items-center size-full">
-          <div className="content-stretch flex items-center px-[14px] relative size-full">
-            <p className="flex-[1_0_0] font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] min-h-px min-w-px relative text-[#1c252e] text-[15px]">
-              {displayText}
-            </p>
-            {/* Label */}
-            <div className="absolute content-stretch flex items-center left-[14px] px-[2px] top-[-5px]">
-              <div className="absolute bg-white h-[2px] left-0 right-0 top-[5px]" />
-              <p className={`font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[14px] relative shrink-0 ${error ? 'text-[#ff5630]' : 'text-[#637381]'} text-[13px]`}>
-                {label}
-              </p>
-            </div>
-            {/* 下拉箭頭 */}
-            <div className="-translate-y-1/2 absolute content-stretch flex h-[40px] items-center justify-center right-0 top-1/2">
-              <div className="content-stretch flex items-center justify-center relative rounded-[500px] shrink-0 size-[40px]">
-                <div className="relative shrink-0 size-[24px]">
-                  <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 24 24">
-                    <g>
-                      <path d={svgPaths.p3a1c00f0} fill="#637381" />
-                    </g>
-                  </svg>
-                </div>
-              </div>
-            </div>
-          </div>
+        {/* 浮動標籤 */}
+        <div className="absolute flex items-center left-[14px] px-[2px] top-[-5px] z-10">
+          <div className="absolute bg-white h-[2px] left-0 right-0 top-[5px]" />
+          <p className={`relative text-[12px] font-semibold ${error ? 'text-[#ff5630]' : 'text-[#637381]'}`}>
+            {label}
+          </p>
+        </div>
+        {/* 內容區：對齊其他篩選欄位的 pt-[14px] pb-[8px] 定位 */}
+        <div className="flex items-center gap-[8px] h-full px-[14px] pt-[14px] pb-[8px]">
+          <p className={`flex-1 min-w-0 text-[14px] font-normal truncate ${selectedOption ? 'text-[#1c252e]' : 'text-[#c4cdd6]'}`}>
+            {displayText}
+          </p>
+          {/* 下拉箭頭 */}
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="shrink-0">
+            <path d="M6 9l6 6 6-6" stroke="#637381" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
         </div>
       </div>
 

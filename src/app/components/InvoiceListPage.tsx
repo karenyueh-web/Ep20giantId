@@ -188,7 +188,7 @@ function DateFilterField({
     setOpen(v => !v);
   };
   return (
-    <div className="relative" onClick={handleClick} style={{ minWidth: 160 }}>
+    <div className="relative w-full" onClick={handleClick}>
       <div className="relative h-[54px] cursor-pointer select-none">
         <div aria-hidden="true" className="absolute inset-0 pointer-events-none rounded-[8px] border border-[rgba(145,158,171,0.2)]" />
         <div className="absolute flex items-center left-[14px] px-[2px] top-[-5px] z-10">
@@ -224,6 +224,45 @@ function DateFilterField({
   );
 }
 
+// ── 發票號碼關鍵字搜尋輸入框 ──────────────────────────────────────────────────
+function InvoiceNoFilterField({
+  label, value, onChange,
+}: { label: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <div className="relative w-full">
+      <div className="relative h-[54px]">
+        <div aria-hidden="true" className="absolute inset-0 pointer-events-none rounded-[8px] border border-[rgba(145,158,171,0.2)]" />
+        <div className="absolute flex items-center left-[14px] px-[2px] top-[-5px] z-10">
+          <div className="absolute bg-white h-[2px] left-0 right-0 top-[5px]" />
+          <p className="relative text-[12px] font-semibold text-[#637381]">{label}</p>
+        </div>
+        <div className="flex items-center gap-[8px] h-full px-[14px] pt-[14px] pb-[8px]">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#637381" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+            <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input
+            type="text"
+            value={value}
+            onChange={e => onChange(e.target.value)}
+            placeholder="輸入發票號碼"
+            className="flex-1 min-w-0 bg-transparent outline-none border-none font-['Public_Sans:Regular',sans-serif] text-[14px] text-[#1c252e] placeholder:text-[#c4cdd6]"
+          />
+          {value && (
+            <button
+              onClick={() => onChange('')}
+              className="flex items-center justify-center w-[16px] h-[16px] hover:opacity-70 transition-opacity shrink-0"
+            >
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                <path d="M8 2L2 8M2 2L8 8" stroke="#637381" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── 主元件 ────────────────────────────────────────────────────────────────────
 export function InvoiceListPage() {
   const { scrollContainerRef, handleMouseDown, canDragScroll } = useHorizontalDragScroll();
@@ -241,9 +280,10 @@ export function InvoiceListPage() {
   const [activeTab, setActiveTab] = useState<InvoiceStatus | 'ALL'>('ALL');
 
   // ── 搜尋篩選 ──
+  const [filterInvoiceNo, setFilterInvoiceNo] = useState('');
+  const [filterBuyer, setFilterBuyer] = useState('');
   const [dateFrom, setDateFrom]     = useState('');
   const [dateTo,   setDateTo]       = useState('');
-  const [filterBuyer, setFilterBuyer] = useState('');
 
   // ── 買方選項（動態建立）──
   const buyerOptions = useMemo(() => {
@@ -319,11 +359,16 @@ export function InvoiceListPage() {
     if (activeTab !== 'ALL') {
       data = data.filter(r => r.status === activeTab);
     }
+    // 發票號碼關鍵字
+    if (filterInvoiceNo.trim()) {
+      const kw = filterInvoiceNo.trim().toLowerCase();
+      data = data.filter(r => r.invoiceNo.toLowerCase().includes(kw));
+    }
+    // 買方
+    if (filterBuyer) data = data.filter(r => r.buyerName === filterBuyer);
     // 日期起迄
     if (dateFrom) data = data.filter(r => r.invoiceDate >= dateFrom.replace(/-/g, '/'));
     if (dateTo)   data = data.filter(r => r.invoiceDate <= dateTo.replace(/-/g, '/'));
-    // 買方
-    if (filterBuyer) data = data.filter(r => r.buyerName === filterBuyer);
     // 進階篩選
     if (appliedFilters.length > 0) {
       data = data.filter(row => appliedFilters.every(f => {
@@ -342,7 +387,7 @@ export function InvoiceListPage() {
       }));
     }
     return data;
-  }, [records, activeTab, dateFrom, dateTo, filterBuyer, appliedFilters]);
+  }, [records, activeTab, filterInvoiceNo, filterBuyer, dateFrom, dateTo, appliedFilters]);
 
   // ── 排序 ──
   const sortedData = useMemo(() => {
@@ -423,17 +468,24 @@ export function InvoiceListPage() {
         </div>
       </div>
 
-      {/* ── 搜尋篩選列 ──────────────────────────────────────────────── */}
-      <div className="shrink-0 flex gap-[16px] items-end px-[20px] pt-[16px] pb-[12px] flex-wrap">
-        <DateFilterField label="發票日期(起)" value={dateFrom} onChange={setDateFrom} />
-        <DateFilterField label="發票日期(迄)" value={dateTo}   onChange={setDateTo}   />
-        <div style={{ minWidth: 240 }}>
+      {/* ── 搜尋篩選列（四欄等寬：發票號碼、買方、發票日期起、迄）── */}
+      <div className="shrink-0 flex gap-[16px] items-center px-[20px] pt-[16px] pb-[12px]">
+        <div className="flex-1 min-w-0">
+          <InvoiceNoFilterField label="發票號碼" value={filterInvoiceNo} onChange={v => { setFilterInvoiceNo(v); setPage(1); }} />
+        </div>
+        <div className="flex-1 min-w-0">
           <DropdownSelect
             label="買方"
             value={filterBuyer}
-            onChange={setFilterBuyer}
+            onChange={v => { setFilterBuyer(v); setPage(1); }}
             options={buyerOptions}
           />
+        </div>
+        <div className="flex-1 min-w-0">
+          <DateFilterField label="發票日期(起)" value={dateFrom} onChange={v => { setDateFrom(v); setPage(1); }} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <DateFilterField label="發票日期(迄)" value={dateTo} onChange={v => { setDateTo(v); setPage(1); }} />
         </div>
       </div>
 
@@ -489,14 +541,14 @@ export function InvoiceListPage() {
                 className="flex items-center px-[16px] bg-[#f4f6f8] border-r border-[rgba(145,158,171,0.08)] shrink-0"
                 style={{ width: INVOICE_NO_W, minWidth: INVOICE_NO_W }}
               >
-                <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#637381] truncate">發票號碼</p>
+                <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[24px] text-[#637381] text-[14px] whitespace-nowrap">發票號碼</p>
               </div>
               {/* 發票狀態 */}
               <div
                 className="flex items-center px-[16px] bg-[#f4f6f8] border-r border-[rgba(145,158,171,0.08)] shrink-0"
                 style={{ width: STATUS_W, minWidth: STATUS_W }}
               >
-                <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#637381]">發票狀態</p>
+                <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[24px] text-[#637381] text-[14px] whitespace-nowrap">發票狀態</p>
               </div>
               {/* 其他欄位 DnD */}
               {visibleColumns.map((col, idx) => (
