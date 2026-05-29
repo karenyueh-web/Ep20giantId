@@ -795,7 +795,82 @@ function StoStickerPage({ onBack }: { onBack: () => void }) {
   }, [stoNo, copies]);
 
   const handlePrint = () => {
-    window.print();
+    if (!previewSto || previewCopies < 1) return;
+
+    const labelsHtml = Array.from({ length: previewCopies }, (_, i) => {
+      const index = i + 1;
+      const total = previewCopies;
+      return `
+        <div class="sticker-card">
+          <p class="seq">${index} / ${total}</p>
+          <p class="sto-no">${previewSto}</p>
+        </div>`;
+    }).join('');
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>STO 貼紙列印 — ${previewSto}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Public Sans', 'Noto Sans TC', sans-serif;
+      background: #fff;
+      padding: 16px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .sticker-card {
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      min-height: 160px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+      page-break-inside: avoid;
+    }
+    .seq {
+      font-size: 11px;
+      color: #919eab;
+      margin-bottom: 8px;
+      letter-spacing: 0.05em;
+    }
+    .sto-no {
+      font-weight: 600;
+      font-size: clamp(28px, 5vw, 56px);
+      color: #1c252e;
+      text-align: center;
+      line-height: 1.1;
+      word-break: break-all;
+    }
+    @media print {
+      body { padding: 8px; }
+      .grid { gap: 8px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="grid">${labelsHtml}</div>
+  <script>
+    window.onload = function() {
+      window.focus();
+      window.print();
+      window.onafterprint = function() { window.close(); };
+    };
+  </script>
+</body>
+</html>`;
+
+    const win = window.open('', '_blank', 'width=900,height=700');
+    if (!win) return;
+    win.document.write(html);
+    win.document.close();
   };
 
   const labels = previewCopies > 0

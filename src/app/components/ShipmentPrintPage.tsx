@@ -692,7 +692,7 @@ function expandShipmentToBoxRows(ship: ShipmentRow): BoxLineRow[] {
   for (const d of ship.details) {
     const boxes = d.boxes ?? [];
     for (const box of boxes) {
-      const bc = String(_stickerBarcodeCounter++).padStart(10, '0') + 'S';
+      const bc = String(_stickerBarcodeCounter++).padStart(9, '0') + '$';
       rows.push({
         id: `${ship.id}-${d.itemNo}-${box.boxNo}`,
         barcode: bc,
