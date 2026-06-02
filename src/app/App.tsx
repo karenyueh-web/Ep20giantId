@@ -290,6 +290,11 @@ export default function App() {
                 bondedType={invoiceDetail.bondedType}
                 currency={invoiceDetail.currency}
                 onClose={() => setInvoiceDetail(null)}
+                onSaveSuccess={(record) => {
+                  setInvoiceDetail(null);
+                  setCurrentPage('invoice-list');
+                  setViewingInvoice(record);
+                }}
               />
             </ResponsivePageLayout>
           );
@@ -323,6 +328,7 @@ export default function App() {
                 currency={viewingInvoice.currency}
                 onClose={() => setViewingInvoice(null)}
                 existingRecord={viewingInvoice}
+                onSaveSuccess={(record) => setViewingInvoice(record)}
               />
             </ResponsivePageLayout>
           );

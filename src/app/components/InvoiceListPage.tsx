@@ -21,8 +21,9 @@ import { DropdownSelect } from './DropdownSelect';
 import { PaginationControls } from './PaginationControls';
 import { DraggableColumnHeader } from './table/DraggableColumnHeader';
 import { measureTextWidth } from './table/tableUtils';
+import { CheckboxIcon } from './CheckboxIcon';
 import {
-  loadInvoiceRecords, initInvoiceStore, INVOICE_STATUS_CONFIG,
+  loadInvoiceRecords, initInvoiceStore, saveInvoiceRecords, INVOICE_STATUS_CONFIG,
   type InvoiceRecord, type InvoiceStatus,
 } from './invoiceStore';
 
@@ -91,6 +92,7 @@ const DEFAULT_COLS: InvListCol[] = [
   { key: 'invoiceType',  label: '發票聯式',   width: 200, minWidth: 120 },
 ];
 
+const CHECKBOX_W    = 48;  // checkbox 欄寬
 const INVOICE_NO_W  = 150; // sticky 發票號碼欄
 // STATUS_W 已移入 DEFAULT_COLS（key: 'status'）
 const STORAGE_KEY   = 'invoiceList_v1_cols';
@@ -288,6 +290,15 @@ export function InvoiceListPage({ onViewInvoice }: InvoiceListPageProps = {}) {
   // ── Tab ──
   const [activeTab, setActiveTab] = useState<InvoiceStatus | 'ALL'>('ALL');
 
+  // ── 選取狀態（僅 DR 可勾選）──
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // 切換 Tab 時清除選取
+  const handleTabChange = (tab: InvoiceStatus | 'ALL') => {
+    setActiveTab(tab);
+    setSelectedIds(new Set());
+  };
+
   // ── 搜尋篩選 ──
   const [filterInvoiceNo, setFilterInvoiceNo] = useState('');
   const [filterBuyer, setFilterBuyer] = useState('');
@@ -423,10 +434,35 @@ export function InvoiceListPage({ onViewInvoice }: InvoiceListPageProps = {}) {
     return counts;
   }, [records]);
 
-  const totalWidth = INVOICE_NO_W + visibleColumns.reduce((s, c) => s + c.width, 0);
+  // 僅 DR Tab 提供勾選刪除
+  const showCheckbox = activeTab === 'DR';
+
+  const totalWidth = (showCheckbox ? CHECKBOX_W : 0) + INVOICE_NO_W + visibleColumns.reduce((s, c) => s + c.width, 0);
 
   const handleSort = (key: string) => {
     setSortConfig(s => ({ key: key as any, dir: s.key === key && s.dir === 'asc' ? 'desc' : 'asc' }));
+  };
+
+  // ── Checkbox 選取邏輯（僅針對當頁 DR 資料）──
+  const drRowsOnPage = useMemo(() => paginatedData.filter(r => r.status === 'DR'), [paginatedData]);
+  const isAllDrSelected = drRowsOnPage.length > 0 && drRowsOnPage.every(r => selectedIds.has(r.id));
+  const isSomeDrSelected = selectedIds.size > 0 && !isAllDrSelected;
+
+  const toggleRow = (id: string) => {
+    setSelectedIds(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
+  };
+  const toggleAllDr = () => {
+    if (isAllDrSelected) {
+      setSelectedIds(prev => { const s = new Set(prev); drRowsOnPage.forEach(r => s.delete(r.id)); return s; });
+    } else {
+      setSelectedIds(prev => { const s = new Set(prev); drRowsOnPage.forEach(r => s.add(r.id)); return s; });
+    }
+  };
+  const handleDeleteSelected = () => {
+    const remaining = records.filter(r => !selectedIds.has(r.id));
+    saveInvoiceRecords(remaining);
+    setRecords(remaining);
+    setSelectedIds(new Set());
   };
 
   // ── 更新時間（模擬）──
@@ -453,7 +489,7 @@ export function InvoiceListPage({ onViewInvoice }: InvoiceListPageProps = {}) {
                 <div
                   key={tab.key}
                   className="content-stretch flex gap-[8px] h-[48px] items-center justify-center min-h-[48px] min-w-[48px] relative shrink-0 cursor-pointer"
-                  onClick={() => setActiveTab(tab.key)}
+                  onClick={() => handleTabChange(tab.key)}
                 >
                   {isActive && (
                     <div aria-hidden="true" className="absolute border-[#1c252e] border-b-2 border-solid inset-0 pointer-events-none" />
@@ -543,8 +579,33 @@ export function InvoiceListPage({ onViewInvoice }: InvoiceListPageProps = {}) {
         >
           <div style={{ minWidth: `${totalWidth}px` }}>
 
+            {/* 選取工具列（僅 DR Tab） */}
+            {showCheckbox && selectedIds.size > 0 && (
+              <div className="flex items-center gap-[12px] px-[16px] h-[52px] bg-[#e8f1fb] border-b border-[rgba(0,94,184,0.12)] sticky top-0 z-20">
+                <CheckboxIcon checked={isAllDrSelected} indeterminate={isSomeDrSelected} onChange={toggleAllDr} />
+                <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-[#1c252e]">{selectedIds.size} selected</span>
+                <button
+                  onClick={handleDeleteSelected}
+                  className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-[#ff5630] hover:text-[#b71d18] transition-colors ml-[4px]"
+                >
+                  刪除
+                </button>
+              </div>
+            )}
+
             {/* 表頭 */}
             <div className="flex sticky top-0 z-10 border-b border-[rgba(145,158,171,0.08)]">
+              {/* Checkbox 欄頭（僅 DR Tab） */}
+              {showCheckbox && (
+                <div
+                  className="flex items-center justify-center bg-[#f4f6f8] border-r border-[rgba(145,158,171,0.08)] shrink-0"
+                  style={{ width: CHECKBOX_W, minWidth: CHECKBOX_W }}
+                >
+                  {selectedIds.size === 0 && drRowsOnPage.length > 0 && (
+                    <CheckboxIcon checked={isAllDrSelected} indeterminate={isSomeDrSelected} onChange={toggleAllDr} />
+                  )}
+                </div>
+              )}
               {/* 發票號碼 sticky */}
               <div
                 className="flex items-center px-[16px] bg-[#f4f6f8] border-r border-[rgba(145,158,171,0.08)] shrink-0"
@@ -576,9 +637,23 @@ export function InvoiceListPage({ onViewInvoice }: InvoiceListPageProps = {}) {
             {paginatedData.map(row => (
               <div
                 key={row.id}
-                className="flex border-b border-[rgba(145,158,171,0.08)] hover:bg-[rgba(145,158,171,0.04)] transition-colors"
+                className={`flex border-b border-[rgba(145,158,171,0.08)] transition-colors ${
+                  selectedIds.has(row.id) ? 'bg-[rgba(0,94,184,0.04)]' : 'hover:bg-[rgba(145,158,171,0.04)]'
+                }`}
                 style={{ minHeight: 56 }}
               >
+                {/* Checkbox 欄（僅 DR Tab） */}
+                {showCheckbox && (
+                  <div
+                    className="flex items-center justify-center border-r border-[rgba(145,158,171,0.08)] shrink-0"
+                    style={{ width: CHECKBOX_W, minWidth: CHECKBOX_W }}
+                    onClick={e => e.stopPropagation()}
+                  >
+                    {row.status === 'DR' && (
+                      <CheckboxIcon checked={selectedIds.has(row.id)} onChange={() => toggleRow(row.id)} />
+                    )}
+                  </div>
+                )}
                 {/* 發票號碼 */}
                 <div
                   className="flex items-center px-[16px] border-r border-[rgba(145,158,171,0.08)] shrink-0 overflow-hidden"

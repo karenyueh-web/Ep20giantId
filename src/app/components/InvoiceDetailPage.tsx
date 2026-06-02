@@ -21,6 +21,7 @@ import {
 } from './invoiceDetailData';
 import {
   appendInvoiceRecord, generateInvoiceId, resolveTaxCode, initInvoiceStore,
+  INVOICE_STATUS_CONFIG, type InvoiceStatus, type HistoryEntry, type InvoiceRecord,
 } from './invoiceStore';
 
 // ── FloatingInput（與 ShipmentDetailPage 一致）──────────────────────────────
@@ -100,7 +101,7 @@ function FloatingDateField({
 }
 
 // ── 主元件 ───────────────────────────────────────────────────────────────────
-export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency, existingRecord }: InvoiceDetailPageProps) {
+export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency, existingRecord, onSaveSuccess }: InvoiceDetailPageProps) {
 
   // ── 是否為檢視既有發票模式 ──
   const isViewMode = !!existingRecord;
@@ -161,6 +162,9 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
   // ── Toast ──
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const showToast = (msg: string) => { setToastMessage(msg); setTimeout(() => setToastMessage(null), 3000); };
+
+  // ── Alert Dialog（阻擋訊息）──
+  const [alertMessage, setAlertMessage] = useState<string | null>(null);
 
   // ── 新增明細 Dialog state ──
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -231,15 +235,36 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
   const handleSaveDraft = () => {
     setSubmitted(true);
     if (!invoiceNo.trim()) {
-      showToast('請填寫發票號碼');
+      setAlertMessage('請填寫發票號碼');
       return;
     }
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, '0');
+    const timestamp = `${now.getFullYear()}/${pad(now.getMonth()+1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
     const createdAt = `${now.getFullYear()}/${pad(now.getMonth()+1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
     const taxCode = resolveTaxCode(invoiceNo, invoiceDate);
-    appendInvoiceRecord({
-      id: generateInvoiceId(),
+
+    // ── 組裝歷程記錄 ──
+    const prevHistory: HistoryEntry[] = existingRecord?.history ?? [];
+    const changes: string[] = [];
+    if (existingRecord) {
+      // 比對欄位變更
+      if (existingRecord.invoiceNo !== invoiceNo.trim()) changes.push(`發票號碼: ${existingRecord.invoiceNo}→${invoiceNo.trim()}`);
+      if (existingRecord.invoiceDate !== invoiceDate) changes.push(`發票日期: ${existingRecord.invoiceDate || '(空)'}→${invoiceDate || '(空)'}`);
+      if (existingRecord.taxRate !== taxRateValue) changes.push(`稅率: ${existingRecord.taxRate}%→${taxRateValue}%`);
+      if (!isOverseas && existingRecord.invoiceType !== invoiceType) changes.push(`發票聯式: ${existingRecord.invoiceType}→${invoiceType}`);
+      if (existingRecord.totalAmount !== totals.inTax) changes.push(`發票總額: ${existingRecord.totalAmount.toLocaleString()}→${totals.inTax.toLocaleString()}`);
+      if (existingRecord.detailCount !== rows.length) changes.push(`明細數量: ${existingRecord.detailCount}→${rows.length}`);
+    }
+    const historyEntry: HistoryEntry = {
+      timestamp,
+      action: existingRecord ? '暫存' : '建立',
+      operator: '當前使用者',
+      changes: changes.length > 0 ? changes.join('；') : (existingRecord ? '無變更' : '新建草稿'),
+    };
+
+    const savedRecord: InvoiceRecord = {
+      id: existingRecord?.id ?? generateInvoiceId(),
       invoiceNo: invoiceNo.trim(),
       invoiceDate,
       status: 'DR',
@@ -254,20 +279,29 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
       vendorName: selectedRows[0]?.vendorName ?? '',
       execNote: '',
       detailCount: rows.length,
-      createdAt,
+      createdAt: existingRecord?.createdAt ?? createdAt,
       rows,
-    });
-    showToast('草稿已暫存，可至發票查詢查閱');
+      history: [...prevHistory, historyEntry],
+    };
+    appendInvoiceRecord(savedRecord);
+    showToast('草稿已暫存');
+    // 延遲跳轉，讓使用者看到 Toast
+    setTimeout(() => onSaveSuccess?.(savedRecord), 800);
   };
 
   // ── 確認開立（placeholder，後續補充）──
   const handleConfirm = () => {
     setSubmitted(true);
-    if (!invoiceNo.trim() || !invoiceDate) {
-      showToast('請填寫必填欄位');
+    const errors: string[] = [];
+    if (!invoiceNo.trim()) errors.push('請填寫發票號碼');
+    if (!invoiceDate) errors.push('請填寫發票日期');
+    if (rows.length === 0) errors.push('尚無發票明細，無法確認開立');
+    if (errors.length > 0) {
+      setAlertMessage(errors.join('\n'));
       return;
     }
     showToast('發票已確認開立');
+    // TODO: 確認開立後建立正式記錄並跳轉
   };
 
   // ── 表格欄位定義 ──
@@ -396,12 +430,25 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
         {/* Toolbar：TAG + 標題 + 操作 */}
         <div className="flex items-center justify-between mb-[12px]">
           <div className="flex items-center gap-[12px]">
-            {/* 保稅|幣別 TAG */}
+            {/* 保稅(幣別) TAG + 發票狀態 */}
             {(() => {
               const isBonded = bondedType === '保稅';
-              const bg     = isBonded ? '#d9e8f5' : '#ede7f6';
-              const border = isBonded ? '#a3c4e0' : '#b39ddb';
-              const text   = isBonded ? '#005eb8' : '#6c3fc5';
+              const statusCode = existingRecord?.status as InvoiceStatus | undefined;
+              // 有狀態時，整個 TAG 使用與 StatusBadge 相同的配色
+              const statusColors: Record<string, { bg: string; border: string; text: string }> = {
+                DR: { bg: 'rgba(142,51,255,0.16)',  border: 'rgba(142,51,255,0.3)',  text: '#5119b7' },
+                P:  { bg: 'rgba(0,184,217,0.16)',   border: 'rgba(0,184,217,0.3)',   text: '#006c9c' },
+                B:  { bg: 'rgba(255,171,0,0.16)',   border: 'rgba(255,171,0,0.3)',   text: '#b76e00' },
+                S:  { bg: 'rgba(34,197,94,0.16)',   border: 'rgba(34,197,94,0.3)',   text: '#118d57' },
+                F:  { bg: 'rgba(255,86,48,0.16)',   border: 'rgba(255,86,48,0.3)',   text: '#b71d18' },
+                H:  { bg: 'rgba(255,0,130,0.16)',   border: 'rgba(255,0,130,0.3)',   text: '#c4027d' },
+              };
+              const sc = statusCode ? statusColors[statusCode] : null;
+              const statusCfg = statusCode ? INVOICE_STATUS_CONFIG[statusCode] : null;
+              // 有狀態 → 用 badge 配色；無狀態 → 黑底白字
+              const bg     = sc ? sc.bg     : '#1c252e';
+              const border = sc ? sc.border : '#1c252e';
+              const text   = sc ? sc.text   : '#ffffff';
               return (
                 <div
                   className="h-[48px] min-w-[48px] relative rounded-[8px] shrink-0"
@@ -416,7 +463,7 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
                     <div className="flex items-center justify-center min-w-[inherit] px-[14px]">
                       <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold leading-[22px] text-[15px] text-center whitespace-nowrap"
                         style={{ color: text }}>
-                        {bondedType} | {currency}
+                        {bondedType}({currency}){statusCfg && <span> | {statusCfg.label}({statusCode})</span>}
                       </p>
                     </div>
                   </div>
@@ -636,6 +683,50 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
         </div>
       </div>
 
+      {/* ── 歷程記錄 ───────────────────────────────────────────────── */}
+      {existingRecord && (existingRecord.history?.length ?? 0) > 0 && (
+        <div className="mt-[24px]">
+          {/* 標題 */}
+          <div className="flex items-center gap-[8px] mb-[16px]">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#637381" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+            </svg>
+            <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[16px] text-[#1c252e]">歷程記錄</p>
+          </div>
+          {/* Timeline */}
+          <div className="bg-white rounded-[12px] shadow-[0px_0px_2px_0px_rgba(145,158,171,0.2),0px_4px_8px_-2px_rgba(145,158,171,0.12)] p-[24px]">
+            <div className="flex flex-col">
+              {existingRecord.history!.map((entry, idx) => {
+                const isLast = idx === existingRecord.history!.length - 1;
+                const dotColor = entry.action === '建立' ? '#22c55e' : entry.action === '暫存' ? '#1D7BF5' : '#b76e00';
+                return (
+                  <div key={idx} className="flex gap-[16px]">
+                    {/* 左側：圓點 + 連接線 */}
+                    <div className="flex flex-col items-center shrink-0" style={{ width: 20 }}>
+                      <div className="w-[12px] h-[12px] rounded-full shrink-0 mt-[4px]" style={{ backgroundColor: dotColor }} />
+                      {!isLast && <div className="w-[2px] flex-1 bg-[rgba(145,158,171,0.16)]" />}
+                    </div>
+                    {/* 右側：內容 */}
+                    <div className={`flex-1 ${!isLast ? 'pb-[20px]' : ''}`}>
+                      <div className="flex items-center gap-[8px] flex-wrap">
+                        <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-[#1c252e]">{entry.action}</span>
+                        <span className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#919eab]">{entry.timestamp}</span>
+                        <span className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381] bg-[rgba(145,158,171,0.08)] rounded-[4px] px-[6px] py-[1px]">{entry.operator}</span>
+                      </div>
+                      {entry.changes && (
+                        <p className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#637381] mt-[4px] leading-[20px] whitespace-pre-line">
+                          {entry.changes.split('；').join('\n')}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── 新增發票明細 Dialog ─────────────────────────────────────── */}
       {addDialogOpen && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center" style={{ background: 'rgba(22,28,36,0.48)' }}>
@@ -788,9 +879,36 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
         </div>
       )}
 
+      {/* Alert Dialog（阻擋訊息彈窗） */}
+      {alertMessage && (
+        <div className="fixed inset-0 z-[350] flex items-center justify-center" style={{ background: 'rgba(22,28,36,0.48)' }}>
+          <div className="bg-white rounded-[16px] shadow-[0px_24px_48px_rgba(0,0,0,0.24)] p-[32px] flex flex-col items-center gap-[20px]"
+            style={{ width: 'min(420px, 90vw)' }}>
+            {/* 警告圖示 */}
+            <div className="w-[56px] h-[56px] rounded-full bg-[rgba(255,171,0,0.12)] flex items-center justify-center shrink-0">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#b76e00" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+            </div>
+            {/* 訊息文字 */}
+            <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[16px] text-[#1c252e] text-center leading-[24px] whitespace-pre-line">
+              {alertMessage}
+            </p>
+            {/* 確認按鈕 */}
+            <button
+              onClick={() => setAlertMessage(null)}
+              className="h-[40px] w-full max-w-[200px] bg-[#1c252e] hover:bg-[#454f5b] text-white rounded-[8px] text-[14px] font-semibold font-['Public_Sans:SemiBold',sans-serif] transition-colors"
+            >
+              我知道了
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Toast */}
       {toastMessage && (
-        <div className="fixed bottom-[24px] left-1/2 -translate-x-1/2 z-[250] bg-[#1c252e] text-white px-[24px] py-[12px] rounded-[8px] shadow-[0px_8px_16px_rgba(0,0,0,0.16)] flex items-center gap-[8px]">
+        <div className="fixed top-[24px] left-1/2 -translate-x-1/2 z-[250] bg-[#1c252e] text-white px-[24px] py-[12px] rounded-[8px] shadow-[0px_8px_16px_rgba(0,0,0,0.16)] flex items-center gap-[8px]">
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.5-10.5l-5 5L6 10" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
           <p className="font-['Public_Sans:Regular',sans-serif] text-[14px]">{toastMessage}</p>
         </div>

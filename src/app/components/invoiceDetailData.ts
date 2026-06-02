@@ -62,6 +62,7 @@ export interface InvoiceDetailPageProps {
   bondedType: string;   // '保稅' | '非保稅'
   currency: string;     // 'TWD' | 'USD' 等
   existingRecord?: import('./invoiceStore').InvoiceRecord;  // 從發票查詢帶入的既有發票
+  onSaveSuccess?: (record: import('./invoiceStore').InvoiceRecord) => void;  // 儲存成功後跳轉
 }
 
 // ── 稅率選項（台灣，對應「稅率」欄位）──
