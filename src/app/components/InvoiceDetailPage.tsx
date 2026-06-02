@@ -21,6 +21,7 @@ import {
 } from './invoiceDetailData';
 import {
   appendInvoiceRecord, generateInvoiceId, resolveTaxCode, initInvoiceStore,
+  deleteInvoiceRecord, loadInvoiceRecords,
   INVOICE_STATUS_CONFIG, type InvoiceStatus, type HistoryEntry, type InvoiceRecord,
 } from './invoiceStore';
 import { OrderHistory } from './OrderHistory';
@@ -137,9 +138,9 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
   // ── 明細列（單價預設 = 驗收價）──
   const [rows, setRows] = useState<InvoiceDetailRow[]>(() => existingRecord ? existingRecord.rows : toInvoiceDetailRows(selectedRows, taxRate));
 
-  // ── 更新單價 ──
+  // ── 更新單價（同時追蹤 priceModified）──
   const updateUnitPrice = (id: number, val: string) => {
-    setRows(prev => prev.map(r => r.id === id ? recalcRow({ ...r, unitPrice: val }, taxRate) : r));
+    setRows(prev => prev.map(r => r.id === id ? recalcRow({ ...r, unitPrice: val, priceModified: true }, taxRate) : r));
   };
 
   // ── 刪除明細 ──
@@ -247,6 +248,101 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
   // ── 歷程彈窗 ──
   const [showInvoiceHistory, setShowInvoiceHistory] = useState(false);
 
+  // ── 價差 Banner ──
+  const [showPriceMismatchBanner, setShowPriceMismatchBanner] = useState(false);
+  const [mismatchedRowIndices, setMismatchedRowIndices] = useState<number[]>([]);
+
+  // ── 唯讀 / 可編輯 ──
+  const isEditable = !existingRecord || existingRecord.status === 'DR';
+  const currentStatus = existingRecord?.status as InvoiceStatus | undefined;
+
+  // ── 狀態配色（與 StatusBadge 同步）──
+  const STATUS_TEXT_COLORS: Record<InvoiceStatus, string> = {
+    DR: '#5119b7', P: '#006c9c', B: '#b76e00', S: '#118d57', F: '#b71d18', H: '#c4027d',
+  };
+
+  // ── 語意化狀態名稱 ──
+  const statusLabel = (code: InvoiceStatus) => INVOICE_STATUS_CONFIG[code].label;
+
+  // ── 共用：組裝發票記錄 + 歷程寫入 ──
+  const buildInvoiceRecord = (status: InvoiceStatus, action: string, extraChanges?: string): InvoiceRecord => {
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const timestamp = `${now.getFullYear()}/${pad(now.getMonth()+1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+    const createdAt = `${now.getFullYear()}/${pad(now.getMonth()+1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    const resolvedTaxCode = resolveTaxCode(invoiceNo, invoiceDate);
+
+    // ── 歷程變更描述（語意化）──
+    const prevHistory: HistoryEntry[] = existingRecord?.history ?? [];
+    const changes: string[] = [];
+    const prevStatus = existingRecord?.status as InvoiceStatus | undefined;
+    if (prevStatus && prevStatus !== status) {
+      changes.push(`狀態: ${statusLabel(prevStatus)}(${prevStatus})→${statusLabel(status)}(${status})`);
+    }
+    if (existingRecord) {
+      if (existingRecord.invoiceNo !== invoiceNo.trim()) changes.push(`發票號碼: ${existingRecord.invoiceNo}→${invoiceNo.trim()}`);
+      if (existingRecord.invoiceDate !== invoiceDate) changes.push(`發票日期: ${existingRecord.invoiceDate || '(空)'}→${invoiceDate || '(空)'}`);
+      if (existingRecord.taxRate !== taxRateValue) changes.push(`稅率: ${existingRecord.taxRate}%→${taxRateValue}%`);
+      if (!isOverseas && existingRecord.invoiceType !== invoiceType) changes.push(`發票聯式: ${existingRecord.invoiceType}→${invoiceType}`);
+      // 明細數量變動：列出新增的每筆資料詳情
+      if (existingRecord.detailCount !== rows.length) {
+        const prevIds = new Set((existingRecord.rows ?? []).map(r => r.id));
+        const added = rows.filter(r => !prevIds.has(r.id));
+        const removed = (existingRecord.rows ?? []).filter(r => !rows.find(cr => cr.id === r.id));
+        if (added.length > 0) {
+          const addedDesc = added.map(r => `${r.orderNo} ${r.materialNo}(數量:${r.acceptQty}, 金額:${r.subtotalInTax.toLocaleString()})`).join(', ');
+          changes.push(`新增明細: ${addedDesc}`);
+        }
+        if (removed.length > 0) {
+          const removedDesc = removed.map(r => `${r.orderNo} ${r.materialNo}`).join(', ');
+          changes.push(`刪除明細: ${removedDesc}`);
+        }
+      }
+    }
+    if (extraChanges) changes.push(extraChanges);
+
+    const historyEntry: HistoryEntry = {
+      timestamp, action, operator: '當前使用者',
+      changes: changes.length > 0 ? changes.join('；') : (existingRecord ? '無變更' : '新建草稿'),
+    };
+
+    return {
+      id: existingRecord?.id ?? generateInvoiceId(),
+      invoiceNo: invoiceNo.trim(),
+      invoiceDate,
+      status,
+      buyerName,
+      invoiceType: isOverseas ? '' : invoiceType,
+      taxRate: taxRateValue,
+      taxCode: resolvedTaxCode,
+      taxAmount: totals.tax,
+      totalAmount: totals.inTax,
+      currency,
+      bondedType,
+      vendorName: existingRecord?.vendorName ?? selectedRows[0]?.vendorName ?? '',
+      execNote: existingRecord?.execNote ?? '',
+      detailCount: rows.length,
+      createdAt: existingRecord?.createdAt ?? createdAt,
+      rows,
+      history: [...prevHistory, historyEntry],
+    };
+  };
+
+  // ── 檢查發票號碼是否重複（同間公司）──
+  const checkDuplicateInvoiceNo = (): string | null => {
+    const trimmedNo = invoiceNo.trim();
+    if (!trimmedNo) return null;
+    const currentVendor = existingRecord?.vendorName ?? selectedRows[0]?.vendorName ?? '';
+    const currentId = existingRecord?.id;
+    const allRecords = loadInvoiceRecords();
+    const dup = allRecords.find(r =>
+      r.invoiceNo === trimmedNo &&
+      r.vendorName === currentVendor &&
+      r.id !== currentId
+    );
+    return dup ? `發票號碼「${trimmedNo}」已被使用，發票狀態:${INVOICE_STATUS_CONFIG[dup.status as InvoiceStatus]?.label ?? dup.status}(${dup.status})，同間公司不可重複使用。` : null;
+  };
+
   // ── 暫存（儲存為草稿 DR）──
   const handleSaveDraft = () => {
     setSubmitted(true);
@@ -254,70 +350,80 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
       setAlertMessage('請填寫發票號碼');
       return;
     }
-    const now = new Date();
-    const pad = (n: number) => String(n).padStart(2, '0');
-    const timestamp = `${now.getFullYear()}/${pad(now.getMonth()+1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-    const createdAt = `${now.getFullYear()}/${pad(now.getMonth()+1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
-    const taxCode = resolveTaxCode(invoiceNo, invoiceDate);
-
-    // ── 組裝歷程記錄 ──
-    const prevHistory: HistoryEntry[] = existingRecord?.history ?? [];
-    const changes: string[] = [];
-    if (existingRecord) {
-      // 比對欄位變更
-      if (existingRecord.invoiceNo !== invoiceNo.trim()) changes.push(`發票號碼: ${existingRecord.invoiceNo}→${invoiceNo.trim()}`);
-      if (existingRecord.invoiceDate !== invoiceDate) changes.push(`發票日期: ${existingRecord.invoiceDate || '(空)'}→${invoiceDate || '(空)'}`);
-      if (existingRecord.taxRate !== taxRateValue) changes.push(`稅率: ${existingRecord.taxRate}%→${taxRateValue}%`);
-      if (!isOverseas && existingRecord.invoiceType !== invoiceType) changes.push(`發票聯式: ${existingRecord.invoiceType}→${invoiceType}`);
-      if (existingRecord.totalAmount !== totals.inTax) changes.push(`發票總額: ${existingRecord.totalAmount.toLocaleString()}→${totals.inTax.toLocaleString()}`);
-      if (existingRecord.detailCount !== rows.length) changes.push(`明細數量: ${existingRecord.detailCount}→${rows.length}`);
+    const dupMsg = checkDuplicateInvoiceNo();
+    if (dupMsg) {
+      setAlertMessage(dupMsg);
+      return;
     }
-    const historyEntry: HistoryEntry = {
-      timestamp,
-      action: existingRecord ? '暫存' : '建立',
-      operator: '當前使用者',
-      changes: changes.length > 0 ? changes.join('；') : (existingRecord ? '無變更' : '新建草稿'),
-    };
-
-    const savedRecord: InvoiceRecord = {
-      id: existingRecord?.id ?? generateInvoiceId(),
-      invoiceNo: invoiceNo.trim(),
-      invoiceDate,
-      status: 'DR',
-      buyerName,
-      invoiceType: isOverseas ? '' : invoiceType,
-      taxRate: taxRateValue,
-      taxCode,
-      taxAmount: totals.tax,
-      totalAmount: totals.inTax,
-      currency,
-      bondedType,
-      vendorName: selectedRows[0]?.vendorName ?? '',
-      execNote: '',
-      detailCount: rows.length,
-      createdAt: existingRecord?.createdAt ?? createdAt,
-      rows,
-      history: [...prevHistory, historyEntry],
-    };
+    const savedRecord = buildInvoiceRecord('DR', existingRecord ? '暫存' : '建立');
     appendInvoiceRecord(savedRecord);
     showToast('草稿已暫存');
-    // 延遲跳轉，讓使用者看到 Toast
     setTimeout(() => onSaveSuccess?.(savedRecord), 800);
   };
 
-  // ── 確認開立（placeholder，後續補充）──
+  // ── 確認開立 ──
   const handleConfirm = () => {
     setSubmitted(true);
     const errors: string[] = [];
     if (!invoiceNo.trim()) errors.push('請填寫發票號碼');
     if (!invoiceDate) errors.push('請填寫發票日期');
     if (rows.length === 0) errors.push('尚無發票明細，無法確認開立');
+    const dupMsg = checkDuplicateInvoiceNo();
+    if (dupMsg) errors.push(dupMsg);
     if (errors.length > 0) {
       setAlertMessage(errors.join('\n'));
       return;
     }
-    showToast('發票已確認開立');
-    // TODO: 確認開立後建立正式記錄並跳轉
+    // 單價 vs 驗收價比對
+    const mismatched = rows
+      .map((r, idx) => ({ ...r, index: idx + 1 }))
+      .filter(r => r.priceModified);
+    if (mismatched.length > 0) {
+      setMismatchedRowIndices(mismatched.map(r => r.index));
+      setShowPriceMismatchBanner(true);
+    } else {
+      submitAsStatusP();
+    }
+  };
+
+  // ── 確認開立：直接送出（無價差）──
+  const submitAsStatusP = () => {
+    const record = buildInvoiceRecord('P', '確認開立');
+    record.execNote = '';
+    appendInvoiceRecord(record);
+    showToast('發票已確認開立，資料處理中');
+    setTimeout(() => onSaveSuccess?.(record), 800);
+  };
+
+  // ── 轉交採購確認（有價差）──
+  const handleTransferToPurchasing = () => {
+    const mismatchRows = rows.filter(r => r.priceModified);
+    const mismatchDesc = mismatchRows.map(r => `${r.orderNo} ${r.materialNo}`).join(', ');
+    const mismatchInfo = `單價與驗收價不符: ${mismatchDesc}`;
+    const record = buildInvoiceRecord('B', '轉交採購確認', mismatchInfo);
+    record.execNote = '價差確認中';
+    appendInvoiceRecord(record);
+    setShowPriceMismatchBanner(false);
+    showToast('已轉交採購確認');
+    setTimeout(() => onSaveSuccess?.(record), 800);
+  };
+
+  // ── 轉線下處理（B/F → H）──
+  const handleOffline = () => {
+    const record = buildInvoiceRecord('H', '轉線下處理');
+    record.execNote = '改線下處理';
+    appendInvoiceRecord(record);
+    showToast('已轉為線下處理');
+    setTimeout(() => onSaveSuccess?.(record), 800);
+  };
+
+  // ── 刪除發票確認彈窗 ──
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const handleDeleteInvoice = () => {
+    if (!existingRecord) return;
+    deleteInvoiceRecord(existingRecord.id);
+    showToast('發票已刪除');
+    setTimeout(() => onClose(), 800);
   };
 
   // ── 表格欄位定義 ──
@@ -358,20 +464,73 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
                 <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[28px] text-[#1c252e] text-[18px] whitespace-nowrap">基本資訊</p>
               </div>
             </div>
+            {/* 發票狀態文字（從 TAG 移到這裡） */}
+            {currentStatus && (
+              <p
+                className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[16px] leading-[28px] whitespace-nowrap ml-[8px]"
+                style={{ color: STATUS_TEXT_COLORS[currentStatus] }}
+              >
+                發票狀態:{statusLabel(currentStatus)}({currentStatus})
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-[12px]">
-            <button
-              onClick={handleSaveDraft}
-              className="h-[40px] w-[120px] rounded-[8px] border border-[rgba(145,158,171,0.32)] bg-white text-[#1c252e] hover:bg-[#f4f6f8] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
-            >
-              暫存
-            </button>
-            <button onClick={handleConfirm}
-              className="h-[40px] w-[120px] bg-[#005eb8] hover:bg-[#004a94] text-white rounded-[8px] text-[14px] font-semibold font-['Public_Sans:SemiBold',sans-serif] transition-colors whitespace-nowrap">
-              確認開立
-            </button>
-            {/* 歷程連結（最右側，有 existingRecord 且有歷程時顯示） */}
-            {existingRecord && (existingRecord.history?.length ?? 0) > 0 && (
+            {/* ── 依狀態顯示操作按鈕（不分角色）── */}
+            {(!currentStatus || currentStatus === 'DR') && (<>
+              <button
+                onClick={handleSaveDraft}
+                className="h-[40px] w-[120px] rounded-[8px] border border-[rgba(145,158,171,0.32)] bg-white text-[#1c252e] hover:bg-[#f4f6f8] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
+              >
+                暫存
+              </button>
+              <button onClick={handleConfirm}
+                className="h-[40px] w-[120px] bg-[#005eb8] hover:bg-[#004a94] text-white rounded-[8px] text-[14px] font-semibold font-['Public_Sans:SemiBold',sans-serif] transition-colors whitespace-nowrap">
+                確認開立
+              </button>
+            </>)}
+            {currentStatus === 'B' && (<>
+              <button
+                onClick={handleOffline}
+                className="h-[40px] w-[120px] rounded-[8px] border border-[rgba(145,158,171,0.32)] bg-white text-[#1c252e] hover:bg-[#f4f6f8] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
+              >
+                線下處理
+              </button>
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="h-[40px] w-[120px] rounded-[8px] bg-[#ff5630] hover:bg-[#b71d18] text-white font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
+              >
+                刪除
+              </button>
+            </>)}
+            {currentStatus === 'S' && (
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="h-[40px] w-[120px] rounded-[8px] bg-[#ff5630] hover:bg-[#b71d18] text-white font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
+              >
+                刪除發票
+              </button>
+            )}
+            {currentStatus === 'F' && (<>
+              <button
+                className="h-[40px] w-[120px] rounded-[8px] border border-[rgba(145,158,171,0.32)] bg-white text-[#1c252e] hover:bg-[#f4f6f8] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
+              >
+                重拋SAP
+              </button>
+              <button
+                onClick={handleOffline}
+                className="h-[40px] w-[120px] rounded-[8px] border border-[rgba(145,158,171,0.32)] bg-white text-[#1c252e] hover:bg-[#f4f6f8] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
+              >
+                轉線下處理
+              </button>
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="h-[40px] w-[120px] rounded-[8px] bg-[#ff5630] hover:bg-[#b71d18] text-white font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
+              >
+                刪除發票
+              </button>
+            </>)}
+            {/* 歷程連結（所有狀態都顯示，只要有 existingRecord） */}
+            {existingRecord && (
               <p
                 className="[text-decoration-skip-ink:none] decoration-solid font-['Roboto:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[32px] text-[#005eb8] text-[16px] underline cursor-pointer hover:opacity-70 select-none whitespace-nowrap"
                 style={{ fontVariationSettings: "'wdth' 100" }}
@@ -416,17 +575,21 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
           {/* 發票號碼（col 1） */}
           <div className="min-w-0">
             <FloatingInput label="發票號碼" value={invoiceNo} onChange={setInvoiceNo}
-              required hasError={submitted && !invoiceNo.trim()} />
+              required hasError={submitted && !invoiceNo.trim()} disabled={!isEditable} />
           </div>
           {/* 發票日期（col 2） */}
           <div className="min-w-0">
-            <FloatingDateField label="發票日期" value={invoiceDate} onChange={setInvoiceDate}
-              required hasError={submitted && !invoiceDate} />
+            {isEditable ? (
+              <FloatingDateField label="發票日期" value={invoiceDate} onChange={setInvoiceDate}
+                required hasError={submitted && !invoiceDate} />
+            ) : (
+              <FloatingInput label="發票日期" value={invoiceDate || ''} onChange={() => {}} disabled />
+            )}
           </div>
           {/* 稅率（col 3，台灣保稅：鎖定 0%；其他：可選） */}
           <div className="min-w-0">
-            {isTaiwanBonded ? (
-              <FloatingInput label="稅率" value="0%" onChange={() => {}} disabled />
+            {!isEditable || isTaiwanBonded ? (
+              <FloatingInput label="稅率" value={`${taxRateValue}%`} onChange={() => {}} disabled />
             ) : (
               <DropdownSelect
                 label="稅率"
@@ -439,7 +602,16 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
           </div>
           {/* 發票聯式 / 稅碼（col 4） */}
           <div className="min-w-0">
-            {isOverseas ? (
+            {!isEditable ? (
+              <FloatingInput
+                label={isOverseas ? '稅碼' : '發票聯式'}
+                value={isOverseas
+                  ? (TAX_CODE_OPTIONS.find(o => o.value === taxCode)?.label ?? taxCode)
+                  : (INVOICE_TYPE_OPTIONS.find(o => o.value === invoiceType)?.label ?? invoiceType)}
+                onChange={() => {}}
+                disabled
+              />
+            ) : isOverseas ? (
               /* 海外買方 → VAT 稅碼，預設 0% */
               <DropdownSelect
                 label="稅碼"
@@ -465,49 +637,76 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
       {/* ── 下半：發票明細 ────────────────────────────────────────── */}
       <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar bg-[#f4f6f8] px-[24px] py-[20px]">
 
+        {/* ── 價差 Banner ────────────────────────────────────────── */}
+        {showPriceMismatchBanner && (
+          <div className="mb-[12px] rounded-[8px] px-[16px] py-[12px]" style={{ backgroundColor: 'rgba(255,171,0,0.08)', border: '1px solid rgba(255,171,0,0.3)' }}>
+            <div className="flex items-start justify-between gap-[16px]">
+              <div className="flex items-start gap-[10px] flex-1">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="shrink-0 mt-[2px]">
+                  <path d="M12 2L1 21h22L12 2z" fill="rgba(255,171,0,0.2)" stroke="#b76e00" strokeWidth="2" strokeLinejoin="round"/>
+                  <path d="M12 9v5M12 17h.01" stroke="#b76e00" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+                <div>
+                  <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-[#1c252e] leading-[22px]">
+                    下列明細單價與驗收價不同，請確認是否誤植，若無問題請轉交採購處理。
+                  </p>
+                  <p className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#b76e00] mt-[4px]">
+                    發票明細編號: {mismatchedRowIndices.join('、')}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-[12px] shrink-0">
+                <button
+                  onClick={() => setShowPriceMismatchBanner(false)}
+                  className="h-[36px] px-[16px] rounded-[8px] bg-[#b76e00] hover:bg-[#8a5200] text-white font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] transition-colors whitespace-nowrap"
+                >
+                  確認單價
+                </button>
+                <p
+                  className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#005eb8] underline cursor-pointer hover:opacity-70 whitespace-nowrap select-none"
+                  onClick={handleTransferToPurchasing}
+                >
+                  轉交採購
+                </p>
+                <button
+                  onClick={() => setShowPriceMismatchBanner(false)}
+                  className="w-[28px] h-[28px] flex items-center justify-center rounded-full hover:bg-[rgba(145,158,171,0.12)] transition-colors text-[#637381]"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── F 狀態紅色提示文字 ── */}
+        {currentStatus === 'F' && (
+          <p className="font-['Public_Sans:Regular',sans-serif] text-[#ff5630] text-[13px] mb-[12px] leading-[20px]">
+            SAP建立發票出現錯誤，若無法判斷錯誤原因，請先至SAP執行TCODE: MIR7手動建立發票以得到更清楚的錯誤訊息與錯誤的項次。
+          </p>
+        )}
+
         {/* Toolbar：TAG + 標題 + 操作 */}
         <div className="flex items-center justify-between mb-[12px]">
           <div className="flex items-center gap-[12px]">
-            {/* 保稅(幣別) TAG + 發票狀態 */}
-            {(() => {
-              const isBonded = bondedType === '保稅';
-              const statusCode = existingRecord?.status as InvoiceStatus | undefined;
-              // 有狀態時，整個 TAG 使用與 StatusBadge 相同的配色
-              const statusColors: Record<string, { bg: string; border: string; text: string }> = {
-                DR: { bg: 'rgba(142,51,255,0.16)',  border: 'rgba(142,51,255,0.3)',  text: '#5119b7' },
-                P:  { bg: 'rgba(0,184,217,0.16)',   border: 'rgba(0,184,217,0.3)',   text: '#006c9c' },
-                B:  { bg: 'rgba(255,171,0,0.16)',   border: 'rgba(255,171,0,0.3)',   text: '#b76e00' },
-                S:  { bg: 'rgba(34,197,94,0.16)',   border: 'rgba(34,197,94,0.3)',   text: '#118d57' },
-                F:  { bg: 'rgba(255,86,48,0.16)',   border: 'rgba(255,86,48,0.3)',   text: '#b71d18' },
-                H:  { bg: 'rgba(255,0,130,0.16)',   border: 'rgba(255,0,130,0.3)',   text: '#c4027d' },
-              };
-              const sc = statusCode ? statusColors[statusCode] : null;
-              const statusCfg = statusCode ? INVOICE_STATUS_CONFIG[statusCode] : null;
-              // 有狀態 → 用 badge 配色；無狀態 → 黑底白字
-              const bg     = sc ? sc.bg     : '#1c252e';
-              const border = sc ? sc.border : '#1c252e';
-              const text   = sc ? sc.text   : '#ffffff';
-              return (
-                <div
-                  className="h-[48px] min-w-[48px] relative rounded-[8px] shrink-0"
-                  style={{ backgroundColor: bg }}
-                >
-                  <div
-                    aria-hidden="true"
-                    className="absolute border border-solid inset-0 pointer-events-none rounded-[8px]"
-                    style={{ borderColor: border }}
-                  />
-                  <div className="flex flex-row items-center justify-center min-w-[inherit] size-full">
-                    <div className="flex items-center justify-center min-w-[inherit] px-[14px]">
-                      <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold leading-[22px] text-[15px] text-center whitespace-nowrap"
-                        style={{ color: text }}>
-                        {bondedType}({currency}){statusCfg && <span> | {statusCfg.label}({statusCode})</span>}
-                      </p>
-                    </div>
-                  </div>
+            {/* 保稅(幣別) TAG — 回歸黑底白字 */}
+            <div
+              className="h-[48px] min-w-[48px] relative rounded-[8px] shrink-0"
+              style={{ backgroundColor: '#1c252e' }}
+            >
+              <div
+                aria-hidden="true"
+                className="absolute border border-solid inset-0 pointer-events-none rounded-[8px]"
+                style={{ borderColor: '#1c252e' }}
+              />
+              <div className="flex flex-row items-center justify-center min-w-[inherit] size-full">
+                <div className="flex items-center justify-center min-w-[inherit] px-[14px]">
+                  <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold leading-[22px] text-[15px] text-center whitespace-nowrap text-white">
+                    {bondedType}({currency})
+                  </p>
                 </div>
-              );
-            })()}
+              </div>
+            </div>
             <div className="h-[48px] min-h-[48px] relative shrink-0">
               <div aria-hidden="true" className="absolute border-[#1c252e] border-b-2 border-solid inset-0 pointer-events-none" />
               <div className="flex items-center justify-center h-full px-[4px]">
@@ -542,8 +741,8 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
             )}
           </div>
 
-          {/* 右側：新增驗收資料按鈕 */}
-          <button
+          {/* 右側：新增驗收資料按鈕（僅可編輯時顯示） */}
+          {isEditable && <button
             onClick={() => setAddDialogOpen(true)}
             title="新增驗收資料"
             className="w-[40px] h-[40px] rounded-full bg-[#1D7BF5] hover:bg-[#1262cc] flex items-center justify-center shrink-0 transition-colors shadow-[0px_4px_8px_rgba(29,123,245,0.32)]"
@@ -552,7 +751,7 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
               <line x1="12" y1="5" x2="12" y2="19" />
               <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
-          </button>
+          </button>}
         </div>
 
         {/* 表格卡片 */}
@@ -614,17 +813,30 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
                   <div style={{ width: 90, minWidth: 90 }} className="px-[8px] shrink-0">
                     <span className="text-[14px] text-[#1c252e]">{row.acceptPrice.toLocaleString()}</span>
                   </div>
-                  {/* 單價（可輸入） */}
-                  <div style={{ width: 90, minWidth: 90 }} className="px-[8px] shrink-0">
-                    <input type="text" inputMode="decimal" value={row.unitPrice}
-                      onChange={e => {
-                        const raw = e.target.value.replace(/[^0-9.]/g, '');
-                        const parts = raw.split('.'); const sanitized = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : raw;
-                        updateUnitPrice(row.id, sanitized);
-                      }}
-                      className="w-full h-[32px] px-[6px] border border-[rgba(0,94,184,0.4)] rounded-[6px] text-[14px] text-[#1c252e] outline-none focus:border-[#005eb8] focus:ring-2 focus:ring-[rgba(0,94,184,0.12)] bg-white text-left transition-colors"
-                    />
-                  </div>
+                  {/* 單價（可編輯時為 input，唯讀時為文字） */}
+                  {(() => {
+                    const hasMismatch = !!row.priceModified;
+                    return (
+                      <div style={{ width: 90, minWidth: 90 }} className="px-[8px] shrink-0">
+                        {isEditable ? (
+                          <input type="text" inputMode="decimal" value={row.unitPrice}
+                            onChange={e => {
+                              const raw = e.target.value.replace(/[^0-9.]/g, '');
+                              const parts = raw.split('.'); const sanitized = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : raw;
+                              updateUnitPrice(row.id, sanitized);
+                            }}
+                            className={`w-full h-[32px] px-[6px] border rounded-[6px] text-[14px] outline-none bg-white text-left transition-colors ${
+                              hasMismatch
+                                ? 'border-[#ff5630] text-[#ff5630] focus:border-[#ff5630] focus:ring-2 focus:ring-[rgba(255,86,48,0.12)]'
+                                : 'border-[rgba(0,94,184,0.4)] text-[#1c252e] focus:border-[#005eb8] focus:ring-2 focus:ring-[rgba(0,94,184,0.12)]'
+                            }`}
+                          />
+                        ) : (
+                          <span className={`text-[14px] ${hasMismatch ? 'text-[#ff5630]' : 'text-[#1c252e]'}`}>{row.unitPrice}</span>
+                        )}
+                      </div>
+                    );
+                  })()}
                   {/* 單項稅額 */}
                   <div
                     style={{ width: 130, minWidth: 130 }}
@@ -708,9 +920,9 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
                       </div>
                     )}
                   </div>
-                  {/* 刪除 */}
+                  {/* 刪除（僅可編輯時顯示） */}
                   <div style={{ width: 50, minWidth: 50 }} className="px-[4px] shrink-0 flex justify-center">
-                    <DeleteButton onClick={() => deleteRow(row.id)} />
+                    {isEditable && <DeleteButton onClick={() => deleteRow(row.id)} />}
                   </div>
                 </div>
               ))}
@@ -916,6 +1128,43 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
             >
               我知道了
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* 刪除確認彈窗 */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-[350] flex items-center justify-center" style={{ background: 'rgba(22,28,36,0.48)' }}>
+          <div className="bg-white rounded-[16px] shadow-[0px_24px_48px_rgba(0,0,0,0.24)] p-[32px] flex flex-col items-center gap-[20px]"
+            style={{ width: 'min(420px, 90vw)' }}>
+            {/* 警告圖示 */}
+            <div className="w-[56px] h-[56px] rounded-full bg-[rgba(255,86,48,0.12)] flex items-center justify-center shrink-0">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ff5630" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                <line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" />
+              </svg>
+            </div>
+            <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[16px] text-[#1c252e] text-center leading-[24px]">
+              確定要刪除這張發票嗎？
+            </p>
+            <p className="font-['Public_Sans:Regular',sans-serif] text-[14px] text-[#637381] text-center leading-[22px]">
+              刪除後該筆資料將被移除，您可以重新開立發票。
+            </p>
+            <div className="flex items-center gap-[12px] w-full justify-center">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="h-[40px] px-[24px] rounded-[8px] border border-[rgba(145,158,171,0.32)] bg-white text-[#1c252e] hover:bg-[#f4f6f8] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleDeleteInvoice}
+                className="h-[40px] px-[24px] rounded-[8px] bg-[#ff5630] hover:bg-[#b71d18] text-white font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors"
+              >
+                確定刪除
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -77,6 +77,12 @@ export function appendInvoiceRecord(record: InvoiceRecord): void {
   saveInvoiceRecords(existing);
 }
 
+// ── 刪除單筆 ──
+export function deleteInvoiceRecord(id: string): void {
+  const existing = loadInvoiceRecords();
+  saveInvoiceRecords(existing.filter(r => r.id !== id));
+}
+
 // ── 產生流水編號 ──
 export function generateInvoiceId(): string {
   const now = new Date();

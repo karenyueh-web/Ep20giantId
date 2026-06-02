@@ -49,6 +49,7 @@ export interface InvoiceDetailRow {
   acceptQty: number;      // 驗收量
   acceptPrice: number;    // 驗收價
   unitPrice: string;      // 單價（可手動輸入）
+  priceModified: boolean; // 使用者是否修改過單價（用於驗收價比對）
   itemTax: number;        // 單項稅額（自動計算）
   subtotalExTax: number;  // 未稅小計（自動計算）
   subtotalInTax: number;  // 含稅小計（自動計算）
@@ -100,6 +101,7 @@ export function toInvoiceDetailRows(rows: InvoiceAcceptRow[], taxRate = 0): Invo
       acceptQty:      r.acceptQty,
       acceptPrice,
       unitPrice,
+      priceModified: false,
       itemTax:        0,
       subtotalExTax:  0,
       subtotalInTax:  0,
