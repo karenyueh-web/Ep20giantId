@@ -179,16 +179,26 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
   const [dialogItemsPerPage, setDialogItemsPerPage] = useState(100);
 
   // 來源候選資料：同廠商 + 同保稅類別 + 排除已加入的 id
+  // 記錄初始明細的原始 id（建立/載入時就在發票中的明細），刪除後應可回到候選清單
+  const [initialRowIds] = useState<Set<number>>(() => new Set(
+    (existingRecord ? existingRecord.rows : toInvoiceDetailRows(selectedRows, taxRate)).map(r => r.id)
+  ));
   const existingIds = useMemo(() => new Set(rows.map(r => r.id)), [rows]);
-  const vendorName  = selectedRows[0]?.vendorName ?? '';
+  const vendorName  = selectedRows[0]?.vendorName ?? existingRecord?.vendorName ?? '';
+  const resolvedBondedType = selectedRows[0]?.bondedType ?? bondedType ?? '';
 
   const candidateRows = useMemo(() => {
-    return invoiceMockData.filter(r =>
-      r.vendorName   === vendorName &&
-      r.bondedType   === (selectedRows[0]?.bondedType ?? '') &&
-      !existingIds.has(r.id)
-    );
-  }, [existingIds, vendorName, selectedRows]);
+    return invoiceMockData.filter(r => {
+      // 已加入的排除
+      if (existingIds.has(r.id)) return false;
+      // 必須是同廠商
+      if (r.vendorName !== vendorName) return false;
+      // 原本就在這張發票中被刪除的 → 直接回到候選（不檢查 bondedType）
+      if (initialRowIds.has(r.id)) return true;
+      // 新候選 → 必須同保稅類別
+      return r.bondedType === resolvedBondedType;
+    });
+  }, [existingIds, vendorName, resolvedBondedType, initialRowIds]);
 
   const filteredCandidates = useMemo(() => {
     const q1 = dialogOrderNo.trim().toLowerCase();
