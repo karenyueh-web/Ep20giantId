@@ -23,6 +23,9 @@ import {
   appendInvoiceRecord, generateInvoiceId, resolveTaxCode, initInvoiceStore,
   INVOICE_STATUS_CONFIG, type InvoiceStatus, type HistoryEntry, type InvoiceRecord,
 } from './invoiceStore';
+import { OrderHistory } from './OrderHistory';
+import type { HistoryEntry as OrderHistoryEntry } from './OrderStoreContext';
+import { MOCK_VENDORS } from './VendorManagementTable';
 
 // ── FloatingInput（與 ShipmentDetailPage 一致）──────────────────────────────
 function FloatingInput({
@@ -231,6 +234,9 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
   // ── 提交驗證狀態 ──
   const [submitted, setSubmitted] = useState(false);
 
+  // ── 歷程彈窗 ──
+  const [showInvoiceHistory, setShowInvoiceHistory] = useState(false);
+
   // ── 暫存（儲存為草稿 DR）──
   const handleSaveDraft = () => {
     setSubmitted(true);
@@ -354,18 +360,40 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
               className="h-[40px] w-[120px] bg-[#005eb8] hover:bg-[#004a94] text-white rounded-[8px] text-[14px] font-semibold font-['Public_Sans:SemiBold',sans-serif] transition-colors whitespace-nowrap">
               確認開立
             </button>
+            {/* 歷程連結（最右側，有 existingRecord 且有歷程時顯示） */}
+            {existingRecord && (existingRecord.history?.length ?? 0) > 0 && (
+              <p
+                className="[text-decoration-skip-ink:none] decoration-solid font-['Roboto:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[32px] text-[#005eb8] text-[16px] underline cursor-pointer hover:opacity-70 select-none whitespace-nowrap"
+                style={{ fontVariationSettings: "'wdth' 100" }}
+                onClick={() => setShowInvoiceHistory(true)}
+              >
+                歷程
+              </p>
+            )}
           </div>
         </div>
 
         {/* 表單：4-column grid，Row 1 與 Row 2 欄位切齊 */}
         <div className="grid grid-cols-4 gap-[16px]">
           {/* Row 1 */}
-          {/* 買方（col 1-2，唯讀，有必填星號） */}
+          {/* 廠商（col 1，唯讀，顯示完整名稱） */}
+          <div className="min-w-0">
+            <FloatingInput label="廠商" value={(() => {
+              const vn = existingRecord?.vendorName ?? selectedRows[0]?.vendorName ?? '';
+              const codeMatch = vn.match(/\(([^)]+)\)/);
+              if (codeMatch) {
+                const found = MOCK_VENDORS.find(v => v.code === codeMatch[1]);
+                if (found) return found.fullName;
+              }
+              return vn;
+            })()} onChange={() => {}} disabled />
+          </div>
+          {/* 買方（col 2-3，唯讀，有必填星號） */}
           <div className="col-span-2 min-w-0">
             <FloatingInput label="買方" value={buyerName} onChange={() => {}} required disabled />
           </div>
-          {/* 發票總額（col 3-4，唯讀，顯示計算值） */}
-          <div className="col-span-2 min-w-0">
+          {/* 發票總額（col 4，唯讀，顯示計算值） */}
+          <div className="min-w-0">
             <FloatingInput
               label="發票總額"
               value={totals.inTax > 0 ? totals.inTax.toLocaleString() : ''}
@@ -683,49 +711,25 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
         </div>
       </div>
 
-      {/* ── 歷程記錄 ───────────────────────────────────────────────── */}
-      {existingRecord && (existingRecord.history?.length ?? 0) > 0 && (
-        <div className="mt-[24px]">
-          {/* 標題 */}
-          <div className="flex items-center gap-[8px] mb-[16px]">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#637381" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
-            </svg>
-            <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[16px] text-[#1c252e]">歷程記錄</p>
-          </div>
-          {/* Timeline */}
-          <div className="bg-white rounded-[12px] shadow-[0px_0px_2px_0px_rgba(145,158,171,0.2),0px_4px_8px_-2px_rgba(145,158,171,0.12)] p-[24px]">
-            <div className="flex flex-col">
-              {existingRecord.history!.map((entry, idx) => {
-                const isLast = idx === existingRecord.history!.length - 1;
-                const dotColor = entry.action === '建立' ? '#22c55e' : entry.action === '暫存' ? '#1D7BF5' : '#b76e00';
-                return (
-                  <div key={idx} className="flex gap-[16px]">
-                    {/* 左側：圓點 + 連接線 */}
-                    <div className="flex flex-col items-center shrink-0" style={{ width: 20 }}>
-                      <div className="w-[12px] h-[12px] rounded-full shrink-0 mt-[4px]" style={{ backgroundColor: dotColor }} />
-                      {!isLast && <div className="w-[2px] flex-1 bg-[rgba(145,158,171,0.16)]" />}
-                    </div>
-                    {/* 右側：內容 */}
-                    <div className={`flex-1 ${!isLast ? 'pb-[20px]' : ''}`}>
-                      <div className="flex items-center gap-[8px] flex-wrap">
-                        <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-[#1c252e]">{entry.action}</span>
-                        <span className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#919eab]">{entry.timestamp}</span>
-                        <span className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381] bg-[rgba(145,158,171,0.08)] rounded-[4px] px-[6px] py-[1px]">{entry.operator}</span>
-                      </div>
-                      {entry.changes && (
-                        <p className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#637381] mt-[4px] leading-[20px] whitespace-pre-line">
-                          {entry.changes.split('；').join('\n')}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ── 發票歷程彈窗（使用 OrderHistory 元件，與訂單歷程一致）────── */}
+      {showInvoiceHistory && existingRecord && (() => {
+        // 將 invoice HistoryEntry 轉換為 OrderHistory 需要的格式
+        const orderHistoryEntries: OrderHistoryEntry[] = (existingRecord.history ?? []).map(e => ({
+          date: e.timestamp,
+          event: e.action,
+          operator: e.operator,
+          remark: e.changes ?? '',
+        }));
+        return (
+          <OrderHistory
+            onClose={() => setShowInvoiceHistory(false)}
+            entries={orderHistoryEntries}
+            titleLabel="發票歷程"
+            correctionDocNo={existingRecord.invoiceNo}
+            correctionDocNoLabel="發票號碼"
+          />
+        );
+      })()}
 
       {/* ── 新增發票明細 Dialog ─────────────────────────────────────── */}
       {addDialogOpen && (

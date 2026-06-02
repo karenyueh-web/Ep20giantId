@@ -15,7 +15,7 @@ import { InvoiceSettingsPage } from "@/app/components/InvoiceSettingsPage";
 import { InvoiceCreatePage } from "@/app/components/InvoiceCreatePage";
 import { InvoiceDetailPage } from "@/app/components/InvoiceDetailPage";
 import { InvoiceListPage } from "@/app/components/InvoiceListPage";
-import type { InvoiceRecord } from "@/app/components/invoiceStore";
+import { type InvoiceRecord, loadInvoiceRecords } from "@/app/components/invoiceStore";
 import { CorrectionCreatePage } from "@/app/components/CorrectionCreatePage";
 import { CorrectionListWithTabs } from "@/app/components/CorrectionListWithTabs";
 import { HistoryCorrectionListPage } from "@/app/components/HistoryCorrectionListPage";
@@ -328,7 +328,14 @@ export default function App() {
                 currency={viewingInvoice.currency}
                 onClose={() => setViewingInvoice(null)}
                 existingRecord={viewingInvoice}
-                onSaveSuccess={(record) => setViewingInvoice(record)}
+                onSaveSuccess={(record) => {
+                  // 先清除 → 觸發卸載；下一 tick 再重設 → 觸發重新掛載，讓 state 完全重置
+                  setViewingInvoice(null);
+                  setTimeout(() => {
+                    const latest = loadInvoiceRecords().find(r => r.id === record.id);
+                    setViewingInvoice(latest ?? record);
+                  }, 50);
+                }}
               />
             </ResponsivePageLayout>
           );
