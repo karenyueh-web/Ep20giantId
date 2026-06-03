@@ -289,6 +289,7 @@ export default function App() {
                 selectedRows={invoiceDetail.rows}
                 bondedType={invoiceDetail.bondedType}
                 currency={invoiceDetail.currency}
+                userRole={userRole}
                 onClose={() => setInvoiceDetail(null)}
                 onSaveSuccess={(record) => {
                   setInvoiceDetail(null);
@@ -326,6 +327,7 @@ export default function App() {
                 selectedRows={[]}
                 bondedType={viewingInvoice.bondedType}
                 currency={viewingInvoice.currency}
+                userRole={userRole}
                 onClose={() => setViewingInvoice(null)}
                 existingRecord={viewingInvoice}
                 onSaveSuccess={(record) => {

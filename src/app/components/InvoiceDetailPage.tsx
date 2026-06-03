@@ -105,7 +105,7 @@ function FloatingDateField({
 }
 
 // ── 主元件 ───────────────────────────────────────────────────────────────────
-export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency, existingRecord, onSaveSuccess }: InvoiceDetailPageProps) {
+export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency, userRole = 'vendor', existingRecord, onSaveSuccess }: InvoiceDetailPageProps) {
 
   // ── 是否為檢視既有發票模式 ──
   const isViewMode = !!existingRecord;
@@ -389,7 +389,7 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
   // ── 確認開立：直接送出（無價差）──
   const submitAsStatusP = () => {
     const record = buildInvoiceRecord('P', '確認開立');
-    record.execNote = '';
+    record.execNote = '回傳SAP中';
     appendInvoiceRecord(record);
     showToast('發票已確認開立，資料處理中');
     setTimeout(() => onSaveSuccess?.(record), 800);
@@ -414,6 +414,24 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
     record.execNote = '改線下處理';
     appendInvoiceRecord(record);
     showToast('已轉為線下處理');
+    setTimeout(() => onSaveSuccess?.(record), 800);
+  };
+
+  // ── 退回廠商（B/F → DR）──
+  const handleReturnToVendor = () => {
+    const record = buildInvoiceRecord('DR', '退回廠商');
+    record.execNote = '採購退回，請廠商重新確認';
+    appendInvoiceRecord(record);
+    showToast('已退回廠商，發票回到草稿狀態');
+    setTimeout(() => onSaveSuccess?.(record), 800);
+  };
+
+  // ── 重拋（F → P）──
+  const handleRetry = () => {
+    const record = buildInvoiceRecord('P', '重拋');
+    record.execNote = '回傳SAP中';
+    appendInvoiceRecord(record);
+    showToast('已重新拋送 SAP，資料處理中');
     setTimeout(() => onSaveSuccess?.(record), 800);
   };
 
@@ -476,59 +494,81 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
           </div>
           <div className="flex items-center gap-[12px]">
             {/* ── 依狀態顯示操作按鈕（不分角色）── */}
-            {(!currentStatus || currentStatus === 'DR') && (<>
-              <button
-                onClick={handleSaveDraft}
-                className="h-[40px] w-[120px] rounded-[8px] border border-[rgba(145,158,171,0.32)] bg-white text-[#1c252e] hover:bg-[#f4f6f8] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
-              >
-                暫存
-              </button>
-              <button onClick={handleConfirm}
-                className="h-[40px] w-[120px] bg-[#005eb8] hover:bg-[#004a94] text-white rounded-[8px] text-[14px] font-semibold font-['Public_Sans:SemiBold',sans-serif] transition-colors whitespace-nowrap">
-                確認開立
-              </button>
-            </>)}
-            {currentStatus === 'B' && (<>
-              <button
-                onClick={handleOffline}
-                className="h-[40px] w-[120px] rounded-[8px] border border-[rgba(145,158,171,0.32)] bg-white text-[#1c252e] hover:bg-[#f4f6f8] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
-              >
-                線下處理
-              </button>
+            {/* ── DR 草稿：廠商可執行 ── */}
+            {(!currentStatus || currentStatus === 'DR') && (
+              <>
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="h-[40px] px-[16px] rounded-[8px] border border-[rgba(145,158,171,0.32)] bg-white text-[#637381] hover:bg-[#f4f6f8] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
+                >
+                  刪除草稿
+                </button>
+                <button
+                  onClick={handleSaveDraft}
+                  className="h-[40px] px-[16px] rounded-[8px] border border-[rgba(145,158,171,0.32)] bg-white text-[#1c252e] hover:bg-[#f4f6f8] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
+                >
+                  暫存
+                </button>
+                <button
+                  onClick={handleConfirm}
+                  className="h-[40px] px-[16px] bg-[#005eb8] hover:bg-[#004a94] text-white rounded-[8px] text-[14px] font-semibold font-['Public_Sans:SemiBold',sans-serif] transition-colors whitespace-nowrap"
+                >
+                  轉發票
+                </button>
+              </>
+            )}
+
+            {/* ── B 採購確認中：採購可執行 ── */}
+            {currentStatus === 'B' && userRole === 'procurement' && (
+              <>
+                <button
+                  onClick={handleOffline}
+                  className="h-[40px] px-[16px] rounded-[8px] border border-[rgba(145,158,171,0.32)] bg-white text-[#1c252e] hover:bg-[#f4f6f8] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
+                >
+                  線下處理
+                </button>
+                <button
+                  onClick={handleReturnToVendor}
+                  className="h-[40px] px-[16px] rounded-[8px] border border-[rgba(255,86,48,0.4)] bg-white text-[#ff5630] hover:bg-[rgba(255,86,48,0.04)] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
+                >
+                  退回廠商
+                </button>
+              </>
+            )}
+
+            {/* ── S 轉發票成功：廠商可刪除 ── */}
+            {currentStatus === 'S' && userRole === 'vendor' && (
               <button
                 onClick={() => setShowDeleteConfirm(true)}
-                className="h-[40px] w-[120px] rounded-[8px] bg-[#ff5630] hover:bg-[#b71d18] text-white font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
-              >
-                刪除
-              </button>
-            </>)}
-            {currentStatus === 'S' && (
-              <button
-                onClick={() => setShowDeleteConfirm(true)}
-                className="h-[40px] w-[120px] rounded-[8px] bg-[#ff5630] hover:bg-[#b71d18] text-white font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
+                className="h-[40px] px-[16px] rounded-[8px] bg-[#ff5630] hover:bg-[#b71d18] text-white font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
               >
                 刪除發票
               </button>
             )}
-            {currentStatus === 'F' && (<>
-              <button
-                className="h-[40px] w-[120px] rounded-[8px] border border-[rgba(145,158,171,0.32)] bg-white text-[#1c252e] hover:bg-[#f4f6f8] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
-              >
-                重拋SAP
-              </button>
-              <button
-                onClick={handleOffline}
-                className="h-[40px] w-[120px] rounded-[8px] border border-[rgba(145,158,171,0.32)] bg-white text-[#1c252e] hover:bg-[#f4f6f8] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
-              >
-                轉線下處理
-              </button>
-              <button
-                onClick={() => setShowDeleteConfirm(true)}
-                className="h-[40px] w-[120px] rounded-[8px] bg-[#ff5630] hover:bg-[#b71d18] text-white font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
-              >
-                刪除發票
-              </button>
-            </>)}
+
+            {/* ── F 轉發票失敗：採購可執行 ── */}
+            {currentStatus === 'F' && userRole === 'procurement' && (
+              <>
+                <button
+                  onClick={handleRetry}
+                  className="h-[40px] px-[16px] rounded-[8px] border border-[rgba(145,158,171,0.32)] bg-white text-[#1c252e] hover:bg-[#f4f6f8] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
+                >
+                  重拋
+                </button>
+                <button
+                  onClick={handleOffline}
+                  className="h-[40px] px-[16px] rounded-[8px] border border-[rgba(145,158,171,0.32)] bg-white text-[#1c252e] hover:bg-[#f4f6f8] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
+                >
+                  線下處理
+                </button>
+                <button
+                  onClick={handleReturnToVendor}
+                  className="h-[40px] px-[16px] rounded-[8px] border border-[rgba(255,86,48,0.4)] bg-white text-[#ff5630] hover:bg-[rgba(255,86,48,0.04)] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
+                >
+                  退回廠商
+                </button>
+              </>
+            )}
             {/* 歷程連結（所有狀態都顯示，只要有 existingRecord） */}
             {existingRecord && (
               <p

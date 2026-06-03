@@ -138,21 +138,21 @@ export const MOCK_INVOICE_RECORDS: InvoiceRecord[] = [
     status: 'P', buyerName: '巨大機械工業股份有限公司(56054251)',
     invoiceType: '21', taxRate: '5', taxCode: 'V1', taxAmount: 31500, totalAmount: 661500,
     currency: 'TWD', bondedType: '非保稅', vendorName: '華銘(0001000641)',
-    execNote: '', detailCount: 4, createdAt: '2025/03/05 11:00', rows: [], history: [],
+    execNote: '回傳SAP中', detailCount: 4, createdAt: '2025/03/05 11:00', rows: [], history: [],
   },
   {
     id: 'INV-20250505-0005', invoiceNo: 'JB0000003', invoiceDate: '2025/03/12',
     status: 'P', buyerName: '愛普智科技股份有限公司(83153430)',
     invoiceType: '25', taxRate: '5', taxCode: 'V1', taxAmount: 8500, totalAmount: 178500,
     currency: 'TWD', bondedType: '非保稅', vendorName: '金盛元工業(0001000059)',
-    execNote: '', detailCount: 2, createdAt: '2025/03/12 13:30', rows: [], history: [],
+    execNote: '回傳SAP中', detailCount: 2, createdAt: '2025/03/12 13:30', rows: [], history: [],
   },
   {
     id: 'INV-20250506-0006', invoiceNo: 'JA0000008', invoiceDate: '2025/03/20',
     status: 'P', buyerName: '巨大機械工業股份有限公司幼獅分公司(29183302)',
     invoiceType: '21', taxRate: '5', taxCode: 'V1', taxAmount: 14000, totalAmount: 294000,
     currency: 'TWD', bondedType: '非保稅', vendorName: '佳承精密(0001000045)',
-    execNote: '', detailCount: 1, createdAt: '2025/03/20 16:45', rows: [], history: [],
+    execNote: '回傳SAP中', detailCount: 1, createdAt: '2025/03/20 16:45', rows: [], history: [],
   },
   // B 採購確認中 × 2
   {
@@ -175,21 +175,21 @@ export const MOCK_INVOICE_RECORDS: InvoiceRecord[] = [
     status: 'S', buyerName: '巨大機械工業股份有限公司(56054251)',
     invoiceType: '21', taxRate: '0', taxCode: 'V0', taxAmount: 0, totalAmount: 508000,
     currency: 'TWD', bondedType: '保稅', vendorName: '華銘(0001000641)',
-    execNote: '轉發票成功', detailCount: 6, createdAt: '2025/05/08 09:00', rows: [], history: [],
+    execNote: '回傳SAP成功', detailCount: 6, createdAt: '2025/05/08 09:00', rows: [], history: [],
   },
   {
     id: 'INV-20250510-0010', invoiceNo: 'JC0000002', invoiceDate: '2025/05/15',
     status: 'S', buyerName: '巨大機械工業股份有限公司幼獅分公司(29183302)',
     invoiceType: '25', taxRate: '5', taxCode: 'V1', taxAmount: 22000, totalAmount: 462000,
     currency: 'TWD', bondedType: '非保稅', vendorName: '佳承精密(0001000045)',
-    execNote: '轉發票成功', detailCount: 3, createdAt: '2025/05/15 11:30', rows: [], history: [],
+    execNote: '回傳SAP成功', detailCount: 3, createdAt: '2025/05/15 11:30', rows: [], history: [],
   },
   {
     id: 'INV-20250511-0011', invoiceNo: 'HZ0000001', invoiceDate: '2025/06/03',
     status: 'S', buyerName: '愛普智科技股份有限公司(83153430)',
     invoiceType: '21', taxRate: '0', taxCode: 'V0', taxAmount: 0, totalAmount: 195000,
     currency: 'USD', bondedType: '保稅', vendorName: '金盛元工業(0001000059)',
-    execNote: '轉發票成功', detailCount: 2, createdAt: '2025/06/03 15:00', rows: [], history: [],
+    execNote: '回傳SAP成功', detailCount: 2, createdAt: '2025/06/03 15:00', rows: [], history: [],
   },
   // F 轉發票失敗 × 2
   {
@@ -197,14 +197,14 @@ export const MOCK_INVOICE_RECORDS: InvoiceRecord[] = [
     status: 'F', buyerName: '巨大機械工業股份有限公司(56054251)',
     invoiceType: '21', taxRate: '0', taxCode: 'V0', taxAmount: 0, totalAmount: 276000,
     currency: 'TWD', bondedType: '保稅', vendorName: '華銘(0001000641)',
-    execNote: 'SAP連線失敗', detailCount: 3, createdAt: '2025/02/20 10:00', rows: [], history: [],
+    execNote: '回傳SAP失敗', detailCount: 3, createdAt: '2025/02/20 10:00', rows: [], history: [],
   },
   {
     id: 'INV-20250513-0013', invoiceNo: 'JB0000007', invoiceDate: '2025/03/25',
     status: 'F', buyerName: '愛普智科技股份有限公司(83153430)',
     invoiceType: '22', taxRate: '5', taxCode: 'V1', taxAmount: 4750, totalAmount: 99750,
     currency: 'TWD', bondedType: '非保稅', vendorName: '久廣精密(0001000053)',
-    execNote: '稅碼錯誤，重新處理中', detailCount: 1, createdAt: '2025/03/25 16:00', rows: [], history: [],
+    execNote: '回傳SAP失敗', detailCount: 1, createdAt: '2025/03/25 16:00', rows: [], history: [],
   },
   // H 線下處理 × 2
   {

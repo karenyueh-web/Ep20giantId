@@ -115,6 +115,31 @@ function getCellValue(row: InvoiceRecord, key: InvListColKey): React.ReactNode {
   if (key === 'status') {
     return <StatusBadge status={row.status} />;
   }
+  // ── 執行備註：P/S/F 狀態固定顯示，其他狀態顿譯原始就 ──
+  if (key === 'execNote') {
+    const overrideMap: Partial<Record<InvoiceStatus, string>> = {
+      P: '回傳SAP中',
+      S: '回傳SAP成功',
+      F: '回傳SAP失敗',
+    };
+    const displayText = overrideMap[row.status as InvoiceStatus] ?? '';
+    const s = displayText.trim() !== '' ? displayText : '—';
+    const colorMap: Partial<Record<InvoiceStatus, string>> = {
+      P: '#006c9c',
+      S: '#118d57',
+      F: '#b71d18',
+    };
+    const color = colorMap[row.status as InvoiceStatus];
+    return (
+      <p
+        className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] truncate w-full"
+        style={{ color: s === '—' ? '#919eab' : (color ?? '#1c252e') }}
+        title={s}
+      >
+        {s}
+      </p>
+    );
+  }
   if (key === 'taxAmount' || key === 'totalAmount') {
     const n = row[key];
     return (

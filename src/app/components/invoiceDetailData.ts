@@ -62,6 +62,7 @@ export interface InvoiceDetailPageProps {
   onClose: () => void;
   bondedType: string;   // '保稅' | '非保稅'
   currency: string;     // 'TWD' | 'USD' 等
+  userRole?: 'vendor' | 'procurement' | 'giant';  // 角色（影響按鈕顯示）
   existingRecord?: import('./invoiceStore').InvoiceRecord;  // 從發票查詢帶入的既有發票
   onSaveSuccess?: (record: import('./invoiceStore').InvoiceRecord) => void;  // 儲存成功後跳轉
 }
