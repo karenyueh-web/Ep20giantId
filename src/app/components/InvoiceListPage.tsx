@@ -26,6 +26,7 @@ import {
   loadInvoiceRecords, initInvoiceStore, saveInvoiceRecords, INVOICE_STATUS_CONFIG,
   type InvoiceRecord, type InvoiceStatus,
 } from './invoiceStore';
+import { UpdateTimeLabel } from './UpdateTimeLabel';
 
 // ── Tab 定義 ──────────────────────────────────────────────────────────────────
 
@@ -568,9 +569,11 @@ export function InvoiceListPage({ onViewInvoice }: InvoiceListPageProps = {}) {
         onFiltersClick={() => setShowFilterDialog(v => !v)}
         onExportCsv={() => { /* TODO */ }}
         actionButton={
-          <span className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#005eb8] whitespace-nowrap ml-[8px]">
-            更新時間：{updateTime}
-          </span>
+          (['P', 'S', 'F'] as (InvoiceStatus | 'ALL')[]).includes(activeTab) ? (
+            <span className="ml-[8px]">
+              <UpdateTimeLabel label="更新時間" currentTime={updateTime} />
+            </span>
+          ) : undefined
         }
         columnsButton={
           <ColumnSelector

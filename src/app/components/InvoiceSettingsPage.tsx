@@ -21,6 +21,7 @@ import { measureTextWidth } from './table/tableUtils';
 import { SimpleDatePicker } from './SimpleDatePicker';
 import { TRACK_DATA, type TrackRecord } from './invoiceSettingsStore';
 import { DropdownSelect } from './DropdownSelect';
+import { UpdateTimeLabel } from './UpdateTimeLabel';
 
 
 // ── react-dnd drag types ──────────────────────────────────────────────────────
@@ -359,8 +360,8 @@ function TrackTab() {
         onFiltersClick={() => setShowFilterDialog(v => !v)}
         onExportCsv={() => { /* TODO */ }}
         actionButton={
-          <span className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#005eb8] whitespace-nowrap ml-[8px]">
-            資料更新時間：{dataUpdateTime}
+          <span className="ml-[8px]">
+            <UpdateTimeLabel label="資料更新時間" currentTime={dataUpdateTime} />
           </span>
         }
         columnsButton={
