@@ -65,6 +65,7 @@ export interface InvoiceDetailPageProps {
   userRole?: 'vendor' | 'procurement' | 'giant';  // 角色（影響按鈕顯示）
   existingRecord?: import('./invoiceStore').InvoiceRecord;  // 從發票查詢帶入的既有發票
   onSaveSuccess?: (record: import('./invoiceStore').InvoiceRecord) => void;  // 儲存成功後跳轉
+  onPrintPreviewChange?: (active: boolean) => void; // 通知父層列印預覽開/關（用於更新麵包屑）
 }
 
 // ── 稅率選項（台灣，對應「稅率」欄位）──

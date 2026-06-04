@@ -52,6 +52,8 @@ export default function App() {
   const [invoiceDetail, setInvoiceDetail] = useState<{ rows: any[]; bondedType: string; currency: string } | null>(null);
   // ── 從發票查詢點擊查看的發票記錄 ──
   const [viewingInvoice, setViewingInvoice] = useState<InvoiceRecord | null>(null);
+  // ── 發票明細列印預覽模式（用於動態更新麵包屑）──
+  const [isPrintPreview, setIsPrintPreview] = useState(false);
 
   const handleLoginSuccess = (role: UserRole) => {
     setIsLoggedIn(true);
@@ -282,8 +284,8 @@ export default function App() {
               onPageChange={handlePageChange}
               onLogout={handleLogout}
               userRole={userRole}
-              title="開立發票"
-              breadcrumb="發票作業 • 開立發票"
+              title={isPrintPreview ? '列印發票明細' : '開立發票'}
+              breadcrumb={isPrintPreview ? '發票作業 • 開立發票 • 列印發票明細' : '發票作業 • 開立發票'}
             >
               <InvoiceDetailPage
                 selectedRows={invoiceDetail.rows}
@@ -291,6 +293,7 @@ export default function App() {
                 currency={invoiceDetail.currency}
                 userRole={userRole}
                 onClose={() => setInvoiceDetail(null)}
+                onPrintPreviewChange={setIsPrintPreview}
                 onSaveSuccess={(record) => {
                   setInvoiceDetail(null);
                   setCurrentPage('invoice-list');
@@ -317,11 +320,11 @@ export default function App() {
           return (
             <ResponsivePageLayout
               currentPage={currentPage}
-              onPageChange={(p) => { setViewingInvoice(null); handlePageChange(p); }}
+              onPageChange={(p) => { setViewingInvoice(null); setIsPrintPreview(false); handlePageChange(p); }}
               onLogout={handleLogout}
               userRole={userRole}
-              title="發票明細"
-              breadcrumb="發票作業 • 發票查詢 • 發票明細"
+              title={isPrintPreview ? '列印發票明細' : '發票明細'}
+              breadcrumb={isPrintPreview ? '發票作業 • 發票查詢 • 發票明細 • 列印發票明細' : '發票作業 • 發票查詢 • 發票明細'}
             >
               <InvoiceDetailPage
                 selectedRows={[]}
@@ -330,8 +333,8 @@ export default function App() {
                 userRole={userRole}
                 onClose={() => setViewingInvoice(null)}
                 existingRecord={viewingInvoice}
+                onPrintPreviewChange={setIsPrintPreview}
                 onSaveSuccess={(record) => {
-                  // 先清除 → 觸發卸載；下一 tick 再重設 → 觸發重新掛載，讓 state 完全重置
                   setViewingInvoice(null);
                   setTimeout(() => {
                     const latest = loadInvoiceRecords().find(r => r.id === record.id);
