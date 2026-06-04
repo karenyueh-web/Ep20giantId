@@ -175,6 +175,9 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
   // ── Alert Dialog（阻擋訊息）──
   const [alertMessage, setAlertMessage] = useState<string | null>(null);
 
+  // ── 狀態轉換通知 Alert ──
+  const [statusAlertMessage, setStatusAlertMessage] = useState<string | null>(null);
+
   // ── 新增明細 Dialog state ──
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [dialogOrderNo,  setDialogOrderNo]  = useState('');
@@ -375,7 +378,7 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
     }
     const savedRecord = buildInvoiceRecord('DR', existingRecord ? '暫存' : '建立');
     appendInvoiceRecord(savedRecord);
-    showToast('草稿已暫存');
+    setStatusAlertMessage('草稿已暫存');
     setTimeout(() => onSaveSuccess?.(savedRecord), 800);
   };
 
@@ -409,7 +412,7 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
     const record = buildInvoiceRecord('P', '確認開立');
     record.execNote = '回傳SAP中';
     appendInvoiceRecord(record);
-    showToast('發票已確認開立，資料處理中');
+    setStatusAlertMessage('發票已確認開立，資料處理中');
     setTimeout(() => onSaveSuccess?.(record), 800);
   };
 
@@ -422,7 +425,7 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
     record.execNote = '價差確認中';
     appendInvoiceRecord(record);
     setShowPriceMismatchBanner(false);
-    showToast('已轉交採購確認');
+    setStatusAlertMessage('已轉交採購確認');
     setTimeout(() => onSaveSuccess?.(record), 800);
   };
 
@@ -431,7 +434,7 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
     const record = buildInvoiceRecord('H', '轉線下處理');
     record.execNote = '改線下處理';
     appendInvoiceRecord(record);
-    showToast('已轉為線下處理');
+    setStatusAlertMessage('已轉為線下處理');
     setTimeout(() => onSaveSuccess?.(record), 800);
   };
 
@@ -440,7 +443,7 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
     const record = buildInvoiceRecord('DR', '退回廠商');
     record.execNote = '採購退回，請廠商重新確認';
     appendInvoiceRecord(record);
-    showToast('已退回廠商，發票回到草稿狀態');
+    setStatusAlertMessage('已退回廠商，發票回到草稿狀態');
     setTimeout(() => onSaveSuccess?.(record), 800);
   };
 
@@ -449,7 +452,7 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
     const record = buildInvoiceRecord('P', '重拋');
     record.execNote = '回傳SAP中';
     appendInvoiceRecord(record);
-    showToast('已重新拋送 SAP，資料處理中');
+    setStatusAlertMessage('已重新拋送 SAP，資料處理中');
     setTimeout(() => onSaveSuccess?.(record), 800);
   };
 
@@ -458,7 +461,7 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
   const handleDeleteInvoice = () => {
     if (!existingRecord) return;
     deleteInvoiceRecord(existingRecord.id);
-    showToast('發票已刪除');
+    setStatusAlertMessage('發票已刪除');
     setTimeout(() => onClose(), 800);
   };
 
@@ -1187,6 +1190,31 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
               className="h-[40px] w-full max-w-[200px] bg-[#1c252e] hover:bg-[#454f5b] text-white rounded-[8px] text-[14px] font-semibold font-['Public_Sans:SemiBold',sans-serif] transition-colors"
             >
               我知道了
+            </button>
+          </div>
+        </div>
+      )}\n\n      {/* 狀態轉換通知 Alert */}
+      {statusAlertMessage && (
+        <div className="fixed inset-0 z-[350] flex items-center justify-center" style={{ background: 'rgba(22,28,36,0.48)' }}>
+          <div className="bg-white rounded-[16px] shadow-[0px_24px_48px_rgba(0,0,0,0.24)] p-[32px] flex flex-col items-center gap-[20px]"
+            style={{ width: 'min(420px, 90vw)' }}>
+            {/* 成功圖示 */}
+            <div className="w-[56px] h-[56px] rounded-full bg-[rgba(34,197,94,0.12)] flex items-center justify-center shrink-0">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+              </svg>
+            </div>
+            {/* 訊息文字 */}
+            <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[16px] text-[#1c252e] text-center leading-[24px] whitespace-pre-line">
+              {statusAlertMessage}
+            </p>
+            {/* 確認按鈕 */}
+            <button
+              onClick={() => setStatusAlertMessage(null)}
+              className="h-[40px] w-full max-w-[200px] bg-[#16a34a] hover:bg-[#15803d] text-white rounded-[8px] text-[14px] font-semibold font-['Public_Sans:SemiBold',sans-serif] transition-colors"
+            >
+              確認
             </button>
           </div>
         </div>
