@@ -140,7 +140,12 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
 
   // ── 更新單價（同時追蹤 priceModified）──
   const updateUnitPrice = (id: number, val: string) => {
-    setRows(prev => prev.map(r => r.id === id ? recalcRow({ ...r, unitPrice: val, priceModified: true }, taxRate) : r));
+    setRows(prev => prev.map(r => {
+      if (r.id !== id) return r;
+      const numVal = parseFloat(val);
+      const isModified = isNaN(numVal) ? true : numVal !== r.acceptPrice;
+      return recalcRow({ ...r, unitPrice: val, priceModified: isModified }, taxRate);
+    }));
   };
 
   // ── 刪除明細 ──
@@ -284,6 +289,19 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
       if (existingRecord.invoiceDate !== invoiceDate) changes.push(`發票日期: ${existingRecord.invoiceDate || '(空)'}→${invoiceDate || '(空)'}`);
       if (existingRecord.taxRate !== taxRateValue) changes.push(`稅率: ${existingRecord.taxRate}%→${taxRateValue}%`);
       if (!isOverseas && existingRecord.invoiceType !== invoiceType) changes.push(`發票聯式: ${existingRecord.invoiceType}→${invoiceType}`);
+      // 單價變更：比對每筆明細的 unitPrice
+      const prevRows = existingRecord.rows ?? [];
+      const priceChangedRows = rows.filter(r => {
+        const prev = prevRows.find(pr => pr.id === r.id);
+        return prev && String(prev.unitPrice) !== String(r.unitPrice);
+      });
+      if (priceChangedRows.length > 0) {
+        const priceDesc = priceChangedRows.map(r => {
+          const prev = prevRows.find(pr => pr.id === r.id);
+          return `${r.materialNo}(單價: ${prev?.unitPrice}→${r.unitPrice})`;
+        }).join(', ');
+        changes.push(`單價變更: ${priceDesc}`);
+      }
       // 明細數量變動：列出新增的每筆資料詳情
       if (existingRecord.detailCount !== rows.length) {
         const prevIds = new Set((existingRecord.rows ?? []).map(r => r.id));
@@ -374,10 +392,10 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
       setAlertMessage(errors.join('\n'));
       return;
     }
-    // 單價 vs 驗收價比對
+    // 單價 vs 驗收價比對（實際數值比對，非旗標）
     const mismatched = rows
       .map((r, idx) => ({ ...r, index: idx + 1 }))
-      .filter(r => r.priceModified);
+      .filter(r => parseFloat(String(r.unitPrice)) !== r.acceptPrice);
     if (mismatched.length > 0) {
       setMismatchedRowIndices(mismatched.map(r => r.index));
       setShowPriceMismatchBanner(true);
@@ -397,7 +415,7 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
 
   // ── 轉交採購確認（有價差）──
   const handleTransferToPurchasing = () => {
-    const mismatchRows = rows.filter(r => r.priceModified);
+    const mismatchRows = rows.filter(r => parseFloat(String(r.unitPrice)) !== r.acceptPrice);
     const mismatchDesc = mismatchRows.map(r => `${r.orderNo} ${r.materialNo}`).join(', ');
     const mismatchInfo = `單價與驗收價不符: ${mismatchDesc}`;
     const record = buildInvoiceRecord('B', '轉交採購確認', mismatchInfo);
@@ -497,21 +515,23 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
             {/* ── DR 草稿：廠商可執行 ── */}
             {(!currentStatus || currentStatus === 'DR') && (
               <>
-                <button
-                  onClick={() => setShowDeleteConfirm(true)}
-                  className="h-[40px] px-[16px] rounded-[8px] border border-[rgba(145,158,171,0.32)] bg-white text-[#637381] hover:bg-[#f4f6f8] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
-                >
-                  刪除草稿
-                </button>
+                {existingRecord && (
+                  <button
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="h-[40px] min-w-[88px] px-[16px] rounded-[8px] border border-[rgba(145,158,171,0.32)] bg-white text-[#637381] hover:bg-[#f4f6f8] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
+                  >
+                    刪除草稿
+                  </button>
+                )}
                 <button
                   onClick={handleSaveDraft}
-                  className="h-[40px] px-[16px] rounded-[8px] border border-[rgba(145,158,171,0.32)] bg-white text-[#1c252e] hover:bg-[#f4f6f8] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
+                  className="h-[40px] min-w-[88px] px-[16px] rounded-[8px] border border-[rgba(145,158,171,0.32)] bg-white text-[#1c252e] hover:bg-[#f4f6f8] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
                 >
                   暫存
                 </button>
                 <button
                   onClick={handleConfirm}
-                  className="h-[40px] px-[16px] bg-[#005eb8] hover:bg-[#004a94] text-white rounded-[8px] text-[14px] font-semibold font-['Public_Sans:SemiBold',sans-serif] transition-colors whitespace-nowrap"
+                  className="h-[40px] min-w-[88px] px-[16px] bg-[#005eb8] hover:bg-[#004a94] text-white rounded-[8px] text-[14px] font-semibold font-['Public_Sans:SemiBold',sans-serif] transition-colors whitespace-nowrap"
                 >
                   轉發票
                 </button>
@@ -519,17 +539,17 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
             )}
 
             {/* ── B 採購確認中：採購可執行 ── */}
-            {currentStatus === 'B' && userRole === 'procurement' && (
+            {currentStatus === 'B' && (
               <>
                 <button
                   onClick={handleOffline}
-                  className="h-[40px] px-[16px] rounded-[8px] border border-[rgba(145,158,171,0.32)] bg-white text-[#1c252e] hover:bg-[#f4f6f8] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
+                  className="h-[40px] min-w-[88px] px-[16px] rounded-[8px] border border-[rgba(145,158,171,0.32)] bg-white text-[#1c252e] hover:bg-[#f4f6f8] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
                 >
                   線下處理
                 </button>
                 <button
                   onClick={handleReturnToVendor}
-                  className="h-[40px] px-[16px] rounded-[8px] border border-[rgba(255,86,48,0.4)] bg-white text-[#ff5630] hover:bg-[rgba(255,86,48,0.04)] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
+                  className="h-[40px] min-w-[88px] px-[16px] rounded-[8px] border border-[rgba(255,86,48,0.4)] bg-white text-[#ff5630] hover:bg-[rgba(255,86,48,0.04)] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
                 >
                   退回廠商
                 </button>
@@ -537,33 +557,33 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
             )}
 
             {/* ── S 轉發票成功：廠商可刪除 ── */}
-            {currentStatus === 'S' && userRole === 'vendor' && (
+            {currentStatus === 'S' && (
               <button
                 onClick={() => setShowDeleteConfirm(true)}
-                className="h-[40px] px-[16px] rounded-[8px] bg-[#ff5630] hover:bg-[#b71d18] text-white font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
+                className="h-[40px] min-w-[88px] px-[16px] rounded-[8px] bg-[#ff5630] hover:bg-[#b71d18] text-white font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
               >
                 刪除發票
               </button>
             )}
 
             {/* ── F 轉發票失敗：採購可執行 ── */}
-            {currentStatus === 'F' && userRole === 'procurement' && (
+            {currentStatus === 'F' && (
               <>
                 <button
                   onClick={handleRetry}
-                  className="h-[40px] px-[16px] rounded-[8px] border border-[rgba(145,158,171,0.32)] bg-white text-[#1c252e] hover:bg-[#f4f6f8] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
+                  className="h-[40px] min-w-[88px] px-[16px] rounded-[8px] border border-[rgba(145,158,171,0.32)] bg-white text-[#1c252e] hover:bg-[#f4f6f8] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
                 >
                   重拋
                 </button>
                 <button
                   onClick={handleOffline}
-                  className="h-[40px] px-[16px] rounded-[8px] border border-[rgba(145,158,171,0.32)] bg-white text-[#1c252e] hover:bg-[#f4f6f8] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
+                  className="h-[40px] min-w-[88px] px-[16px] rounded-[8px] border border-[rgba(145,158,171,0.32)] bg-white text-[#1c252e] hover:bg-[#f4f6f8] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
                 >
                   線下處理
                 </button>
                 <button
                   onClick={handleReturnToVendor}
-                  className="h-[40px] px-[16px] rounded-[8px] border border-[rgba(255,86,48,0.4)] bg-white text-[#ff5630] hover:bg-[rgba(255,86,48,0.04)] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
+                  className="h-[40px] min-w-[88px] px-[16px] rounded-[8px] border border-[rgba(255,86,48,0.4)] bg-white text-[#ff5630] hover:bg-[rgba(255,86,48,0.04)] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
                 >
                   退回廠商
                 </button>
@@ -976,7 +996,7 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
       {/* ── 發票歷程彈窗（使用 OrderHistory 元件，與訂單歷程一致）────── */}
       {showInvoiceHistory && existingRecord && (() => {
         // 將 invoice HistoryEntry 轉換為 OrderHistory 需要的格式
-        const orderHistoryEntries: OrderHistoryEntry[] = (existingRecord.history ?? []).map(e => ({
+        const orderHistoryEntries: OrderHistoryEntry[] = (existingRecord.history ?? []).slice().reverse().map(e => ({
           date: e.timestamp,
           event: e.action,
           operator: e.operator,
