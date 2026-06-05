@@ -24,8 +24,7 @@ const PAGE_META: Partial<Record<string, { title: string; breadcrumb: string }>> 
   'invoice-create':         { title: '開立發票',        breadcrumb: '發票作業 • 開立發票' },
   'invoice-list':           { title: '發票查詢',        breadcrumb: '發票作業 • 發票查詢' },
   'invoice-settings':       { title: '發票設定',        breadcrumb: '發票作業 • 發票設定' },
-  // 零件/索樣維護
-  'parts-maintain':         { title: '零件資訊維護',    breadcrumb: '零件/索樣維護 • 零件資訊維護' },
+  // 零件/索樣維護（parts-maintain 已實作，不在此列）
   'parts-quote':            { title: '列印報價單',      breadcrumb: '零件/索樣維護 • 列印報價單' },
   'parts-sample':           { title: '索樣單',          breadcrumb: '零件/索樣維護 • 索樣單' },
   // 品保作業

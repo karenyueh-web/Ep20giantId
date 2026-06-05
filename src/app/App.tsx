@@ -20,6 +20,7 @@ import { CorrectionCreatePage } from "@/app/components/CorrectionCreatePage";
 import { CorrectionListWithTabs } from "@/app/components/CorrectionListWithTabs";
 import { HistoryCorrectionListPage } from "@/app/components/HistoryCorrectionListPage";
 import { OrderScheduleInquiryPage } from "@/app/components/OrderScheduleInquiryPage";
+import PartsMaintenancePage from "@/app/components/PartsMaintenancePage";
 import { ResponsivePageLayout } from "@/app/components/ResponsivePageLayout";
 import { LoginPage } from "@/app/components/LoginPage";
 import { RegisterPage } from "@/app/components/RegisterPage";
@@ -54,6 +55,9 @@ export default function App() {
   const [viewingInvoice, setViewingInvoice] = useState<InvoiceRecord | null>(null);
   // ── 發票明細列印預覽模式（用於動態更新麵包屑）──
   const [isPrintPreview, setIsPrintPreview] = useState(false);
+  // ── 零件資訊維護 breadcrumb state ──
+  const [partsTitle, setPartsTitle] = useState('零件資訊維護');
+  const [partsBreadcrumb, setPartsBreadcrumb] = useState('零件/索樣維護 • 零件資訊維護');
 
   const handleLoginSuccess = (role: UserRole) => {
     setIsLoggedIn(true);
@@ -359,6 +363,21 @@ export default function App() {
         );
 
       case 'parts-maintain':
+        return (
+          <ResponsivePageLayout
+            currentPage={currentPage}
+            onPageChange={(p) => { setPartsTitle('零件資訊維護'); setPartsBreadcrumb('零件/索樣維護 • 零件資訊維護'); handlePageChange(p); }}
+            onLogout={handleLogout}
+            userRole={userRole}
+            title={partsTitle}
+            breadcrumb={partsBreadcrumb}
+          >
+            <PartsMaintenancePage
+              userRole={userRole}
+              onBreadcrumbChange={(title, bc) => { setPartsTitle(title); setPartsBreadcrumb(bc); }}
+            />
+          </ResponsivePageLayout>
+        );
       case 'parts-quote':
       case 'parts-sample':
       case 'quality-report':

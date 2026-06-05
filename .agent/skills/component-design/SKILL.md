@@ -789,10 +789,10 @@ const MyDropdown = () => { /* 自製下拉選單 */ }
 
 在開始撰寫任何 JSX 前，完成以下確認：
 
+- [ ] ⭐ **先找同類型的既有功能頁面，閱讀其原始碼**。例如：列表頁找 `ShippingBasicSettingsPage.tsx`（使用 `StandardDataTable`）或 `OrderListWithTabs.tsx`（手動組裝表格），明細頁找 `CorrectionDetailPage.tsx`。**完全對齊該頁面的 HTML 結構、className、元件組合方式，禁止自行設計版面佈局。**
 - [ ] 查看設計系統 `theme.css` 確認色彩 token
 - [ ] 確認 `src/app/components/ui/` 有無可用的 shadcn 元件
 - [ ] 確認 `src/app/components/` 有無已封裝的業務元件
-- [ ] 參考相似頁面（如 `OrderListWithTabs.tsx`、`CorrectionCreatePage.tsx`）的佈局模式
 - [ ] 確認不使用寫死色碼（`#ffffff`、`rgb(...)` 等）
 - [ ] 確認 scrollable 容器套用 `.custom-scrollbar`
 - [ ] 表單類下拉選擇使用 `DropdownSelect` 而非原生 `<select>`
