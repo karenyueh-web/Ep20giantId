@@ -26,7 +26,7 @@ interface PartsMaintenancePageProps {
 type TabId = 'all' | 'pending' | 'quoted';
 const TABS: { id: TabId; label: string }[] = [
   { id: 'all', label: 'All' },
-  { id: 'pending', label: '待報價' },
+  { id: 'pending', label: '未報價' },
   { id: 'quoted', label: '已報價' },
 ];
 
