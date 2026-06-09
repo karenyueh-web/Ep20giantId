@@ -96,17 +96,18 @@ export function generateInvoiceId(): string {
 // 取發票號碼前 2 碼（字軌）+ 發票日期年月，查 TRACK_DATA
 import { TRACK_DATA } from './invoiceSettingsStore';
 
-export function resolveTaxCode(invoiceNo: string, invoiceDate: string): string {
-  if (!invoiceNo || !invoiceDate) return '';
+export function resolveTaxCode(invoiceNo: string, invoiceDate: string): string | null {
+  if (!invoiceNo || !invoiceDate) return null;
   const track = invoiceNo.slice(0, 2).toUpperCase();
   // invoiceDate 格式：YYYY/MM/DD 或 YYYY-MM-DD
   const parts = invoiceDate.replace(/-/g, '/').split('/');
-  if (parts.length < 2) return '';
+  if (parts.length < 2) return null;
   const year  = parts[0];
   const month = parts[1].padStart(2, '0');
   const found = TRACK_DATA.find(r => r.year === year && r.month === month && r.track === track);
-  return found ? found.taxCode : '';
+  return found ? found.taxCode : null;
 }
+
 
 // ── Mock 資料（含 6 種狀態，供 Tab 計數展示）──
 export const MOCK_INVOICE_RECORDS: InvoiceRecord[] = [

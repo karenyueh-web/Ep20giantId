@@ -13,7 +13,7 @@ import { DraggableColumnHeader } from './table/DraggableColumnHeader';
 import { measureTextWidth } from './table/tableUtils';
 import {
   type InvoiceAcceptRow, type InvCol, type InvColKey,
-  DEFAULT_COLS, BONDED_OPTIONS, PURCHASE_ORG_OPTIONS, invoiceMockData,
+  DEFAULT_COLS, BONDED_OPTIONS, PURCHASE_ORG_OPTIONS, COMPANY_OPTIONS, invoiceMockData,
 } from './invoiceCreateData';
 
 const STORAGE_KEY_PREFIX = 'invoiceCreate_v1_';
@@ -71,6 +71,7 @@ export function InvoiceCreatePage({ onOpenDetail }: { onOpenDetail?: (rows: Invo
   // ── 搜尋條件 ──
   const [bondedSearch, setBondedSearch] = useState('');
   const [purchaseOrgSearch, setPurchaseOrgSearch] = useState('');
+  const [companySearch, setCompanySearch] = useState('');
   const [orderNoSearch, setOrderNoSearch] = useState('');
 
   // ── localStorage 同步（columns 任何變更都立即儲存，包含拖拉排序、調寬）──
@@ -110,6 +111,7 @@ export function InvoiceCreatePage({ onOpenDetail }: { onOpenDetail?: (rows: Invo
         return true;
       });
     }
+    if (companySearch) data = data.filter(r => r.companyCode === companySearch);
     if (purchaseOrgSearch) data = data.filter(r => r.purchaseOrg === purchaseOrgSearch);
     if (orderNoSearch.trim()) {
       const kws = splitKeywords(orderNoSearch);
@@ -132,7 +134,7 @@ export function InvoiceCreatePage({ onOpenDetail }: { onOpenDetail?: (rows: Invo
       }));
     }
     return data;
-  }, [bondedSearch, purchaseOrgSearch, orderNoSearch, appliedFilters]);
+  }, [bondedSearch, companySearch, purchaseOrgSearch, orderNoSearch, appliedFilters]);
 
   // ── 排序 ──
   const sortedData = useMemo(() => {
@@ -148,7 +150,7 @@ export function InvoiceCreatePage({ onOpenDetail }: { onOpenDetail?: (rows: Invo
   useEffect(() => { setPage(1); }, [sortedData.length]);
 
   // ── 搜尋條件改變時清空選取（避免殘留看不見的選取項目）──
-  useEffect(() => { setSelectedIds(new Set()); }, [bondedSearch, purchaseOrgSearch, orderNoSearch, appliedFilters]);
+  useEffect(() => { setSelectedIds(new Set()); }, [bondedSearch, companySearch, purchaseOrgSearch, orderNoSearch, appliedFilters]);
 
 
   // ── 分頁 ──
@@ -245,6 +247,12 @@ export function InvoiceCreatePage({ onOpenDetail }: { onOpenDetail?: (rows: Invo
           />
         </div>
         <div className="flex-1 min-w-[160px]">
+          <DropdownSelect
+            label="公司" value={companySearch} onChange={setCompanySearch}
+            options={COMPANY_OPTIONS} placeholder="全部" searchable={true}
+          />
+        </div>
+        <div className="flex-1 min-w-[200px]">
           <DropdownSelect
             label="採購組織" value={purchaseOrgSearch} onChange={setPurchaseOrgSearch}
             options={PURCHASE_ORG_OPTIONS} placeholder="全部" searchable={true}

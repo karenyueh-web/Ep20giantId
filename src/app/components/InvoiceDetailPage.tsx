@@ -1,4 +1,4 @@
-﻿/**
+/**
  * InvoiceDetailPage — 開立發票明細頁
  *
  * 結構：
@@ -60,10 +60,10 @@ function FloatingInput({
 
 // ── FloatingDateField（日期選擇）─────────────────────────────────────────────
 function FloatingDateField({
-  label, value, onChange, required, hasError,
+  label, value, onChange, required, hasError, minDate, maxDate,
 }: {
   label: string; value: string; onChange: (v: string) => void;
-  required?: boolean; hasError?: boolean;
+  required?: boolean; hasError?: boolean; minDate?: string; maxDate?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ top: 0, left: 0 });
@@ -97,7 +97,7 @@ function FloatingDateField({
       {open && (
         <div style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999 }}
           onClick={e => e.stopPropagation()}>
-          <SimpleDatePicker selectedDate={value} onDateSelect={d => { onChange(d); setOpen(false); }} />
+          <SimpleDatePicker selectedDate={value} onDateSelect={d => { onChange(d); setOpen(false); }} minDate={minDate} maxDate={maxDate} />
         </div>
       )}
     </div>
@@ -119,8 +119,9 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
 
   const [invoiceNo,   setInvoiceNo]   = useState(existingRecord?.invoiceNo ?? '');
   const [invoiceDate, setInvoiceDate] = useState(existingRecord?.invoiceDate ?? '');
-  // 台灣買方：發票聯式（預設 21）
-  const [invoiceType, setInvoiceType] = useState(existingRecord?.invoiceType || '21');
+  // 台灣買方：發票聯式（預設 22）
+  const [invoiceType, setInvoiceType] = useState(existingRecord?.invoiceType || '22');
+
   // 海外買方：VAT 稅碼（預設 0%）
   const [taxCode,     setTaxCode]     = useState(existingRecord?.taxCode || '0');
 
@@ -252,6 +253,9 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
 
   // ── 提交驗證狀態 ──
   const [submitted, setSubmitted] = useState(false);
+  // ── 欄位紅框狀態（按下「我知道了」後保持顯示）──
+  const [invoiceNoError, setInvoiceNoError]     = useState(false);
+  const [invoiceDateError, setInvoiceDateError] = useState(false);
 
   // ── 歷程彈窗 ──
   const [showInvoiceHistory, setShowInvoiceHistory] = useState(false);
@@ -280,7 +284,8 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
     const pad = (n: number) => String(n).padStart(2, '0');
     const timestamp = `${now.getFullYear()}/${pad(now.getMonth()+1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
     const createdAt = `${now.getFullYear()}/${pad(now.getMonth()+1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
-    const resolvedTaxCode = resolveTaxCode(invoiceNo, invoiceDate);
+    const resolvedTaxCode = resolveTaxCode(invoiceNo, invoiceDate) ?? '';
+
 
     // ── 歷程變更描述（語意化）──
     const prevHistory: HistoryEntry[] = existingRecord?.history ?? [];
@@ -351,31 +356,71 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
     };
   };
 
-  // ── 檢查發票號碼是否重複（同間公司）──
-  const checkDuplicateInvoiceNo = (): string | null => {
-    const trimmedNo = invoiceNo.trim();
-    if (!trimmedNo) return null;
-    const currentVendor = existingRecord?.vendorName ?? selectedRows[0]?.vendorName ?? '';
-    const currentId = existingRecord?.id;
+  // ── 發票號碼格式驗證：前 2 碼英文 + 後 8 碼數字，共 10 碼 ──
+  const INVOICE_NO_REGEX = /^[A-Za-z]{2}\d{8}$/;
+
+  const validateInvoiceNo = (): string[] => {
+    const no = invoiceNo.trim();
+    const errs: string[] = [];
+
+    // 1. 格式檢查
+    if (!no) {
+      setInvoiceNoError(true);
+      errs.push('請填寫發票號碼');
+      return errs; // 後續檢查依賴號碼，直接返回
+    }
+    if (!INVOICE_NO_REGEX.test(no)) {
+      setInvoiceNoError(true);
+      errs.push(`發票號碼格式不正確（須為 2 碼英文字母 + 8 碼數字，共 10 碼），請重新輸入。`);
+      return errs;
+    }
+    setInvoiceNoError(false);
+
     const allRecords = loadInvoiceRecords();
-    const dup = allRecords.find(r =>
-      r.invoiceNo === trimmedNo &&
-      r.vendorName === currentVendor &&
-      r.id !== currentId
-    );
-    return dup ? `發票號碼「${trimmedNo}」已被使用，發票狀態:${INVOICE_STATUS_CONFIG[dup.status as InvoiceStatus]?.label ?? dup.status}(${dup.status})，同間公司不可重複使用。` : null;
+    const currentId  = existingRecord?.id;
+
+    // 2. 同期別（年月）重複檢查
+    if (invoiceDate) {
+      const parts = invoiceDate.replace(/-/g, '/').split('/');
+      if (parts.length >= 2) {
+        const year  = parts[0];
+        const month = parts[1].padStart(2, '0');
+        const dup = allRecords.find(r =>
+          r.invoiceNo.toUpperCase() === no.toUpperCase() &&
+          r.id !== currentId &&
+          (() => {
+            const dp = (r.invoiceDate || '').replace(/-/g, '/').split('/');
+            return dp.length >= 2 && dp[0] === year && dp[1].padStart(2, '0') === month;
+          })()
+        );
+        if (dup) {
+          setInvoiceNoError(true);
+          errs.push(`發票號碼「${no}」在 ${year}/${month} 已存在，同期別內不可重複（目前狀態：${INVOICE_STATUS_CONFIG[dup.status as InvoiceStatus]?.label ?? dup.status}）。`);
+        }
+      }
+    }
+
+    // 3. 字軌對應檢查（需有發票日期才能驗證）
+    if (invoiceDate) {
+      const taxCode = resolveTaxCode(no, invoiceDate);
+      if (taxCode === null) {
+        const track = no.slice(0, 2).toUpperCase();
+        const parts = invoiceDate.replace(/-/g, '/').split('/');
+        const yearMonth = parts.length >= 2 ? `${parts[0]}/${parts[1].padStart(2, '0')}` : invoiceDate;
+        setInvoiceNoError(true);
+        errs.push(`字軌「${track}」在 ${yearMonth} 的字軌主檔中查無資料，無法開立發票，請確認發票號碼與日期是否正確。`);
+      }
+    }
+
+    return errs;
   };
 
   // ── 暫存（儲存為草稿 DR）──
   const handleSaveDraft = () => {
     setSubmitted(true);
-    if (!invoiceNo.trim()) {
-      setAlertMessage('請填寫發票號碼');
-      return;
-    }
-    const dupMsg = checkDuplicateInvoiceNo();
-    if (dupMsg) {
-      setAlertMessage(dupMsg);
+    const errs = validateInvoiceNo();
+    if (errs.length > 0) {
+      setAlertMessage(errs.join('\n'));
       return;
     }
     const savedRecord = buildInvoiceRecord('DR', existingRecord ? '暫存' : '建立');
@@ -388,11 +433,15 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
   const handleConfirm = () => {
     setSubmitted(true);
     const errors: string[] = [];
-    if (!invoiceNo.trim()) errors.push('請填寫發票號碼');
-    if (!invoiceDate) errors.push('請填寫發票日期');
+    errors.push(...validateInvoiceNo());
+    if (!invoiceDate) {
+      setInvoiceDateError(true);
+      errors.push('請填寫發票日期');
+    } else {
+      setInvoiceDateError(false);
+    }
+
     if (rows.length === 0) errors.push('尚無發票明細，無法確認開立');
-    const dupMsg = checkDuplicateInvoiceNo();
-    if (dupMsg) errors.push(dupMsg);
     if (errors.length > 0) {
       setAlertMessage(errors.join('\n'));
       return;
@@ -408,6 +457,7 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
       submitAsStatusP();
     }
   };
+
 
   // ── 確認開立：直接送出（無價差）──
   const submitAsStatusP = () => {
@@ -564,7 +614,7 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
               </>
             )}
 
-            {/* ── S 轉發票成功：廠商可刪除 ── */}
+            {/* ── S 轉發票成功：僅巨大角色可刪除（TODO: 上線前加回 userRole === 'giant' 條件）── */}
             {currentStatus === 'S' && (
               <button
                 onClick={() => setShowDeleteConfirm(true)}
@@ -574,7 +624,7 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
               </button>
             )}
 
-            {/* ── F 轉發票失敗：採購可執行 ── */}
+            {/* ── F 轉發票失敗：採購可執行重拋／線下處理；廠商可刪除發票（TODO: 上線前加回角色判斷）── */}
             {currentStatus === 'F' && (
               <>
                 <button
@@ -590,10 +640,10 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
                   線下處理
                 </button>
                 <button
-                  onClick={handleReturnToVendor}
-                  className="h-[40px] min-w-[88px] px-[16px] rounded-[8px] border border-[rgba(255,86,48,0.4)] bg-white text-[#ff5630] hover:bg-[rgba(255,86,48,0.04)] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="h-[40px] min-w-[88px] px-[16px] rounded-[8px] bg-[#ff5630] hover:bg-[#b71d18] text-white font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
                 >
-                  退回廠商
+                  刪除發票
                 </button>
               </>
             )}
@@ -642,14 +692,18 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
           {/* Row 2 */}
           {/* 發票號碼（col 1） */}
           <div className="min-w-0">
-            <FloatingInput label="發票號碼" value={invoiceNo} onChange={setInvoiceNo}
-              required hasError={submitted && !invoiceNo.trim()} disabled={!isEditable} />
+            <FloatingInput label="發票號碼" value={invoiceNo}
+              onChange={v => { setInvoiceNo(v); setInvoiceNoError(false); }}
+              required hasError={invoiceNoError} disabled={!isEditable} />
           </div>
           {/* 發票日期（col 2） */}
           <div className="min-w-0">
             {isEditable ? (
-              <FloatingDateField label="發票日期" value={invoiceDate} onChange={setInvoiceDate}
-                required hasError={submitted && !invoiceDate} />
+              <FloatingDateField label="發票日期" value={invoiceDate}
+                onChange={v => { setInvoiceDate(v); setInvoiceDateError(false); }}
+                required hasError={invoiceDateError}
+                minDate={`${new Date().getFullYear()}/01/01`}
+                maxDate={`${new Date().getFullYear()}/12/31`} />
             ) : (
               <FloatingInput label="發票日期" value={invoiceDate || ''} onChange={() => {}} disabled />
             )}

@@ -6,11 +6,13 @@ interface SimpleDatePickerProps {
   onDateSelect: (date: string) => void;
   /** Earliest selectable date (YYYY/MM/DD). Days before this are disabled. */
   minDate?: string;
+  /** Latest selectable date (YYYY/MM/DD). Days after this are disabled. */
+  maxDate?: string;
 }
 
 type ViewMode = 'calendar' | 'year' | 'month';
 
-export function SimpleDatePicker({ selectedDate, onDateSelect, minDate }: SimpleDatePickerProps) {
+export function SimpleDatePicker({ selectedDate, onDateSelect, minDate, maxDate }: SimpleDatePickerProps) {
   const today = new Date();
   const todayYear = today.getFullYear();
   const todayMonth = today.getMonth();
@@ -53,23 +55,66 @@ export function SimpleDatePicker({ selectedDate, onDateSelect, minDate }: Simple
     return day === sel.day && currentMonth.getMonth() === sel.month && currentMonth.getFullYear() === sel.year;
   };
 
-  // ─── Parse minDate ───
-  const parseMinDate = () => {
-    if (!minDate) return null;
-    const parts = minDate.split('/');
+  // ─── Parse minDate / maxDate ───
+  const parseDateStr = (d?: string) => {
+    if (!d) return null;
+    const parts = d.split('/');
     if (parts.length !== 3) return null;
     return { year: parseInt(parts[0]), month: parseInt(parts[1]) - 1, day: parseInt(parts[2]) };
   };
-  const minDateParsed = parseMinDate();
+  const minDateParsed = parseDateStr(minDate);
+  const maxDateParsed = parseDateStr(maxDate);
 
   const isDayDisabled = (day: number): boolean => {
-    if (!minDateParsed) return false;
     const y = currentMonth.getFullYear();
     const m = currentMonth.getMonth();
-    if (y < minDateParsed.year) return true;
-    if (y === minDateParsed.year && m < minDateParsed.month) return true;
-    if (y === minDateParsed.year && m === minDateParsed.month && day < minDateParsed.day) return true;
+    // 早於 minDate
+    if (minDateParsed) {
+      if (y < minDateParsed.year) return true;
+      if (y === minDateParsed.year && m < minDateParsed.month) return true;
+      if (y === minDateParsed.year && m === minDateParsed.month && day < minDateParsed.day) return true;
+    }
+    // 晚於 maxDate
+    if (maxDateParsed) {
+      if (y > maxDateParsed.year) return true;
+      if (y === maxDateParsed.year && m > maxDateParsed.month) return true;
+      if (y === maxDateParsed.year && m === maxDateParsed.month && day > maxDateParsed.day) return true;
+    }
     return false;
+  };
+
+  // ─── 月份是否整月都在範圍外（用來 disable 月份 grid 中的選項）───
+  const isMonthDisabled = (year: number, monthIdx: number): boolean => {
+    if (minDateParsed) {
+      if (year < minDateParsed.year) return true;
+      if (year === minDateParsed.year && monthIdx < minDateParsed.month) return true;
+    }
+    if (maxDateParsed) {
+      if (year > maxDateParsed.year) return true;
+      if (year === maxDateParsed.year && monthIdx > maxDateParsed.month) return true;
+    }
+    return false;
+  };
+
+  // ─── 年份是否在範圍外 ───
+  const isYearDisabled = (year: number): boolean => {
+    if (minDateParsed && year < minDateParsed.year) return true;
+    if (maxDateParsed && year > maxDateParsed.year) return true;
+    return false;
+  };
+
+  // ─── 翻月按鈕是否需要停用 ───
+  const isPrevMonthDisabled = (): boolean => {
+    if (!minDateParsed) return false;
+    const prevYear  = currentMonth.getMonth() === 0 ? currentMonth.getFullYear() - 1 : currentMonth.getFullYear();
+    const prevMonth = currentMonth.getMonth() === 0 ? 11 : currentMonth.getMonth() - 1;
+    return prevYear < minDateParsed.year || (prevYear === minDateParsed.year && prevMonth < minDateParsed.month);
+  };
+  const isNextMonthDisabled = (): boolean => {
+    if (!maxDateParsed) return false;
+    const nextYear  = currentMonth.getMonth() === 11 ? currentMonth.getFullYear() + 1 : currentMonth.getFullYear();
+    const nextMonth = currentMonth.getMonth() === 11 ? 0 : currentMonth.getMonth() + 1;
+    return nextYear > maxDateParsed.year || (nextYear === maxDateParsed.year && nextMonth > maxDateParsed.month);
   };
 
   const handleDateSelect = (day: number) => {
@@ -79,19 +124,27 @@ export function SimpleDatePicker({ selectedDate, onDateSelect, minDate }: Simple
     onDateSelect(`${year}/${month.toString().padStart(2, '0')}/${day.toString().padStart(2, '0')}`);
   };
 
-  const handlePrevMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1));
-  const handleNextMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1));
+  const handlePrevMonth = () => {
+    if (isPrevMonthDisabled()) return;
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1));
+  };
+  const handleNextMonth = () => {
+    if (isNextMonthDisabled()) return;
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1));
+  };
 
   // ─── Year view handlers ───
   const handlePrevYearRange = () => setYearRangeStart(prev => prev - 12);
   const handleNextYearRange = () => setYearRangeStart(prev => prev + 12);
   const handleYearSelect = (year: number) => {
+    if (isYearDisabled(year)) return;
     setCurrentMonth(new Date(year, currentMonth.getMonth()));
     setViewMode('month');
   };
 
   // ─── Month view handlers ───
   const handleMonthSelect = (monthIdx: number) => {
+    if (isMonthDisabled(currentMonth.getFullYear(), monthIdx)) return;
     setCurrentMonth(new Date(currentMonth.getFullYear(), monthIdx));
     setViewMode('calendar');
   };
@@ -126,6 +179,10 @@ export function SimpleDatePicker({ selectedDate, onDateSelect, minDate }: Simple
   const handlePrev = viewMode === 'year' ? handlePrevYearRange : viewMode === 'month' ? () => setCurrentMonth(new Date(currentMonth.getFullYear() - 1, currentMonth.getMonth())) : handlePrevMonth;
   const handleNext = viewMode === 'year' ? handleNextYearRange : viewMode === 'month' ? () => setCurrentMonth(new Date(currentMonth.getFullYear() + 1, currentMonth.getMonth())) : handleNextMonth;
 
+  // ─── Prev/Next 按鈕在 calendar 視圖下的停用狀態 ───
+  const isPrevBtnDisabled = viewMode === 'calendar' && isPrevMonthDisabled();
+  const isNextBtnDisabled = viewMode === 'calendar' && isNextMonthDisabled();
+
   return (
     <div className="absolute z-50 bg-white rounded-[10px] shadow-[0px_0px_2px_0px_rgba(145,158,171,0.24),-20px_20px_40px_-4px_rgba(145,158,171,0.24)] w-[280px]">
       {/* Header */}
@@ -140,14 +197,20 @@ export function SimpleDatePicker({ selectedDate, onDateSelect, minDate }: Simple
           </svg>
         </div>
         <div className="flex gap-[12px]">
-          <div className="flex items-center justify-center rounded-[500px] size-[36px] cursor-pointer hover:bg-[rgba(0,0,0,0.04)]" onClick={handlePrev}>
+          <div
+            className={`flex items-center justify-center rounded-[500px] size-[36px] transition-colors ${isPrevBtnDisabled ? 'opacity-25 cursor-not-allowed' : 'cursor-pointer hover:bg-[rgba(0,0,0,0.04)]'}`}
+            onClick={isPrevBtnDisabled ? undefined : handlePrev}
+          >
             <div className="relative size-[20px]">
               <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 24 24">
                 <path d={datePickerSvg.paf67180} fill="#637381" />
               </svg>
             </div>
           </div>
-          <div className="flex items-center justify-center rounded-[500px] size-[36px] cursor-pointer hover:bg-[rgba(0,0,0,0.04)]" onClick={handleNext}>
+          <div
+            className={`flex items-center justify-center rounded-[500px] size-[36px] transition-colors ${isNextBtnDisabled ? 'opacity-25 cursor-not-allowed' : 'cursor-pointer hover:bg-[rgba(0,0,0,0.04)]'}`}
+            onClick={isNextBtnDisabled ? undefined : handleNext}
+          >
             <div className="relative size-[20px]">
               <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 24 24">
                 <path d={datePickerSvg.p3906a380} fill="#637381" />
@@ -164,12 +227,16 @@ export function SimpleDatePicker({ selectedDate, onDateSelect, minDate }: Simple
             {years.map(year => {
               const isCurrentYear = year === todayYear;
               const isActiveYear = year === currentMonth.getFullYear();
+              const disabled = isYearDisabled(year);
               return (
                 <div
                   key={year}
-                  className={`flex items-center justify-center h-[40px] rounded-[8px] cursor-pointer transition-colors
-                    ${isActiveYear ? 'bg-[#005EB8] text-white' : isCurrentYear ? 'border border-[#005EB8] text-[#005EB8]' : 'hover:bg-[rgba(145,158,171,0.08)] text-[#1c252e]'}`}
-                  onClick={() => handleYearSelect(year)}
+                  className={`flex items-center justify-center h-[40px] rounded-[8px] transition-colors
+                    ${disabled ? 'opacity-25 cursor-not-allowed text-[#1c252e]' :
+                      isActiveYear ? 'bg-[#005EB8] text-white cursor-pointer' :
+                      isCurrentYear ? 'border border-[#005EB8] text-[#005EB8] cursor-pointer' :
+                      'hover:bg-[rgba(145,158,171,0.08)] text-[#1c252e] cursor-pointer'}`}
+                  onClick={() => !disabled && handleYearSelect(year)}
                 >
                   <p className={`font-['Public_Sans:Regular',sans-serif] text-[13px] leading-[20px] ${isActiveYear ? 'font-semibold' : ''}`}>
                     {year}
@@ -188,12 +255,16 @@ export function SimpleDatePicker({ selectedDate, onDateSelect, minDate }: Simple
             {monthShortNames.map((name, idx) => {
               const isCurrentMonth = idx === todayMonth && currentMonth.getFullYear() === todayYear;
               const isActiveMonth = idx === currentMonth.getMonth();
+              const disabled = isMonthDisabled(currentMonth.getFullYear(), idx);
               return (
                 <div
                   key={idx}
-                  className={`flex items-center justify-center h-[40px] rounded-[8px] cursor-pointer transition-colors
-                    ${isActiveMonth ? 'bg-[#005EB8] text-white' : isCurrentMonth ? 'border border-[#005EB8] text-[#005EB8]' : 'hover:bg-[rgba(145,158,171,0.08)] text-[#1c252e]'}`}
-                  onClick={() => handleMonthSelect(idx)}
+                  className={`flex items-center justify-center h-[40px] rounded-[8px] transition-colors
+                    ${disabled ? 'opacity-25 cursor-not-allowed text-[#1c252e]' :
+                      isActiveMonth ? 'bg-[#005EB8] text-white cursor-pointer' :
+                      isCurrentMonth ? 'border border-[#005EB8] text-[#005EB8] cursor-pointer' :
+                      'hover:bg-[rgba(145,158,171,0.08)] text-[#1c252e] cursor-pointer'}`}
+                  onClick={() => !disabled && handleMonthSelect(idx)}
                 >
                   <p className={`font-['Public_Sans:Regular',sans-serif] text-[13px] leading-[20px] ${isActiveMonth ? 'font-semibold' : ''}`}>
                     {name}
