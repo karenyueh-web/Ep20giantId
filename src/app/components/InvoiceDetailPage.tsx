@@ -1,4 +1,4 @@
-/**
+﻿/**
  * InvoiceDetailPage — 開立發票明細頁
  *
  * 結構：
@@ -105,7 +105,7 @@ function FloatingDateField({
 }
 
 // ── 主元件 ───────────────────────────────────────────────────────────────────
-export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency, userRole = 'vendor', existingRecord, onSaveSuccess, onPrintPreviewChange }: InvoiceDetailPageProps) {
+export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency, userRole = 'vendor', existingRecord, onSaveSuccess }: InvoiceDetailPageProps) {
 
   // ── 是否為檢視既有發票模式 ──
   const isViewMode = !!existingRecord;
@@ -256,10 +256,7 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
   // ── 歷程彈窗 ──
   const [showInvoiceHistory, setShowInvoiceHistory] = useState(false);
 
-  // ── 列印預覽 ──
-  const [showPrintPreview, setShowPrintPreview] = useState(false);
-  const openPrintPreview  = () => { setShowPrintPreview(true);  onPrintPreviewChange?.(true);  };
-  const closePrintPreview = () => { setShowPrintPreview(false); onPrintPreviewChange?.(false); };
+
 
   // ── 價差 Banner ──
   const [showPriceMismatchBanner, setShowPriceMismatchBanner] = useState(false);
@@ -489,299 +486,8 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
 
   const totalWidth = TABLE_COLS.reduce((s, c) => s + c.w, 0);
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // 列印預覽：與 ShipmentPrintPage 相同機制
-  // ─────────────────────────────────────────────────────────────────────────
-  if (showPrintPreview) {
+  // (列印預覽功能已移除)
 
-    // ── 分頁設定（與 ShipmentPrintPage 相同邏輯）──────────────────────────
-    const ROWS_PER_PAGE = 13;
-    const pages: (typeof rows)[] = [];
-    for (let i = 0; i < rows.length; i += ROWS_PER_PAGE) {
-      pages.push(rows.slice(i, i + ROWS_PER_PAGE));
-    }
-    if (pages.length === 0) pages.push([]);
-
-    // ── 樣式常數 ──────────────────────────────────────────────────────────
-    const border = '1px solid #333';
-    const tdStyle: React.CSSProperties = { border, padding: '3px 5px', fontSize: '12px', verticalAlign: 'middle' };
-    const thStyle: React.CSSProperties = { ...tdStyle, fontWeight: 'bold', background: '#f0f0f0', textAlign: 'center' };
-
-    // ── 共用：表頭（每頁重複）────────────────────────────────────────────
-    const InvoiceTableHeader = () => (
-      <tr>
-        <th style={{ ...thStyle, width: '5%' }}>發票項次</th>
-        <th style={{ ...thStyle, width: '14%' }}>訂單號碼</th>
-        <th style={{ ...thStyle, width: '8%' }}>訂單項次</th>
-        <th style={{ ...thStyle, width: '14%' }}>料號</th>
-        <th style={{ ...thStyle, width: '14%' }}>備註</th>
-        <th style={{ ...thStyle, width: '12%' }}>驗收單號</th>
-        <th style={{ ...thStyle, width: '7%' }}>驗收項次</th>
-        <th style={{ ...thStyle, width: '7%' }}>發票量</th>
-        <th style={{ ...thStyle, width: '7%' }}>單價</th>
-        <th style={{ ...thStyle, width: '6%' }}>發票稅額</th>
-        <th style={{ ...thStyle, width: '6%' }}>金額小計(未稅)</th>
-      </tr>
-    );
-
-    // ── 列印 HTML 產生（含分頁 page-break）───────────────────────────────
-    const handleIframePrint = () => {
-      const tdS = 'border:1px solid #333;padding:3px 5px;font-size:12px;vertical-align:middle;';
-      const thS = `${tdS}font-weight:bold;background:#f0f0f0;text-align:center;`;
-
-      const headerHtml = `
-        <div style="margin-bottom:10px;">
-          <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:4px;font-size:13px;">
-            <span><strong>發票號碼</strong> ${invoiceNo || '—'}</span>
-            <span><strong>發票日期</strong> ${invoiceDate || '—'}</span>
-            <span><strong>發票狀態</strong> ${currentStatus ? INVOICE_STATUS_CONFIG[currentStatus].label : '—'}</span>
-            <span><strong>幣別</strong> ${currency}</span>
-            <span><strong>稅別</strong> ${taxRateValue}%</span>
-          </div>
-          <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:13px;">
-            <span><strong>發票稅額</strong> ${totals.tax.toLocaleString()}</span>
-            <span><strong>發票總額</strong> ${totals.inTax.toLocaleString()}</span>
-          </div>
-        </div>`;
-
-      const tableHeaderHtml = `<tr>
-        <th style="${thS}width:5%;">發票項次</th>
-        <th style="${thS}width:14%;">訂單號碼</th>
-        <th style="${thS}width:8%;">訂單項次</th>
-        <th style="${thS}width:14%;">料號</th>
-        <th style="${thS}width:14%;">備註</th>
-        <th style="${thS}width:12%;">驗收單號</th>
-        <th style="${thS}width:7%;">驗收項次</th>
-        <th style="${thS}width:7%;">發票量</th>
-        <th style="${thS}width:7%;">單價</th>
-        <th style="${thS}width:6%;">發票稅額</th>
-        <th style="${thS}width:6%;">金額小計(未稅)</th>
-      </tr>`;
-
-      const pagesHtml = pages.map((pageRows, pageIndex) => {
-        const isLastPage = pageIndex === pages.length - 1;
-        const pageSubTax = pageRows.reduce((s, r) => s + r.itemTax, 0);
-        const pageSubEx  = pageRows.reduce((s, r) => s + r.subtotalExTax, 0);
-        const globalOffset = pageIndex * ROWS_PER_PAGE;
-
-        const rowsHtml = pageRows.map((row, idx) => {
-          const parts = row.orderNo.split('-');
-          const orderNoMain  = parts[0];
-          const orderSeqMain = parts.slice(1).join('-');
-          return `<tr>
-            <td style="${tdS}text-align:center;">${globalOffset + idx + 1}</td>
-            <td style="${tdS}word-break:break-all;">${orderNoMain}</td>
-            <td style="${tdS}text-align:center;">${orderSeqMain}</td>
-            <td style="${tdS}word-break:break-all;">${row.materialNo}</td>
-            <td style="${tdS}">${row.productName}</td>
-            <td style="${tdS}">${row.acceptNo}</td>
-            <td style="${tdS}text-align:center;">${row.acceptSeq}</td>
-            <td style="${tdS}text-align:right;">${row.acceptQty.toLocaleString()}</td>
-            <td style="${tdS}text-align:right;">${row.unitPrice}</td>
-            <td style="${tdS}text-align:right;">${row.itemTax.toLocaleString()}</td>
-            <td style="${tdS}text-align:right;font-weight:bold;">${row.subtotalExTax.toLocaleString()}</td>
-          </tr>`;
-        }).join('');
-
-        const emptyHtml = pageRows.length === 0
-          ? `<tr><td colspan="11" style="${tdS}text-align:center;color:#919eab;padding:20px;">目前沒有發票明細</td></tr>`
-          : '';
-
-        const subTotalHtml = `<tr>
-          <td colspan="9" style="${tdS}text-align:right;font-weight:bold;">小計</td>
-          <td style="${tdS}text-align:right;font-weight:bold;">${pageSubTax.toLocaleString()}</td>
-          <td style="${tdS}text-align:right;font-weight:bold;">${pageSubEx.toLocaleString()}</td>
-        </tr>`;
-
-        const grandTotalHtml = isLastPage ? `<tr>
-          <td colspan="9" style="${tdS}text-align:right;font-weight:bold;">合計</td>
-          <td style="${tdS}text-align:right;font-weight:bold;">${totals.tax.toLocaleString()}</td>
-          <td style="${tdS}text-align:right;font-weight:bold;">${totals.exTax.toLocaleString()}</td>
-        </tr>` : '';
-
-        const isFirst = pageIndex === 0;
-        return `<div class="invoice-page-block">
-          ${isFirst ? headerHtml : ''}
-          <table style="width:100%;border-collapse:collapse;">
-            <thead>${tableHeaderHtml}</thead>
-            <tbody>${rowsHtml}${emptyHtml}${subTotalHtml}${grandTotalHtml}</tbody>
-          </table>
-        </div>`;
-      }).join('');
-
-      const invoiceHtml = [
-        '<!DOCTYPE html>',
-        '<html lang="zh-TW">',
-        '<head>',
-        '  <meta charset="UTF-8" />',
-        '  <title> </title>',
-        '  <style>',
-        '    @page { size: A4 portrait; margin: 12mm; }',
-        '    *, *::before, *::after { box-sizing: border-box; }',
-        '    html, body { margin: 0; padding: 20px 24px; background: white;',
-        '      font-family: "Noto Sans TC","Noto Sans JP","微軟正黑體",sans-serif;',
-        '      font-size: 12px; color: #000; }',
-        '    table { border-collapse: collapse; width: 100%; }',
-        '    td, th { border: 1px solid #333; padding: 3px 5px; font-size: 12px; vertical-align: middle; }',
-        '    .invoice-page-block { page-break-after: always; break-after: page; }',
-        '    .invoice-page-block:last-child { page-break-after: auto; break-after: auto; }',
-        '  </style>',
-        '</head>',
-        `<body>${pagesHtml}</body>`,
-        '</html>',
-      ].join('\n');
-
-      const iframe = document.createElement('iframe');
-      iframe.style.cssText = 'position:fixed;left:-10000px;top:0;width:794px;height:1123px;border:none;pointer-events:none;';
-      document.body.appendChild(iframe);
-      const doc = iframe.contentDocument || iframe.contentWindow?.document;
-      if (!doc) { document.body.removeChild(iframe); return; }
-      doc.open(); doc.write(invoiceHtml); doc.close();
-      setTimeout(() => {
-        iframe.contentWindow?.focus();
-        iframe.contentWindow?.print();
-        setTimeout(() => { document.body.removeChild(iframe); }, 1000);
-      }, 400);
-    };
-
-    return (
-      <div className="bg-white flex flex-col h-full relative rounded-[16px] shadow-[0px_0px_2px_0px_rgba(145,158,171,0.2),0px_12px_24px_0px_rgba(145,158,171,0.12)] w-full overflow-hidden">
-
-        {/* ── 工具列 */}
-        <div className="shrink-0 border-b border-[rgba(145,158,171,0.08)] relative">
-          <div className="content-stretch flex items-center h-[48px] px-[20px] gap-[16px] relative w-full">
-            <div
-              onClick={() => closePrintPreview()}
-              className="overflow-clip relative shrink-0 size-[29px] cursor-pointer hover:opacity-70 transition-opacity"
-              aria-label="返回"
-            >
-              <IconsSolidIcSolarMultipleForwardLeftBroken />
-            </div>
-            <button
-              onClick={handleIframePrint}
-              className="flex items-center gap-[7px] h-[32px] px-[16px] rounded-[8px] bg-[#1c252e] hover:bg-[#2d3748] text-white font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap shrink-0"
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="6 9 6 2 18 2 18 9" />
-                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
-                <rect x="6" y="14" width="12" height="8" />
-              </svg>
-              print
-            </button>
-            <div className="absolute bg-[rgba(145,158,171,0.08)] bottom-0 h-[2px] left-0 right-0" />
-          </div>
-        </div>
-
-        {/* ── 預覽區（與 ShipmentPrintPage 相同結構）*/}
-        <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar bg-[#f4f6f8] px-[32px] py-[28px]">
-          <div className="flex flex-col items-center w-full">
-            <div
-              className="invoice-doc-wrapper"
-              style={{
-                width: '100%', maxWidth: '660px', margin: '0 auto',
-                background: 'white', padding: '20px 24px',
-                fontFamily: "'Noto Sans TC','Noto Sans JP','微軟正黑體',sans-serif",
-                fontSize: '12px', color: '#000',
-                border: '1px solid rgba(145,158,171,0.2)',
-                borderRadius: '8px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-                boxSizing: 'border-box',
-              }}
-            >
-              {pages.map((pageRows, pageIndex) => {
-                const isLastPage  = pageIndex === pages.length - 1;
-                const globalOffset = pageIndex * ROWS_PER_PAGE;
-                const pageSubTax  = pageRows.reduce((s, r) => s + r.itemTax, 0);
-                const pageSubEx   = pageRows.reduce((s, r) => s + r.subtotalExTax, 0);
-
-                return (
-                  <div key={pageIndex}>
-                    {/* 發票基本資訊（僅第一頁顯示）*/}
-                    {pageIndex === 0 && (
-                      <div style={{ marginBottom: '10px' }}>
-                        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '4px', fontSize: '13px' }}>
-                          <span><strong>發票號碼</strong> {invoiceNo || '—'}</span>
-                          <span><strong>發票日期</strong> {invoiceDate || '—'}</span>
-                          <span><strong>發票狀態</strong> {currentStatus ? INVOICE_STATUS_CONFIG[currentStatus].label : '—'}</span>
-                          <span><strong>幣別</strong> {currency}</span>
-                          <span><strong>稅別</strong> {taxRateValue}%</span>
-                        </div>
-                        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', fontSize: '13px' }}>
-                          <span><strong>發票稅額</strong> {totals.tax.toLocaleString()}</span>
-                          <span><strong>發票總額</strong> {totals.inTax.toLocaleString()}</span>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* 明細表格（每頁）*/}
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                      <thead><InvoiceTableHeader /></thead>
-                      <tbody>
-                        {pageRows.map((row, idx) => {
-                          const parts = row.orderNo.split('-');
-                          return (
-                            <tr key={row.id}>
-                              <td style={{ ...tdStyle, textAlign: 'center' }}>{globalOffset + idx + 1}</td>
-                              <td style={{ ...tdStyle, wordBreak: 'break-all' }}>{parts[0]}</td>
-                              <td style={{ ...tdStyle, textAlign: 'center' }}>{parts.slice(1).join('-')}</td>
-                              <td style={{ ...tdStyle, wordBreak: 'break-all' }}>{row.materialNo}</td>
-                              <td style={tdStyle}>{row.productName}</td>
-                              <td style={tdStyle}>{row.acceptNo}</td>
-                              <td style={{ ...tdStyle, textAlign: 'center' }}>{row.acceptSeq}</td>
-                              <td style={{ ...tdStyle, textAlign: 'right' }}>{row.acceptQty.toLocaleString()}</td>
-                              <td style={{ ...tdStyle, textAlign: 'right' }}>{row.unitPrice}</td>
-                              <td style={{ ...tdStyle, textAlign: 'right' }}>{row.itemTax.toLocaleString()}</td>
-                              <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 'bold' }}>{row.subtotalExTax.toLocaleString()}</td>
-                            </tr>
-                          );
-                        })}
-                        {pageRows.length === 0 && (
-                          <tr>
-                            <td colSpan={11} style={{ ...tdStyle, textAlign: 'center', color: '#919eab', padding: '20px' }}>目前沒有發票明細</td>
-                          </tr>
-                        )}
-                        {/* 小計（每頁）*/}
-                        <tr>
-                          <td colSpan={9} style={{ ...tdStyle, textAlign: 'right', fontWeight: 'bold' }}>小計</td>
-                          <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 'bold' }}>{pageSubTax.toLocaleString()}</td>
-                          <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 'bold' }}>{pageSubEx.toLocaleString()}</td>
-                        </tr>
-                        {/* 合計（最後一頁）*/}
-                        {isLastPage && (
-                          <tr>
-                            <td colSpan={9} style={{ ...tdStyle, textAlign: 'right', fontWeight: 'bold' }}>合計</td>
-                            <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 'bold' }}>{totals.tax.toLocaleString()}</td>
-                            <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 'bold' }}>{totals.exTax.toLocaleString()}</td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-
-                    {/* ─ 分頁符號（非最後頁，列印時隱藏）─ 與 ShipmentPrintPage 相同 */}
-                    {!isLastPage && (
-                      <div
-                        data-no-print="true"
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: '12px',
-                          margin: '20px 0', color: '#aaa', fontSize: '13px',
-                        }}
-                      >
-                        <div style={{ flex: 1, height: '1px', background: 'repeating-linear-gradient(to right, #ccc 0, #ccc 6px, transparent 6px, transparent 12px)' }} />
-                        <span style={{ padding: '2px 14px', color: '#777', fontSize: '13px', letterSpacing: '1px', whiteSpace: 'nowrap' }}>
-                          {pageIndex + 1} / {pages.length}
-                        </span>
-                        <div style={{ flex: 1, height: '1px', background: 'repeating-linear-gradient(to right, #ccc 0, #ccc 6px, transparent 6px, transparent 12px)' }} />
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
 
   return (
@@ -1103,21 +809,8 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
             )}
           </div>
 
-          {/* 右側：列印按鈕（非 DR 狀態顯示）+ 新增驗收資料按鈕（僅可編輯時顯示） */}
+          {/* 右側：新增驗收資料按鈕（僅可編輯時顯示） */}
           <div className="flex items-center gap-[8px]">
-            {currentStatus && currentStatus !== 'DR' && (
-              <button
-                onClick={() => openPrintPreview()}
-                title="列印發票明細"
-                className="w-[40px] h-[40px] rounded-full bg-[#1D7BF5] hover:bg-[#1262cc] flex items-center justify-center shrink-0 transition-colors shadow-[0px_4px_8px_rgba(29,123,245,0.32)]"
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="6 9 6 2 18 2 18 9" />
-                  <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
-                  <rect x="6" y="14" width="12" height="8" />
-                </svg>
-              </button>
-            )}
             {isEditable && <button
               onClick={() => setAddDialogOpen(true)}
               title="新增驗收資料"

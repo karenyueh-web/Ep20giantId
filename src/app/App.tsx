@@ -53,8 +53,6 @@ export default function App() {
   const [invoiceDetail, setInvoiceDetail] = useState<{ rows: any[]; bondedType: string; currency: string } | null>(null);
   // ── 從發票查詢點擊查看的發票記錄 ──
   const [viewingInvoice, setViewingInvoice] = useState<InvoiceRecord | null>(null);
-  // ── 發票明細列印預覽模式（用於動態更新麵包屑）──
-  const [isPrintPreview, setIsPrintPreview] = useState(false);
   // ── 零件資訊維護 breadcrumb state ──
   const [partsTitle, setPartsTitle] = useState('零件資訊維護');
   const [partsBreadcrumb, setPartsBreadcrumb] = useState('零件/索樣維護 • 零件資訊維護');
@@ -288,8 +286,8 @@ export default function App() {
               onPageChange={handlePageChange}
               onLogout={handleLogout}
               userRole={userRole}
-              title={isPrintPreview ? '列印發票明細' : '開立發票'}
-              breadcrumb={isPrintPreview ? '發票作業 • 開立發票 • 列印發票明細' : '發票作業 • 開立發票'}
+              title="開立發票"
+              breadcrumb="發票作業 • 開立發票"
             >
               <InvoiceDetailPage
                 selectedRows={invoiceDetail.rows}
@@ -297,7 +295,6 @@ export default function App() {
                 currency={invoiceDetail.currency}
                 userRole={userRole}
                 onClose={() => setInvoiceDetail(null)}
-                onPrintPreviewChange={setIsPrintPreview}
                 onSaveSuccess={(record) => {
                   setInvoiceDetail(null);
                   setCurrentPage('invoice-list');
@@ -324,11 +321,11 @@ export default function App() {
           return (
             <ResponsivePageLayout
               currentPage={currentPage}
-              onPageChange={(p) => { setViewingInvoice(null); setIsPrintPreview(false); handlePageChange(p); }}
+              onPageChange={(p) => { setViewingInvoice(null); handlePageChange(p); }}
               onLogout={handleLogout}
               userRole={userRole}
-              title={isPrintPreview ? '列印發票明細' : '發票明細'}
-              breadcrumb={isPrintPreview ? '發票作業 • 發票查詢 • 發票明細 • 列印發票明細' : '發票作業 • 發票查詢 • 發票明細'}
+              title="發票明細"
+              breadcrumb="發票作業 • 發票查詢 • 發票明細"
             >
               <InvoiceDetailPage
                 selectedRows={[]}
@@ -337,7 +334,6 @@ export default function App() {
                 userRole={userRole}
                 onClose={() => setViewingInvoice(null)}
                 existingRecord={viewingInvoice}
-                onPrintPreviewChange={setIsPrintPreview}
                 onSaveSuccess={(record) => {
                   setViewingInvoice(null);
                   setTimeout(() => {
