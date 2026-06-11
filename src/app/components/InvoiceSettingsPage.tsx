@@ -1,9 +1,10 @@
 /**
  * InvoiceSettingsPage — 發票設定
  *
- * 兩個 TAB：
+ * 三個 TAB：
  *  1. 字軌主檔：資料更新時間（SAP拉取）、年、月、稅碼、字軌
  *  2. 發票截止日期：年、月、截止日期（連結，點擊開啟日期選擇器）、更新時間-人員
+ *  3. 工廠稅率：SAP工廠代號、稅率、有效日期、操作（刪除 / 修改）
  */
 
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
@@ -22,11 +23,13 @@ import { SimpleDatePicker } from './SimpleDatePicker';
 import { TRACK_DATA, type TrackRecord } from './invoiceSettingsStore';
 import { DropdownSelect } from './DropdownSelect';
 import { UpdateTimeLabel } from './UpdateTimeLabel';
+import { ActionCellButtons } from './ActionButtons';
 
 
 // ── react-dnd drag types ──────────────────────────────────────────────────────
-const DRAG_TYPE_TRACK = 'invoice-track-col';
-const DRAG_TYPE_DEAD  = 'invoice-deadline-col';
+const DRAG_TYPE_TRACK    = 'invoice-track-col';
+const DRAG_TYPE_DEAD     = 'invoice-deadline-col';
+const DRAG_TYPE_FAC_TAX  = 'invoice-factory-tax-col';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // 字軌主檔資料與型別從共用模組引入（invoiceSettingsStore.ts）
@@ -135,9 +138,18 @@ function useTableCols<T>(initialCols: ColDef<T>[], storageKey: string) {
       const saved = localStorage.getItem(storageKey);
       if (saved) {
         const parsed = JSON.parse(saved) as ColDef<T>[];
+        const savedMap = new Map(parsed.map(c => [c.key, c]));
         const valid = new Set(initialCols.map(c => c.key));
         const filtered = parsed.filter(c => valid.has(c.key));
-        return filtered.length === initialCols.length ? filtered : initialCols.map(c => ({ ...c }));
+        if (filtered.length === initialCols.length) {
+          // 保留使用者的 width/hidden，但 label 以程式碼為準
+          return initialCols.map(c => ({
+            ...savedMap.get(c.key)!,
+            label: c.label,
+            minWidth: c.minWidth,
+            required: c.required,
+          }));
+        }
       }
     } catch { /* ignore */ }
     return initialCols.map(c => ({ ...c }));
@@ -864,9 +876,850 @@ function DeadlineTab() {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
+// 工廠稅率 Tab
+
+interface FactoryTaxRecord {
+  id: number;
+  factoryCode: string;   // SAP工廠代號
+  taxRate: number;       // 稅率（%）
+  effectiveDate: string; // 有效日期 YYYY/MM/DD
+  updatedAt: string;     // 更新時間-人員
+}
+
+// Mock 工廠清單（供下拉選單使用）
+const FACTORY_OPTIONS = [
+  { value: '', label: '全部' },
+  { value: '1000', label: '1000' },
+  { value: '1100', label: '1100' },
+  { value: '2000', label: '2000' },
+  { value: '2610', label: '2610' },
+  { value: '3000', label: '3000' },
+  { value: 'TW01', label: 'TW01' },
+  { value: 'TW02', label: 'TW02' },
+];
+
+
+// 預設資料版本號：每次修改 FACTORY_TAX_DATA_INIT 時只需更新此數字
+const FACTORY_TAX_DATA_VERSION = 4;
+
+const FACTORY_TAX_DATA_INIT: FactoryTaxRecord[] = [
+  { id: 1, factoryCode: 'GTM1', taxRate: 5, effectiveDate: '2019/01/01', updatedAt: '2026/06/11 00:00-系統' },
+  { id: 2, factoryCode: 'GVM1', taxRate: 8, effectiveDate: '2026/12/31', updatedAt: '2026/06/11 00:00-系統' },
+  { id: 3, factoryCode: 'AIP1', taxRate: 5, effectiveDate: '2019/01/01', updatedAt: '2026/06/11 00:00-系統' },
+  { id: 4, factoryCode: 'AIP2', taxRate: 5, effectiveDate: '2019/01/01', updatedAt: '2026/06/11 00:00-系統' },
+  { id: 5, factoryCode: 'DTC1', taxRate: 5, effectiveDate: '2019/01/01', updatedAt: '2026/06/11 00:00-系統' },
+  { id: 6, factoryCode: 'DTE1', taxRate: 5, effectiveDate: '2019/01/01', updatedAt: '2026/06/11 00:00-系統' },
+  { id: 7, factoryCode: 'DTG1', taxRate: 5, effectiveDate: '2019/01/01', updatedAt: '2026/06/11 00:00-系統' },
+  { id: 8, factoryCode: 'DTI1', taxRate: 5, effectiveDate: '2019/01/01', updatedAt: '2026/06/11 00:00-系統' },
+];
+
+const FAC_TAX_COLS_INIT: ColDef<FactoryTaxRecord>[] = [
+  { key: 'factoryCode',   label: 'SAP工廠代號',   width: 160, minWidth: 120 },
+  { key: 'taxRate',       label: '稅率',           width: 120, minWidth: 80  },
+  { key: 'effectiveDate', label: '生效日期', width: 180, minWidth: 120 },
+  { key: 'updatedAt',     label: '更新時間-人員', width: 260, minWidth: 180 },
+  { key: 'id',            label: '操作',           width: 100, minWidth: 100, required: true },
+];
+
+// ── 新增工廠稅率 Dialog ──────────────────────────────────────────────────────
+interface AddFactoryTaxDialogProps {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: (record: Omit<FactoryTaxRecord, 'id' | 'updatedAt'>) => void;
+  existingData: FactoryTaxRecord[];
+}
+
+function AddFactoryTaxDialog({ open, onClose, onConfirm, existingData }: AddFactoryTaxDialogProps) {
+  const [factoryCode, setFactoryCode] = useState('');
+  const [taxRateStr, setTaxRateStr] = useState('');
+  const [effectiveDate, setEffectiveDate] = useState('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const datePickerRef = useRef<HTMLDivElement>(null);
+
+  // 點外部關閉日期選擇器
+  useEffect(() => {
+    if (!showDatePicker) return;
+    const handler = (e: MouseEvent) => {
+      if (datePickerRef.current && !datePickerRef.current.contains(e.target as Node)) {
+        setShowDatePicker(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showDatePicker]);
+
+  const validate = () => {
+    const e: Record<string, string> = {};
+    if (!factoryCode) e.factoryCode = '必填';
+    if (!taxRateStr || isNaN(Number(taxRateStr))) e.taxRate = '必填，請輸入數字';
+    if (!effectiveDate) {
+      e.effectiveDate = '必填';
+    } else if (factoryCode && existingData.some(r => r.factoryCode === factoryCode && r.effectiveDate === effectiveDate)) {
+      e.effectiveDate = `該工廠已有相同生效日期（${effectiveDate}）的稅率設定`;
+    }
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const handleSubmit = () => {
+    if (!validate()) return;
+    onConfirm({ factoryCode, taxRate: Number(taxRateStr), effectiveDate });
+    handleClose();
+  };
+
+  const handleClose = () => {
+    setFactoryCode(''); setTaxRateStr(''); setEffectiveDate('');
+    setErrors({}); setShowDatePicker(false);
+    onClose();
+  };
+
+  if (!open) return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9990] flex items-center justify-center"
+      style={{ background: 'rgba(28,37,46,0.45)' }}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) handleClose(); }}
+    >
+      <div className="bg-white rounded-[16px] shadow-[0px_0px_2px_0px_rgba(145,158,171,0.2),0px_12px_24px_-4px_rgba(145,158,171,0.12)] w-[480px] max-w-[calc(100vw-48px)] flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-[24px] pt-[24px] pb-[16px] border-b border-[rgba(145,158,171,0.12)]">
+          <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[18px] text-[#1c252e]">新增工廠稅率</p>
+          <button onClick={handleClose} className="flex items-center justify-center w-[36px] h-[36px] rounded-full hover:bg-[rgba(145,158,171,0.08)] transition-colors">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path d="M18 6L6 18M6 6l12 12" stroke="#637381" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="px-[24px] py-[20px] flex flex-col gap-[20px]">
+          {/* SAP工廠代號 */}
+          <div style={{ position: 'relative' }}>
+            <div style={{ position: 'relative', height: 54 }}>
+              <div
+                aria-hidden="true"
+                style={{
+                  position: 'absolute', inset: 0, pointerEvents: 'none',
+                  borderRadius: 8,
+                  border: `1px solid ${errors.factoryCode ? '#ff5630' : 'rgba(145,158,171,0.2)'}`,
+                }}
+              />
+              <div style={{ position: 'absolute', top: -5, left: 14, display: 'flex', alignItems: 'center', padding: '0 2px', zIndex: 10 }}>
+                <div style={{ position: 'absolute', background: 'white', height: 2, left: 0, right: 0, top: 5 }} />
+                <p style={{ fontSize: 12, fontWeight: 600, color: errors.factoryCode ? '#ff5630' : '#637381', position: 'relative' }}>SAP工廠代號</p>
+              </div>
+              <div className="flex items-center px-[14px]" style={{ height: 54 }}>
+                <input
+                  type="text"
+                  maxLength={10}
+                  value={factoryCode}
+                  onChange={e => { setFactoryCode(e.target.value); setErrors(p => ({ ...p, factoryCode: '' })); }}
+                  placeholder="請輸入工廠代號（最多10字）"
+                  className="flex-1 bg-transparent text-[14px] text-[#1c252e] placeholder:text-[#919eab] outline-none"
+                />
+              </div>
+            </div>
+            {errors.factoryCode && <p className="mt-[4px] text-[#ff5630] text-[12px]">{errors.factoryCode}</p>}
+          </div>
+
+          {/* 稅率 */}
+          <div style={{ position: 'relative' }}>
+            <div style={{ position: 'relative', height: 54 }}>
+              {/* border */}
+              <div
+                aria-hidden="true"
+                style={{
+                  position: 'absolute', inset: 0, pointerEvents: 'none',
+                  borderRadius: 8,
+                  border: `1px solid ${errors.taxRate ? '#ff5630' : 'rgba(145,158,171,0.2)'}`,
+                }}
+              />
+              {/* floating label */}
+              <div style={{ position: 'absolute', top: -5, left: 14, display: 'flex', alignItems: 'center', padding: '0 2px', zIndex: 10 }}>
+                <div style={{ position: 'absolute', background: 'white', height: 2, left: 0, right: 0, top: 5 }} />
+                <p style={{ fontSize: 12, fontWeight: 600, color: errors.taxRate ? '#ff5630' : '#637381', position: 'relative' }}>稅率</p>
+              </div>
+              <div className="flex items-center gap-[8px] px-[14px]" style={{ height: 54 }}>
+                <input
+                  type="number"
+                  min="0"
+                  step="any"
+                  value={taxRateStr}
+                  onChange={e => { setTaxRateStr(e.target.value); setErrors(p => ({ ...p, taxRate: '' })); }}
+                  placeholder="0"
+                  className="flex-1 bg-transparent text-[14px] text-[#1c252e] placeholder:text-[#919eab] outline-none"
+                  style={{ appearance: 'textfield' }}
+                />
+                <span className="text-[14px] font-semibold text-[#637381] shrink-0">%</span>
+              </div>
+            </div>
+            {errors.taxRate && <p className="mt-[4px] text-[#ff5630] text-[12px]">{errors.taxRate}</p>}
+          </div>
+
+          {/* 有效日期 */}
+          <div style={{ position: 'relative' }} ref={datePickerRef}>
+            <div style={{ position: 'relative', height: 54 }}>
+              <div
+                aria-hidden="true"
+                style={{
+                  position: 'absolute', inset: 0, pointerEvents: 'none',
+                  borderRadius: 8,
+                  border: `1px solid ${errors.effectiveDate ? '#ff5630' : 'rgba(145,158,171,0.2)'}`,
+                }}
+              />
+              <div style={{ position: 'absolute', top: -5, left: 14, display: 'flex', alignItems: 'center', padding: '0 2px', zIndex: 10 }}>
+                <div style={{ position: 'absolute', background: 'white', height: 2, left: 0, right: 0, top: 5 }} />
+                <p style={{ fontSize: 12, fontWeight: 600, color: errors.effectiveDate ? '#ff5630' : '#637381', position: 'relative' }}>生效日期</p>
+              </div>
+              <button
+                type="button"
+                className="flex items-center gap-[8px] px-[14px] w-full text-left"
+                style={{ height: 54 }}
+                onClick={() => setShowDatePicker(v => !v)}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="shrink-0">
+                  <rect x="3" y="4" width="18" height="18" rx="2" stroke="#919eab" strokeWidth="1.5"/>
+                  <path d="M16 2v4M8 2v4M3 10h18" stroke="#919eab" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+                <span className={`text-[14px] flex-1 ${effectiveDate ? 'text-[#1c252e]' : 'text-[#919eab]'}`}>
+                  {effectiveDate || '選擇日期...'}
+                </span>
+              </button>
+            </div>
+            {errors.effectiveDate && <p className="mt-[4px] text-[#ff5630] text-[12px]">{errors.effectiveDate}</p>}
+
+            {/* 日期選擇器 */}
+            {showDatePicker && (
+              <div style={{ position: 'absolute', top: 60, left: 0, zIndex: 100 }}>
+                <SimpleDatePicker
+                  selectedDate={effectiveDate}
+                  onDateSelect={(d) => { setEffectiveDate(d); setErrors(p => ({ ...p, effectiveDate: '' })); setShowDatePicker(false); }}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-[12px] px-[24px] pb-[24px] pt-[8px]">
+          <button
+            onClick={handleClose}
+            className="h-[40px] px-[20px] rounded-[8px] border border-[rgba(145,158,171,0.32)] text-[14px] font-semibold text-[#637381] hover:bg-[rgba(145,158,171,0.08)] transition-colors"
+          >
+            取消
+          </button>
+          <button
+            onClick={handleSubmit}
+            className="h-[40px] px-[20px] rounded-[8px] bg-[#005eb8] text-white text-[14px] font-semibold hover:bg-[#003d82] transition-colors"
+          >
+            確認新增
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+// ── 修改工廠稅率 Dialog ──────────────────────────────────────────────────────
+interface EditFactoryTaxDialogProps {
+  open: boolean;
+  record: FactoryTaxRecord | null;
+  onClose: () => void;
+  onConfirm: (id: number, taxRate: number, effectiveDate: string) => void;
+  existingData: FactoryTaxRecord[];
+}
+
+function EditFactoryTaxDialog({ open, record, onClose, onConfirm, existingData }: EditFactoryTaxDialogProps) {
+  const [taxRateStr, setTaxRateStr] = useState('');
+  const [effectiveDate, setEffectiveDate] = useState('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const datePickerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (record) {
+      setTaxRateStr(String(record.taxRate));
+      setEffectiveDate(record.effectiveDate);
+      setErrors({});
+      setShowDatePicker(false);
+    }
+  }, [record]);
+
+  useEffect(() => {
+    if (!showDatePicker) return;
+    const handler = (e: MouseEvent) => {
+      if (datePickerRef.current && !datePickerRef.current.contains(e.target as Node)) {
+        setShowDatePicker(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showDatePicker]);
+
+  const validate = () => {
+    const e: Record<string, string> = {};
+    if (!taxRateStr || isNaN(Number(taxRateStr))) e.taxRate = '必填，請輸入數字';
+    if (!effectiveDate) {
+      e.effectiveDate = '必填';
+    } else if (record && existingData.some(r => r.id !== record.id && r.factoryCode === record.factoryCode && r.effectiveDate === effectiveDate)) {
+      e.effectiveDate = `該工廠已有相同生效日期（${effectiveDate}）的稅率設定`;
+    }
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const handleSubmit = () => {
+    if (!record || !validate()) return;
+    onConfirm(record.id, Number(taxRateStr), effectiveDate);
+    onClose();
+  };
+
+  if (!open || !record) return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9990] flex items-center justify-center"
+      style={{ background: 'rgba(28,37,46,0.45)' }}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="bg-white rounded-[16px] shadow-[0px_0px_2px_0px_rgba(145,158,171,0.2),0px_12px_24px_-4px_rgba(145,158,171,0.12)] w-[480px] max-w-[calc(100vw-48px)] flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-[24px] pt-[24px] pb-[16px] border-b border-[rgba(145,158,171,0.12)]">
+          <div>
+            <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[18px] text-[#1c252e]">修改工廠稅率</p>
+            <p className="text-[13px] text-[#637381] mt-[2px]">工廠：{record.factoryCode}</p>
+          </div>
+          <button onClick={onClose} className="flex items-center justify-center w-[36px] h-[36px] rounded-full hover:bg-[rgba(145,158,171,0.08)] transition-colors">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path d="M18 6L6 18M6 6l12 12" stroke="#637381" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="px-[24px] py-[20px] flex flex-col gap-[20px]">
+          {/* 稅率 */}
+          <div style={{ position: 'relative' }}>
+            <div style={{ position: 'relative', height: 54 }}>
+              <div
+                aria-hidden="true"
+                style={{
+                  position: 'absolute', inset: 0, pointerEvents: 'none',
+                  borderRadius: 8,
+                  border: `1px solid ${errors.taxRate ? '#ff5630' : 'rgba(145,158,171,0.2)'}`,
+                }}
+              />
+              <div style={{ position: 'absolute', top: -5, left: 14, display: 'flex', alignItems: 'center', padding: '0 2px', zIndex: 10 }}>
+                <div style={{ position: 'absolute', background: 'white', height: 2, left: 0, right: 0, top: 5 }} />
+                <p style={{ fontSize: 12, fontWeight: 600, color: errors.taxRate ? '#ff5630' : '#637381', position: 'relative' }}>稅率</p>
+              </div>
+              <div className="flex items-center gap-[8px] px-[14px]" style={{ height: 54 }}>
+                <input
+                  type="number"
+                  min="0"
+                  step="any"
+                  value={taxRateStr}
+                  onChange={e => { setTaxRateStr(e.target.value); setErrors(p => ({ ...p, taxRate: '' })); }}
+                  className="flex-1 bg-transparent text-[14px] text-[#1c252e] placeholder:text-[#919eab] outline-none"
+                  style={{ appearance: 'textfield' }}
+                />
+                <span className="text-[14px] font-semibold text-[#637381] shrink-0">%</span>
+              </div>
+            </div>
+            {errors.taxRate && <p className="mt-[4px] text-[#ff5630] text-[12px]">{errors.taxRate}</p>}
+          </div>
+
+          {/* 有效日期 */}
+          <div style={{ position: 'relative' }} ref={datePickerRef}>
+            <div style={{ position: 'relative', height: 54 }}>
+              <div
+                aria-hidden="true"
+                style={{
+                  position: 'absolute', inset: 0, pointerEvents: 'none',
+                  borderRadius: 8,
+                  border: `1px solid ${errors.effectiveDate ? '#ff5630' : 'rgba(145,158,171,0.2)'}`,
+                }}
+              />
+              <div style={{ position: 'absolute', top: -5, left: 14, display: 'flex', alignItems: 'center', padding: '0 2px', zIndex: 10 }}>
+                <div style={{ position: 'absolute', background: 'white', height: 2, left: 0, right: 0, top: 5 }} />
+                <p style={{ fontSize: 12, fontWeight: 600, color: errors.effectiveDate ? '#ff5630' : '#637381', position: 'relative' }}>生效日期</p>
+              </div>
+              <button
+                type="button"
+                className="flex items-center gap-[8px] px-[14px] w-full text-left"
+                style={{ height: 54 }}
+                onClick={() => setShowDatePicker(v => !v)}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="shrink-0">
+                  <rect x="3" y="4" width="18" height="18" rx="2" stroke="#919eab" strokeWidth="1.5"/>
+                  <path d="M16 2v4M8 2v4M3 10h18" stroke="#919eab" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+                <span className={`text-[14px] flex-1 ${effectiveDate ? 'text-[#1c252e]' : 'text-[#919eab]'}`}>
+                  {effectiveDate || '選擇日期...'}
+                </span>
+              </button>
+            </div>
+            {errors.effectiveDate && <p className="mt-[4px] text-[#ff5630] text-[12px]">{errors.effectiveDate}</p>}
+            {/* 日期選擇器 */}
+            {showDatePicker && (
+              <div style={{ position: 'absolute', top: 60, left: 0, zIndex: 100 }}>
+                <SimpleDatePicker
+                  selectedDate={effectiveDate}
+                  onDateSelect={(d) => { setEffectiveDate(d); setErrors(p => ({ ...p, effectiveDate: '' })); setShowDatePicker(false); }}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-[12px] px-[24px] pb-[24px] pt-[8px]">
+          <button
+            onClick={onClose}
+            className="h-[40px] px-[20px] rounded-[8px] border border-[rgba(145,158,171,0.32)] text-[14px] font-semibold text-[#637381] hover:bg-[rgba(145,158,171,0.08)] transition-colors"
+          >
+            取消
+          </button>
+          <button
+            onClick={handleSubmit}
+            className="h-[40px] px-[20px] rounded-[8px] bg-[#005eb8] text-white text-[14px] font-semibold hover:bg-[#003d82] transition-colors"
+          >
+            確認修改
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+// ── 刪除確認 Dialog ──────────────────────────────────────────────────────────
+interface DeleteConfirmDialogProps {
+  open: boolean;
+  record: FactoryTaxRecord | null;
+  onClose: () => void;
+  onConfirm: () => void;
+}
+
+function DeleteConfirmDialog({ open, record, onClose, onConfirm }: DeleteConfirmDialogProps) {
+  if (!open || !record) return null;
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9990] flex items-center justify-center"
+      style={{ background: 'rgba(28,37,46,0.45)' }}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="bg-white rounded-[16px] shadow-[0px_0px_2px_0px_rgba(145,158,171,0.2),0px_12px_24px_-4px_rgba(145,158,171,0.12)] w-[420px] max-w-[calc(100vw-48px)] flex flex-col">
+        <div className="flex items-start gap-[16px] px-[24px] pt-[24px] pb-[20px]">
+          <div className="flex items-center justify-center w-[44px] h-[44px] rounded-full bg-[rgba(255,86,48,0.08)] shrink-0">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" stroke="#ff5630" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+          <div>
+            <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[16px] text-[#1c252e]">確認刪除</p>
+            <p className="text-[14px] text-[#637381] mt-[6px] leading-[22px]">
+              確定要刪除工廠 <span className="font-semibold text-[#1c252e]">{record.factoryCode}</span> 稅率 <span className="font-semibold text-[#1c252e]">{record.taxRate}%</span>（生效日期 {record.effectiveDate}）的設定嗎？此操作無法還原。
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center justify-end gap-[12px] px-[24px] pb-[24px]">
+          <button
+            onClick={onClose}
+            className="h-[40px] px-[20px] rounded-[8px] border border-[rgba(145,158,171,0.32)] text-[14px] font-semibold text-[#637381] hover:bg-[rgba(145,158,171,0.08)] transition-colors"
+          >
+            取消
+          </button>
+          <button
+            onClick={() => { onConfirm(); onClose(); }}
+            className="h-[40px] px-[20px] rounded-[8px] bg-[#ff5630] text-white text-[14px] font-semibold hover:bg-[#b71d18] transition-colors"
+          >
+            確認刪除
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+// ── FactoryTaxTab 主體 ───────────────────────────────────────────────────────
+function FactoryTaxTab() {
+  const STORAGE_KEY     = 'invoice-settings-factory-tax-v2';
+  const DATA_STORAGE_KEY = 'invoice-settings-factory-tax-data';
+  const [data, setData] = useState<FactoryTaxRecord[]>(() => {
+    try {
+      const saved = localStorage.getItem(DATA_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved) as { version: number; records: FactoryTaxRecord[] };
+        if (parsed.version === FACTORY_TAX_DATA_VERSION) return parsed.records;
+      }
+    } catch { /* ignore */ }
+    return FACTORY_TAX_DATA_INIT;
+  });
+  const [cols, setCols] = useTableCols<FactoryTaxRecord>(FAC_TAX_COLS_INIT, STORAGE_KEY);
+  const [tempCols, setTempCols] = useState<ColDef<FactoryTaxRecord>[]>([]);
+  const [showColSelector, setShowColSelector] = useState(false);
+  const [showFilterDialog, setShowFilterDialog] = useState(false);
+  const [filters, setFilters] = useState<FilterCondition[]>([]);
+  const [appliedFilters, setAppliedFilters] = useState<FilterCondition[]>([]);
+  const [sortConfig, setSortConfig] = useState<{ key: string | null; dir: 'asc' | 'desc' | null }>({ key: null, dir: null });
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(100);
+
+  // 搜尋
+  const [filterFactory, setFilterFactory] = useState('');
+  const [filterTaxRate, setFilterTaxRate] = useState('');
+
+  // Dialog states
+  const [showAdd, setShowAdd] = useState(false);
+  const [editTarget, setEditTarget] = useState<FactoryTaxRecord | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<FactoryTaxRecord | null>(null);
+
+  const { scrollContainerRef, handleMouseDown, canDragScroll } = useHorizontalDragScroll();
+
+  // 搜尋過濾
+  const searchFiltered = useMemo(() =>
+    data.filter(r =>
+      (!filterFactory || r.factoryCode === filterFactory) &&
+      (!filterTaxRate || String(r.taxRate).includes(filterTaxRate.trim()))
+    ),
+    [data, filterFactory, filterTaxRate]
+  );
+
+  const filtered = useMemo(() => {
+    if (appliedFilters.length === 0) return searchFiltered;
+    return searchFiltered.filter(row =>
+      appliedFilters.every(f => {
+        if (!f.column) return true;
+        const val = String((row as any)[f.column] ?? '');
+        const fv = f.value ?? '';
+        switch (f.operator) {
+          case 'contains': return val.toLowerCase().includes(fv.toLowerCase());
+          case 'equals': return val.toLowerCase() === fv.toLowerCase();
+          case 'notEquals': return val.toLowerCase() !== fv.toLowerCase();
+          case 'startsWith': return val.toLowerCase().startsWith(fv.toLowerCase());
+          case 'endsWith': return val.toLowerCase().endsWith(fv.toLowerCase());
+          case 'isEmpty': return !val.trim();
+          case 'isNotEmpty': return !!val.trim();
+          default: return true;
+        }
+      })
+    );
+  }, [searchFiltered, appliedFilters]);
+
+  const sorted = useMemo(() => {
+    if (!sortConfig.key || !sortConfig.dir) return filtered;
+    return [...filtered].sort((a, b) => {
+      const av = String((a as any)[sortConfig.key!] ?? '');
+      const bv = String((b as any)[sortConfig.key!] ?? '');
+      const cmp = av.localeCompare(bv, 'zh-Hant-TW', { sensitivity: 'base' });
+      return sortConfig.dir === 'asc' ? cmp : -cmp;
+    });
+  }, [filtered, sortConfig]);
+
+  useEffect(() => { setPage(1); }, [sorted.length]);
+
+  const paginated = useMemo(() => {
+    const s = (page - 1) * perPage;
+    return sorted.slice(s, s + perPage);
+  }, [sorted, page, perPage]);
+
+  const visibleCols = cols.filter(c => c.visible !== false);
+
+  const moveCol = useCallback((drag: string, hover: string) => {
+    setCols(prev => {
+      const di = prev.findIndex(c => c.key === drag);
+      const hi = prev.findIndex(c => c.key === hover);
+      const next = [...prev];
+      const [removed] = next.splice(di, 1);
+      next.splice(hi, 0, removed);
+      return next;
+    });
+  }, [setCols]);
+
+  const updateWidth = useCallback((key: string, w: number) => {
+    setCols(prev => prev.map(c => c.key === key ? { ...c, width: w } : c));
+  }, [setCols]);
+
+  const autoFitWidth = useCallback((key: string) => {
+    setCols(prev => {
+      const col = prev.find(c => c.key === key);
+      if (!col) return prev;
+      const headerW = measureTextWidth(col.label, '600 14px "Public Sans", "Noto Sans JP", sans-serif') + 48;
+      let maxDataW = 0;
+      data.forEach(row => {
+        const val = String((row as any)[key] ?? '');
+        const w = measureTextWidth(val, '14px "Public Sans", "Noto Sans JP", sans-serif') + 32;
+        if (w > maxDataW) maxDataW = w;
+      });
+      const bestFit = Math.max(col.minWidth, Math.ceil(Math.max(headerW, maxDataW)));
+      return prev.map(c => c.key === key ? { ...c, width: bestFit } : c);
+    });
+  }, [setCols, data]);
+
+  const handleSort = (key: string) => {
+    setSortConfig(s => ({ key, dir: s.key === key && s.dir === 'asc' ? 'desc' : 'asc' }));
+  };
+
+  const totalWidth = visibleCols.reduce((s, c) => s + c.width, 0);
+
+  // 資料持久化：data 變動時自動存入 localStorage（含版本號）
+  useEffect(() => {
+    try { localStorage.setItem(DATA_STORAGE_KEY, JSON.stringify({ version: FACTORY_TAX_DATA_VERSION, records: data })); } catch { /* ignore */ }
+  }, [data]);
+
+  // CRUD handlers
+  const makeTimestamp = () => {
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}-OOO`;
+  };
+
+  const handleAdd = (record: Omit<FactoryTaxRecord, 'id' | 'updatedAt'>) => {
+    const newId = Math.max(0, ...data.map(d => d.id)) + 1;
+    setData(prev => [...prev, { ...record, id: newId, updatedAt: makeTimestamp() }]);
+  };
+
+  const handleEdit = (id: number, taxRate: number, effectiveDate: string) => {
+    setData(prev => prev.map(r => r.id === id ? { ...r, taxRate, effectiveDate, updatedAt: makeTimestamp() } : r));
+  };
+
+  const handleDelete = () => {
+    if (!deleteTarget) return;
+    setData(prev => prev.filter(r => r.id !== deleteTarget.id));
+    setDeleteTarget(null);
+  };
+
+  // 篩選 tags
+  const activeTags: { label: string; onClear: () => void }[] = [];
+  if (filterFactory) activeTags.push({ label: `工廠：${filterFactory}`, onClear: () => setFilterFactory('') });
+  const clearAll = () => { setFilterFactory(''); setFilterTaxRate(''); };
+
+  // 新增按鈕（放在 toolbar actionButton）
+  const addButton = (
+    <button
+      onClick={() => setShowAdd(true)}
+      className="flex items-center gap-[6px] h-[34px] px-[14px] rounded-[8px] bg-[#005eb8] text-white text-[13px] font-semibold hover:bg-[#003d82] transition-colors"
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+        <path d="M12 5v14M5 12h14" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+      </svg>
+      新增
+    </button>
+  );
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* 搜尋列 */}
+      <div className="shrink-0 flex gap-[16px] items-end flex-wrap px-[20px] pt-[16px] pb-[16px]">
+        <div className="flex-1 min-w-[160px]">
+          <DropdownSelect
+            label="工廠"
+            value={filterFactory}
+            onChange={setFilterFactory}
+            searchable
+            options={[
+              { value: '', label: '全部' },
+              ...Array.from(new Set(data.map(r => r.factoryCode)))
+                .sort()
+                .map(code => ({ value: code, label: code })),
+            ]}
+          />
+        </div>
+        {/* 稅率關鍵字搜尋 */}
+        <div className="flex-1 min-w-[160px]" style={{ position: 'relative' }}>
+          <div style={{ position: 'relative', height: 54, overflow: 'visible' }}>
+            <div
+              aria-hidden="true"
+              style={{
+                position: 'absolute', inset: 0, pointerEvents: 'none',
+                borderRadius: 8, border: '1px solid rgba(145,158,171,0.2)',
+              }}
+            />
+            <div style={{ position: 'absolute', top: -5, left: 14, display: 'flex', alignItems: 'center', padding: '0 2px', zIndex: 10 }}>
+              <div style={{ position: 'absolute', background: 'white', height: 2, left: 0, right: 0, top: 5 }} />
+              <p style={{ fontSize: 12, fontWeight: 600, color: '#637381', position: 'relative' }}>稅率</p>
+            </div>
+            <div className="flex items-center gap-[8px] px-[14px]" style={{ height: 54 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="shrink-0">
+                <path d="M21 21L15 15M17 11C17 14.3137 14.3137 17 11 17C7.68629 17 5 14.3137 5 11C5 7.68629 7.68629 5 11 5C14.3137 5 17 7.68629 17 11Z" stroke="#919EAB" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+              <input
+                type="text"
+                value={filterTaxRate}
+                onChange={e => setFilterTaxRate(e.target.value)}
+                placeholder="搜尋稅率..."
+                className="flex-1 bg-transparent text-[14px] text-[#1c252e] placeholder:text-[#919eab] outline-none"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Toolbar */}
+      <TableToolbar
+        resultsCount={filtered.length}
+        showColumnSelector={showColSelector}
+        showFilterDialog={showFilterDialog}
+        onColumnsClick={() => { setTempCols(JSON.parse(JSON.stringify(cols))); setShowColSelector(v => !v); }}
+        onFiltersClick={() => setShowFilterDialog(v => !v)}
+        onExportCsv={() => { /* TODO */ }}
+        actionButton={addButton}
+        columnsButton={
+          <ColumnSelector
+            columns={tempCols.filter(c => !c.required) as Parameters<typeof ColumnSelector>[0]['columns']}
+            onToggleColumn={key => setTempCols(tempCols.map(c => c.key === key ? { ...c, visible: !(c.visible !== false) } : c))}
+            onToggleAll={all => setTempCols(tempCols.map(c => c.required ? c : { ...c, visible: all }))}
+            onClose={() => setShowColSelector(false)}
+            onApply={() => { setCols(tempCols as ColDef<FactoryTaxRecord>[]); setShowColSelector(false); }}
+          />
+        }
+        filtersButton={
+          <FilterDialog
+            filters={filters}
+            availableColumns={FAC_TAX_COLS_INIT.filter(c => !c.required).map(c => ({ key: c.key, label: c.label }))}
+            onFiltersChange={setFilters}
+            onClose={() => setShowFilterDialog(false)}
+            onApply={(vf) => { setAppliedFilters(vf); setShowFilterDialog(false); setPage(1); }}
+          />
+        }
+      />
+
+      {/* 篩選標籤列 */}
+      {activeTags.length > 0 && (
+        <div className="shrink-0 flex items-center gap-[8px] px-[20px] pb-[12px] flex-wrap">
+          {activeTags.map((tag, i) => (
+            <div key={i} className="flex items-center gap-[4px] bg-[rgba(0,94,184,0.08)] px-[10px] py-[4px] rounded-[6px]">
+              <span className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#1c252e]">{tag.label}</span>
+              <button onClick={tag.onClear} className="flex items-center justify-center w-[16px] h-[16px] hover:opacity-70 transition-opacity">
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                  <path d="M8 2L2 8M2 2L8 8" stroke="#637381" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </button>
+            </div>
+          ))}
+          <button onClick={clearAll} className="flex items-center gap-[4px] text-[#ff5630] hover:opacity-70 transition-opacity">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+              <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="#ff5630" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px]">Clear</span>
+          </button>
+        </div>
+      )}
+
+      {/* 表格 */}
+      <DndProvider backend={HTML5Backend}>
+        <div
+          ref={scrollContainerRef}
+          onMouseDown={handleMouseDown}
+          className={`flex-1 min-h-0 overflow-x-auto overflow-y-auto custom-scrollbar ${canDragScroll ? 'cursor-grab active:cursor-grabbing' : ''}`}
+        >
+          <div style={{ minWidth: `${totalWidth}px` }}>
+            {/* 表頭 */}
+            <div className="flex sticky top-0 z-10 border-b border-[rgba(145,158,171,0.08)]">
+              {visibleCols.map((col, idx) => (
+                <DraggableColumnHeader
+                  key={col.key}
+                  column={col}
+                  index={idx}
+                  moveColumn={moveCol}
+                  updateColumnWidth={updateWidth}
+                  autoFitWidth={autoFitWidth}
+                  sortConfig={{ key: sortConfig.key, direction: sortConfig.dir }}
+                  onSort={col.key === 'id' ? () => {} : handleSort}
+                  isLast={idx === visibleCols.length - 1}
+                  isFiltered={!!appliedFilters?.some(f => f.column === col.key)}
+                  dragType={DRAG_TYPE_FAC_TAX}
+                />
+              ))}
+              <div className="flex-1 bg-[#f4f6f8] min-w-0" />
+            </div>
+
+            {/* 資料列 */}
+            {paginated.map(row => (
+              <div
+                key={row.id}
+                className="flex border-b border-[rgba(145,158,171,0.08)] hover:bg-[rgba(145,158,171,0.04)] transition-colors"
+                style={{ minHeight: 64 }}
+              >
+                {visibleCols.map((col, ci) => (
+                  <div
+                    key={`${row.id}-${col.key}`}
+                    style={{ width: col.width }}
+                    className={`flex items-center px-[16px] overflow-hidden ${ci < visibleCols.length - 1 ? 'border-r border-[rgba(145,158,171,0.08)]' : ''}`}
+                  >
+                    {col.key === 'id' ? (
+                      <ActionCellButtons
+                        onEdit={() => setEditTarget(row)}
+                        onDelete={() => setDeleteTarget(row)}
+                      />
+                    ) : col.key === 'taxRate' ? (
+                      <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] text-[#1c252e] truncate w-full">
+                        {row.taxRate}%
+                      </p>
+                    ) : (
+                      <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] text-[#1c252e] truncate w-full">
+                        {String((row as any)[col.key] ?? '')}
+                      </p>
+                    )}
+                  </div>
+                ))}
+                <div className="flex-1 min-w-0" />
+              </div>
+            ))}
+
+            {paginated.length === 0 && (
+              <div className="flex items-center justify-center py-[60px]">
+                <p className="font-['Public_Sans:Regular',sans-serif] text-[#919eab] text-[14px]">無符合條件的資料</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </DndProvider>
+
+      {/* 分頁 */}
+      <div className="shrink-0 flex items-center bg-white border-t border-[rgba(145,158,171,0.08)]">
+        <PaginationControls
+          currentPage={page}
+          totalItems={sorted.length}
+          itemsPerPage={perPage}
+          onPageChange={setPage}
+          onItemsPerPageChange={n => { setPerPage(n); setPage(1); }}
+        />
+      </div>
+
+      {/* Dialogs */}
+      <AddFactoryTaxDialog
+        open={showAdd}
+        onClose={() => setShowAdd(false)}
+        onConfirm={handleAdd}
+        existingData={data}
+      />
+      <EditFactoryTaxDialog
+        open={!!editTarget}
+        record={editTarget}
+        onClose={() => setEditTarget(null)}
+        onConfirm={handleEdit}
+        existingData={data}
+      />
+      <DeleteConfirmDialog
+        open={!!deleteTarget}
+        record={deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+      />
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
 // 主頁面元件
 
-type TabKey = 'track' | 'deadline';
+type TabKey = 'track' | 'deadline' | 'factory-tax';
 
 export function InvoiceSettingsPage() {
   const [activeTab, setActiveTab] = useState<TabKey>('track');
@@ -902,13 +1755,28 @@ export function InvoiceSettingsPage() {
           </p>
         </div>
 
+        {/* 工廠稅率 */}
+        <div
+          onClick={() => setActiveTab('factory-tax')}
+          className="content-stretch flex gap-[8px] h-[48px] items-center justify-center min-h-[48px] min-w-[48px] relative shrink-0 cursor-pointer"
+        >
+          {activeTab === 'factory-tax' && (
+            <div aria-hidden="true" className="absolute border-[#1c252e] border-b-2 border-solid inset-0 pointer-events-none" />
+          )}
+          <p className={`font-['Public_Sans:Medium','Noto_Sans_JP:Medium',sans-serif] font-medium leading-[22px] relative shrink-0 text-[14px] ${activeTab === 'factory-tax' ? 'text-[#1c252e]' : 'text-[#637381]'}`}>
+            工廠稅率
+          </p>
+        </div>
+
         {/* 底部灰色底線 */}
         <div className="absolute bg-[rgba(145,158,171,0.08)] bottom-0 h-[2px] left-0 right-0" />
       </div>
 
       {/* TAB 內容 */}
       <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-        {activeTab === 'track' ? <TrackTab /> : <DeadlineTab />}
+        {activeTab === 'track' && <TrackTab />}
+        {activeTab === 'deadline' && <DeadlineTab />}
+        {activeTab === 'factory-tax' && <FactoryTaxTab />}
       </div>
     </div>
   );
