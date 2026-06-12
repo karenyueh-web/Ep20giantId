@@ -41,6 +41,7 @@ export interface PartRecord {
   // 狀態
   quoteStatus: 'pending' | 'quoted';
   notifyStatus: 'sent' | 'unsent';
+  notifySentAt?: string[];          // 寄送時間紀錄（可多次，對應催促機制）
   savedAt: string;
   updatedAt: string;
   syncDtcDte: boolean;
@@ -197,7 +198,9 @@ export const MOCK_PARTS: PartRecord[] = [
     brandSettings: [
       { id: bId(), brand: 'Giant', unitPrice: '125', currency: 'TWD', quoteQty: '1000', leadTime: '30', moq: '500', tradeTerms: 'FOB', tradeTermsPlace: '台中港', quoteUnit: 'PCE', productType: '標準品' },
     ],
-    quoteStatus: 'quoted', notifyStatus: 'sent', savedAt: '2025/05/04 15:30', updatedAt: '2025/05/05 12:30', syncDtcDte: false,
+    quoteStatus: 'quoted', notifyStatus: 'sent',
+    notifySentAt: ['2025/05/05 09:30', '2025/05/12 14:20', '2025/05/19 10:05'],
+    savedAt: '2025/05/04 15:30', updatedAt: '2025/05/05 12:30', syncDtcDte: false,
   },
   {
     id: 2,
@@ -208,7 +211,9 @@ export const MOCK_PARTS: PartRecord[] = [
     grossWeight: '0.45', netWeight: '0.42', weightUnit: 'KG',
     vendorPartNo: '', remark: '',
     brandSettings: [],
-    quoteStatus: 'pending', notifyStatus: 'sent', savedAt: '', updatedAt: '2025/05/05 12:30', syncDtcDte: false,
+    quoteStatus: 'pending', notifyStatus: 'sent',
+    notifySentAt: ['2025/05/05 09:30', '2025/05/12 14:20'],
+    savedAt: '', updatedAt: '2025/05/05 12:30', syncDtcDte: false,
   },
   {
     id: 3,
@@ -219,7 +224,9 @@ export const MOCK_PARTS: PartRecord[] = [
     grossWeight: '0.08', netWeight: '0.07', weightUnit: 'KG',
     vendorPartNo: '', remark: '2020/7/8 美工通知無量產需求故禁用',
     brandSettings: [],
-    quoteStatus: 'pending', notifyStatus: 'sent', savedAt: '', updatedAt: '2025/05/05 12:30', syncDtcDte: false,
+    quoteStatus: 'pending', notifyStatus: 'sent',
+    notifySentAt: ['2025/05/05 09:30'],
+    savedAt: '', updatedAt: '2025/05/05 12:30', syncDtcDte: false,
   },
   {
     id: 4,
@@ -244,7 +251,9 @@ export const MOCK_PARTS: PartRecord[] = [
       { id: bId(), brand: 'Giant', unitPrice: '350', currency: 'TWD', quoteQty: '500', leadTime: '45', moq: '200', tradeTerms: 'EXW', tradeTermsPlace: '台中工廠', quoteUnit: 'PCE', productType: '標準品' },
       { id: bId(), brand: 'Scott', unitPrice: '380', currency: 'TWD', quoteQty: '300', leadTime: '45', moq: '150', tradeTerms: 'EXW', tradeTermsPlace: '台中工廠', quoteUnit: 'PCE', productType: '客製品' },
     ],
-    quoteStatus: 'quoted', notifyStatus: 'sent', savedAt: '2025/05/20 10:00', updatedAt: '2025/05/05 12:30', syncDtcDte: true,
+    quoteStatus: 'quoted', notifyStatus: 'sent',
+    notifySentAt: ['2025/05/05 09:30', '2025/05/13 16:45'],
+    savedAt: '2025/05/20 10:00', updatedAt: '2025/05/05 12:30', syncDtcDte: true,
   },
   {
     id: 6,
@@ -257,7 +266,9 @@ export const MOCK_PARTS: PartRecord[] = [
     brandSettings: [
       { id: bId(), brand: 'Giant', unitPrice: '2800', currency: 'TWD', quoteQty: '200', leadTime: '60', moq: '100', tradeTerms: 'FOB', tradeTermsPlace: '基隆港', quoteUnit: 'PCE', productType: '客製品' },
     ],
-    quoteStatus: 'quoted', notifyStatus: 'sent', savedAt: '2025/04/28 09:15', updatedAt: '2025/05/05 12:30', syncDtcDte: false,
+    quoteStatus: 'quoted', notifyStatus: 'sent',
+    notifySentAt: ['2025/04/28 09:15'],
+    savedAt: '2025/04/28 09:15', updatedAt: '2025/05/05 12:30', syncDtcDte: false,
   },
   {
     id: 7,
@@ -268,7 +279,9 @@ export const MOCK_PARTS: PartRecord[] = [
     grossWeight: '0.15', netWeight: '0.12', weightUnit: 'KG',
     vendorPartNo: '', remark: '',
     brandSettings: [],
-    quoteStatus: 'pending', notifyStatus: 'sent', savedAt: '', updatedAt: '2025/05/05 12:30', syncDtcDte: false,
+    quoteStatus: 'pending', notifyStatus: 'sent',
+    notifySentAt: ['2025/05/05 09:30', '2025/05/12 14:20', '2025/05/20 08:55'],
+    savedAt: '', updatedAt: '2025/05/05 12:30', syncDtcDte: false,
   },
   {
     id: 8,
@@ -281,7 +294,9 @@ export const MOCK_PARTS: PartRecord[] = [
     brandSettings: [
       { id: bId(), brand: 'Giant', unitPrice: '185', currency: 'TWD', quoteQty: '800', leadTime: '25', moq: '400', tradeTerms: 'FOB', tradeTermsPlace: '台中港', quoteUnit: 'PCE', productType: '標準品' },
     ],
-    quoteStatus: 'quoted', notifyStatus: 'sent', savedAt: '2025/05/16 14:20', updatedAt: '2025/05/05 12:30', syncDtcDte: false,
+    quoteStatus: 'quoted', notifyStatus: 'sent',
+    notifySentAt: ['2025/05/05 09:30', '2025/05/16 14:20'],
+    savedAt: '2025/05/16 14:20', updatedAt: '2025/05/05 12:30', syncDtcDte: false,
   },
   {
     id: 9,
@@ -305,7 +320,9 @@ export const MOCK_PARTS: PartRecord[] = [
     brandSettings: [
       { id: bId(), brand: 'Giant', unitPrice: '220', currency: 'TWD', quoteQty: '600', leadTime: '35', moq: '300', tradeTerms: 'EXW', tradeTermsPlace: '高雄工廠', quoteUnit: 'NPR', productType: '標準品' },
     ],
-    quoteStatus: 'quoted', notifyStatus: 'sent', savedAt: '2025/04/06 11:45', updatedAt: '2025/05/05 12:30', syncDtcDte: false,
+    quoteStatus: 'quoted', notifyStatus: 'sent',
+    notifySentAt: ['2025/03/20 10:30'],
+    savedAt: '2025/04/06 11:45', updatedAt: '2025/05/05 12:30', syncDtcDte: false,
   },
   {
     id: 11,
@@ -316,7 +333,9 @@ export const MOCK_PARTS: PartRecord[] = [
     grossWeight: '0.01', netWeight: '0.01', weightUnit: 'KG',
     vendorPartNo: '', remark: '',
     brandSettings: [],
-    quoteStatus: 'pending', notifyStatus: 'sent', savedAt: '', updatedAt: '2025/05/05 12:30', syncDtcDte: false,
+    quoteStatus: 'pending', notifyStatus: 'sent',
+    notifySentAt: ['2025/05/05 09:30', '2025/05/12 14:20'],
+    savedAt: '', updatedAt: '2025/05/05 12:30', syncDtcDte: false,
   },
   {
     id: 12,
@@ -330,7 +349,9 @@ export const MOCK_PARTS: PartRecord[] = [
       { id: bId(), brand: 'Giant', unitPrice: '890', currency: 'TWD', quoteQty: '400', leadTime: '40', moq: '200', tradeTerms: 'FOB', tradeTermsPlace: '台中港', quoteUnit: 'SET', productType: '標準品' },
       { id: bId(), brand: 'LIV', unitPrice: '920', currency: 'TWD', quoteQty: '200', leadTime: '40', moq: '100', tradeTerms: 'FOB', tradeTermsPlace: '台中港', quoteUnit: 'SET', productType: '客製品' },
     ],
-    quoteStatus: 'quoted', notifyStatus: 'sent', savedAt: '2025/06/01 16:00', updatedAt: '2025/05/05 12:30', syncDtcDte: true,
+    quoteStatus: 'quoted', notifyStatus: 'sent',
+    notifySentAt: ['2025/05/05 09:30', '2025/05/25 11:15'],
+    savedAt: '2025/06/01 16:00', updatedAt: '2025/05/05 12:30', syncDtcDte: true,
   },
   {
     id: 13,
@@ -354,7 +375,9 @@ export const MOCK_PARTS: PartRecord[] = [
     brandSettings: [
       { id: bId(), brand: 'Giant', unitPrice: '340', currency: 'TWD', quoteQty: '500', leadTime: '30', moq: '250', tradeTerms: 'FOB', tradeTermsPlace: '台中港', quoteUnit: 'PCE', productType: '標準品' },
     ],
-    quoteStatus: 'quoted', notifyStatus: 'sent', savedAt: '2025/06/02 09:30', updatedAt: '2025/05/05 12:30', syncDtcDte: true,
+    quoteStatus: 'quoted', notifyStatus: 'sent',
+    notifySentAt: ['2025/05/05 09:30', '2025/06/02 09:30'],
+    savedAt: '2025/06/02 09:30', updatedAt: '2025/05/05 12:30', syncDtcDte: true,
   },
   {
     id: 15,
@@ -365,7 +388,9 @@ export const MOCK_PARTS: PartRecord[] = [
     grossWeight: '0.95', netWeight: '0.88', weightUnit: 'KG',
     vendorPartNo: '', remark: '',
     brandSettings: [],
-    quoteStatus: 'pending', notifyStatus: 'sent', savedAt: '', updatedAt: '2025/05/05 12:30', syncDtcDte: false,
+    quoteStatus: 'pending', notifyStatus: 'sent',
+    notifySentAt: ['2025/05/05 09:30'],
+    savedAt: '', updatedAt: '2025/05/05 12:30', syncDtcDte: false,
   },
 ];
 

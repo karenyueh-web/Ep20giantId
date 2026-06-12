@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
 import { Toaster } from '@/app/components/ui/sonner';
 import { StandardDataTable, type StandardColumn } from './StandardDataTable';
@@ -30,12 +31,117 @@ const TABS: { id: TabId; label: string }[] = [
   { id: 'quoted', label: '已報價' },
 ];
 
-// ── 通知狀態 Badge ─────────────────────────────────────────────────────────────
-function NotifyBadge({ status }: { status: 'sent' | 'unsent' }) {
+// ── 寄送時間 Tooltip（Portal 定位，繞過 cell overflow:hidden）────────────────────
+function NotifySentTooltip({
+  sentAt,
+  anchorRef,
+  onClose,
+}: {
+  sentAt: string[];
+  anchorRef: React.RefObject<HTMLSpanElement | null>;
+  onClose: () => void;
+}) {
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+
+  useEffect(() => {
+    if (!anchorRef.current) return;
+    const rect = anchorRef.current.getBoundingClientRect();
+    const TOOLTIP_W = 260;
+    // 假設每列約 44px， header 40px， padding 32px
+    const TOOLTIP_H = 40 + sentAt.length * 44 + 32;
+    const spaceBelow = window.innerHeight - rect.bottom - 8;
+    const top = spaceBelow >= TOOLTIP_H ? rect.bottom + 8 : rect.top - TOOLTIP_H - 8;
+    const left = Math.min(rect.left, window.innerWidth - TOOLTIP_W - 12);
+    setPos({ top, left });
+  }, [anchorRef, sentAt.length]);
+
+  if (!pos) return null;
+
+  return createPortal(
+    <div
+      onMouseEnter={(e) => e.stopPropagation()}
+      style={{ top: pos.top, left: pos.left, width: 260, zIndex: 9999 }}
+      className="fixed bg-white rounded-[12px] shadow-[0px_4px_24px_rgba(0,0,0,0.16)] border border-[rgba(145,158,171,0.16)] overflow-hidden"
+    >
+      {/* Header */}
+      <div className="flex items-center gap-[8px] px-[16px] py-[12px] bg-[#f4f6f8] border-b border-[rgba(145,158,171,0.12)]">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="shrink-0">
+          <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+            stroke="#637381" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#1c252e]">
+          寄送紀錄
+        </span>
+        <span className="ml-auto inline-flex items-center px-[6px] py-[1px] rounded-[4px] bg-[rgba(34,197,94,0.12)] text-[#118d57] text-[11px] font-semibold">
+          共 {sentAt.length} 次
+        </span>
+      </div>
+      {/* List */}
+      <div className="px-[12px] py-[8px] flex flex-col gap-[2px]">
+        {sentAt.map((t, i) => (
+          <div key={i} className="flex items-center gap-[10px] px-[8px] py-[8px] rounded-[8px] hover:bg-[rgba(145,158,171,0.06)] transition-colors">
+            {/* 次數 badge */}
+            <span className={`shrink-0 inline-flex items-center justify-center w-[22px] h-[22px] rounded-full text-[11px] font-bold ${
+              i === 0
+                ? 'bg-[rgba(22,119,255,0.12)] text-[#1677ff]'
+                : 'bg-[rgba(255,171,0,0.16)] text-[#b76e00]'
+            }`}>
+              {i + 1}
+            </span>
+            {/* 日期 + 時間 */}
+            <div className="flex flex-col">
+              <span className="font-['Public_Sans:Medium',sans-serif] font-medium text-[13px] text-[#1c252e] leading-[20px]">
+                {t.split(' ')[0]}
+              </span>
+              <span className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381] leading-[18px]">
+                {t.split(' ')[1] || ''}
+              </span>
+            </div>
+            {/* 標示 */}
+            {i === 0 && (
+              <span className="ml-auto text-[11px] text-[#637381] whitespace-nowrap">首次寄送</span>
+            )}
+            {i > 0 && (
+              <span className="ml-auto text-[11px] text-[#b76e00] whitespace-nowrap">催促 #{i}</span>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+// ── 通知狀態 Badge ───────────────────────────────────────────────────────
+function NotifyBadge({ status, sentAt }: { status: 'sent' | 'unsent'; sentAt?: string[] }) {
+  const [hovered, setHovered] = useState(false);
+  const badgeRef = useRef<HTMLSpanElement>(null);
+  const hasSentHistory = status === 'sent' && sentAt && sentAt.length > 0;
+
   if (status === 'sent') {
     return (
-      <span className="inline-flex items-center px-[8px] py-[2px] rounded-[6px] text-[12px] font-medium leading-[20px] whitespace-nowrap bg-[rgba(34,197,94,0.16)] text-[#118d57]">
+      <span
+        ref={badgeRef}
+        onMouseEnter={() => hasSentHistory && setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        className={`inline-flex items-center gap-[4px] px-[8px] py-[2px] rounded-[6px] text-[12px] font-medium leading-[20px] whitespace-nowrap bg-[rgba(34,197,94,0.16)] text-[#118d57] ${
+          hasSentHistory ? 'cursor-pointer' : ''
+        }`}
+      >
         已發送通知
+        {hasSentHistory && (
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" className="opacity-60">
+            <circle cx="12" cy="12" r="10" stroke="#118d57" strokeWidth="1.5" />
+            <path d="M12 8v4M12 16h.01" stroke="#118d57" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        )}
+        {hovered && hasSentHistory && (
+          <NotifySentTooltip
+            sentAt={sentAt!}
+            anchorRef={badgeRef}
+            onClose={() => setHovered(false)}
+          />
+        )}
       </span>
     );
   }
@@ -229,7 +335,7 @@ export default function PartsMaintenancePage({
         label: '通知狀態',
         width: 120,
         minWidth: 100,
-        renderCell: (val) => <NotifyBadge status={val as 'sent' | 'unsent'} />,
+        renderCell: (_val, row) => <NotifyBadge status={row.notifyStatus} sentAt={row.notifySentAt} />,
       },
       { key: 'updatedAt', label: '資料更新時間', width: 160, minWidth: 120 },
     ],
@@ -286,20 +392,12 @@ export default function PartsMaintenancePage({
       <div className="content-stretch flex gap-[40px] h-[48px] items-center px-[20px] relative shrink-0 w-full">
         {TABS.map((tab) => {
           const isActive = activeTab === tab.id;
-          const count =
-            tab.id === 'all'
-              ? tabCounts.all
-              : tab.id === 'pending'
-                ? tabCounts.pending
-                : tabCounts.quoted;
-          // Badge 色票：active 時依 tab 類型著色，inactive 統一灰色
+          // 只有「未報價」顯示數量（All 與已報價資料只增不減，顯示數量無意義）
+          const showBadge = tab.id === 'pending';
+          const count = tabCounts.pending;
           const getBadgeStyle = () => {
             if (!isActive) return { bg: 'bg-[rgba(145,158,171,0.16)]', text: 'text-[#637381]' };
-            switch (tab.id) {
-              case 'pending': return { bg: 'bg-[rgba(255,171,0,0.16)]', text: 'text-[#b76e00]' };
-              case 'quoted':  return { bg: 'bg-[rgba(34,197,94,0.16)]', text: 'text-[#118d57]' };
-              default:        return { bg: 'bg-[rgba(145,158,171,0.16)]', text: 'text-[#637381]' };
-            }
+            return { bg: 'bg-[rgba(255,171,0,0.16)]', text: 'text-[#b76e00]' };
           };
           const badge = getBadgeStyle();
           return (
@@ -321,14 +419,17 @@ export default function PartsMaintenancePage({
               >
                 {tab.label}
               </p>
-              <div className={`${badge.bg} content-stretch flex gap-[6px] h-[24px] items-center justify-center min-w-[24px] px-[6px] py-0 relative rounded-[6px] shrink-0`}>
-                <p className={`font-['Public_Sans:Bold',sans-serif] font-bold leading-[20px] relative shrink-0 ${badge.text} text-[12px] text-center`}>
-                  {count}
-                </p>
-              </div>
+              {showBadge && (
+                <div className={`${badge.bg} content-stretch flex gap-[6px] h-[24px] items-center justify-center min-w-[24px] px-[6px] py-0 relative rounded-[6px] shrink-0`}>
+                  <p className={`font-['Public_Sans:Bold',sans-serif] font-bold leading-[20px] relative shrink-0 ${badge.text} text-[12px] text-center`}>
+                    {count}
+                  </p>
+                </div>
+              )}
             </div>
           );
         })}
+
         <div className="absolute bg-[rgba(145,158,171,0.08)] bottom-0 h-[2px] left-0 right-0" />
       </div>
 
@@ -410,7 +511,7 @@ export default function PartsMaintenancePage({
         <StandardDataTable<PartWithDisplay>
           columns={columns}
           data={displayData}
-          storageKey="parts-maintenance-list-v1"
+          storageKey="parts-maintenance-list-v2"
           showCheckbox={userRole !== 'vendor'}
           actionButton={actionButton}
           externalFilteredData={displayData}

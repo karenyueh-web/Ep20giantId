@@ -1073,6 +1073,116 @@ const { scrollContainerRef, handleMouseDown, canDragScroll } = useHorizontalDrag
 
 ---
 
+### 功能九：Sticky 欄位規範（StandardDataTable 專用）
+
+> ❗ **以下規則違反均會造成視覺破版，務必遵守。**
+
+#### 9.1 Sticky Checkbox 欄 — hover 背景必須為實心色
+
+`position: sticky` 的 checkbox 欄在 hover 時，**禁止使用半透明 rgba 背景色**。  
+半透明背景會讓被 sticky 欄壓住的下層資料欄文字「透出來」，造成 hover 破版。
+
+```tsx
+// ❌ 錯誤：rgba 4% opacity 幾乎完全透明，hover 時底層文字會透出
+className="bg-white group-hover:bg-[rgba(145,158,171,0.04)]"
+
+// ✅ 正確：實心色，與 sticky-right 欄一致
+className="bg-white group-hover:bg-[#f5f6f7]"
+```
+
+**所有 sticky 欄（左固定、右固定）一律使用實心 hover 色：**
+
+| 狀態 | 一般 sticky 欄 | 已選取列的 sticky-right 欄 |
+|------|--------------|-------------------------|
+| 預設 | `bg-white` | `bg-white` |
+| hover | `group-hover:bg-[#f5f6f7]` | `group-hover:bg-[#f5f6f7]` |
+| 已選取列 | `bg-white`（選取色在 row 上） | `bg-[#eef4fb]` |
+
+---
+
+#### 9.2 資料列 Cell — 必須有 shrink-0 + minWidth
+
+Flex row 內的資料 cell，**缺少 `shrink-0` 會被 flex 壓縮**，導致欄位變窄、只顯示文字尾端。  
+表頭（`DraggableColumnHeader`）已有 `shrink-0`，資料 cell 必須同步。
+
+```tsx
+// ❌ 錯誤：cell 缺少 shrink-0 與 minWidth，flex 可能壓縮欄位
+<div style={{ width: col.width }} className="flex items-center px-[16px] overflow-hidden">
+
+// ✅ 正確
+<div
+  style={{ width: col.width, minWidth: col.minWidth }}
+  className="flex items-center px-[16px] overflow-hidden shrink-0"
+>
+```
+
+---
+
+#### 9.3 Cell 內文字 — flex 容器內使用 flex-1 min-w-0 而非 w-full
+
+```tsx
+// ❌ 錯誤：w-full 在 flex 容器中可能解析為 border-box 寬度，truncate 失效
+<p className="truncate w-full text-[14px]">{val}</p>
+
+// ✅ 正確：flex-1 min-w-0 才能讓 truncate 正確截斷
+<p className="truncate min-w-0 flex-1 text-[14px]">{val}</p>
+```
+
+---
+
+#### 9.4 localStorage 欄位順序 — 以 initialColumns 為主
+
+`loadCols` 合併邏輯**必須以 `initialColumns` 的順序為基準**，從 localStorage 只讀取 `width`、`visible` 等使用者設定。  
+**禁止把新欄位 append 到陣列最後**，否則新增欄位後欄位順序會亂。
+
+```ts
+// ❌ 錯誤：新欄位被附加到最後，破壞 initialColumns 定義的順序
+const merged = [...filteredFromStorage, ...newCols];
+
+// ✅ 正確：以 initialColumns 為主，localStorage 只補充使用者偏好
+const savedMap = new Map(parsed.map(c => [c.key, c]));
+const merged = initialColumns.map(src => {
+  const saved = savedMap.get(src.key);
+  return {
+    ...src,
+    ...(saved ? {
+      visible: saved.visible,
+      width: Math.max(saved.width ?? src.width, src.minWidth), // 防寬度損壞
+    } : {}),
+    ...(src.required ? { width: src.width, minWidth: src.minWidth } : {}),
+  };
+});
+```
+
+> ⚠️ localStorage 的欄位寬度必須以 `Math.max(savedWidth, minWidth)` 夾住，防止因誤操作 resize 造成欄位崩潰。
+
+---
+
+#### 9.5 StorageKey 版本控管
+
+當欄位定義（欄位數、欄位名）有**破壞性變更**時，必須 bump storageKey 版號，讓所有使用者的舊快取自動失效。
+
+```ts
+// 格式：{feature}-list-v{N}
+storageKey="parts-maintenance-list-v2"  // 從 v1 改為 v2 時清掉所有舊快取
+```
+
+---
+
+#### 9.6 Scroll Reset on Mount
+
+StandardDataTable 掛載時應重置 `scrollLeft = 0`，防止 HMR 或元件重用時保留非預期的捲動狀態。
+
+```ts
+useEffect(() => {
+  if (scrollContainerRef.current) {
+    scrollContainerRef.current.scrollLeft = 0;
+  }
+}, []);
+```
+
+---
+
 ## 十二、開發規範
 
 1. **永遠先參考此文件** — 不得自行定義顏色、間距、字型、圓角值
@@ -1087,8 +1197,13 @@ const { scrollContainerRef, handleMouseDown, canDragScroll } = useHorizontalDrag
 10. **欄位排序優先判斷數字 → 中文 → 英文**，對應使用不同 locale 的 `localeCompare`
 11. **localStorage key 格式固定：** `{feature}_{userEmail}_{tab}_columns`
 12. **Stitch 生成 UI 僅供靈感**，實際實作必須遵循此文件
+13. **Sticky 欄 hover 背景必須為實心色** — 禁止使用 `rgba` 半透明色（見功能九 9.1），否則 hover 時底層文字會透出
+14. **資料列 Cell 必須有 `shrink-0` + `minWidth`** — 缺少 shrink-0 會被 flex 壓縮，欄位顯示不完整（見功能九 9.2）
+15. **Cell 內文字用 `flex-1 min-w-0`，禁止用 `w-full`** — flex 容器內 w-full 無法正確觸發 truncate（見功能九 9.3）
+16. **loadCols 以 initialColumns 順序為主** — 新欄位不可 append 到最後，從 localStorage 只讀 width/visible（見功能九 9.4）
+17. **破壞性欄位變更必須 bump storageKey 版號** — 格式 `{feature}-list-v{N}`（見功能九 9.5）
 
 ---
 
 *由 `scan-patterns.mjs` 掃描 320 個檔案自動生成，並手動整合驗證。*
-*最後更新：2026-03-20*
+*最後更新：2026-06-12*

@@ -619,7 +619,7 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
                 {existingRecord && (
                   <button
                     onClick={() => setShowDeleteConfirm(true)}
-                    className="h-[40px] min-w-[88px] px-[16px] rounded-[8px] border border-[rgba(145,158,171,0.32)] bg-white text-[#637381] hover:bg-[#f4f6f8] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
+                    className="h-[40px] min-w-[88px] px-[16px] rounded-[8px] bg-[#ff5630] hover:bg-[#b71d18] text-white font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
                   >
                     刪除草稿
                   </button>

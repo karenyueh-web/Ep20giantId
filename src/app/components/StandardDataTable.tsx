@@ -1,4 +1,4 @@
-﻿/**
+/**
  * StandardDataTable — 專案標準表格元件
  *
  * 功能清單（符合表格系統規範）：
@@ -105,27 +105,36 @@ export function StandardDataTable<T extends { id: number }>({
 }: StandardDataTableProps<T>) {
   const { scrollContainerRef, handleMouseDown, canDragScroll } = useHorizontalDragScroll();
 
+  // 挂載時確保滞動位置回到最左側（防止 HMR 保留舊滾動狀態）
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollLeft = 0;
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ── 欄位狀態（從 localStorage 載入，保留上次拖拉/可見/寬度設定）──────────
   const loadCols = (): StandardColumn<T>[] => {
     try {
       const saved = localStorage.getItem(storageKey);
       if (saved) {
         const parsed = JSON.parse(saved) as StandardColumn<T>[];
-        const validKeys = new Set(initialColumns.map(c => c.key));
-        const filtered = parsed.filter(c => validKeys.has(c.key));
-        const savedKeys = new Set(filtered.map(c => c.key));
-        const newCols = initialColumns.filter(c => !savedKeys.has(c.key));
-        // 補回函式類型屬性（無法 JSON 序列化）及 required（設計時屬性）
-        const merged = [...filtered, ...newCols].map(c => {
-          const src = initialColumns.find(ic => ic.key === c.key);
-          return src ? {
-            ...c,
-            renderCell: src.renderCell,
-            required: src.required,
-            label: src.label,
-            // required 欄（操作欄）的寬度永遠以 prop 為準，不使用 localStorage 快取值
+        // 以 initialColumns 的欄位順序為主，從 localStorage 只讀取 width / visible 等使用者設定
+        // 這樣新增欄位不會被附加到最後，欄位順序永遠與程式定義一致
+        const savedMap = new Map(parsed.map(c => [c.key, c]));
+        const merged = initialColumns.map(src => {
+          const saved = savedMap.get(src.key);
+          return {
+            ...src,
+            // 保留使用者的欄位寬度與可見性設定
+            ...(saved ? {
+              visible: saved.visible,
+              // 防止 localStorage 儲存異常小的寬度（resize 意外或資料損壞）
+              width: Math.max(saved.width ?? src.width, src.minWidth),
+            } : {}),
+            // required 欄（操作欄）的寬度永遠以 prop 為準
             ...(src.required ? { width: src.width, minWidth: src.minWidth } : {}),
-          } : c;
+          };
         });
         return merged as StandardColumn<T>[];
       }
@@ -290,7 +299,7 @@ export function StandardDataTable<T extends { id: number }>({
     return (
       <p
         title={val}
-        className={`font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] truncate w-full ${val ? 'text-[#1c252e]' : 'text-[#919eab]'}`}
+        className={`font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] truncate min-w-0 flex-1 ${val ? 'text-[#1c252e]' : 'text-[#919eab]'}`}
       >
         {val || '—'}
       </p>
@@ -418,7 +427,7 @@ export function StandardDataTable<T extends { id: number }>({
                 {/* Checkbox cell */}
                 {showCheckbox && (
                   <div
-                    className="flex items-center justify-center shrink-0 border-r border-[rgba(145,158,171,0.08)] bg-white group-hover:bg-[rgba(145,158,171,0.04)]"
+                    className="flex items-center justify-center shrink-0 border-r border-[rgba(145,158,171,0.08)] bg-white group-hover:bg-[#f5f6f7]"
                     style={{ width: CHECKBOX_COL_W, minWidth: CHECKBOX_COL_W, position: 'sticky', left: 0, zIndex: 4, boxShadow: '2px 0 4px -2px rgba(145,158,171,0.16)' }}
                     onClick={e => { e.stopPropagation(); handleToggleRow(row.id); }}
                   >
@@ -431,8 +440,8 @@ export function StandardDataTable<T extends { id: number }>({
                   return (
                     <div
                       key={`${row.id}-${col.key}`}
-                      style={{ width: col.width }}
-                      className={`flex items-center px-[16px] overflow-hidden ${isLastNormal ? '' : 'border-r border-[rgba(145,158,171,0.08)]'}`}
+                      style={{ width: col.width, minWidth: col.minWidth }}
+                      className={`flex items-center px-[16px] overflow-hidden shrink-0 ${isLastNormal ? '' : 'border-r border-[rgba(145,158,171,0.08)]'}`}
                     >
                       {renderCellValue(col, row)}
                     </div>
