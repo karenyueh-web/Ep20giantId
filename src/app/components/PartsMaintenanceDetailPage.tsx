@@ -6,6 +6,7 @@ import { Toaster } from '@/app/components/ui/sonner';
 import { SearchField } from '@/app/components/SearchField';
 import { DropdownSelect } from '@/app/components/DropdownSelect';
 import { DeleteButton } from '@/app/components/ActionButtons';
+import IconsSolidIcSolarMultipleForwardLeftBroken from '@/imports/IconsSolidIcSolarMultipleForwardLeftBroken';
 import type { PartRecord, BrandSetting } from '@/app/components/partsMaintenanceData';
 import {
   BRAND_OPTIONS, TRADE_TERMS_OPTIONS, QUOTE_UNIT_OPTIONS,
@@ -115,28 +116,38 @@ export default function PartsMaintenanceDetailPage({
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-full">
+    <>
       <Toaster />
 
-      {/* ════════ Tabs ════════ */}
-      <div className="content-stretch flex gap-[40px] h-[48px] items-center px-[20px] relative shrink-0 w-full">
-        {TABS.map(tab => (
-          <div
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className="content-stretch flex gap-[8px] h-[48px] items-center justify-center min-h-[48px] min-w-[48px] relative shrink-0 cursor-pointer"
-          >
-            {activeTab === tab.id && (
-              <div aria-hidden="true" className="absolute border-[#1c252e] border-b-2 border-solid inset-0 pointer-events-none" />
-            )}
-            <p className={`font-['Public_Sans:Medium','Noto_Sans_JP:Medium',sans-serif] font-medium leading-[22px] relative shrink-0 text-[14px] ${
-              activeTab === tab.id ? 'text-[#1c252e]' : 'text-[#637381]'
-            }`}>
-              {tab.label}
-            </p>
+      {/* ════════ Header (返回 + Tabs) ════════ */}
+      <div className="shrink-0 px-[24px] pt-[16px] pb-0 border-b border-[rgba(145,158,171,0.12)]">
+
+        {/* 返回箭頭列 */}
+        <div className="flex items-center gap-[10px] mb-[4px]">
+          <div onClick={onClose} className="shrink-0 size-[29px] cursor-pointer hover:opacity-70 transition-opacity">
+            <IconsSolidIcSolarMultipleForwardLeftBroken />
           </div>
-        ))}
-        <div className="absolute bg-[rgba(145,158,171,0.08)] bottom-0 h-[2px] left-0 right-0" />
+
+          {/* Tabs */}
+          <div className="flex gap-[32px] items-end h-[48px] relative">
+            {TABS.map(tab => (
+              <div
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className="flex gap-[8px] h-[48px] items-center justify-center relative shrink-0 cursor-pointer"
+              >
+                {activeTab === tab.id && (
+                  <div aria-hidden="true" className="absolute border-[#1c252e] border-b-2 border-solid inset-0 pointer-events-none" />
+                )}
+                <p className={`font-['Public_Sans:Medium','Noto_Sans_JP:Medium',sans-serif] font-medium leading-[22px] relative shrink-0 text-[14px] ${
+                  activeTab === tab.id ? 'text-[#1c252e]' : 'text-[#637381]'
+                }`}>
+                  {tab.label}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* ════════ Content ════════ */}
@@ -172,7 +183,7 @@ export default function PartsMaintenanceDetailPage({
           <UnderConstructionContent />
         )}
       </div>
-    </div>
+    </>
   );
 }
 
@@ -237,8 +248,16 @@ function InfoContent({
     <div className="space-y-[24px]">
       {/* ── Header row ─────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between flex-wrap gap-[12px]">
-        <div className="flex items-center gap-[20px]">
-          <h2 className="text-[18px] font-semibold text-[#1c252e]">基本資料設定</h2>
+        <div className="flex items-center gap-[16px]">
+          {/* 區塊標題：Section Title 規範 */}
+          <div className="h-[48px] min-h-[48px] relative shrink-0">
+            <div aria-hidden="true" className="absolute border-[#1c252e] border-b-2 border-solid inset-0 pointer-events-none" />
+            <div className="flex items-center justify-center h-full px-[4px]">
+              <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[28px] text-[#1c252e] text-[18px] whitespace-nowrap">
+                基本資料設定
+              </p>
+            </div>
+          </div>
           <label className="flex items-center gap-[8px] cursor-pointer select-none">
             <input
               type="checkbox"
@@ -252,13 +271,13 @@ function InfoContent({
         <div className="flex items-center gap-[12px]">
           <button
             onClick={onSave}
-            className="bg-[#1890FF] text-white rounded-[8px] h-[40px] px-[20px] text-[14px] font-medium hover:bg-[#1060c0] transition-colors"
+            className="bg-[#1890FF] text-white rounded-[8px] h-[40px] min-w-[100px] px-[20px] text-[14px] font-semibold hover:bg-[#1060c0] transition-colors"
           >
             儲存
           </button>
           <button
             onClick={() => toast('功能開發中')}
-            className="bg-[#1c252e] text-white rounded-[8px] h-[40px] px-[20px] text-[14px] font-medium hover:bg-[#2d3a47] transition-colors"
+            className="bg-[#1c252e] text-white rounded-[8px] h-[40px] min-w-[100px] px-[20px] text-[14px] font-semibold hover:bg-[#2d3a47] transition-colors"
           >
             列印報價單
           </button>
@@ -266,35 +285,28 @@ function InfoContent({
       </div>
 
       {/* ── Read-only fields (中台帶入) ────────────────────────────────────── */}
-      <div className="space-y-[12px]">
-        <div className="flex flex-wrap gap-x-[40px] gap-y-[8px]">
-          <ReadOnlyField label="廠商" value={`${part.vendorName}(${part.vendorCode})`} />
-          <ReadOnlyField label="料號" value={part.material} />
-          <ReadOnlyField label="採購組織" value={part.purchaseOrg} />
-          <ReadOnlyField label="工廠" value={part.plant} />
-        </div>
-        <div>
-          <ReadOnlyField label="長規格敘述" value={part.longDescription} />
-        </div>
+      <div className="flex flex-wrap gap-x-[40px] gap-y-[8px]">
+        <ReadOnlyField label="廠商" value={`${part.vendorName}(${part.vendorCode})`} />
+        <ReadOnlyField label="料號" value={part.material} />
+        <ReadOnlyField label="採購組織" value={part.purchaseOrg} />
+        <ReadOnlyField label="工廠" value={part.plant} />
+        <ReadOnlyField label="長規格敘述" value={part.longDescription} />
       </div>
 
       {/* ── Editable fields (bordered box) ─────────────────────────────────── */}
       <div className="border border-[rgba(145,158,171,0.2)] rounded-[12px] p-[24px] space-y-[16px]">
-        {/* Row 1: Dates */}
-        <div className="flex gap-[16px]">
+        {/* Row 1: 日期類 + 廠商料號 */}
+        <div className="grid grid-cols-4 gap-[16px]">
           <SearchField label="廠商QA計畫完成日期" value={qaCompletionDate} onChange={setQaCompletionDate} type="date" />
           <SearchField label="可送樣日" value={sampleDate} onChange={setSampleDate} type="date" />
           <SearchField label="預計首批可供貨日(出廠日)" value={firstDeliveryDate} onChange={setFirstDeliveryDate} type="date" />
+          <SearchField label="廠商料號" value={vendorPartNo} onChange={setVendorPartNo} type="search" />
         </div>
-        {/* Row 2: Weights */}
-        <div className="flex gap-[16px]">
+        {/* Row 2: 重量類 + 備註 */}
+        <div className="grid grid-cols-4 gap-[16px]">
           <SearchField label="毛重" value={grossWeight} onChange={setGrossWeight} type="search" />
           <SearchField label="淨重" value={netWeight} onChange={setNetWeight} type="search" />
           <DropdownSelect label="重量單位" value={weightUnit} onChange={setWeightUnit} options={WEIGHT_UNIT_OPTIONS} />
-        </div>
-        {/* Row 3: Vendor part no & remark */}
-        <div className="flex gap-[16px]">
-          <SearchField label="廠商料號" value={vendorPartNo} onChange={setVendorPartNo} type="search" />
           <SearchField label="備註" value={remark} onChange={setRemark} type="search" />
         </div>
       </div>
@@ -317,8 +329,8 @@ function InfoContent({
 function ReadOnlyField({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-baseline">
-      <span className="font-semibold text-[14px] text-[#1c252e]">{label}</span>
-      <span className="ml-[8px] text-[14px] text-[#637381]">{value}</span>
+      <span className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] text-[#1c252e]">{label}</span>
+      <span className="ml-[8px] font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[14px] text-[#637381]">{value}</span>
     </div>
   );
 }
@@ -353,7 +365,15 @@ function BrandSettingsSection({ brandSettings, onAdd, onDelete, onUpdate }: Bran
       {/* Section header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-[8px]">
-          <h3 className="text-[18px] font-semibold text-[#1c252e]">品牌設定</h3>
+          {/* 區塊標題：Section Title 規範 */}
+          <div className="h-[48px] min-h-[48px] relative shrink-0">
+            <div aria-hidden="true" className="absolute border-[#1c252e] border-b-2 border-solid inset-0 pointer-events-none" />
+            <div className="flex items-center justify-center h-full px-[4px]">
+              <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[28px] text-[#1c252e] text-[18px] whitespace-nowrap">
+                品牌設定
+              </p>
+            </div>
+          </div>
           <span className="text-[14px] text-[#637381]">({brandSettings.length})</span>
         </div>
         <button

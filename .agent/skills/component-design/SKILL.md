@@ -587,6 +587,65 @@ const isSomeSelected = selectedIds.size > 0 && !isAllSelected;
 
 ---
 
+## ⭐ 區塊標題規範（Section Title）
+
+> 明細頁內各區塊的標題元件，帶有底部黑色 2px 底線，用於區分不同功能區塊。
+> **禁止自行使用 `<h2>` + 自訂樣式或 `border-b` 實作，必須使用以下標準結構。**
+
+### 視覺規格
+
+| 項目 | 規格 |
+|------|------|
+| 高度 | `h-[48px] min-h-[48px]` |
+| 字體 | `font-semibold`（600）, `text-[18px]` |
+| 字色 | `text-[#1c252e]` |
+| 底線 | `absolute border-[#1c252e] border-b-2 border-solid inset-0`（覆蓋整個高度的底線） |
+| 左右 padding | `px-[4px]` |
+| 參考來源 | `InvoiceDetailPage.tsx`（第 865–870 行）、`ShipmentDetailPage.tsx` |
+
+### HTML 結構模板
+
+```tsx
+{/* 區塊標題（Section Title）*/}
+<div className="h-[48px] min-h-[48px] relative shrink-0">
+  {/* 底線：absolute 覆蓋整個高度 */}
+  <div aria-hidden="true" className="absolute border-[#1c252e] border-b-2 border-solid inset-0 pointer-events-none" />
+  <div className="flex items-center justify-center h-full px-[4px]">
+    <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[28px] text-[#1c252e] text-[18px] whitespace-nowrap">
+      區塊名稱
+    </p>
+  </div>
+</div>
+```
+
+### 帶額外資訊的區塊標題（如計數、副標題）
+
+若需在標題右側顯示附加資訊（數量、狀態等），將標題與附加資訊水平排列：
+
+```tsx
+<div className="flex items-center gap-[8px]">
+  {/* 標準區塊標題 */}
+  <div className="h-[48px] min-h-[48px] relative shrink-0">
+    <div aria-hidden="true" className="absolute border-[#1c252e] border-b-2 border-solid inset-0 pointer-events-none" />
+    <div className="flex items-center justify-center h-full px-[4px]">
+      <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[28px] text-[#1c252e] text-[18px] whitespace-nowrap">
+        區塊名稱
+      </p>
+    </div>
+  </div>
+  {/* 計數或附加資訊 */}
+  <span className="text-[14px] text-[#637381]">(3)</span>
+</div>
+```
+
+### 使用時機
+
+- 明細頁內容卡片中，區分不同功能區塊的標題（如「基本資料設定」、「品牌設定」、「發票明細」）
+- 每個區塊開頭使用，搭配下方內容形成視覺分層
+- **不適用於**：TAB 標籤（用 TAB 規範）、頁面主標題（用 PageHeader）
+
+---
+
 
 建立新元件時，依序遵循此決策樹：
 

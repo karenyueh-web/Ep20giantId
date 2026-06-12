@@ -270,7 +270,7 @@ export default function PartsMaintenancePage({
   const handleMaterialClick = useCallback(
     (part: PartRecord) => {
       setViewingPart(part);
-      onBreadcrumbChange?.('明細', '零件/索樣維護 • 零件資訊維護 • 明細');
+      onBreadcrumbChange?.('零件資訊維護', '零件/索樣維護 • 零件資訊維護 • 明細');
     },
     [onBreadcrumbChange],
   );
@@ -345,27 +345,12 @@ export default function PartsMaintenancePage({
   // ── Detail 頁渲染 ──────────────────────────────────────────────────────────
   if (viewingPart) {
     return (
-      <div className="flex flex-col h-full">
-        {/* 返回箭頭 */}
-        <div className="shrink-0 flex items-center px-[20px] pt-[12px]">
-          <button
-            onClick={handleBackToList}
-            className="flex items-center justify-center w-[36px] h-[36px] rounded-full hover:bg-[rgba(145,158,171,0.08)] transition-colors"
-            title="返回列表"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <path d="M15 18l-6-6 6-6" stroke="#637381" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
-        </div>
-        {/* 明細頁 */}
-        <div className="flex-1 min-h-0">
-          <PartsMaintenanceDetailPage
-            part={viewingPart}
-            onClose={handleBackToList}
-            onSave={handleDetailSave}
-          />
-        </div>
+      <div className="bg-white flex flex-col h-full relative rounded-[16px] shadow-[0px_0px_2px_0px_rgba(145,158,171,0.2),0px_12px_24px_-4px_rgba(145,158,171,0.12)] w-full overflow-hidden">
+        <PartsMaintenanceDetailPage
+          part={viewingPart}
+          onClose={handleBackToList}
+          onSave={handleDetailSave}
+        />
       </div>
     );
   }
