@@ -345,7 +345,7 @@ export default function PartsMaintenancePage({
   // ── Detail 頁渲染 ──────────────────────────────────────────────────────────
   if (viewingPart) {
     return (
-      <div className="bg-white flex flex-col h-full relative rounded-[16px] shadow-[0px_0px_2px_0px_rgba(145,158,171,0.2),0px_12px_24px_-4px_rgba(145,158,171,0.12)] w-full overflow-hidden">
+      <div className="bg-white flex flex-col min-h-full relative rounded-[16px] shadow-[0px_0px_2px_0px_rgba(145,158,171,0.2),0px_12px_24px_-4px_rgba(145,158,171,0.12)] w-full">
         <PartsMaintenanceDetailPage
           part={viewingPart}
           onClose={handleBackToList}

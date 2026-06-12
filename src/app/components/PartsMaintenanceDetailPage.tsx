@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Toaster } from '@/app/components/ui/sonner';
-import { SearchField } from '@/app/components/SearchField';
+import { SearchField } from '@/app/components/SearchField'; // 日期欄位保留
 import { DropdownSelect } from '@/app/components/DropdownSelect';
 import { DeleteButton } from '@/app/components/ActionButtons';
 import IconsSolidIcSolarMultipleForwardLeftBroken from '@/imports/IconsSolidIcSolarMultipleForwardLeftBroken';
@@ -61,7 +61,7 @@ export default function PartsMaintenanceDetailPage({
       ...prev,
       {
         id: Date.now(),
-        brand: '',
+        brand: 'ALL',
         unitPrice: '',
         currency: '',
         quoteQty: '',
@@ -151,7 +151,7 @@ export default function PartsMaintenanceDetailPage({
       </div>
 
       {/* ════════ Content ════════ */}
-      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-[24px] py-[20px]">
+      <div className="px-[24px] py-[20px]">
         {activeTab === 'info' ? (
           <InfoContent
             part={part}
@@ -300,14 +300,14 @@ function InfoContent({
           <SearchField label="廠商QA計畫完成日期" value={qaCompletionDate} onChange={setQaCompletionDate} type="date" />
           <SearchField label="可送樣日" value={sampleDate} onChange={setSampleDate} type="date" />
           <SearchField label="預計首批可供貨日(出廠日)" value={firstDeliveryDate} onChange={setFirstDeliveryDate} type="date" />
-          <SearchField label="廠商料號" value={vendorPartNo} onChange={setVendorPartNo} type="search" />
+          <FloatingInput label="廠商料號" value={vendorPartNo} onChange={setVendorPartNo} />
         </div>
         {/* Row 2: 重量類 + 備註 */}
         <div className="grid grid-cols-4 gap-[16px]">
-          <SearchField label="毛重" value={grossWeight} onChange={setGrossWeight} type="search" />
-          <SearchField label="淨重" value={netWeight} onChange={setNetWeight} type="search" />
+          <FloatingInput label="毛重" value={grossWeight} onChange={setGrossWeight} />
+          <FloatingInput label="淨重" value={netWeight} onChange={setNetWeight} />
           <DropdownSelect label="重量單位" value={weightUnit} onChange={setWeightUnit} options={WEIGHT_UNIT_OPTIONS} />
-          <SearchField label="備註" value={remark} onChange={setRemark} type="search" />
+          <FloatingInput label="備註" value={remark} onChange={setRemark} />
         </div>
       </div>
 
@@ -317,6 +317,48 @@ function InfoContent({
         onAdd={onAddBrand}
         onDelete={onDeleteBrand}
         onUpdate={onUpdateBrand}
+      />
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FloatingInput — 純文字浮動 label 輸入框（無搜尋 icon）
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function FloatingInput({
+  label, value, onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div className="relative w-full h-[54px]">
+      {/* border overlay */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 pointer-events-none rounded-[8px] border border-solid border-[rgba(145,158,171,0.2)] transition-colors"
+      />
+      {/* 浮動標籤 */}
+      <div className="absolute flex items-center left-[14px] px-[2px] top-[-5px] z-10">
+        <div className="absolute bg-white h-[2px] left-0 right-0 top-[5px]" />
+        <p className="relative text-[12px] font-semibold text-[#637381]">{label}</p>
+      </div>
+      {/* 輸入框 */}
+      <input
+        type="text"
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        className="w-full h-full rounded-[8px] px-[14px] pt-[14px] pb-[8px] text-[14px] text-[#1c252e] outline-none bg-transparent border-0 focus:ring-0"
+        onFocus={e => {
+          const border = e.currentTarget.previousElementSibling?.previousElementSibling as HTMLElement;
+          if (border) { border.style.borderColor = '#1890FF'; border.style.boxShadow = '0 0 0 2px rgba(24,144,255,0.15)'; }
+        }}
+        onBlur={e => {
+          const border = e.currentTarget.previousElementSibling?.previousElementSibling as HTMLElement;
+          if (border) { border.style.borderColor = 'rgba(145,158,171,0.2)'; border.style.boxShadow = ''; }
+        }}
       />
     </div>
   );
@@ -415,31 +457,32 @@ function BrandSettingsSection({ brandSettings, onAdd, onDelete, onUpdate }: Bran
               </tr>
             ) : (
               brandSettings.map(bs => (
-                <tr key={bs.id} className="border-t border-[rgba(145,158,171,0.08)] items-center">
+                <tr key={bs.id} className="border-t border-[rgba(145,158,171,0.08)]">
                   {BRAND_TABLE_COLUMNS.map(col => (
-                    <td key={col.key} className="px-[8px] py-[6px]">
+                    <td key={col.key} className="px-[8px] py-[6px] align-middle">
                       {col.type === 'select' ? (
-                        <select
+                        <DropdownSelect
+                          label=""
                           value={(bs as any)[col.key]}
-                          onChange={e => onUpdate(bs.id, col.key as keyof BrandSetting, e.target.value)}
-                          className="border border-[rgba(145,158,171,0.2)] rounded-[6px] h-[36px] px-[8px] text-[13px] w-full bg-white text-[#1c252e] outline-none focus:border-[#1890FF] transition-colors cursor-pointer"
-                        >
-                          <option value="">請選擇</option>
-                          {col.options!.map(opt => (
-                            <option key={opt.value} value={opt.value}>{opt.label}</option>
-                          ))}
-                        </select>
-                      ) : (
-                        <input
-                          type="text"
-                          value={(bs as any)[col.key]}
-                          onChange={e => onUpdate(bs.id, col.key as keyof BrandSetting, e.target.value)}
-                          className="border border-[rgba(145,158,171,0.2)] rounded-[6px] h-[36px] px-[8px] text-[13px] w-full bg-white text-[#1c252e] outline-none focus:border-[#1890FF] transition-colors"
+                          onChange={v => onUpdate(bs.id, col.key as keyof BrandSetting, v)}
+                          options={[{ value: '', label: '請選擇' }, ...col.options!]}
+                          placeholder="請選擇"
+                          searchable
                         />
+                      ) : (
+                        <div className="relative w-full h-[54px]">
+                          <div aria-hidden="true" className="absolute inset-0 pointer-events-none rounded-[8px] border border-solid border-[rgba(145,158,171,0.2)]" />
+                          <input
+                            type="text"
+                            value={(bs as any)[col.key]}
+                            onChange={e => onUpdate(bs.id, col.key as keyof BrandSetting, e.target.value)}
+                            className="w-full h-full rounded-[8px] px-[14px] text-[14px] text-[#1c252e] outline-none bg-transparent border-0 focus:ring-0"
+                          />
+                        </div>
                       )}
                     </td>
                   ))}
-                  <td className="px-[4px] py-[6px]">
+                  <td className="px-[4px] py-[6px] align-middle">
                     <DeleteButton onClick={() => onDelete(bs.id)} />
                   </td>
                 </tr>

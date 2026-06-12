@@ -97,7 +97,7 @@ export function ResponsivePageLayout({
         </div>
 
         {/* C: Content area */}
-        <div className="flex-1 min-h-0 px-[24px] pb-[10px] overflow-hidden">
+        <div className="flex-1 min-h-0 px-[24px] pb-[10px] overflow-y-auto custom-scrollbar">
           {children}
         </div>
       </div>
