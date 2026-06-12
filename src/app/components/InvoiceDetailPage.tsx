@@ -28,6 +28,44 @@ import { OrderHistory } from './OrderHistory';
 import type { HistoryEntry as OrderHistoryEntry } from './OrderStoreContext';
 import { MOCK_VENDORS } from './VendorManagementTable';
 
+// ── 從工廠稅率設定查詢適用稅率 ──────────────────────────────────────────────
+function lookupFactoryTaxRate(plantCode: string): string {
+  if (!plantCode) return '5';
+  try {
+    const saved = localStorage.getItem('invoice-settings-factory-tax-data');
+    if (!saved) return '5';
+    const parsed = JSON.parse(saved) as {
+      version: number;
+      records: Array<{ factoryCode: string; taxRate: number; effectiveDate: string }>;
+    };
+    if (!parsed?.records) return '5';
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // 篩選同工廠 + 生效日期 ≤ 今天
+    const applicable = parsed.records.filter(r => {
+      if (r.factoryCode !== plantCode) return false;
+      const parts = r.effectiveDate.split('/');
+      if (parts.length < 3) return false;
+      const effDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+      return effDate <= today;
+    });
+
+    if (applicable.length === 0) return '5';
+
+    // 取生效日期最新的那筆
+    applicable.sort((a, b) => {
+      const parse = (s: string) => { const [y, m, d] = s.split('/').map(Number); return new Date(y, m - 1, d).getTime(); };
+      return parse(b.effectiveDate) - parse(a.effectiveDate);
+    });
+
+    return String(applicable[0].taxRate);
+  } catch {
+    return '5';
+  }
+}
+
 // ── FloatingInput（與 ShipmentDetailPage 一致）──────────────────────────────
 function FloatingInput({
   label, value, onChange, placeholder, required, disabled, hasError,
@@ -128,7 +166,12 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
   // ── 稅率 ──
   // 台灣保稅驗證：稅率鎖定 0％
   const isTaiwanBonded = !isOverseas && bondedType === '保稅';
-  const [taxRateValue, setTaxRateValue] = useState(() => existingRecord ? existingRecord.taxRate : (isTaiwanBonded ? '0' : '5'));
+  const [taxRateValue, setTaxRateValue] = useState(() => {
+    if (existingRecord) return existingRecord.taxRate;
+    if (isTaiwanBonded) return '0';
+    // 非保稅：從工廠稅率表自動帶入
+    return lookupFactoryTaxRate(selectedRows[0]?.plantCode ?? '');
+  });
   const taxRate = parseFloat(taxRateValue) / 100 || 0;
 
   // ── 品名 tooltip hover state ──
@@ -708,19 +751,9 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
               <FloatingInput label="發票日期" value={invoiceDate || ''} onChange={() => {}} disabled />
             )}
           </div>
-          {/* 稅率（col 3，台灣保稅：鎖定 0%；其他：可選） */}
+          {/* 稅率（col 3，台灣保稅：鎖定 0%；非保稅：自動從工廠稅率表帶入） */}
           <div className="min-w-0">
-            {!isEditable || isTaiwanBonded ? (
-              <FloatingInput label="稅率" value={`${taxRateValue}%`} onChange={() => {}} disabled />
-            ) : (
-              <DropdownSelect
-                label="稅率"
-                value={taxRateValue}
-                onChange={handleTaxRateChange}
-                options={TAX_RATE_OPTIONS}
-                searchable={false}
-              />
-            )}
+            <FloatingInput label="稅率" value={`${taxRateValue}%`} onChange={() => {}} disabled />
           </div>
           {/* 發票聯式 / 稅碼（col 4） */}
           <div className="min-w-0">

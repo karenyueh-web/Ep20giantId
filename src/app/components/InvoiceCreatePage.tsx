@@ -201,6 +201,21 @@ export function InvoiceCreatePage({ onOpenDetail }: { onOpenDetail?: (rows: Invo
       return;
     }
 
+    // 4+5. 工廠代號、採購組織必須各自一致（合併顯示）
+    const consistencyErrors: string[] = [];
+    const plantCodes = new Set(selectedRows.map(r => r.plantCode));
+    if (plantCodes.size > 1) {
+      consistencyErrors.push(`工廠代號不一致（${Array.from(plantCodes).join('、')}）`);
+    }
+    const purchaseOrgs = new Set(selectedRows.map(r => r.purchaseOrg));
+    if (purchaseOrgs.size > 1) {
+      consistencyErrors.push(`採購組織不一致（${Array.from(purchaseOrgs).join('、')}）`);
+    }
+    if (consistencyErrors.length > 0) {
+      setInvoiceError('採購組織、工廠必須相同才能開立發票');
+      return;
+    }
+
     // 通過驗證 → 導航到發票明細頁
     const bondedChar = selectedRows[0].orderType.slice(-1).toUpperCase();
     const bondedType = bondedChar === 'B' ? '保稅' : '非保稅';
