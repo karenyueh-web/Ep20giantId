@@ -24,6 +24,7 @@ import { TRACK_DATA, type TrackRecord } from './invoiceSettingsStore';
 import { DropdownSelect } from './DropdownSelect';
 import { UpdateTimeLabel } from './UpdateTimeLabel';
 import { ActionCellButtons } from './ActionButtons';
+import { INVOICE_TYPE_OPTIONS } from './invoiceDetailData';
 
 
 // ── react-dnd drag types ──────────────────────────────────────────────────────
@@ -881,47 +882,68 @@ function DeadlineTab() {
 interface FactoryTaxRecord {
   id: number;
   factoryCode: string;   // SAP工廠代號
+  companyCode: string;   // 公司代碼（新增）
+  bondedType: string;    // 保稅/非保稅（新增）
+  invoiceType: string;   // 發票聯式（新增；越南等海外可留空）
+  taxCode: string;       // 稅碼（新增，最多10字元）
   taxRate: number;       // 稅率（%）
   effectiveDate: string; // 有效日期 YYYY/MM/DD
   updatedAt: string;     // 更新時間-人員
 }
 
-// Mock 工廠清單（供下拉選單使用）
-const FACTORY_OPTIONS = [
-  { value: '', label: '全部' },
-  { value: '1000', label: '1000' },
-  { value: '1100', label: '1100' },
-  { value: '2000', label: '2000' },
-  { value: '2610', label: '2610' },
-  { value: '3000', label: '3000' },
-  { value: 'TW01', label: 'TW01' },
-  { value: 'TW02', label: 'TW02' },
+// ── 公司選項（來自 ORG_TO_COMPANY 唯一公司，下拉選單用）──
+const COMPANY_CODE_OPTIONS = [
+  { value: '',     label: '全部' },
+  { value: '1100', label: '巨大機械(1100)' },
+  { value: '1400', label: 'AIP愛普智(1400)' },
+  { value: '3110', label: 'Giant Vietnam(3110)' },
+  { value: '4110', label: 'GEM(4110)' },
+  { value: '4120', label: 'GHM(4120)' },
 ];
 
+// 新增/修改 Dialog 用（去掉「全部」選項）
+const COMPANY_CODE_OPTIONS_EDIT = COMPANY_CODE_OPTIONS.filter(o => o.value !== '');
 
-// 預設資料版本號：每次修改 FACTORY_TAX_DATA_INIT 時只需更新此數字
-const FACTORY_TAX_DATA_VERSION = 4;
+// ── 保稅選項 ──
+const BONDED_TYPE_OPTIONS_EDIT = [
+  { value: '保稅',  label: '保稅'  },
+  { value: '非保稅', label: '非保稅' },
+];
+
+// 發票聯式選項（帶空白選項供越南等海外工廠使用）
+const INVOICE_TYPE_OPTIONS_WITH_NA = [
+  { value: '', label: '（不適用）' },
+  ...INVOICE_TYPE_OPTIONS,
+];
+
+// ── 工廠稅率初始資料 ──────────────────────────────────────────────────────────
+// 版本號：每次修改 FACTORY_TAX_DATA_INIT 時只需更新此數字
+const FACTORY_TAX_DATA_VERSION = 6;
 
 const FACTORY_TAX_DATA_INIT: FactoryTaxRecord[] = [
-  { id: 1, factoryCode: 'GTM1', taxRate: 5, effectiveDate: '2019/01/01', updatedAt: '2026/06/11 00:00-系統' },
-  { id: 2, factoryCode: 'GVM1', taxRate: 8, effectiveDate: '2026/12/31', updatedAt: '2026/06/11 00:00-系統' },
-  { id: 3, factoryCode: 'AIP1', taxRate: 5, effectiveDate: '2019/01/01', updatedAt: '2026/06/11 00:00-系統' },
-  { id: 4, factoryCode: 'AIP2', taxRate: 5, effectiveDate: '2019/01/01', updatedAt: '2026/06/11 00:00-系統' },
-  { id: 5, factoryCode: 'DTC1', taxRate: 5, effectiveDate: '2019/01/01', updatedAt: '2026/06/11 00:00-系統' },
-  { id: 6, factoryCode: 'DTE1', taxRate: 5, effectiveDate: '2019/01/01', updatedAt: '2026/06/11 00:00-系統' },
-  { id: 7, factoryCode: 'DTG1', taxRate: 5, effectiveDate: '2019/01/01', updatedAt: '2026/06/11 00:00-系統' },
-  { id: 8, factoryCode: 'DTI1', taxRate: 5, effectiveDate: '2019/01/01', updatedAt: '2026/06/11 00:00-系統' },
+  { id: 1, factoryCode: 'GTM1', companyCode: '1100', bondedType: '保稅', invoiceType: '22', taxCode: 'V1', taxRate: 5, effectiveDate: '2019/01/01', updatedAt: '2026/06/11 00:00-系統' },
+  { id: 2, factoryCode: 'GVM1', companyCode: '3110', bondedType: '保稅', invoiceType: '',   taxCode: 'V1', taxRate: 8, effectiveDate: '2026/12/31', updatedAt: '2026/06/11 00:00-系統' },
+  { id: 3, factoryCode: 'AIP1', companyCode: '1100', bondedType: '保稅', invoiceType: '22', taxCode: 'V1', taxRate: 5, effectiveDate: '2019/01/01', updatedAt: '2026/06/11 00:00-系統' },
+  { id: 4, factoryCode: 'AIP2', companyCode: '1100', bondedType: '保稅', invoiceType: '22', taxCode: 'V1', taxRate: 5, effectiveDate: '2019/01/01', updatedAt: '2026/06/11 00:00-系統' },
+  { id: 5, factoryCode: 'DTC1', companyCode: '1100', bondedType: '保稅', invoiceType: '22', taxCode: 'V1', taxRate: 5, effectiveDate: '2019/01/01', updatedAt: '2026/06/11 00:00-系統' },
+  { id: 6, factoryCode: 'DTE1', companyCode: '1100', bondedType: '保稅', invoiceType: '22', taxCode: 'V1', taxRate: 5, effectiveDate: '2019/01/01', updatedAt: '2026/06/11 00:00-系統' },
+  { id: 7, factoryCode: 'DTG1', companyCode: '1100', bondedType: '保稅', invoiceType: '22', taxCode: 'V1', taxRate: 5, effectiveDate: '2019/01/01', updatedAt: '2026/06/11 00:00-系統' },
+  { id: 8, factoryCode: 'DTI1', companyCode: '1100', bondedType: '保稅', invoiceType: '22', taxCode: 'V1', taxRate: 5, effectiveDate: '2019/01/01', updatedAt: '2026/06/11 00:00-系統' },
 ];
 
 const FAC_TAX_COLS_INIT: ColDef<FactoryTaxRecord>[] = [
-  { key: 'factoryCode',   label: 'SAP工廠代號',   width: 160, minWidth: 120 },
-  { key: 'taxRate',       label: '稅率',           width: 120, minWidth: 80  },
-  { key: 'effectiveDate', label: '生效日期', width: 180, minWidth: 120 },
+  { key: 'factoryCode',   label: 'SAP工廠代號', width: 160, minWidth: 120 },
+  { key: 'companyCode',   label: '公司(代碼)',  width: 200, minWidth: 140 },
+  { key: 'bondedType',    label: '保稅/非保',   width: 120, minWidth: 100 },
+  { key: 'invoiceType',   label: '發票聯式',    width: 240, minWidth: 140 },
+  { key: 'taxCode',       label: '稅碼',        width: 120, minWidth: 80  },
+  { key: 'taxRate',       label: '稅率',        width: 100, minWidth: 80  },
+  { key: 'effectiveDate', label: '生效日期',    width: 160, minWidth: 120 },
   { key: 'updatedAt',     label: '更新時間-人員', width: 260, minWidth: 180 },
-  { key: 'id',            label: '操作',           width: 100, minWidth: 100, required: true },
+  { key: 'id',            label: '操作',        width: 100, minWidth: 100, required: true },
 ];
 
-// ── 新增工廠稅率 Dialog ──────────────────────────────────────────────────────
+// ── 新增工廠稅率 Dialog ────────────────────────────────────────────
 interface AddFactoryTaxDialogProps {
   open: boolean;
   onClose: () => void;
@@ -929,34 +951,106 @@ interface AddFactoryTaxDialogProps {
   existingData: FactoryTaxRecord[];
 }
 
-function AddFactoryTaxDialog({ open, onClose, onConfirm, existingData }: AddFactoryTaxDialogProps) {
-  const [factoryCode, setFactoryCode] = useState('');
-  const [taxRateStr, setTaxRateStr] = useState('');
-  const [effectiveDate, setEffectiveDate] = useState('');
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const datePickerRef = useRef<HTMLDivElement>(null);
+// 小工具：浮動標籤輸入框
+function FieldInput({
+  label, value, onChange, placeholder, maxLength, type = 'text', suffix, hasError,
+}: {
+  label: string; value: string; onChange: (v: string) => void;
+  placeholder?: string; maxLength?: number; type?: string;
+  suffix?: string; hasError?: boolean;
+}) {
+  const borderColor = hasError ? '#ff5630' : 'rgba(145,158,171,0.2)';
+  const labelColor  = hasError ? '#ff5630' : '#637381';
+  return (
+    <div style={{ position: 'relative', height: 54 }}>
+      <div aria-hidden="true" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', borderRadius: 8, border: `1px solid ${borderColor}` }} />
+      <div style={{ position: 'absolute', top: -5, left: 14, display: 'flex', alignItems: 'center', padding: '0 2px', zIndex: 10 }}>
+        <div style={{ position: 'absolute', background: 'white', height: 2, left: 0, right: 0, top: 5 }} />
+        <p style={{ fontSize: 12, fontWeight: 600, color: labelColor, position: 'relative' }}>{label}</p>
+      </div>
+      <div className="flex items-center gap-[8px] px-[14px]" style={{ height: 54 }}>
+        <input
+          type={type}
+          min={type === 'number' ? '0' : undefined}
+          step={type === 'number' ? 'any' : undefined}
+          maxLength={maxLength}
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          placeholder={placeholder ?? ''}
+          className="flex-1 bg-transparent text-[14px] text-[#1c252e] placeholder:text-[#919eab] outline-none"
+          style={type === 'number' ? { appearance: 'textfield' } : undefined}
+        />
+        {suffix && <span className="text-[14px] font-semibold text-[#637381] shrink-0">{suffix}</span>}
+      </div>
+    </div>
+  );
+}
 
-  // 點外部關閉日期選擇器
-  useEffect(() => {
-    if (!showDatePicker) return;
-    const handler = (e: MouseEvent) => {
-      if (datePickerRef.current && !datePickerRef.current.contains(e.target as Node)) {
-        setShowDatePicker(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [showDatePicker]);
+// 浮動標籤日期選擇器
+function FieldDatePicker({
+  label, value, onChange, hasError,
+}: {
+  label: string; value: string; onChange: (v: string) => void; hasError?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const borderColor = hasError ? '#ff5630' : 'rgba(145,158,171,0.2)';
+  const labelColor  = hasError ? '#ff5630' : '#637381';
+  const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    setPos({ top: r.bottom + 4, left: r.left });
+    setOpen(v => !v);
+  };
+  return (
+    <div style={{ position: 'relative', height: 54 }} onClick={handleClick}>
+      <div aria-hidden="true" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', borderRadius: 8, border: `1px solid ${borderColor}` }} />
+      <div style={{ position: 'absolute', top: -5, left: 14, display: 'flex', alignItems: 'center', padding: '0 2px', zIndex: 10 }}>
+        <div style={{ position: 'absolute', background: 'white', height: 2, left: 0, right: 0, top: 5 }} />
+        <p style={{ fontSize: 12, fontWeight: 600, color: labelColor, position: 'relative' }}>{label}</p>
+      </div>
+      <div className="flex items-center gap-[8px] px-[14px] cursor-pointer" style={{ height: 54 }}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="shrink-0">
+          <rect x="3" y="4" width="18" height="18" rx="2" stroke="#919eab" strokeWidth="1.5"/>
+          <path d="M16 2v4M8 2v4M3 10h18" stroke="#919eab" strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+        <span className={`text-[14px] flex-1 ${value ? 'text-[#1c252e]' : 'text-[#919eab]'}`}>{value || '選擇日期...'}</span>
+      </div>
+      {open && (
+        <div style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999 }} onClick={e => e.stopPropagation()}>
+          <SimpleDatePicker selectedDate={value} onDateSelect={d => { onChange(d); setOpen(false); }} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AddFactoryTaxDialog({ open, onClose, onConfirm, existingData }: AddFactoryTaxDialogProps) {
+  const [factoryCode,  setFactoryCode]  = useState('');
+  const [companyCode,  setCompanyCode]  = useState('');
+  const [bondedType,   setBondedType]   = useState('');
+  const [invoiceType,  setInvoiceType]  = useState('');
+  const [taxCode,      setTaxCode]      = useState('');
+  const [taxRateStr,   setTaxRateStr]   = useState('');
+  const [effectiveDate, setEffectiveDate] = useState('');
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const validate = () => {
     const e: Record<string, string> = {};
-    if (!factoryCode) e.factoryCode = '必填';
+    if (!factoryCode.trim())  e.factoryCode  = '必填';
+    if (!companyCode)         e.companyCode  = '必選';
+    if (!bondedType)          e.bondedType   = '必選';
     if (!taxRateStr || isNaN(Number(taxRateStr))) e.taxRate = '必填，請輸入數字';
     if (!effectiveDate) {
       e.effectiveDate = '必填';
-    } else if (factoryCode && existingData.some(r => r.factoryCode === factoryCode && r.effectiveDate === effectiveDate)) {
-      e.effectiveDate = `該工廠已有相同生效日期（${effectiveDate}）的稅率設定`;
+    } else if (factoryCode && companyCode && bondedType &&
+      existingData.some(r =>
+        r.factoryCode === factoryCode.trim() &&
+        r.companyCode === companyCode &&
+        r.bondedType  === bondedType &&
+        r.effectiveDate === effectiveDate
+      )
+    ) {
+      e.effectiveDate = `該工廠+公司+保稅別已有相同生效日期（${effectiveDate}）的稅率設定`;
     }
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -964,13 +1058,13 @@ function AddFactoryTaxDialog({ open, onClose, onConfirm, existingData }: AddFact
 
   const handleSubmit = () => {
     if (!validate()) return;
-    onConfirm({ factoryCode, taxRate: Number(taxRateStr), effectiveDate });
+    onConfirm({ factoryCode: factoryCode.trim(), companyCode, bondedType, invoiceType, taxCode, taxRate: Number(taxRateStr), effectiveDate });
     handleClose();
   };
 
   const handleClose = () => {
-    setFactoryCode(''); setTaxRateStr(''); setEffectiveDate('');
-    setErrors({}); setShowDatePicker(false);
+    setFactoryCode(''); setCompanyCode(''); setBondedType(''); setInvoiceType('');
+    setTaxCode(''); setTaxRateStr(''); setEffectiveDate(''); setErrors({});
     onClose();
   };
 
@@ -982,9 +1076,9 @@ function AddFactoryTaxDialog({ open, onClose, onConfirm, existingData }: AddFact
       style={{ background: 'rgba(28,37,46,0.45)' }}
       onMouseDown={(e) => { if (e.target === e.currentTarget) handleClose(); }}
     >
-      <div className="bg-white rounded-[16px] shadow-[0px_0px_2px_0px_rgba(145,158,171,0.2),0px_12px_24px_-4px_rgba(145,158,171,0.12)] w-[480px] max-w-[calc(100vw-48px)] flex flex-col">
+      <div className="bg-white rounded-[16px] shadow-[0px_0px_2px_0px_rgba(145,158,171,0.2),0px_12px_24px_-4px_rgba(145,158,171,0.12)] w-[520px] max-w-[calc(100vw-48px)] flex flex-col max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between px-[24px] pt-[24px] pb-[16px] border-b border-[rgba(145,158,171,0.12)]">
+        <div className="flex items-center justify-between px-[24px] pt-[24px] pb-[16px] border-b border-[rgba(145,158,171,0.12)] sticky top-0 bg-white z-10">
           <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[18px] text-[#1c252e]">新增工廠稅率</p>
           <button onClick={handleClose} className="flex items-center justify-center w-[36px] h-[36px] rounded-full hover:bg-[rgba(145,158,171,0.08)] transition-colors">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -995,110 +1089,91 @@ function AddFactoryTaxDialog({ open, onClose, onConfirm, existingData }: AddFact
 
         {/* Body */}
         <div className="px-[24px] py-[20px] flex flex-col gap-[20px]">
+
           {/* SAP工廠代號 */}
-          <div style={{ position: 'relative' }}>
-            <div style={{ position: 'relative', height: 54 }}>
-              <div
-                aria-hidden="true"
-                style={{
-                  position: 'absolute', inset: 0, pointerEvents: 'none',
-                  borderRadius: 8,
-                  border: `1px solid ${errors.factoryCode ? '#ff5630' : 'rgba(145,158,171,0.2)'}`,
-                }}
-              />
-              <div style={{ position: 'absolute', top: -5, left: 14, display: 'flex', alignItems: 'center', padding: '0 2px', zIndex: 10 }}>
-                <div style={{ position: 'absolute', background: 'white', height: 2, left: 0, right: 0, top: 5 }} />
-                <p style={{ fontSize: 12, fontWeight: 600, color: errors.factoryCode ? '#ff5630' : '#637381', position: 'relative' }}>SAP工廠代號</p>
-              </div>
-              <div className="flex items-center px-[14px]" style={{ height: 54 }}>
-                <input
-                  type="text"
-                  maxLength={10}
-                  value={factoryCode}
-                  onChange={e => { setFactoryCode(e.target.value); setErrors(p => ({ ...p, factoryCode: '' })); }}
-                  placeholder="請輸入工廠代號（最多10字）"
-                  className="flex-1 bg-transparent text-[14px] text-[#1c252e] placeholder:text-[#919eab] outline-none"
-                />
-              </div>
-            </div>
+          <div>
+            <FieldInput
+              label="SAP工廠代號"
+              value={factoryCode}
+              onChange={v => { setFactoryCode(v); setErrors(p => ({ ...p, factoryCode: '' })); }}
+              placeholder="請輸入工廠代號（最多10字）"
+              maxLength={10}
+              hasError={!!errors.factoryCode}
+            />
             {errors.factoryCode && <p className="mt-[4px] text-[#ff5630] text-[12px]">{errors.factoryCode}</p>}
           </div>
 
+          {/* 公司(代碼) */}
+          <div>
+            <DropdownSelect
+              label="公司(代碼)"
+              value={companyCode}
+              onChange={v => { setCompanyCode(v); setErrors(p => ({ ...p, companyCode: '' })); }}
+              options={COMPANY_CODE_OPTIONS_EDIT}
+              searchable={false}
+              hasError={!!errors.companyCode}
+            />
+            {errors.companyCode && <p className="mt-[4px] text-[#ff5630] text-[12px]">{errors.companyCode}</p>}
+          </div>
+
+          {/* 保稅/非保稅 */}
+          <div>
+            <DropdownSelect
+              label="保稅/非保稅"
+              value={bondedType}
+              onChange={v => { setBondedType(v); setErrors(p => ({ ...p, bondedType: '' })); }}
+              options={BONDED_TYPE_OPTIONS_EDIT}
+              searchable={false}
+              hasError={!!errors.bondedType}
+            />
+            {errors.bondedType && <p className="mt-[4px] text-[#ff5630] text-[12px]">{errors.bondedType}</p>}
+          </div>
+
+          {/* 發票聯式（非必選） */}
+          <div>
+            <DropdownSelect
+              label="發票聯式"
+              value={invoiceType}
+              onChange={setInvoiceType}
+              options={INVOICE_TYPE_OPTIONS_WITH_NA}
+              searchable={false}
+            />
+          </div>
+
+          {/* 稅碼 */}
+          <div>
+            <FieldInput
+              label="稅碼"
+              value={taxCode}
+              onChange={setTaxCode}
+              placeholder="請輸入稅碼（最多10字）"
+              maxLength={10}
+            />
+          </div>
+
           {/* 稅率 */}
-          <div style={{ position: 'relative' }}>
-            <div style={{ position: 'relative', height: 54 }}>
-              {/* border */}
-              <div
-                aria-hidden="true"
-                style={{
-                  position: 'absolute', inset: 0, pointerEvents: 'none',
-                  borderRadius: 8,
-                  border: `1px solid ${errors.taxRate ? '#ff5630' : 'rgba(145,158,171,0.2)'}`,
-                }}
-              />
-              {/* floating label */}
-              <div style={{ position: 'absolute', top: -5, left: 14, display: 'flex', alignItems: 'center', padding: '0 2px', zIndex: 10 }}>
-                <div style={{ position: 'absolute', background: 'white', height: 2, left: 0, right: 0, top: 5 }} />
-                <p style={{ fontSize: 12, fontWeight: 600, color: errors.taxRate ? '#ff5630' : '#637381', position: 'relative' }}>稅率</p>
-              </div>
-              <div className="flex items-center gap-[8px] px-[14px]" style={{ height: 54 }}>
-                <input
-                  type="number"
-                  min="0"
-                  step="any"
-                  value={taxRateStr}
-                  onChange={e => { setTaxRateStr(e.target.value); setErrors(p => ({ ...p, taxRate: '' })); }}
-                  placeholder="0"
-                  className="flex-1 bg-transparent text-[14px] text-[#1c252e] placeholder:text-[#919eab] outline-none"
-                  style={{ appearance: 'textfield' }}
-                />
-                <span className="text-[14px] font-semibold text-[#637381] shrink-0">%</span>
-              </div>
-            </div>
+          <div>
+            <FieldInput
+              label="稅率"
+              value={taxRateStr}
+              onChange={v => { setTaxRateStr(v); setErrors(p => ({ ...p, taxRate: '' })); }}
+              placeholder="0"
+              type="number"
+              suffix="%"
+              hasError={!!errors.taxRate}
+            />
             {errors.taxRate && <p className="mt-[4px] text-[#ff5630] text-[12px]">{errors.taxRate}</p>}
           </div>
 
-          {/* 有效日期 */}
-          <div style={{ position: 'relative' }} ref={datePickerRef}>
-            <div style={{ position: 'relative', height: 54 }}>
-              <div
-                aria-hidden="true"
-                style={{
-                  position: 'absolute', inset: 0, pointerEvents: 'none',
-                  borderRadius: 8,
-                  border: `1px solid ${errors.effectiveDate ? '#ff5630' : 'rgba(145,158,171,0.2)'}`,
-                }}
-              />
-              <div style={{ position: 'absolute', top: -5, left: 14, display: 'flex', alignItems: 'center', padding: '0 2px', zIndex: 10 }}>
-                <div style={{ position: 'absolute', background: 'white', height: 2, left: 0, right: 0, top: 5 }} />
-                <p style={{ fontSize: 12, fontWeight: 600, color: errors.effectiveDate ? '#ff5630' : '#637381', position: 'relative' }}>生效日期</p>
-              </div>
-              <button
-                type="button"
-                className="flex items-center gap-[8px] px-[14px] w-full text-left"
-                style={{ height: 54 }}
-                onClick={() => setShowDatePicker(v => !v)}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="shrink-0">
-                  <rect x="3" y="4" width="18" height="18" rx="2" stroke="#919eab" strokeWidth="1.5"/>
-                  <path d="M16 2v4M8 2v4M3 10h18" stroke="#919eab" strokeWidth="1.5" strokeLinecap="round"/>
-                </svg>
-                <span className={`text-[14px] flex-1 ${effectiveDate ? 'text-[#1c252e]' : 'text-[#919eab]'}`}>
-                  {effectiveDate || '選擇日期...'}
-                </span>
-              </button>
-            </div>
+          {/* 生效日期 */}
+          <div>
+            <FieldDatePicker
+              label="生效日期"
+              value={effectiveDate}
+              onChange={v => { setEffectiveDate(v); setErrors(p => ({ ...p, effectiveDate: '' })); }}
+              hasError={!!errors.effectiveDate}
+            />
             {errors.effectiveDate && <p className="mt-[4px] text-[#ff5630] text-[12px]">{errors.effectiveDate}</p>}
-
-            {/* 日期選擇器 */}
-            {showDatePicker && (
-              <div style={{ position: 'absolute', top: 60, left: 0, zIndex: 100 }}>
-                <SimpleDatePicker
-                  selectedDate={effectiveDate}
-                  onDateSelect={(d) => { setEffectiveDate(d); setErrors(p => ({ ...p, effectiveDate: '' })); setShowDatePicker(false); }}
-                />
-              </div>
-            )}
           </div>
         </div>
 
@@ -1123,49 +1198,43 @@ function AddFactoryTaxDialog({ open, onClose, onConfirm, existingData }: AddFact
   );
 }
 
-// ── 修改工廠稅率 Dialog ──────────────────────────────────────────────────────
+// ── 修改工廠稅率 Dialog ────────────────────────────────────────────
 interface EditFactoryTaxDialogProps {
   open: boolean;
   record: FactoryTaxRecord | null;
   onClose: () => void;
-  onConfirm: (id: number, taxRate: number, effectiveDate: string) => void;
+  onConfirm: (id: number, taxRate: number, taxCode: string, effectiveDate: string) => void;
   existingData: FactoryTaxRecord[];
 }
 
 function EditFactoryTaxDialog({ open, record, onClose, onConfirm, existingData }: EditFactoryTaxDialogProps) {
-  const [taxRateStr, setTaxRateStr] = useState('');
+  const [taxRateStr,    setTaxRateStr]    = useState('');
+  const [taxCode,       setTaxCode]       = useState('');
   const [effectiveDate, setEffectiveDate] = useState('');
-  const [showDatePicker, setShowDatePicker] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const datePickerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (record) {
       setTaxRateStr(String(record.taxRate));
+      setTaxCode(record.taxCode ?? '');
       setEffectiveDate(record.effectiveDate);
       setErrors({});
-      setShowDatePicker(false);
     }
   }, [record]);
-
-  useEffect(() => {
-    if (!showDatePicker) return;
-    const handler = (e: MouseEvent) => {
-      if (datePickerRef.current && !datePickerRef.current.contains(e.target as Node)) {
-        setShowDatePicker(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [showDatePicker]);
 
   const validate = () => {
     const e: Record<string, string> = {};
     if (!taxRateStr || isNaN(Number(taxRateStr))) e.taxRate = '必填，請輸入數字';
     if (!effectiveDate) {
       e.effectiveDate = '必填';
-    } else if (record && existingData.some(r => r.id !== record.id && r.factoryCode === record.factoryCode && r.effectiveDate === effectiveDate)) {
-      e.effectiveDate = `該工廠已有相同生效日期（${effectiveDate}）的稅率設定`;
+    } else if (record && existingData.some(r =>
+      r.id !== record.id &&
+      r.factoryCode === record.factoryCode &&
+      r.companyCode === record.companyCode &&
+      r.bondedType  === record.bondedType &&
+      r.effectiveDate === effectiveDate
+    )) {
+      e.effectiveDate = `該工廠+公司+保稅別已有相同生效日期（${effectiveDate}）的稅率設定`;
     }
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -1173,9 +1242,13 @@ function EditFactoryTaxDialog({ open, record, onClose, onConfirm, existingData }
 
   const handleSubmit = () => {
     if (!record || !validate()) return;
-    onConfirm(record.id, Number(taxRateStr), effectiveDate);
+    onConfirm(record.id, Number(taxRateStr), taxCode, effectiveDate);
     onClose();
   };
+
+  // 公司、保稅別、發票聯式的顯示用 label
+  const companyLabel   = COMPANY_CODE_OPTIONS.find(o => o.value === record?.companyCode)?.label ?? record?.companyCode ?? '';
+  const invoiceLabel   = INVOICE_TYPE_OPTIONS_WITH_NA.find(o => o.value === (record?.invoiceType ?? ''))?.label ?? record?.invoiceType ?? '';
 
   if (!open || !record) return null;
 
@@ -1185,12 +1258,12 @@ function EditFactoryTaxDialog({ open, record, onClose, onConfirm, existingData }
       style={{ background: 'rgba(28,37,46,0.45)' }}
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-white rounded-[16px] shadow-[0px_0px_2px_0px_rgba(145,158,171,0.2),0px_12px_24px_-4px_rgba(145,158,171,0.12)] w-[480px] max-w-[calc(100vw-48px)] flex flex-col">
+      <div className="bg-white rounded-[16px] shadow-[0px_0px_2px_0px_rgba(145,158,171,0.2),0px_12px_24px_-4px_rgba(145,158,171,0.12)] w-[520px] max-w-[calc(100vw-48px)] flex flex-col max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between px-[24px] pt-[24px] pb-[16px] border-b border-[rgba(145,158,171,0.12)]">
+        <div className="flex items-center justify-between px-[24px] pt-[24px] pb-[16px] border-b border-[rgba(145,158,171,0.12)] sticky top-0 bg-white z-10">
           <div>
             <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[18px] text-[#1c252e]">修改工廠稅率</p>
-            <p className="text-[13px] text-[#637381] mt-[2px]">工廠：{record.factoryCode}</p>
+            <p className="text-[13px] text-[#637381] mt-[2px]">工廠：{record.factoryCode}　公司：{companyLabel}　{record.bondedType}</p>
           </div>
           <button onClick={onClose} className="flex items-center justify-center w-[36px] h-[36px] rounded-full hover:bg-[rgba(145,158,171,0.08)] transition-colors">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -1201,79 +1274,55 @@ function EditFactoryTaxDialog({ open, record, onClose, onConfirm, existingData }
 
         {/* Body */}
         <div className="px-[24px] py-[20px] flex flex-col gap-[20px]">
-          {/* 稅率 */}
-          <div style={{ position: 'relative' }}>
-            <div style={{ position: 'relative', height: 54 }}>
-              <div
-                aria-hidden="true"
-                style={{
-                  position: 'absolute', inset: 0, pointerEvents: 'none',
-                  borderRadius: 8,
-                  border: `1px solid ${errors.taxRate ? '#ff5630' : 'rgba(145,158,171,0.2)'}`,
-                }}
-              />
-              <div style={{ position: 'absolute', top: -5, left: 14, display: 'flex', alignItems: 'center', padding: '0 2px', zIndex: 10 }}>
-                <div style={{ position: 'absolute', background: 'white', height: 2, left: 0, right: 0, top: 5 }} />
-                <p style={{ fontSize: 12, fontWeight: 600, color: errors.taxRate ? '#ff5630' : '#637381', position: 'relative' }}>稅率</p>
-              </div>
-              <div className="flex items-center gap-[8px] px-[14px]" style={{ height: 54 }}>
-                <input
-                  type="number"
-                  min="0"
-                  step="any"
-                  value={taxRateStr}
-                  onChange={e => { setTaxRateStr(e.target.value); setErrors(p => ({ ...p, taxRate: '' })); }}
-                  className="flex-1 bg-transparent text-[14px] text-[#1c252e] placeholder:text-[#919eab] outline-none"
-                  style={{ appearance: 'textfield' }}
-                />
-                <span className="text-[14px] font-semibold text-[#637381] shrink-0">%</span>
-              </div>
+
+          {/* 唯讀資訊小提示區 */}
+          <div className="rounded-[8px] px-[14px] py-[10px] flex flex-col gap-[4px]" style={{ backgroundColor: 'rgba(145,158,171,0.06)', border: '1px solid rgba(145,158,171,0.16)' }}>
+            <p className="text-[12px] text-[#637381] font-semibold mb-[2px]">唯讀欄位（不可修改）</p>
+            <div className="grid grid-cols-2 gap-x-[16px] gap-y-[4px]">
+              <span className="text-[13px] text-[#637381]">SAP工廠代號：<span className="text-[#1c252e] font-semibold">{record.factoryCode}</span></span>
+              <span className="text-[13px] text-[#637381]">公司：<span className="text-[#1c252e] font-semibold">{companyLabel}</span></span>
+              <span className="text-[13px] text-[#637381]">保稅/非保：<span className="text-[#1c252e] font-semibold">{record.bondedType}</span></span>
+              <span className="text-[13px] text-[#637381]">發票聯式：<span className="text-[#1c252e] font-semibold">{invoiceLabel || '（不適用）'}</span></span>
             </div>
+          </div>
+
+          {/* 稅率（可改） */}
+          <div>
+            <FieldInput
+              label="稅率"
+              value={taxRateStr}
+              onChange={v => { setTaxRateStr(v); setErrors(p => ({ ...p, taxRate: '' })); }}
+              placeholder="0"
+              type="number"
+              suffix="%"
+              hasError={!!errors.taxRate}
+            />
             {errors.taxRate && <p className="mt-[4px] text-[#ff5630] text-[12px]">{errors.taxRate}</p>}
           </div>
 
-          {/* 有效日期 */}
-          <div style={{ position: 'relative' }} ref={datePickerRef}>
-            <div style={{ position: 'relative', height: 54 }}>
-              <div
-                aria-hidden="true"
-                style={{
-                  position: 'absolute', inset: 0, pointerEvents: 'none',
-                  borderRadius: 8,
-                  border: `1px solid ${errors.effectiveDate ? '#ff5630' : 'rgba(145,158,171,0.2)'}`,
-                }}
-              />
-              <div style={{ position: 'absolute', top: -5, left: 14, display: 'flex', alignItems: 'center', padding: '0 2px', zIndex: 10 }}>
-                <div style={{ position: 'absolute', background: 'white', height: 2, left: 0, right: 0, top: 5 }} />
-                <p style={{ fontSize: 12, fontWeight: 600, color: errors.effectiveDate ? '#ff5630' : '#637381', position: 'relative' }}>生效日期</p>
-              </div>
-              <button
-                type="button"
-                className="flex items-center gap-[8px] px-[14px] w-full text-left"
-                style={{ height: 54 }}
-                onClick={() => setShowDatePicker(v => !v)}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="shrink-0">
-                  <rect x="3" y="4" width="18" height="18" rx="2" stroke="#919eab" strokeWidth="1.5"/>
-                  <path d="M16 2v4M8 2v4M3 10h18" stroke="#919eab" strokeWidth="1.5" strokeLinecap="round"/>
-                </svg>
-                <span className={`text-[14px] flex-1 ${effectiveDate ? 'text-[#1c252e]' : 'text-[#919eab]'}`}>
-                  {effectiveDate || '選擇日期...'}
-                </span>
-              </button>
-            </div>
+          {/* 稅碼（可改） */}
+          <div>
+            <FieldInput
+              label="稅碼"
+              value={taxCode}
+              onChange={setTaxCode}
+              placeholder="請輸入稅碼（最多10字）"
+              maxLength={10}
+            />
+          </div>
+
+          {/* 生效日期（可改） */}
+          <div>
+            <FieldDatePicker
+              label="生效日期"
+              value={effectiveDate}
+              onChange={v => { setEffectiveDate(v); setErrors(p => ({ ...p, effectiveDate: '' })); }}
+              hasError={!!errors.effectiveDate}
+            />
             {errors.effectiveDate && <p className="mt-[4px] text-[#ff5630] text-[12px]">{errors.effectiveDate}</p>}
-            {/* 日期選擇器 */}
-            {showDatePicker && (
-              <div style={{ position: 'absolute', top: 60, left: 0, zIndex: 100 }}>
-                <SimpleDatePicker
-                  selectedDate={effectiveDate}
-                  onDateSelect={(d) => { setEffectiveDate(d); setErrors(p => ({ ...p, effectiveDate: '' })); setShowDatePicker(false); }}
-                />
-              </div>
-            )}
           </div>
         </div>
+
 
         {/* Footer */}
         <div className="flex items-center justify-end gap-[12px] px-[24px] pb-[24px] pt-[8px]">
@@ -1372,6 +1421,7 @@ function FactoryTaxTab() {
 
   // 搜尋
   const [filterFactory, setFilterFactory] = useState('');
+  const [filterCompany, setFilterCompany] = useState('');
   const [filterTaxRate, setFilterTaxRate] = useState('');
 
   // Dialog states
@@ -1385,9 +1435,10 @@ function FactoryTaxTab() {
   const searchFiltered = useMemo(() =>
     data.filter(r =>
       (!filterFactory || r.factoryCode === filterFactory) &&
-      (!filterTaxRate || String(r.taxRate).includes(filterTaxRate.trim()))
+      (!filterCompany  || r.companyCode === filterCompany) &&
+      (!filterTaxRate  || String(r.taxRate).includes(filterTaxRate.trim()))
     ),
-    [data, filterFactory, filterTaxRate]
+    [data, filterFactory, filterCompany, filterTaxRate]
   );
 
   const filtered = useMemo(() => {
@@ -1484,8 +1535,8 @@ function FactoryTaxTab() {
     setData(prev => [...prev, { ...record, id: newId, updatedAt: makeTimestamp() }]);
   };
 
-  const handleEdit = (id: number, taxRate: number, effectiveDate: string) => {
-    setData(prev => prev.map(r => r.id === id ? { ...r, taxRate, effectiveDate, updatedAt: makeTimestamp() } : r));
+  const handleEdit = (id: number, taxRate: number, taxCode: string, effectiveDate: string) => {
+    setData(prev => prev.map(r => r.id === id ? { ...r, taxRate, taxCode, effectiveDate, updatedAt: makeTimestamp() } : r));
   };
 
   const handleDelete = () => {
@@ -1497,7 +1548,8 @@ function FactoryTaxTab() {
   // 篩選 tags
   const activeTags: { label: string; onClear: () => void }[] = [];
   if (filterFactory) activeTags.push({ label: `工廠：${filterFactory}`, onClear: () => setFilterFactory('') });
-  const clearAll = () => { setFilterFactory(''); setFilterTaxRate(''); };
+  if (filterCompany) activeTags.push({ label: `公司：${COMPANY_CODE_OPTIONS.find(o => o.value === filterCompany)?.label ?? filterCompany}`, onClear: () => setFilterCompany('') });
+  const clearAll = () => { setFilterFactory(''); setFilterCompany(''); setFilterTaxRate(''); };
 
   // 新增按鈕（放在 toolbar actionButton）
   const addButton = (
@@ -1516,7 +1568,8 @@ function FactoryTaxTab() {
     <div className="flex flex-col h-full">
       {/* 搜尋列 */}
       <div className="shrink-0 flex gap-[16px] items-end flex-wrap px-[20px] pt-[16px] pb-[16px]">
-        <div className="flex-1 min-w-[160px]">
+        {/* 工廠 */}
+        <div className="flex-1 min-w-[140px]">
           <DropdownSelect
             label="工廠"
             value={filterFactory}
@@ -1530,8 +1583,18 @@ function FactoryTaxTab() {
             ]}
           />
         </div>
+        {/* 公司 */}
+        <div className="flex-1 min-w-[160px]">
+          <DropdownSelect
+            label="公司(代碼)"
+            value={filterCompany}
+            onChange={setFilterCompany}
+            searchable={false}
+            options={COMPANY_CODE_OPTIONS}
+          />
+        </div>
         {/* 稅率關鍵字搜尋 */}
-        <div className="flex-1 min-w-[160px]" style={{ position: 'relative' }}>
+        <div className="flex-1 min-w-[140px]" style={{ position: 'relative' }}>
           <div style={{ position: 'relative', height: 54, overflow: 'visible' }}>
             <div
               aria-hidden="true"
@@ -1660,6 +1723,14 @@ function FactoryTaxTab() {
                     ) : col.key === 'taxRate' ? (
                       <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] text-[#1c252e] truncate w-full">
                         {row.taxRate}%
+                      </p>
+                    ) : col.key === 'companyCode' ? (
+                      <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] text-[#1c252e] truncate w-full">
+                        {COMPANY_CODE_OPTIONS.find(o => o.value === row.companyCode)?.label ?? row.companyCode}
+                      </p>
+                    ) : col.key === 'invoiceType' ? (
+                      <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] text-[#1c252e] truncate w-full">
+                        {INVOICE_TYPE_OPTIONS_WITH_NA.find(o => o.value === (row.invoiceType ?? ''))?.label ?? row.invoiceType}
                       </p>
                     ) : (
                       <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] text-[#1c252e] truncate w-full">

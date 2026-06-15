@@ -18,6 +18,7 @@ import {
   type InvoiceDetailRow, type InvoiceDetailPageProps,
   TAX_RATE_OPTIONS, INVOICE_TYPE_OPTIONS, TAX_CODE_OPTIONS,
   toInvoiceDetailRows, recalcRow, resolveBuyer, isOverseasBuyer,
+  resolveVietnamSapTaxCode,
 } from './invoiceDetailData';
 import {
   appendInvoiceRecord, generateInvoiceId, resolveTaxCode, initInvoiceStore,
@@ -27,32 +28,52 @@ import {
 import { OrderHistory } from './OrderHistory';
 import type { HistoryEntry as OrderHistoryEntry } from './OrderStoreContext';
 import { MOCK_VENDORS } from './VendorManagementTable';
+import { TRACK_DATA } from './invoiceSettingsStore';
 
 // ── 從工廠稅率設定查詢適用稅率 ──────────────────────────────────────────────
-function lookupFactoryTaxRate(plantCode: string): string {
-  if (!plantCode) return '5';
+/**
+ * 工廠稅率表查表
+ * 比對條件： companyCode + plantCode(factoryCode) + bondedType + 生效日期 ≤ 今天
+ * 回傳生效日期最新的那筆資料的 { taxRate, taxCode }
+ */
+function lookupFactoryTaxEntry(
+  plantCode: string,
+  companyCode: string,
+  bondedType: string,
+): { taxRate: string; taxCode: string } {
+  const DEFAULT = { taxRate: '5', taxCode: '' };
+  if (!plantCode) return DEFAULT;
   try {
     const saved = localStorage.getItem('invoice-settings-factory-tax-data');
-    if (!saved) return '5';
+    if (!saved) return DEFAULT;
     const parsed = JSON.parse(saved) as {
       version: number;
-      records: Array<{ factoryCode: string; taxRate: number; effectiveDate: string }>;
+      records: Array<{
+        factoryCode: string;
+        companyCode: string;
+        bondedType: string;
+        taxRate: number;
+        taxCode: string;
+        effectiveDate: string;
+      }>;
     };
-    if (!parsed?.records) return '5';
+    if (!parsed?.records) return DEFAULT;
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // 篩選同工廠 + 生效日期 ≤ 今天
+    // 篩選：同工廠 + 公司 + 保稅別 + 生效日期 ≤ 今天
     const applicable = parsed.records.filter(r => {
-      if (r.factoryCode !== plantCode) return false;
+      if (r.factoryCode !== plantCode)  return false;
+      if (r.companyCode !== companyCode) return false;
+      if (r.bondedType  !== bondedType)  return false;
       const parts = r.effectiveDate.split('/');
       if (parts.length < 3) return false;
       const effDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
       return effDate <= today;
     });
 
-    if (applicable.length === 0) return '5';
+    if (applicable.length === 0) return DEFAULT;
 
     // 取生效日期最新的那筆
     applicable.sort((a, b) => {
@@ -60,9 +81,12 @@ function lookupFactoryTaxRate(plantCode: string): string {
       return parse(b.effectiveDate) - parse(a.effectiveDate);
     });
 
-    return String(applicable[0].taxRate);
+    return {
+      taxRate: String(applicable[0].taxRate),
+      taxCode: applicable[0].taxCode ?? '',
+    };
   } catch {
-    return '5';
+    return DEFAULT;
   }
 }
 
@@ -164,14 +188,31 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
   const [taxCode,     setTaxCode]     = useState(existingRecord?.taxCode || '0');
 
   // ── 稅率 ──
+  // 取得訂單的工廠代號、公司代碼、保稅別
+  const row0 = selectedRows[0];
   // 台灣保稅驗證：稅率鎖定 0％
   const isTaiwanBonded = !isOverseas && bondedType === '保稅';
+
+  // 工廠稅率表查表結果（新開立時查表；既有發票不重新查）
+  const factoryTaxEntry = useMemo(() => {
+    if (existingRecord || isOverseas || isTaiwanBonded) return { taxRate: '5', taxCode: '' };
+    return lookupFactoryTaxEntry(
+      row0?.plantCode   ?? '',
+      row0?.companyCode ?? '',
+      row0?.bondedType  ?? bondedType ?? '',
+    );
+  }, []);  // eslint-disable-line react-hooks/exhaustive-deps
+
   const [taxRateValue, setTaxRateValue] = useState(() => {
     if (existingRecord) return existingRecord.taxRate;
     if (isTaiwanBonded) return '0';
     // 非保稅：從工廠稅率表自動帶入
-    return lookupFactoryTaxRate(selectedRows[0]?.plantCode ?? '');
+    return factoryTaxEntry.taxRate;
   });
+
+  // 工廠稅率表的稅碼（台灣發票用）
+  const factoryTaxCode = existingRecord?.taxCode ?? factoryTaxEntry.taxCode;
+
   const taxRate = parseFloat(taxRateValue) / 100 || 0;
 
   // ── 品名 tooltip hover state ──
@@ -327,7 +368,10 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
     const pad = (n: number) => String(n).padStart(2, '0');
     const timestamp = `${now.getFullYear()}/${pad(now.getMonth()+1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
     const createdAt = `${now.getFullYear()}/${pad(now.getMonth()+1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
-    const resolvedTaxCode = resolveTaxCode(invoiceNo, invoiceDate) ?? '';
+    // ── 稅碼推算：越南發票→依稅率查 SAP 稅碼表；台灣發票→工廠稅率表的稅碼 ──
+    const resolvedTaxCode = isOverseas
+      ? resolveVietnamSapTaxCode(taxRateValue)
+      : factoryTaxCode;
 
 
     // ── 歷程變更描述（語意化）──
@@ -399,19 +443,29 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
     };
   };
 
-  // ── 發票號碼格式驗證：前 2 碼英文 + 後 8 碼數字，共 10 碼 ──
+  // ── 發票號碼格式驗證 ──
+  // 台灣發票：前 2 碼英文 + 後 8 碼數字，共 10 碼
+  // 越南發票（isOverseas）：僅驗必填，不限格式（越南發票號碼由越南稅務機關規範）
   const INVOICE_NO_REGEX = /^[A-Za-z]{2}\d{8}$/;
 
   const validateInvoiceNo = (): string[] => {
     const no = invoiceNo.trim();
     const errs: string[] = [];
 
-    // 1. 格式檢查
+    // 1. 必填檢查（所有發票類型通用）
     if (!no) {
       setInvoiceNoError(true);
       errs.push('請填寫發票號碼');
-      return errs; // 後續檢查依賴號碼，直接返回
+      return errs;
     }
+
+    // 越南買方：僅驗必填，跳過台灣格式及字軌主檔驗證
+    if (isOverseas) {
+      setInvoiceNoError(false);
+      return errs;
+    }
+
+    // 2. 台灣格式檢查
     if (!INVOICE_NO_REGEX.test(no)) {
       setInvoiceNoError(true);
       errs.push(`發票號碼格式不正確（須為 2 碼英文字母 + 8 碼數字，共 10 碼），請重新輸入。`);
@@ -422,7 +476,7 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
     const allRecords = loadInvoiceRecords();
     const currentId  = existingRecord?.id;
 
-    // 2. 同期別（年月）重複檢查
+    // 3. 同期別（年月）重複檢查
     if (invoiceDate) {
       const parts = invoiceDate.replace(/-/g, '/').split('/');
       if (parts.length >= 2) {
@@ -443,15 +497,35 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
       }
     }
 
-    // 3. 字軌對應檢查（需有發票日期才能驗證）
-    if (invoiceDate) {
-      const taxCode = resolveTaxCode(no, invoiceDate);
-      if (taxCode === null) {
-        const track = no.slice(0, 2).toUpperCase();
-        const parts = invoiceDate.replace(/-/g, '/').split('/');
-        const yearMonth = parts.length >= 2 ? `${parts[0]}/${parts[1].padStart(2, '0')}` : invoiceDate;
-        setInvoiceNoError(true);
-        errs.push(`字軌「${track}」在 ${yearMonth} 的字軌主檔中查無資料，無法開立發票，請確認發票號碼與日期是否正確。`);
+    // 4. 字軌對應檢查（需有發票日期才能驗證）
+    // 流程：先從工廠稅率表取出稅碼(factoryTaxCode)，
+    //         再用該稅碼查字軌主檔，確認發票號碼前2碼字軌是否符合當月
+    if (invoiceDate && !isOverseas) {
+      const parts = invoiceDate.replace(/-/g, '/').split('/');
+      const year  = parts[0];
+      const month = parts[1]?.padStart(2, '0') ?? '';
+      const track = no.slice(0, 2).toUpperCase();
+
+      if (factoryTaxCode) {
+        // 工廠稅率表有稅碼：驗證發票字軌是否屬於該稅碼的字軌
+        const validTracks = TRACK_DATA.filter(r =>
+          r.year === year && r.month === month && r.taxCode === factoryTaxCode
+        ).map(r => r.track);
+
+        if (validTracks.length === 0) {
+          setInvoiceNoError(true);
+          errs.push('稅碼錯誤，請確認後再開');
+        } else if (!validTracks.includes(track)) {
+          setInvoiceNoError(true);
+          errs.push('發票字軌不符，請確認後再開');
+        }
+      } else {
+        // 工廠稅率表稅碼為空：改用字軌反查（相容舊邏輯）
+        const taxCodeFromTrack = resolveTaxCode(no, invoiceDate);
+        if (taxCodeFromTrack === null) {
+          setInvoiceNoError(true);
+          errs.push('稅碼錯誤，請確認後再開');
+        }
       }
     }
 
@@ -756,27 +830,20 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
             <FloatingInput label="稅率" value={`${taxRateValue}%`} onChange={() => {}} disabled />
           </div>
           {/* 發票聯式 / 稅碼（col 4） */}
+          {/* 越南買方（isOverseas）：不顯示稅碼欄位，稅碼由稅率比對 SAP 稅碼表後自動回傳 */}
           <div className="min-w-0">
-            {!isEditable ? (
+            {isOverseas ? (
+              /* 越南買方 → 不顯示稅碼欄位 */
+              null
+            ) : !isEditable ? (
               <FloatingInput
-                label={isOverseas ? '稅碼' : '發票聯式'}
-                value={isOverseas
-                  ? (TAX_CODE_OPTIONS.find(o => o.value === taxCode)?.label ?? taxCode)
-                  : (INVOICE_TYPE_OPTIONS.find(o => o.value === invoiceType)?.label ?? invoiceType)}
+                label="發票聯式"
+                value={INVOICE_TYPE_OPTIONS.find(o => o.value === invoiceType)?.label ?? invoiceType}
                 onChange={() => {}}
                 disabled
               />
-            ) : isOverseas ? (
-              /* 海外買方 → VAT 稅碼，預設 0% */
-              <DropdownSelect
-                label="稅碼"
-                value={taxCode}
-                onChange={setTaxCode}
-                options={TAX_CODE_OPTIONS}
-                searchable={false}
-              />
             ) : (
-              /* 台灣買方 → 發票聯式，預設 21 */
+              /* 台灣買方 → 發票聯式 */
               <DropdownSelect
                 label="發票聯式"
                 value={invoiceType}

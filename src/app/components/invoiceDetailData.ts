@@ -88,6 +88,25 @@ export const TAX_CODE_OPTIONS = [
   { value: '10', label: '10% VAT tax - Goods & Service' },
 ];
 
+// ── 越南 SAP 稅碼對照表（稅率 → SAP 稅碼）──
+// TODO: 待補入實際 SAP 稅碼表
+export const VIETNAM_SAP_TAX_CODE_MAP: Record<string, string> = {
+  // 稅率(%) : SAP 稅碼
+  // '0'  : 'V0',   // 範例：0% VAT → SAP 稅碼 V0
+  // '5'  : 'V5',   // 範例：5% VAT → SAP 稅碼 V5
+  // '10' : 'V10',  // 範例：10% VAT → SAP 稅碼 V10
+};
+
+/**
+ * 越南發票：根據稅率查詢 SAP 稅碼
+ * 當 SAP 稅碼表補入後，此函式自動生效
+ * @param taxRateValue 稅率字串，例如 '0' | '5' | '10'
+ * @returns SAP 稅碼字串，或空字串（當稅碼表尚未設定時）
+ */
+export function resolveVietnamSapTaxCode(taxRateValue: string): string {
+  return VIETNAM_SAP_TAX_CODE_MAP[taxRateValue] ?? '';
+}
+
 // ── 從驗收資料轉換為發票明細列（單價預設 = 驗收價）──
 export function toInvoiceDetailRows(rows: InvoiceAcceptRow[], taxRate = 0): InvoiceDetailRow[] {
   return rows.map((r) => {
