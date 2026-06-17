@@ -21,6 +21,7 @@ import { CorrectionListWithTabs } from "@/app/components/CorrectionListWithTabs"
 import { HistoryCorrectionListPage } from "@/app/components/HistoryCorrectionListPage";
 import { OrderScheduleInquiryPage } from "@/app/components/OrderScheduleInquiryPage";
 import PartsMaintenancePage from "@/app/components/PartsMaintenancePage";
+import EsgMaterialPage from "@/app/components/EsgMaterialPage";
 import { ResponsivePageLayout } from "@/app/components/ResponsivePageLayout";
 import { LoginPage } from "@/app/components/LoginPage";
 import { RegisterPage } from "@/app/components/RegisterPage";
@@ -374,6 +375,19 @@ export default function App() {
             />
           </ResponsivePageLayout>
         );
+      case 'esg-maintain':
+        return (
+          <ResponsivePageLayout
+            currentPage={currentPage}
+            onPageChange={handlePageChange}
+            onLogout={handleLogout}
+            userRole={userRole}
+            title="材料維護"
+            breadcrumb="ESG • 材料維護"
+          >
+            <EsgMaterialPage userRole={userRole} />
+          </ResponsivePageLayout>
+        );
       case 'parts-quote':
       case 'parts-sample':
       case 'quality-report':
@@ -383,8 +397,6 @@ export default function App() {
       case 'newparts-project':
       case 'newparts-settings':
       case 'vendor-evaluation':
-      case 'esg-material':
-      case 'esg-maintain':
       case 'shipment-tw-order':
       case 'shipment-tw-shipping':
       case 'shipment-tw-print':
