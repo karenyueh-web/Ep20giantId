@@ -220,27 +220,18 @@ export default function EsgMaterialPage({ userRole = 'giant' }: EsgMaterialPageP
   const [materials, setMaterials] = useState<EsgMaterialRecord[]>([...MOCK_ESG_MATERIALS]);
   const [modalMode, setModalMode] = useState<'add' | 'edit' | null>(null);
   const [editingRecord, setEditingRecord] = useState<EsgMaterialRecord | null>(null);
-  const [searchTw, setSearchTw] = useState('');
-  const [searchCn, setSearchCn] = useState('');
-  const [searchEn, setSearchEn] = useState('');
+  const [search, setSearch] = useState('');
 
   // ── 篩選 ─────────────────────────────────────────────────────────────────────
   const filteredData = useMemo(() => {
-    let data = materials;
-    if (searchTw.trim()) {
-      const kw = searchTw.trim().toLowerCase();
-      data = data.filter(m => m.nameTw.toLowerCase().includes(kw));
-    }
-    if (searchCn.trim()) {
-      const kw = searchCn.trim().toLowerCase();
-      data = data.filter(m => m.nameCn.toLowerCase().includes(kw));
-    }
-    if (searchEn.trim()) {
-      const kw = searchEn.trim().toLowerCase();
-      data = data.filter(m => m.nameEn.toLowerCase().includes(kw));
-    }
-    return data;
-  }, [materials, searchTw, searchCn, searchEn]);
+    const kw = search.trim().toLowerCase();
+    if (!kw) return materials;
+    return materials.filter(m =>
+      m.nameTw.toLowerCase().includes(kw) ||
+      m.nameCn.toLowerCase().includes(kw) ||
+      m.nameEn.toLowerCase().includes(kw),
+    );
+  }, [materials, search]);
 
   // ── 序號欄 ────────────────────────────────────────────────────────────────────
   type EsgMaterialWithSeq = EsgMaterialRecord & { _seq: number };
@@ -354,9 +345,7 @@ export default function EsgMaterialPage({ userRole = 'giant' }: EsgMaterialPageP
 
       {/* A. 搜尋列 */}
       <div className="shrink-0 flex gap-[16px] items-center px-[20px] py-[20px]">
-        <SearchField label="材料名(繁中)" value={searchTw} onChange={setSearchTw} type="search" />
-        <SearchField label="材料名(簡中)" value={searchCn} onChange={setSearchCn} type="search" />
-        <SearchField label="材料名(En)"   value={searchEn} onChange={setSearchEn} type="search" />
+        <SearchField label="材料名" value={search} onChange={setSearch} type="search" />
       </div>
 
       {/* B. 表格 */}
