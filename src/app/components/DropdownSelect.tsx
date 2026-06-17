@@ -1,4 +1,15 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+
+// ── Recently-used helpers ─────────────────────────────────────────────────────
+function getRecentlyUsed(storageKey: string): string[] {
+  try { return JSON.parse(localStorage.getItem(storageKey) ?? '[]'); } catch { return []; }
+}
+function saveRecentlyUsed(storageKey: string, value: string): void {
+  try {
+    const prev = getRecentlyUsed(storageKey).filter(v => v !== value);
+    localStorage.setItem(storageKey, JSON.stringify([value, ...prev].slice(0, 5)));
+  } catch { /**/ }
+}
 
 interface DropdownSelectProps {
   label: string;
@@ -10,6 +21,8 @@ interface DropdownSelectProps {
   className?: string;
   searchable?: boolean;
   disabled?: boolean;
+  /** 提供 key 時啟用「最近使用」排序（寫入 localStorage） */
+  storageKey?: string;
 }
 
 export function DropdownSelect({
@@ -22,6 +35,7 @@ export function DropdownSelect({
   className = '',
   searchable = false,
   disabled = false,
+  storageKey,
 }: DropdownSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -115,13 +129,26 @@ export function DropdownSelect({
     setIsOpen(prev => !prev);
   };
 
+  // 依「最近使用」排序
+  const sortedOptions = useMemo(() => {
+    if (!storageKey) return options;
+    const recent = getRecentlyUsed(storageKey);
+    if (recent.length === 0) return options;
+    const recentSet = new Set(recent);
+    const recentItems = recent
+      .map(v => options.find(o => o.value === v))
+      .filter(Boolean) as typeof options;
+    const rest = options.filter(o => !recentSet.has(o.value));
+    return [...recentItems, ...rest];
+  }, [options, storageKey, isOpen]); // isOpen → 每次打開重新計算
+
   // 篩選選項
   const filteredOptions = searchable && searchQuery
-    ? options.filter(option =>
+    ? sortedOptions.filter(option =>
         option.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
         option.value.toLowerCase().includes(searchQuery.toLowerCase())
       )
-    : options;
+    : sortedOptions;
 
   const selectedOption = options.find(opt => opt.value === value);
   const displayText = selectedOption?.label || placeholder;
@@ -198,6 +225,7 @@ export function DropdownSelect({
                     } ${index === filteredOptions.length - 1 ? 'rounded-b-[8px]' : ''}`}
                     onClick={() => {
                       onChange(option.value);
+                      if (storageKey && option.value) saveRecentlyUsed(storageKey, option.value);
                       setIsOpen(false);
                       setSearchQuery('');
                     }}

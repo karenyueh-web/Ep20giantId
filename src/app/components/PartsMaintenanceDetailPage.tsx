@@ -7,11 +7,12 @@ import { SearchField } from '@/app/components/SearchField'; // 日期欄位保�
 import { DropdownSelect } from '@/app/components/DropdownSelect';
 import { DeleteButton } from '@/app/components/ActionButtons';
 import IconsSolidIcSolarMultipleForwardLeftBroken from '@/imports/IconsSolidIcSolarMultipleForwardLeftBroken';
-import type { PartRecord, BrandSetting } from '@/app/components/partsMaintenanceData';
+import type { PartRecord, BrandSetting, PartHistoryEntry } from '@/app/components/partsMaintenanceData';
 import {
   BRAND_OPTIONS, TRADE_TERMS_OPTIONS, QUOTE_UNIT_OPTIONS,
   PRODUCT_TYPE_OPTIONS, WEIGHT_UNIT_OPTIONS, CURRENCY_OPTIONS,
 } from '@/app/components/partsMaintenanceData';
+import { OrderHistory } from '@/app/components/OrderHistory';
 
 // ── Props ────────────────────────────────────────────────────────────────────
 
@@ -38,6 +39,10 @@ export default function PartsMaintenanceDetailPage({
   onSave,
 }: PartsMaintenanceDetailPageProps) {
   const [activeTab, setActiveTab] = useState<TabId>('info');
+
+  // ── 歷程相關狀態 ──────────────────────────────────────────────────────────
+  const [showHistory, setShowHistory] = useState(false);
+  const [history, setHistory] = useState<PartHistoryEntry[]>(part.history ?? []);
 
   // ── Editable field state ─────────────────────────────────────────────────
   const [syncDtcDte, setSyncDtcDte] = useState(part.syncDtcDte);
@@ -91,8 +96,77 @@ export default function PartsMaintenanceDetailPage({
     const pad = (n: number) => String(n).padStart(2, '0');
     const savedAt = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
 
-    const hasQuote = brandSettings.some(bs => bs.unitPrice.trim() !== '');
+    // 廠商QA計畫完成日期、可送樣日、預計首批可供貨日、廠商料號，任一有填即歸類「已報價」
+    const hasQuote =
+      qaCompletionDate.trim() !== '' ||
+      sampleDate.trim() !== '' ||
+      firstDeliveryDate.trim() !== '' ||
+      vendorPartNo.trim() !== '';
     const quoteStatus: 'quoted' | 'pending' = hasQuote ? 'quoted' : 'pending';
+
+    // ── 歷程：比對變更欄位，產生異動摘要 ────────────────────────────────────
+    const changes: string[] = [];
+    if (qaCompletionDate !== part.qaCompletionDate)
+      changes.push(`廠商QA計畫完成日期: ${part.qaCompletionDate || '(空)'}\u2192${qaCompletionDate || '(空)'}`);
+    if (sampleDate !== part.sampleDate)
+      changes.push(`可送樣日: ${part.sampleDate || '(空)'}\u2192${sampleDate || '(空)'}`);
+    if (firstDeliveryDate !== part.firstDeliveryDate)
+      changes.push(`預計首批可供貨日: ${part.firstDeliveryDate || '(空)'}\u2192${firstDeliveryDate || '(空)'}`);
+    if (vendorPartNo !== part.vendorPartNo)
+      changes.push(`廠商料號: ${part.vendorPartNo || '(空)'}\u2192${vendorPartNo || '(空)'}`);
+    if (grossWeight !== part.grossWeight)
+      changes.push(`毛重: ${part.grossWeight}\u2192${grossWeight}`);
+    if (netWeight !== part.netWeight)
+      changes.push(`淨重: ${part.netWeight}\u2192${netWeight}`);
+    if (weightUnit !== part.weightUnit)
+      changes.push(`重量單位: ${part.weightUnit}\u2192${weightUnit}`);
+    if (remark !== part.remark)
+      changes.push('備註已修改');
+    if (syncDtcDte !== part.syncDtcDte)
+      changes.push(`同步DTC/DTE: ${part.syncDtcDte ? '是' : '否'}\u2192${syncDtcDte ? '是' : '否'}`);
+    // 品牌設定逐筆比對（以 id 為 key）
+    const addedBrands = brandSettings.filter(nb => !part.brandSettings.some(ob => ob.id === nb.id));
+    const removedBrands = part.brandSettings.filter(ob => !brandSettings.some(nb => nb.id === ob.id));
+    const modifiedBrands = brandSettings.filter(nb => {
+      const ob = part.brandSettings.find(o => o.id === nb.id);
+      return ob && JSON.stringify({ ...ob, id: 0 }) !== JSON.stringify({ ...nb, id: 0 });
+    });
+    const fmtBrand = (b: BrandSetting) =>
+      `${b.brand || '(未選)'}(${b.currency || '—'} ${b.unitPrice || '—'}/報價量:${b.quoteQty || '—'}/MOQ:${b.moq || '—'})`;
+    const BRAND_FIELD_LABELS: Partial<Record<keyof BrandSetting, string>> = {
+      brand: '品牌', unitPrice: '採購單價', currency: '幣別',
+      quoteQty: '報價數量', leadTime: 'Lead Time', moq: 'MOQ',
+      tradeTerms: '國貿條件', tradeTermsPlace: '國貿條件地點',
+      quoteUnit: '報價單位', productType: '標準/客製品',
+    };
+    if (addedBrands.length > 0)
+      changes.push(`新增品牌: ${addedBrands.map(fmtBrand).join('、')}`);
+    if (removedBrands.length > 0)
+      changes.push(`刪除品牌: ${removedBrands.map(fmtBrand).join('、')}`);
+    for (const nb of modifiedBrands) {
+      const ob = part.brandSettings.find(o => o.id === nb.id)!;
+      const brandName = nb.brand || ob.brand || '(未選)';
+      const fieldDiffs: string[] = [];
+      for (const key of Object.keys(BRAND_FIELD_LABELS) as (keyof BrandSetting)[]) {
+        if (String(ob[key] ?? '') !== String(nb[key] ?? '')) {
+          fieldDiffs.push(`${BRAND_FIELD_LABELS[key]}: ${ob[key] || '(空)'}→${nb[key] || '(空)'}`);
+        }
+      }
+      if (fieldDiffs.length > 0)
+        changes.push(`修改品牌設定[${brandName}]: ${fieldDiffs.join('、')}`);
+    }
+
+    // 事項標籤
+    const eventLabel = '修改零件資料';
+
+    const newEntry: PartHistoryEntry = {
+      date: savedAt,
+      event: eventLabel,
+      operator: `廠商-${part.vendorName}`,
+      remark: changes.length > 0 ? changes.join('；') : '無變更',
+    };
+    const updatedHistory = [...history, newEntry];
+    setHistory(updatedHistory);
 
     const updatedPart: PartRecord = {
       ...part,
@@ -108,6 +182,7 @@ export default function PartsMaintenanceDetailPage({
       brandSettings,
       quoteStatus,
       savedAt,
+      history: updatedHistory,
     };
 
     onSave(updatedPart);
@@ -178,11 +253,23 @@ export default function PartsMaintenanceDetailPage({
             onDeleteBrand={handleDeleteBrand}
             onUpdateBrand={updateBrand}
             onSave={handleSave}
+            onShowHistory={() => setShowHistory(true)}
           />
         ) : (
           <UnderConstructionContent />
         )}
       </div>
+
+      {/* ── 零件歷程彈窗 ──────────────────────────────────────────── */}
+      {showHistory && (
+        <OrderHistory
+          onClose={() => setShowHistory(false)}
+          entries={[...history].reverse()}
+          titleLabel="零件資料歷程"
+          correctionDocNo={part.material}
+          correctionDocNoLabel="料號"
+        />
+      )}
     </>
   );
 }
@@ -216,6 +303,7 @@ interface InfoContentProps {
   onDeleteBrand: (id: number) => void;
   onUpdateBrand: (id: number, field: keyof BrandSetting, value: string) => void;
   onSave: () => void;
+  onShowHistory: () => void;
 }
 
 function InfoContent({
@@ -243,6 +331,7 @@ function InfoContent({
   onDeleteBrand,
   onUpdateBrand,
   onSave,
+  onShowHistory,
 }: InfoContentProps) {
   return (
     <div className="space-y-[24px]">
@@ -258,17 +347,26 @@ function InfoContent({
               </p>
             </div>
           </div>
-          <label className="flex items-center gap-[8px] cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={syncDtcDte}
-              onChange={e => setSyncDtcDte(e.target.checked)}
-              className="w-[16px] h-[16px] accent-[#1890FF] cursor-pointer"
-            />
-            <span className="text-[14px] text-[#1c252e]">同步零件資訊(DTC、DTE)</span>
-          </label>
+          {part.plant === 'GTM1' && (
+            <label className="flex items-center gap-[8px] cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={syncDtcDte}
+                onChange={e => setSyncDtcDte(e.target.checked)}
+                className="w-[16px] h-[16px] accent-[#1890FF] cursor-pointer"
+              />
+              <span className="text-[14px] text-[#1c252e]">同步零件資訊(DTC、DTE)</span>
+            </label>
+          )}
         </div>
         <div className="flex items-center gap-[12px]">
+          <p
+            className="[text-decoration-skip-ink:none] decoration-solid font-['Roboto:Regular',sans-serif] font-normal leading-[32px] text-[#005eb8] text-[16px] underline cursor-pointer hover:opacity-70 select-none whitespace-nowrap"
+            style={{ fontVariationSettings: "'wdth' 100" }}
+            onClick={onShowHistory}
+          >
+            歷程
+          </p>
           <button
             onClick={onSave}
             className="bg-[#1890FF] text-white rounded-[8px] h-[40px] min-w-[100px] px-[20px] text-[14px] font-semibold hover:bg-[#1060c0] transition-colors"
@@ -389,16 +487,16 @@ interface BrandSettingsSectionProps {
 }
 
 const BRAND_TABLE_COLUMNS = [
-  { key: 'brand' as const, label: '品牌', width: '120px', type: 'select' as const, options: BRAND_OPTIONS },
+  { key: 'brand' as const, label: '品牌', width: '120px', type: 'select' as const, options: BRAND_OPTIONS, storageKey: 'parts_brand_brand' },
   { key: 'unitPrice' as const, label: '採購單價', width: '100px', type: 'text' as const },
-  { key: 'currency' as const, label: '幣別', width: '90px', type: 'select' as const, options: CURRENCY_OPTIONS },
+  { key: 'currency' as const, label: '幣別', width: '90px', type: 'select' as const, options: CURRENCY_OPTIONS, storageKey: 'parts_brand_currency' },
   { key: 'quoteQty' as const, label: '報價數量', width: '100px', type: 'text' as const },
   { key: 'leadTime' as const, label: 'Lead Time', width: '100px', type: 'text' as const },
   { key: 'moq' as const, label: 'MOQ', width: '90px', type: 'text' as const },
-  { key: 'tradeTerms' as const, label: '國貿條件', width: '130px', type: 'select' as const, options: TRADE_TERMS_OPTIONS },
+  { key: 'tradeTerms' as const, label: '國貿條件', width: '130px', type: 'select' as const, options: TRADE_TERMS_OPTIONS, storageKey: 'parts_brand_tradeTerms' },
   { key: 'tradeTermsPlace' as const, label: '國貿條件約定地點', width: '140px', type: 'text' as const },
-  { key: 'quoteUnit' as const, label: '報價單位', width: '120px', type: 'select' as const, options: QUOTE_UNIT_OPTIONS },
-  { key: 'productType' as const, label: '標準品/客製品', width: '120px', type: 'select' as const, options: PRODUCT_TYPE_OPTIONS },
+  { key: 'quoteUnit' as const, label: '報價單位', width: '120px', type: 'select' as const, options: QUOTE_UNIT_OPTIONS, storageKey: 'parts_brand_quoteUnit' },
+  { key: 'productType' as const, label: '標準品/客製品', width: '120px', type: 'select' as const, options: PRODUCT_TYPE_OPTIONS, storageKey: 'parts_brand_productType' },
 ];
 
 function BrandSettingsSection({ brandSettings, onAdd, onDelete, onUpdate }: BrandSettingsSectionProps) {
@@ -468,6 +566,7 @@ function BrandSettingsSection({ brandSettings, onAdd, onDelete, onUpdate }: Bran
                           options={[{ value: '', label: '請選擇' }, ...col.options!]}
                           placeholder="請選擇"
                           searchable
+                          storageKey={(col as any).storageKey}
                         />
                       ) : (
                         <div className="relative w-full h-[54px]">

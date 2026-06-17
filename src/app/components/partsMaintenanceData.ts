@@ -2,6 +2,14 @@
 
 // ── Interfaces ───────────────────────────────────────────────────────────────
 
+/** 零件歷程紀錄（與 OrderHistory 元件同結構） */
+export interface PartHistoryEntry {
+  date: string;     // 'YYYY/MM/DD HH:mm'
+  event: string;    // 事項描述
+  operator: string; // 操作人員
+  remark: string;   // 異動詳細
+}
+
 /** 單筆品牌設定 */
 export interface BrandSetting {
   id: number;
@@ -44,6 +52,8 @@ export interface PartRecord {
   notifySentAt?: string[];          // 寄送時間紀錄（可多次，對應催促機制）
   savedAt: string;
   updatedAt: string;
+  // 歷程
+  history?: PartHistoryEntry[];
   syncDtcDte: boolean;
 }
 
@@ -159,8 +169,8 @@ export const PLANT_OPTIONS = [
   { value: 'GTM1', label: 'GTM1' },
   { value: 'GTM2', label: 'GTM2' },
   { value: 'GCM1', label: 'GCM1' },
-  { value: 'DTC', label: 'DTC' },
-  { value: 'DTE', label: 'DTE' },
+  { value: 'DTC1', label: 'DTC1' },
+  { value: 'DTE1', label: 'DTE1' },
   { value: 'GLM1', label: 'GLM1' },
 ];
 
@@ -202,6 +212,10 @@ export const MOCK_PARTS: PartRecord[] = [
     quoteStatus: 'quoted', notifyStatus: 'sent',
     notifySentAt: ['2025/05/05 09:30', '2025/05/12 14:20', '2025/05/19 10:05'],
     savedAt: '2025/05/04 15:30', updatedAt: '2025/05/05 12:30', syncDtcDte: false,
+    history: [
+      { date: '2025/05/05 09:30', event: '初始建立(未報價)', operator: '系統', remark: '由中台同步建立，通知廠商填寫' },
+      { date: '2025/05/04 15:30', event: '填寫零件資料(未報價→已報價)', operator: '廠商-速聯', remark: '廠商料號: SR-CSL0075；品牌設定: 1 筆(Giant/TWD/125)' },
+    ],
   },
   {
     id: 2,
@@ -228,6 +242,9 @@ export const MOCK_PARTS: PartRecord[] = [
     quoteStatus: 'pending', notifyStatus: 'sent',
     notifySentAt: ['2025/05/05 09:30'],
     savedAt: '', updatedAt: '2025/05/05 12:30', syncDtcDte: false,
+    history: [
+      { date: '2025/05/05 09:30', event: '初始建立(未報價)', operator: '系統', remark: '由中台同步建立，通知廠商填寫' },
+    ],
   },
   {
     id: 4,
@@ -341,7 +358,7 @@ export const MOCK_PARTS: PartRecord[] = [
   {
     id: 12,
     vendorCode: '0001000012', vendorName: '台灣製造',
-    material: '1830-CRK0045-G07', plant: 'DTC', purchaseOrg: '1101',
+    material: '1830-CRK0045-G07', plant: 'DTC1', purchaseOrg: '1101',
     longDescription: 'CRANKSET ALLOY 170MM 50/34T 110BCD ROAD DOUBLE CHAINRING',
     qaCompletionDate: '2025/05/25', sampleDate: '2025/06/08', firstDeliveryDate: '2025/07/20',
     grossWeight: '0.72', netWeight: '0.65', weightUnit: 'KG',
@@ -357,7 +374,7 @@ export const MOCK_PARTS: PartRecord[] = [
   {
     id: 13,
     vendorCode: '0001000046', vendorName: '速聯國際',
-    material: '1940-DRL0067-H08', plant: 'DTE', purchaseOrg: '1301',
+    material: '1940-DRL0067-H08', plant: 'DTE1', purchaseOrg: '1301',
     longDescription: 'REAR DERAILLEUR 11-SPEED LONG CAGE SHADOW RD+ CLUTCH',
     qaCompletionDate: '', sampleDate: '', firstDeliveryDate: '',
     grossWeight: '0.25', netWeight: '0.22', weightUnit: 'KG',
@@ -379,6 +396,10 @@ export const MOCK_PARTS: PartRecord[] = [
     quoteStatus: 'quoted', notifyStatus: 'sent',
     notifySentAt: ['2025/05/05 09:30', '2025/06/02 09:30'],
     savedAt: '2025/06/02 09:30', updatedAt: '2025/05/05 12:30', syncDtcDte: true,
+    history: [
+      { date: '2025/05/05 09:30', event: '初始建立(未報價)', operator: '系統', remark: '由中台同步建立，通知廠商填寫' },
+      { date: '2025/06/02 09:30', event: '填寫零件資料(未報價→已報價)', operator: '廠商-速聯', remark: '廠商料號: SR-BASAD1；同步DTC/DTE: 是；品牌設定: 1 筆(Giant/TWD/340)' },
+    ],
   },
   {
     id: 15,
@@ -392,6 +413,30 @@ export const MOCK_PARTS: PartRecord[] = [
     quoteStatus: 'pending', notifyStatus: 'sent',
     notifySentAt: ['2025/05/05 09:30'],
     savedAt: '', updatedAt: '2025/05/05 12:30', syncDtcDte: false,
+  },
+  // ── 同步功能 Demo 資料：與 id=3 (GTM1) 配對的 DTC1 ────────────────────────
+  {
+    id: 16,
+    vendorCode: '000100463', vendorName: '速聯',
+    material: '1129-CSL0075-L03', plant: 'DTC1', purchaseOrg: '1101',
+    longDescription: 'G9 Pique ADV PRO 29 0 (R)(拉絲無膜標+數位無膜標) CARBON SMOKE/G-CH01',
+    qaCompletionDate: '', sampleDate: '', firstDeliveryDate: '',
+    grossWeight: '0.08', netWeight: '0.07', weightUnit: 'KG',
+    vendorPartNo: '', remark: '',
+    brandSettings: [],
+    quoteStatus: 'pending', notifyStatus: 'unsent', savedAt: '', updatedAt: '2025/05/05 12:30', syncDtcDte: false,
+  },
+  // ── 同步功能 Demo 資料：與 id=14 (GTM1) 配對的 DTE1 ───────────────────────
+  {
+    id: 17,
+    vendorCode: '000100463', vendorName: '速聯',
+    material: '1330-BASAD1-003', plant: 'DTE1', purchaseOrg: '1101',
+    longDescription: 'G9 Pique ADV PRO 29 0 (15)(拉絲無膜標+數位無膜標) CARBON SMOKE/G-CH01',
+    qaCompletionDate: '', sampleDate: '', firstDeliveryDate: '',
+    grossWeight: '1.20', netWeight: '1.05', weightUnit: 'KG',
+    vendorPartNo: '', remark: '',
+    brandSettings: [],
+    quoteStatus: 'pending', notifyStatus: 'unsent', savedAt: '', updatedAt: '2025/05/05 12:30', syncDtcDte: false,
   },
 ];
 

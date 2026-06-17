@@ -183,14 +183,14 @@ export default function PartsMaintenancePage({
     return partsData;
   }, [partsData, userRole]);
 
-  // ── Tab 篩選 ────────────────────────────────────────────────────────────────
+  // ── Tab 篩選 ─────────────────────────────────────────────────────────
   const tabFilteredData = useMemo(() => {
     if (activeTab === 'pending') return roleBaseData.filter((p) => p.quoteStatus === 'pending');
     if (activeTab === 'quoted') return roleBaseData.filter((p) => p.quoteStatus === 'quoted');
     return roleBaseData;
   }, [roleBaseData, activeTab]);
 
-  // ── 搜尋/下拉篩選 ──────────────────────────────────────────────────────────
+  // ── 搜尋/下拉篩選 ──────────────────────────────────────────────────────
   const filteredData = useMemo(() => {
     let data = tabFilteredData;
     if (filterPurchaseOrg) {
@@ -222,50 +222,6 @@ export default function PartsMaintenancePage({
     return { all, pending, quoted };
   }, [roleBaseData]);
 
-  // ── Active filters（for chips）────────────────────────────────────────────
-  const activeFilters: { key: string; label: string; value: string; onClear: () => void }[] = [];
-  if (filterPurchaseOrg) {
-    const opt = PURCHASE_ORG_OPTIONS.find((o) => o.value === filterPurchaseOrg);
-    activeFilters.push({
-      key: 'purchaseOrg',
-      label: '採購組織',
-      value: opt?.label ?? filterPurchaseOrg,
-      onClear: () => setFilterPurchaseOrg(''),
-    });
-  }
-  if (filterMaterial.trim()) {
-    activeFilters.push({
-      key: 'material',
-      label: '料號',
-      value: filterMaterial,
-      onClear: () => setFilterMaterial(''),
-    });
-  }
-  if (filterVendor.trim()) {
-    activeFilters.push({
-      key: 'vendor',
-      label: '廠商',
-      value: filterVendor,
-      onClear: () => setFilterVendor(''),
-    });
-  }
-  if (filterPlant) {
-    const opt = PLANT_OPTIONS.find((o) => o.value === filterPlant);
-    activeFilters.push({
-      key: 'plant',
-      label: '工廠',
-      value: opt?.label ?? filterPlant,
-      onClear: () => setFilterPlant(''),
-    });
-  }
-
-  const clearAllFilters = useCallback(() => {
-    setFilterPurchaseOrg('');
-    setFilterMaterial('');
-    setFilterVendor('');
-    setFilterPlant('');
-  }, []);
-
   // ── 點擊料號 → 進入明細 ──────────────────────────────────────────────────
   const handleMaterialClick = useCallback(
     (part: PartRecord) => {
@@ -284,12 +240,69 @@ export default function PartsMaintenancePage({
   // ── Detail 頁儲存 ──────────────────────────────────────────────────────────
   const handleDetailSave = useCallback(
     (updated: PartRecord) => {
-      setPartsData((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+      setPartsData((prev) => {
+        // 先更新自己這筆
+        const newData = prev.map((p) => (p.id === updated.id ? updated : p));
+
+        // 若未勾選同步或工廠非 GTM1，直接結束
+        if (!updated.syncDtcDte || updated.plant !== 'GTM1') return newData;
+
+        // 計算同步時間戳
+        const now = new Date();
+        const pad = (n: number) => String(n).padStart(2, '0');
+        const savedAt = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+
+        // 沿用已報價判斷邏輯
+        const hasQuote =
+          updated.qaCompletionDate.trim() !== '' ||
+          updated.sampleDate.trim() !== '' ||
+          updated.firstDeliveryDate.trim() !== '' ||
+          updated.vendorPartNo.trim() !== '';
+
+        // 找出同廠商、同料號、同採購組織、同長規格敘述且工廠為 DTC1 / DTE1 的資料，同步可編輯欄位
+        return newData.map((p) => {
+          if (
+            p.id !== updated.id &&
+            p.vendorCode === updated.vendorCode &&
+            p.material === updated.material &&
+            p.purchaseOrg === updated.purchaseOrg &&
+            p.longDescription === updated.longDescription &&
+            (p.plant === 'DTC1' || p.plant === 'DTE1')
+          ) {
+            return {
+              ...p,
+              qaCompletionDate: updated.qaCompletionDate,
+              sampleDate: updated.sampleDate,
+              firstDeliveryDate: updated.firstDeliveryDate,
+              vendorPartNo: updated.vendorPartNo,
+              grossWeight: updated.grossWeight,
+              netWeight: updated.netWeight,
+              weightUnit: updated.weightUnit,
+              remark: updated.remark,
+              brandSettings: updated.brandSettings.map((bs) => ({
+                ...bs,
+                id: Date.now() + Math.floor(Math.random() * 10000),
+              })),
+              syncDtcDte: true,
+              quoteStatus: hasQuote ? 'quoted' : p.quoteStatus,
+              savedAt,
+            };
+          }
+          return p;
+        });
+      });
+
       setViewingPart(null);
       onBreadcrumbChange?.('零件資訊維護', '零件/索樣維護 • 零件資訊維護');
+
+      // 同步成功通知
+      if (updated.syncDtcDte && updated.plant === 'GTM1') {
+        toast('已同步至 DTC1 / DTE1 相符資料');
+      }
     },
     [onBreadcrumbChange],
   );
+
 
   // ── vendorDisplay 虛擬欄位 ────────────────────────────────────────────────
   type PartWithDisplay = PartRecord & { vendorDisplay: string };
@@ -447,49 +460,6 @@ export default function PartsMaintenancePage({
           searchable
         />
       </div>
-
-      {/* ── C. Filter chips ── */}
-      {activeFilters.length > 0 && (
-        <div className="shrink-0 flex items-center gap-[8px] flex-wrap px-[20px] pb-[12px]">
-          {activeFilters.map((f) => (
-            <span
-              key={f.key}
-              className="inline-flex items-center gap-[4px] px-[10px] py-[4px] rounded-[8px] bg-[rgba(145,158,171,0.12)] text-[13px] text-[#1c252e]"
-            >
-              <span className="font-semibold">{f.label}:</span> {f.value}
-              <button
-                onClick={f.onClear}
-                className="ml-[2px] hover:opacity-70 transition-opacity"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M18 6L6 18M6 6l12 12"
-                    stroke="#637381"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </button>
-            </span>
-          ))}
-          <button
-            onClick={clearAllFilters}
-            className="inline-flex items-center gap-[4px] px-[8px] py-[4px] text-[13px] text-[#ff5630] hover:opacity-70 transition-opacity cursor-pointer"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z"
-                stroke="#ff5630"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            Clear
-          </button>
-        </div>
-      )}
 
       {/* ── D. StandardDataTable ── */}
       <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
