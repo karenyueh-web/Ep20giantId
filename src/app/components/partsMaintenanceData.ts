@@ -25,6 +25,28 @@ export interface BrandSetting {
   productType: string;
 }
 
+/** 物料成分（來自 ESG > 材料維護） */
+export interface MaterialComposition {
+  id: number;         // 此成分設定的唯一 ID
+  esgMaterialId: number; // 對應 EsgMaterialRecord.id
+  /** 材料名（繁中） */
+  nameTw: string;
+  /** 材料名（簡中） */
+  nameCn: string;
+  /** 材料名（英文） */
+  nameEn: string;
+  /** 碳排量（kg CO₂e） */
+  carbonEmission: number;
+  /** 建檔者 */
+  createdBy: string;
+  /** 建檔日期 YYYY/MM/DD */
+  createdAt: string;
+  /** 最後修改者 */
+  updatedBy?: string;
+  /** 最後修改日期 */
+  updatedAt?: string;
+}
+
 /** 單筆零件資料 */
 export interface PartRecord {
   id: number;
@@ -46,6 +68,8 @@ export interface PartRecord {
   remark: string;
   // 品牌設定（一對多）
   brandSettings: BrandSetting[];
+  // 物料成分設定（一對多）
+  materialCompositions?: MaterialComposition[];
   // 狀態
   quoteStatus: 'pending' | 'quoted';
   notifyStatus: 'sent' | 'unsent';
@@ -268,6 +292,10 @@ export const MOCK_PARTS: PartRecord[] = [
     brandSettings: [
       { id: bId(), brand: 'Giant', unitPrice: '350', currency: 'TWD', quoteQty: '500', leadTime: '45', moq: '200', tradeTerms: 'EXW', tradeTermsPlace: '台中工廠', quoteUnit: 'PCE', productType: '標準品' },
       { id: bId(), brand: 'Scott', unitPrice: '380', currency: 'TWD', quoteQty: '300', leadTime: '45', moq: '150', tradeTerms: 'EXW', tradeTermsPlace: '台中工廠', quoteUnit: 'PCE', productType: '客製品' },
+    ],
+    materialCompositions: [
+      { id: 5001, esgMaterialId: 65, nameTw: '紙板（芯紙）', nameCn: '纸板（芯纸）', nameEn: 'Cardboard (core paper)', carbonEmission: 1.2, createdBy: 'Allen Zou 郝芳筆', createdAt: '2024/03/20' },
+      { id: 5002, esgMaterialId: 87, nameTw: '合成橡膠', nameCn: '合成橡胶', nameEn: 'Synthetic rubber', carbonEmission: 1.2, createdBy: 'Allen Zou 郝芳筆', createdAt: '2024/03/20' },
     ],
     quoteStatus: 'quoted', notifyStatus: 'sent',
     notifySentAt: ['2025/05/05 09:30', '2025/05/13 16:45'],
