@@ -470,3 +470,26 @@ export const MOCK_PARTS: PartRecord[] = [
 
 // ── 資料更新時間（模擬中台同步時間） ──────────────────────────────────────────
 export const LAST_SYNC_TIME = '2025/05/05 12:30';
+
+// ── Module-level mutable store（跨頁面保留資料）──────────────────────────────
+let _parts: PartRecord[] = [...MOCK_PARTS];
+
+/** 取得最新的零件清單 */
+export function getParts(): PartRecord[] {
+  return _parts;
+}
+
+/** 新增或覆寫一筆零件資料（含 materialCompositions） */
+export function updatePart(updated: PartRecord): void {
+  const idx = _parts.findIndex(p => p.id === updated.id);
+  if (idx >= 0) {
+    _parts = _parts.map(p => p.id === updated.id ? updated : p);
+  } else {
+    _parts = [..._parts, updated];
+  }
+}
+
+/** 批次覆寫整個清單（同步 DTC/DTE 時使用） */
+export function setAllParts(parts: PartRecord[]): void {
+  _parts = parts;
+}

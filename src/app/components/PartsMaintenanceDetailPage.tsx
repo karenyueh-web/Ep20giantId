@@ -5,18 +5,19 @@ import { toast } from 'sonner';
 import { Toaster } from '@/app/components/ui/sonner';
 import { SearchField } from '@/app/components/SearchField'; // 日期欄位保留
 import { DropdownSelect } from '@/app/components/DropdownSelect';
-import { DeleteButton, ActionCellButtons } from '@/app/components/ActionButtons';
+import { DeleteButton } from '@/app/components/ActionButtons';
 import { BaseOverlay } from '@/app/components/BaseOverlay';
 import IconsSolidIcSolarMultipleForwardLeftBroken from '@/imports/IconsSolidIcSolarMultipleForwardLeftBroken';
 import type { PartRecord, BrandSetting, PartHistoryEntry, MaterialComposition } from '@/app/components/partsMaintenanceData';
 import {
   BRAND_OPTIONS, TRADE_TERMS_OPTIONS, QUOTE_UNIT_OPTIONS,
   PRODUCT_TYPE_OPTIONS, WEIGHT_UNIT_OPTIONS, CURRENCY_OPTIONS,
+  updatePart,
 } from '@/app/components/partsMaintenanceData';
 import { OrderHistory } from '@/app/components/OrderHistory';
 import {
   type EsgMaterialRecord,
-  MOCK_ESG_MATERIALS,
+  getEsgMaterials,
 } from '@/app/components/esgMaterialData';
 import { StandardDataTable, type StandardColumn } from '@/app/components/StandardDataTable';
 
@@ -271,9 +272,18 @@ export default function PartsMaintenanceDetailPage({
           <MaterialCompositionTab
             part={part}
             compositions={materialCompositions}
-            onAdd={(mc) => setMaterialCompositions(prev => [...prev, mc])}
-            onEdit={(updated) => setMaterialCompositions(prev => prev.map(mc => mc.id === updated.id ? updated : mc))}
-            onDelete={(id) => setMaterialCompositions(prev => prev.filter(mc => mc.id !== id))}
+            onAdd={(mc) => {
+              const next = [...materialCompositions, mc];
+              setMaterialCompositions(next);
+              // 即時寫入 store，切頁後不會遺失
+              updatePart({ ...part, materialCompositions: next });
+            }}
+            onDelete={(id) => {
+              const next = materialCompositions.filter(mc => mc.id !== id);
+              setMaterialCompositions(next);
+              // 即時寫入 store
+              updatePart({ ...part, materialCompositions: next });
+            }}
           />
         )}
       </div>
@@ -620,16 +630,14 @@ interface MaterialCompositionTabProps {
   part: PartRecord;
   compositions: MaterialComposition[];
   onAdd: (mc: MaterialComposition) => void;
-  onEdit: (updated: MaterialComposition) => void;
   onDelete: (id: number) => void;
 }
 
 type McWithSeq = MaterialComposition & { _seq: number };
 
-function MaterialCompositionTab({ part, compositions, onAdd, onEdit, onDelete }: MaterialCompositionTabProps) {
+function MaterialCompositionTab({ part, compositions, onAdd, onDelete }: MaterialCompositionTabProps) {
   const [showSelectOverlay, setShowSelectOverlay] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
-  const [editTarget, setEditTarget] = useState<MaterialComposition | null>(null);
 
   // 已選用的 ESG ID 集合（防重複新增）
   const usedEsgIds = useMemo(() => new Set(compositions.map(mc => mc.esgMaterialId)), [compositions]);
@@ -665,26 +673,50 @@ function MaterialCompositionTab({ part, compositions, onAdd, onEdit, onDelete }:
     setDeleteTargetId(null);
   }, [onDelete]);
 
-  const handleEditSave = useCallback((updated: MaterialComposition) => {
-    onEdit(updated);
-    toast('已更新成分資訊');
-    setEditTarget(null);
-  }, [onEdit]);
 
   // 欄位定義
+  // 所有來自 ESG 的欄位（材料名、碳排量）皆即時從 store 查詢，不使用快照值
   const columns: StandardColumn<McWithSeq>[] = useMemo(() => [
     { key: '_seq', label: '#', width: 52, minWidth: 44 },
-    { key: 'nameTw', label: '材料名', width: 140, minWidth: 100 },
-    { key: 'nameCn', label: '材料名(簡體中文)', width: 180, minWidth: 130 },
-    { key: 'nameEn', label: '材料名(英文)', width: 220, minWidth: 150 },
+    {
+      key: 'nameTw',
+      label: '材料名',
+      width: 140,
+      minWidth: 100,
+      renderCell: (_val, row) => {
+        const esgRecord = getEsgMaterials().find(m => m.id === row.esgMaterialId);
+        return <span className="font-normal text-[14px] text-[#1c252e]">{esgRecord?.nameTw ?? row.nameTw}</span>;
+      },
+    },
+    {
+      key: 'nameCn',
+      label: '材料名(簡體中文)',
+      width: 180,
+      minWidth: 130,
+      renderCell: (_val, row) => {
+        const esgRecord = getEsgMaterials().find(m => m.id === row.esgMaterialId);
+        return <span className="font-normal text-[14px] text-[#1c252e]">{esgRecord?.nameCn ?? row.nameCn}</span>;
+      },
+    },
+    {
+      key: 'nameEn',
+      label: '材料名(英文)',
+      width: 220,
+      minWidth: 150,
+      renderCell: (_val, row) => {
+        const esgRecord = getEsgMaterials().find(m => m.id === row.esgMaterialId);
+        return <span className="font-normal text-[14px] text-[#1c252e]">{esgRecord?.nameEn ?? row.nameEn}</span>;
+      },
+    },
     {
       key: 'carbonEmission',
       label: '炭排量(kg CO₂e)',
       width: 140,
       minWidth: 110,
-      renderCell: (val) => (
-        <span className="font-normal text-[14px] text-[#1c252e]">{String(val)}</span>
-      ),
+      renderCell: (_val, row) => {
+        const esgRecord = getEsgMaterials().find(m => m.id === row.esgMaterialId);
+        return <span className="font-normal text-[14px] text-[#1c252e]">{String(esgRecord?.carbonEmission ?? row.carbonEmission)}</span>;
+      },
     },
     {
       key: 'createdBy',
@@ -700,14 +732,11 @@ function MaterialCompositionTab({ part, compositions, onAdd, onEdit, onDelete }:
     {
       key: 'id',
       label: '',
-      width: 100,
-      minWidth: 100,
+      width: 60,
+      minWidth: 60,
       required: true,
       renderCell: (_val, row) => (
-        <ActionCellButtons
-          onEdit={() => setEditTarget(row)}
-          onDelete={() => setDeleteTargetId(row.id)}
-        />
+        <DeleteButton onClick={() => setDeleteTargetId(row.id)} />
       ),
     },
   ] as StandardColumn<McWithSeq>[], []);
@@ -754,14 +783,6 @@ function MaterialCompositionTab({ part, compositions, onAdd, onEdit, onDelete }:
         />
       )}
 
-      {/* 編輯成分 Overlay */}
-      {editTarget && (
-        <EditCompositionOverlay
-          composition={editTarget}
-          onClose={() => setEditTarget(null)}
-          onSave={handleEditSave}
-        />
-      )}
 
       {/* 刪除確認 Dialog */}
       {deleteTargetId !== null && (
@@ -798,8 +819,8 @@ function MaterialSelectOverlay({ usedEsgIds, onClose, onConfirm }: MaterialSelec
 
   const filtered = useMemo(() => {
     const kw = search.trim().toLowerCase();
-    if (!kw) return MOCK_ESG_MATERIALS;
-    return MOCK_ESG_MATERIALS.filter(m =>
+    if (!kw) return getEsgMaterials();
+    return getEsgMaterials().filter(m =>
       m.nameTw.toLowerCase().includes(kw) ||
       m.nameCn.toLowerCase().includes(kw) ||
       m.nameEn.toLowerCase().includes(kw),
@@ -807,7 +828,7 @@ function MaterialSelectOverlay({ usedEsgIds, onClose, onConfirm }: MaterialSelec
   }, [search]);
 
   const selectedRecord = useMemo(
-    () => MOCK_ESG_MATERIALS.find(m => m.id === selectedId) ?? null,
+    () => getEsgMaterials().find(m => m.id === selectedId) ?? null,
     [selectedId],
   );
 

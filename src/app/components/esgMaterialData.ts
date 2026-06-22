@@ -133,3 +133,28 @@ export const MOCK_ESG_MATERIALS: EsgMaterialRecord[] = [
   { id: 109, nameTw: '碳纖布',                 nameCn: '碳纤布',                 nameEn: 'Carbon Fiber Prepreg',                     carbonEmission: 0, createdBy: 'Allen Zou 郝芳筆', createdAt: '2024/03/20' },
   { id: 110, nameTw: '其他',                   nameCn: '其他',                   nameEn: 'other',                                   carbonEmission: 0, createdBy: 'Allen Zou 郝芳筆', createdAt: '2024/03/20' },
 ];
+
+// ── Module-level mutable store ───────────────────────────────────────────────
+// 使用 let 讓陣列可被替換，所有 import 此模組的地方都能即時取得最新資料
+
+let _esgMaterials: EsgMaterialRecord[] = [...MOCK_ESG_MATERIALS];
+
+/** 取得最新的 ESG 材料清單（供查詢用，始終是最新版本） */
+export function getEsgMaterials(): EsgMaterialRecord[] {
+  return _esgMaterials;
+}
+
+/** 新增一筆 ESG 材料（EsgMaterialPage 新增時呼叫） */
+export function addEsgMaterial(record: EsgMaterialRecord): void {
+  _esgMaterials = [..._esgMaterials, record];
+}
+
+/** 更新一筆 ESG 材料（EsgMaterialPage 編輯儲存時呼叫） */
+export function updateEsgMaterial(updated: EsgMaterialRecord): void {
+  _esgMaterials = _esgMaterials.map(m => m.id === updated.id ? updated : m);
+}
+
+/** 刪除一筆 ESG 材料（EsgMaterialPage 刪除時呼叫） */
+export function deleteEsgMaterial(id: number): void {
+  _esgMaterials = _esgMaterials.filter(m => m.id !== id);
+}

@@ -15,6 +15,8 @@ import {
   PURCHASE_ORG_OPTIONS,
   PLANT_OPTIONS,
   LAST_SYNC_TIME,
+  getParts,
+  setAllParts,
 } from './partsMaintenanceData';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
@@ -161,7 +163,7 @@ export default function PartsMaintenancePage({
   const [viewingPart, setViewingPart] = useState<PartRecord | null>(null);
 
   // ── 資料（本地 state，detail 修改可同步回來）────────────────────────────────
-  const [partsData, setPartsData] = useState<PartRecord[]>([...MOCK_PARTS]);
+  const [partsData, setPartsData] = useState<PartRecord[]>(() => [...getParts()]);
 
   // ── Tabs ────────────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<TabId>('all');
@@ -245,7 +247,10 @@ export default function PartsMaintenancePage({
         const newData = prev.map((p) => (p.id === updated.id ? updated : p));
 
         // 若未勾選同步或工廠非 GTM1，直接結束
-        if (!updated.syncDtcDte || updated.plant !== 'GTM1') return newData;
+        if (!updated.syncDtcDte || updated.plant !== 'GTM1') {
+          setAllParts(newData);   // 同步寫入 store
+          return newData;
+        }
 
         // 計算同步時間戳
         const now = new Date();
@@ -260,7 +265,7 @@ export default function PartsMaintenancePage({
           updated.vendorPartNo.trim() !== '';
 
         // 找出同廠商、同料號、同採購組織、同長規格敘述且工廠為 DTC1 / DTE1 的資料，同步可編輯欄位
-        return newData.map((p) => {
+        const synced = newData.map((p) => {
           if (
             p.id !== updated.id &&
             p.vendorCode === updated.vendorCode &&
@@ -290,6 +295,8 @@ export default function PartsMaintenancePage({
           }
           return p;
         });
+        setAllParts(synced);   // 同步寫入 store
+        return synced;
       });
 
       setViewingPart(null);

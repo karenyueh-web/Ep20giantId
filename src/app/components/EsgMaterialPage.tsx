@@ -10,6 +10,9 @@ import { BaseOverlay } from './BaseOverlay';
 import {
   type EsgMaterialRecord,
   MOCK_ESG_MATERIALS,
+  addEsgMaterial,
+  updateEsgMaterial,
+  getEsgMaterials,
 } from './esgMaterialData';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
@@ -217,7 +220,7 @@ function UpdateInfoCell({ record }: { record: EsgMaterialRecord }) {
 
 // ── 主元件 ─────────────────────────────────────────────────────────────────────
 export default function EsgMaterialPage({ userRole = 'giant' }: EsgMaterialPageProps) {
-  const [materials, setMaterials] = useState<EsgMaterialRecord[]>([...MOCK_ESG_MATERIALS]);
+  const [materials, setMaterials] = useState<EsgMaterialRecord[]>(() => [...getEsgMaterials()]);
   const [modalMode, setModalMode] = useState<'add' | 'edit' | null>(null);
   const [editingRecord, setEditingRecord] = useState<EsgMaterialRecord | null>(null);
   const [search, setSearch] = useState('');
@@ -272,22 +275,20 @@ export default function EsgMaterialPage({ userRole = 'giant' }: EsgMaterialPageP
         createdAt: dateStr,
       };
       setMaterials(prev => [...prev, newRecord]);
+      addEsgMaterial(newRecord);          // 同步寫入共用 store
       toast('新增材料成功');
     } else if (modalMode === 'edit' && editingRecord) {
-      setMaterials(prev =>
-        prev.map(m =>
-          m.id === editingRecord.id
-            ? { ...m,
-                nameTw: form.nameTw.trim(),
-                nameCn: form.nameCn.trim(),
-                nameEn: form.nameEn.trim(),
-                carbonEmission: Number(form.carbonEmission),
-                updatedBy: '目前使用者',
-                updatedAt: dateStr,
-              }
-            : m,
-        ),
-      );
+      const updatedRecord: EsgMaterialRecord = {
+        ...editingRecord,
+        nameTw: form.nameTw.trim(),
+        nameCn: form.nameCn.trim(),
+        nameEn: form.nameEn.trim(),
+        carbonEmission: Number(form.carbonEmission),
+        updatedBy: '目前使用者',
+        updatedAt: dateStr,
+      };
+      setMaterials(prev => prev.map(m => m.id === editingRecord.id ? updatedRecord : m));
+      updateEsgMaterial(updatedRecord);   // 同步寫入共用 store
       toast('編輯材料成功');
     }
     handleCloseModal();
