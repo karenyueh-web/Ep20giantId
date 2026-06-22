@@ -12,15 +12,15 @@ import { useState } from 'react';
 import IconsSolidIcSolarMultipleForwardLeftBroken from '@/imports/IconsSolidIcSolarMultipleForwardLeftBroken';
 import type { PartRecord, BrandSetting } from '@/app/components/partsMaintenanceData';
 import { MOCK_VENDORS } from '@/app/components/VendorManagementTable';
+import giantGroupLogo from '@/assets/giant-group-logo.png';
 
-// ── Giant Group Logo SVG（inline，不依賴外部圖片）─────────────────────────────
+// ── Giant Group Logo（使用真實圖片）─────────────────────────────────────────
 const GiantLogo = () => (
-  <svg width="90" height="36" viewBox="0 0 180 72" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <text x="0" y="28" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="26" fill="#003087">GIANT</text>
-    <text x="0" y="48" fontFamily="Arial, sans-serif" fontWeight="400" fontSize="13" fill="#003087" letterSpacing="3">GROUP</text>
-    <circle cx="165" cy="18" r="10" fill="#003087" />
-    <path d="M158 18 Q165 8 172 18 Q165 28 158 18Z" fill="white" />
-  </svg>
+  <img
+    src={giantGroupLogo}
+    alt="Giant Group"
+    style={{ height: '40px', width: 'auto', objectFit: 'contain' }}
+  />
 );
 
 // ── 公司固定資訊（Hard code）────────────────────────────────────────────────
@@ -28,13 +28,22 @@ const COMPANY_NAME   = '巨大機械工業股份有限公司';
 const COMPANY_PHONE  = 'TEL: +886-4-26814771';
 const COMPANY_FAX    = 'FAX: +886-4-26821231';
 
-// ── F3 固定備註條款（Hard code）──────────────────────────────────────────────
-const FOOTER_NOTES = [
+// ── F3 固定備註條款（中文）────────────────────────────────────────────────────
+const FOOTER_NOTES_ZH = [
   'Giant EP已新增零件料號，請您開啟 Giant EP 平台維護。',
   '請收到此單後兩個日曆天內報價完成，未能準時報價完成，請依照敝司系統單價請款。如單價維護後有任何異動，請務必Mail通知整合採購負責窗口。',
   '如屬客製品，適用以下條款：\n客製品係由客戶自行與您談妥規格、價格、預估交期、預估數量等交易條件，巨大僅代理採購。\n客戶取消或延後與巨大間訂單時，巨大得延後或取消相應客製品訂單及其款項支付。客戶無法、拒絕或延後支付貨款時，巨大得延後或取消客製品訂單及其款項支付，當客戶無法支付貨款時，巨大倉庫之產品得退回原廠商並全額退款。',
   '完成報價回填後，請將此通知單以Mail或掃描傳真予整合採購負責窗口。',
   '如未落實維護EP零件資訊頭檔欄位，後續將影響內部廠商評價結果。',
+];
+
+// ── F3 固定備註條款（英文）────────────────────────────────────────────────────
+const FOOTER_NOTES_EN = [
+  'The Giant Part Number has been added to the Giant EP system. Please log in to the Giant EP platform to complete the necessary maintenance.',
+  'Please submit your quotation within two (2) calendar days of receiving this notification. Should you be unable to meet this deadline, payment will be processed based on the unit price recorded in our system. In the event of any subsequent changes to the unit price, please notify the designated Integrated Sourcing contact via email without delay.',
+  'For Customized Products, the following terms and conditions shall apply:\nThe transaction terms for Customized Products — including specifications, pricing, estimated lead time, and estimated quantity — are negotiated directly between the customer and the supplier. Giant acts solely as a purchasing intermediary.\nIn the event that a customer cancels or postpones an order placed with Giant, Giant reserves the right to defer or cancel the corresponding Customized Product order(s) and associated payments. If the customer is unable to pay, refuses to pay, or delays payment for the goods, Giant likewise reserves the right to defer or cancel the Customized Product order(s) and associated payments. Should the customer ultimately be unable to fulfill payment obligations, products held in Giant\'s warehouse may be returned to the original supplier with a full refund.',
+  'Upon completion of the quotation, please forward this notification to the designated Integrated Sourcing contact via email or scanned fax.',
+  'Failure to diligently maintain the required EP part information header fields may adversely affect your performance evaluation results within our internal vendor assessment system.',
 ];
 
 // ── TAB 定義 ─────────────────────────────────────────────────────────────────
@@ -78,6 +87,8 @@ export default function QuotationPrintPage({ part, onBack }: QuotationPrintPageP
       '    table { border-collapse: collapse; width: 100%; }',
       '    td, th { border: 1px solid #555; padding: 2px 4px; font-size: 11px; vertical-align: middle; }',
       '    [data-no-print] { display: none; }',
+      '    /* 移除預覽卡片的外框裝飾，列印時不需要 */',
+      '    .shipment-doc-wrapper { border: none !important; box-shadow: none !important; border-radius: 0 !important; padding: 0 !important; max-width: none !important; }',
       '  </style>',
       '</head>',
       '<body>' + cloned.innerHTML + '</body>',
@@ -156,7 +167,7 @@ export default function QuotationPrintPage({ part, onBack }: QuotationPrintPageP
       <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar bg-[#f4f6f8] px-[32px] py-[28px] quotation-print-area">
         {activeTab === 'zh'
           ? <ZhQuotationDoc part={part} />
-          : <EnQuotationPlaceholder />
+          : <EnQuotationDoc part={part} />
         }
       </div>
     </div>
@@ -290,7 +301,7 @@ function ZhQuotationDoc({ part }: { part: PartRecord }) {
 
       {/* F3 固定備註 */}
       <div style={{ marginTop: '16px', fontSize: '10.5px', lineHeight: '1.7', color: '#222' }}>
-        {FOOTER_NOTES.map((note, i) => (
+        {FOOTER_NOTES_ZH.map((note, i) => (
           <div key={i} style={{ marginBottom: '4px' }}>
             {`${i + 1}. `}
             {note.split('\n').map((line, j) => (
@@ -306,23 +317,151 @@ function ZhQuotationDoc({ part }: { part: PartRecord }) {
   );
 }
 
-// ── 英文報價單佔位 ────────────────────────────────────────────────────────────
-function EnQuotationPlaceholder() {
+// ── 英文報價單文件 ────────────────────────────────────────────────────────────
+function EnQuotationDoc({ part }: { part: PartRecord }) {
+  const vendorFull =
+    MOCK_VENDORS.find(v => v.code === part.vendorCode)?.fullName ??
+    MOCK_VENDORS.find(v => v.name === part.vendorName)?.fullName ??
+    part.vendorName;
+  const userEmail = localStorage.getItem('currentUserEmail') ?? '';
+  const printedAt = new Date().toLocaleString('en-GB', {
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hour12: false,
+  }).replace(',', '');
+
+  const lines: BrandSetting[] = part.brandSettings;
+
+  // ── 樣式常數 ──────────────────────────────────────────────────────────────
+  const border = '1px solid #555';
+  const td: React.CSSProperties = { border, padding: '3px 5px', fontSize: '10.5px', verticalAlign: 'middle' };
+  // 英文版表頭允許換行、字型縮小，避免撐破表格
+  const th: React.CSSProperties = {
+    ...td,
+    fontWeight: 'bold',
+    background: '#f0f0f0',
+    textAlign: 'center',
+    whiteSpace: 'normal',
+    wordBreak: 'break-word',
+    lineHeight: '1.3',
+    fontSize: '10px',
+  };
+
   return (
     <div
+      className="shipment-doc-wrapper"
       style={{
         width: '100%', maxWidth: '720px', margin: '0 auto',
         background: 'white', padding: '20px 24px',
+        fontFamily: "'Noto Sans TC','Noto Sans JP',Arial,sans-serif",
+        fontSize: '12px', color: '#000',
         border: '1px solid rgba(145,158,171,0.2)',
         borderRadius: '8px',
         boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        minHeight: '300px',
-        fontFamily: "'Public_Sans',sans-serif",
-        fontSize: '14px', color: '#919eab',
+        boxSizing: 'border-box',
       }}
     >
-      英文報價單內容待補
+      {/* ① Header: Logo (left) + Print Date / TEL / FAX (right) */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+        <GiantLogo />
+        <div style={{ textAlign: 'right', fontSize: '11px', lineHeight: '1.7' }}>
+          <div>Print Date: {printedAt}</div>
+          <div>{COMPANY_PHONE}</div>
+          <div>{COMPANY_FAX}</div>
+        </div>
+      </div>
+
+      {/* ② To / Contact Window */}
+      <div style={{ fontSize: '12px', lineHeight: '1.8', marginBottom: '6px' }}>
+        <div>To: {vendorFull}({part.vendorCode})</div>
+        <div>Contact Window: {userEmail}</div>
+      </div>
+
+      {/* ③ Title */}
+      <div style={{ textAlign: 'center', fontSize: '16px', fontWeight: 'bold', letterSpacing: '1px', margin: '8px 0 12px' }}>
+        GIANT Quotation Notification
+      </div>
+
+      {/* ④ Detail Table */}
+      <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+        <colgroup>
+          <col style={{ width: '7%' }} />   {/* Material Group */}
+          <col style={{ width: '11%' }} />  {/* Giant Part NO */}
+          <col style={{ width: '5%' }} />   {/* Factory */}
+          <col style={{ width: '18%' }} />  {/* Item Description */}
+          <col style={{ width: '10%' }} />  {/* Vendor Part NO */}
+          <col style={{ width: '6%' }} />   {/* Quotation Unit */}
+          <col style={{ width: '7%' }} />   {/* Unit Price */}
+          <col style={{ width: '6%' }} />   {/* Currency */}
+          <col style={{ width: '7%' }} />   {/* Brand */}
+          <col style={{ width: '7%' }} />   {/* STD/CUS */}
+          <col style={{ width: '7%' }} />   {/* Lead Time */}
+          <col style={{ width: '9%' }} />   {/* Incoterms */}
+        </colgroup>
+        <thead>
+          <tr>
+            <th style={th}>Material Group</th>
+            <th style={th}>Giant Part NO</th>
+            <th style={th}>Factory</th>
+            <th style={th}>Item Description</th>
+            <th style={th}>Vendor Part NO</th>
+            <th style={th}>Quotation Unit</th>
+            <th style={th}>Unit Price</th>
+            <th style={th}>Currency</th>
+            <th style={th}>Brand</th>
+            <th style={th}>STD / CUS</th>
+            <th style={th}>Lead Time</th>
+            <th style={th}>Incoterms</th>
+          </tr>
+        </thead>
+        <tbody>
+          {lines.length === 0 ? (
+            <tr>
+              <td colSpan={12} style={{ ...td, textAlign: 'center', color: '#919eab' }}>
+                No brand setting data available
+              </td>
+            </tr>
+          ) : (
+            lines.map((b, i) => (
+              <tr key={i}>
+                <td style={{ ...td, wordBreak: 'break-all' }}></td>
+                <td style={{ ...td, wordBreak: 'break-all' }}>{part.material}</td>
+                <td style={{ ...td, textAlign: 'center' }}>{part.plant}</td>
+                <td style={{ ...td, wordBreak: 'break-word' }}>{part.longDescription}</td>
+                <td style={{ ...td, wordBreak: 'break-all' }}>{part.vendorPartNo}</td>
+                <td style={{ ...td, textAlign: 'center' }}>{b.quoteUnit}</td>
+                <td style={{ ...td, textAlign: 'right' }}>{b.unitPrice ? Number(b.unitPrice).toLocaleString() : ''}</td>
+                <td style={{ ...td, textAlign: 'center' }}>{b.currency}</td>
+                <td style={{ ...td, wordBreak: 'break-word' }}>{b.brand}</td>
+                <td style={{ ...td, textAlign: 'center' }}>{b.productType}</td>
+                <td style={{ ...td, textAlign: 'center' }}>{b.leadTime}</td>
+                <td style={{ ...td, wordBreak: 'break-word' }}>{b.tradeTerms}{b.tradeTermsPlace ? ` (${b.tradeTermsPlace})` : ''}</td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+
+      {/* ⑤ Footer */}
+      <div style={{ marginTop: '20px', fontSize: '12px', lineHeight: '1.8' }}>
+        <div>Effective Date (Day/Month/Year):</div>
+        <div style={{ marginTop: '4px' }}>Signature:</div>
+      </div>
+
+      {/* F3 Footer Notes */}
+      <div style={{ marginTop: '16px', fontSize: '10.5px', lineHeight: '1.7', color: '#222' }}>
+        {FOOTER_NOTES_EN.map((note, i) => (
+          <div key={i} style={{ marginBottom: '4px' }}>
+            {`${i + 1}. `}
+            {note.split('\n').map((line, j) => (
+              <span key={j}>
+                {j > 0 && <br />}
+                {j > 0 ? <span style={{ paddingLeft: '16px' }}>{line}</span> : line}
+              </span>
+            ))}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
