@@ -784,6 +784,9 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
     if (['vendor-account-management', 'giant-account-management'].includes(currentPage)) {
       autoExpanded.push('account');
     }
+    if (['esg-material', 'esg-maintain'].includes(currentPage)) {
+      autoExpanded.push('esg');
+    }
     
     return autoExpanded;
   });
