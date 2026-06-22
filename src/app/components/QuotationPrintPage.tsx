@@ -56,12 +56,21 @@ const QUOTE_PRINT_TABS: { id: QuotePrintTab; label: string }[] = [
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 interface QuotationPrintPageProps {
-  part: PartRecord;
+  /** 單筆模式（從明細頁進入）*/
+  part?: PartRecord;
+  /** 多筆模式（從列印報價單列表進入）*/
+  parts?: PartRecord[];
+  /** 要列印的品牌 ID 集合（多筆模式才用）*/
+  selectedBrandIds?: Set<number>;
   onBack: () => void;
 }
 
 // ── 主元件 ───────────────────────────────────────────────────────────────────
-export default function QuotationPrintPage({ part, onBack }: QuotationPrintPageProps) {
+export default function QuotationPrintPage({ part, parts, selectedBrandIds, onBack }: QuotationPrintPageProps) {
+  // 統一成「多筆 parts」，單筆模式就包成陣列
+  const effectiveParts: PartRecord[] = parts ?? (part ? [part] : []);
+  // 若無 selectedBrandIds 限制（單筆模式），代表顯示該物料全部品牌設定
+  const effectiveBrandIds = selectedBrandIds ?? null;
   const [activeTab, setActiveTab] = useState<QuotePrintTab>('zh');
 
   // ── 列印處理（比照 ShipmentPrintPage）──────────────────────────────────────
@@ -166,8 +175,8 @@ export default function QuotationPrintPage({ part, onBack }: QuotationPrintPageP
       {/* ── 預覽區 ───────────────────────────────────────────────────────── */}
       <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar bg-[#f4f6f8] px-[32px] py-[28px] quotation-print-area">
         {activeTab === 'zh'
-          ? <ZhQuotationDoc part={part} />
-          : <EnQuotationDoc part={part} />
+          ? <ZhQuotationDoc parts={effectiveParts} selectedBrandIds={effectiveBrandIds} />
+          : <EnQuotationDoc parts={effectiveParts} selectedBrandIds={effectiveBrandIds} />
         }
       </div>
     </div>
@@ -175,12 +184,14 @@ export default function QuotationPrintPage({ part, onBack }: QuotationPrintPageP
 }
 
 // ── 中文報價單文件 ────────────────────────────────────────────────────────────
-function ZhQuotationDoc({ part }: { part: PartRecord }) {
-  // 取廠商完整名稱：先用 vendorCode 比對，找不到再用 vendorName（簡稱）比對
-  const vendorFull =
-    MOCK_VENDORS.find(v => v.code === part.vendorCode)?.fullName ??
-    MOCK_VENDORS.find(v => v.name === part.vendorName)?.fullName ??
-    part.vendorName;
+function ZhQuotationDoc({ parts, selectedBrandIds }: { parts: PartRecord[]; selectedBrandIds: Set<number> | null }) {
+  // 取廠商完整名稱（以第一筆物料的廠商代表）
+  const firstPart = parts[0];
+  const vendorFull = firstPart
+    ? (MOCK_VENDORS.find(v => v.code === firstPart.vendorCode)?.fullName ??
+       MOCK_VENDORS.find(v => v.name === firstPart.vendorName)?.fullName ??
+       firstPart.vendorName)
+    : '';
   // 取當前登入 email
   const userEmail  = localStorage.getItem('currentUserEmail') ?? '';
   // 列印日期
@@ -190,8 +201,13 @@ function ZhQuotationDoc({ part }: { part: PartRecord }) {
     hour12: false,
   }).replace(/\//g, '/');
 
-  // 每筆 BrandSetting = 一筆明細
-  const lines: BrandSetting[] = part.brandSettings;
+  // 展開所有明細（跨物料 × 品牌設定），依 selectedBrandIds 過濾
+  type QuoteLine = BrandSetting & { _part: PartRecord };
+  const lines: QuoteLine[] = parts.flatMap((p) =>
+    p.brandSettings
+      .filter((bs) => selectedBrandIds === null || selectedBrandIds.has(bs.id))
+      .map((bs) => ({ ...bs, _part: p }))
+  );
 
   // ── 樣式常數 ──────────────────────────────────────────────────────────────
   const border = '1px solid #555';
@@ -224,7 +240,7 @@ function ZhQuotationDoc({ part }: { part: PartRecord }) {
 
       {/* ② To / 窗口 */}
       <div style={{ fontSize: '12px', lineHeight: '1.8', marginBottom: '6px' }}>
-        <div>To: {vendorFull}({part.vendorCode})</div>
+        <div>To: {vendorFull}({firstPart?.vendorCode ?? ''})</div>
         <div>窗口: {userEmail}</div>
       </div>
 
@@ -264,13 +280,13 @@ function ZhQuotationDoc({ part }: { part: PartRecord }) {
                 {/* L1 物料群組：待確認資料來源，暫顯示空白 */}
                 <td style={td}></td>
                 {/* L2 物料料號 */}
-                <td style={td}>{part.material}</td>
+                <td style={td}>{b._part.material}</td>
                 {/* L3 GMC工廠 */}
-                <td style={{ ...td, textAlign: 'center' }}>{part.plant}</td>
+                <td style={{ ...td, textAlign: 'center' }}>{b._part.plant}</td>
                 {/* L4 長規格敍述 */}
-                <td style={td}>{part.longDescription}</td>
+                <td style={td}>{b._part.longDescription}</td>
                 {/* L5 供應商料號 */}
-                <td style={td}>{part.vendorPartNo}</td>
+                <td style={td}>{b._part.vendorPartNo}</td>
                 {/* L6 報價單位 */}
                 <td style={{ ...td, textAlign: 'center' }}>{b.quoteUnit}</td>
                 {/* L7 採購單價 */}
@@ -281,9 +297,9 @@ function ZhQuotationDoc({ part }: { part: PartRecord }) {
                 <td style={td}>{b.brand}</td>
                 {/* L10 標準品/客製品 */}
                 <td style={{ ...td, textAlign: 'center' }}>{b.productType}</td>
-                {/* L12 Lead Time */}
+                {/* L11 Lead Time */}
                 <td style={{ ...td, textAlign: 'center' }}>{b.leadTime}</td>
-                {/* L13 國貿條件 */}
+                {/* L12 國貿條件 */}
                 <td style={td}>{b.tradeTerms}{b.tradeTermsPlace ? ` (${b.tradeTermsPlace})` : ''}</td>
               </tr>
             ))
@@ -318,11 +334,13 @@ function ZhQuotationDoc({ part }: { part: PartRecord }) {
 }
 
 // ── 英文報價單文件 ────────────────────────────────────────────────────────────
-function EnQuotationDoc({ part }: { part: PartRecord }) {
-  const vendorFull =
-    MOCK_VENDORS.find(v => v.code === part.vendorCode)?.fullName ??
-    MOCK_VENDORS.find(v => v.name === part.vendorName)?.fullName ??
-    part.vendorName;
+function EnQuotationDoc({ parts, selectedBrandIds }: { parts: PartRecord[]; selectedBrandIds: Set<number> | null }) {
+  const firstPart = parts[0];
+  const vendorFull = firstPart
+    ? (MOCK_VENDORS.find(v => v.code === firstPart.vendorCode)?.fullName ??
+       MOCK_VENDORS.find(v => v.name === firstPart.vendorName)?.fullName ??
+       firstPart.vendorName)
+    : '';
   const userEmail = localStorage.getItem('currentUserEmail') ?? '';
   const printedAt = new Date().toLocaleString('en-GB', {
     year: 'numeric', month: '2-digit', day: '2-digit',
@@ -330,7 +348,12 @@ function EnQuotationDoc({ part }: { part: PartRecord }) {
     hour12: false,
   }).replace(',', '');
 
-  const lines: BrandSetting[] = part.brandSettings;
+  type QuoteLine = BrandSetting & { _part: PartRecord };
+  const lines: QuoteLine[] = parts.flatMap((p) =>
+    p.brandSettings
+      .filter((bs) => selectedBrandIds === null || selectedBrandIds.has(bs.id))
+      .map((bs) => ({ ...bs, _part: p }))
+  );
 
   // ── 樣式常數 ──────────────────────────────────────────────────────────────
   const border = '1px solid #555';
@@ -373,7 +396,7 @@ function EnQuotationDoc({ part }: { part: PartRecord }) {
 
       {/* ② To / Contact Window */}
       <div style={{ fontSize: '12px', lineHeight: '1.8', marginBottom: '6px' }}>
-        <div>To: {vendorFull}({part.vendorCode})</div>
+        <div>To: {vendorFull}({firstPart?.vendorCode ?? ''})</div>
         <div>Contact Window: {userEmail}</div>
       </div>
 
@@ -425,10 +448,10 @@ function EnQuotationDoc({ part }: { part: PartRecord }) {
             lines.map((b, i) => (
               <tr key={i}>
                 <td style={{ ...td, wordBreak: 'break-all' }}></td>
-                <td style={{ ...td, wordBreak: 'break-all' }}>{part.material}</td>
-                <td style={{ ...td, textAlign: 'center' }}>{part.plant}</td>
-                <td style={{ ...td, wordBreak: 'break-word' }}>{part.longDescription}</td>
-                <td style={{ ...td, wordBreak: 'break-all' }}>{part.vendorPartNo}</td>
+                <td style={{ ...td, wordBreak: 'break-all' }}>{b._part.material}</td>
+                <td style={{ ...td, textAlign: 'center' }}>{b._part.plant}</td>
+                <td style={{ ...td, wordBreak: 'break-word' }}>{b._part.longDescription}</td>
+                <td style={{ ...td, wordBreak: 'break-all' }}>{b._part.vendorPartNo}</td>
                 <td style={{ ...td, textAlign: 'center' }}>{b.quoteUnit}</td>
                 <td style={{ ...td, textAlign: 'right' }}>{b.unitPrice ? Number(b.unitPrice).toLocaleString() : ''}</td>
                 <td style={{ ...td, textAlign: 'center' }}>{b.currency}</td>

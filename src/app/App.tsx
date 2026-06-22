@@ -21,6 +21,7 @@ import { CorrectionListWithTabs } from "@/app/components/CorrectionListWithTabs"
 import { HistoryCorrectionListPage } from "@/app/components/HistoryCorrectionListPage";
 import { OrderScheduleInquiryPage } from "@/app/components/OrderScheduleInquiryPage";
 import PartsMaintenancePage from "@/app/components/PartsMaintenancePage";
+import QuotationPrintListPage from "@/app/components/QuotationPrintListPage";
 import EsgMaterialPage from "@/app/components/EsgMaterialPage";
 import { ResponsivePageLayout } from "@/app/components/ResponsivePageLayout";
 import { LoginPage } from "@/app/components/LoginPage";
@@ -389,6 +390,18 @@ export default function App() {
           </ResponsivePageLayout>
         );
       case 'parts-quote':
+        return (
+          <ResponsivePageLayout
+            currentPage={currentPage}
+            onPageChange={handlePageChange}
+            onLogout={handleLogout}
+            userRole={userRole}
+            title="列印報價單"
+            breadcrumb="零件/索樣維護 • 列印報價單"
+          >
+            <QuotationPrintListPage userRole={userRole} />
+          </ResponsivePageLayout>
+        );
       case 'parts-sample':
       case 'quality-report':
       case 'quality-hazard':

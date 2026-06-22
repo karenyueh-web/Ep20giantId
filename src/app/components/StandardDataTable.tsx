@@ -78,6 +78,10 @@ export interface StandardDataTableProps<T extends { id: number }> {
   externalFilteredData?: T[];
   /** 點擊列的回調 */
   onRowClick?: (row: T) => void;
+  /** 選取工具列的自訂操作區（有選取時出現，放在 "X selected" 右邊）*/
+  batchActions?: ReactNode;
+  /** 覆寫外層容器的額外 className（例如嵌入其他 card 時可用 rounded-none 去掉圓角）*/
+  className?: string;
 }
 
 
@@ -102,6 +106,8 @@ export function StandardDataTable<T extends { id: number }>({
   onToggleAll,
   externalFilteredData,
   onRowClick,
+  batchActions,
+  className,
 }: StandardDataTableProps<T>) {
   const { scrollContainerRef, handleMouseDown, canDragScroll } = useHorizontalDragScroll();
 
@@ -307,7 +313,7 @@ export function StandardDataTable<T extends { id: number }>({
   };
 
   return (
-    <div className="bg-white flex flex-col h-full relative rounded-[16px] shadow-[0px_0px_2px_0px_rgba(145,158,171,0.2),0px_12px_24px_-4px_rgba(145,158,171,0.12)] w-full overflow-hidden">
+    <div className={`bg-white flex flex-col h-full relative rounded-[16px] shadow-[0px_0px_2px_0px_rgba(145,158,171,0.2),0px_12px_24px_-4px_rgba(145,158,171,0.12)] w-full overflow-hidden ${className ?? ''}`}>
 
       {/* ── TableToolbar（Columns / Filters / Export）── */}
       <TableToolbar
@@ -356,13 +362,14 @@ export function StandardDataTable<T extends { id: number }>({
           {showCheckbox && (
             <div className="flex items-center justify-center shrink-0" style={{ width: CHECKBOX_COL_W, minWidth: CHECKBOX_COL_W }}>
               <button onClick={handleSelectAll} className="flex items-center justify-center w-[36px] h-[36px] rounded-full hover:bg-[rgba(0,85,156,0.12)] transition-colors">
-                <CheckboxIcon checked={isAllSelected} onChange={handleSelectAll} />
+                <CheckboxIcon checked={isAllSelected} indeterminate={selectedIds.size > 0 && !isAllSelected} />
               </button>
             </div>
           )}
           <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-[#1c252e] leading-[24px] ml-[8px]">
             {selectedIds.size} selected
           </span>
+          {batchActions && batchActions}
         </div>
       )}
 
@@ -429,7 +436,8 @@ export function StandardDataTable<T extends { id: number }>({
                   <div
                     className="flex items-center justify-center shrink-0 border-r border-[rgba(145,158,171,0.08)] bg-white group-hover:bg-[#f5f6f7]"
                     style={{ width: CHECKBOX_COL_W, minWidth: CHECKBOX_COL_W, position: 'sticky', left: 0, zIndex: 4, boxShadow: '2px 0 4px -2px rgba(145,158,171,0.16)' }}
-                    onClick={e => { e.stopPropagation(); handleToggleRow(row.id); }}
+                    data-is-checkbox="true"
+                    onClick={e => e.stopPropagation()}
                   >
                     <CheckboxIcon checked={selectedIds.has(row.id)} onChange={() => handleToggleRow(row.id)} />
                   </div>

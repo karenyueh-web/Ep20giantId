@@ -278,6 +278,90 @@ function FloatingInput({ label, value, onChange, required, showError }) {
 | `ContactDetailOverlay` | `ContactDetailOverlay.tsx` | 含表單欄位的詳細資訊彈窗 |
 | `ForecastUploadOverlay` | `ForecastUploadOverlay.tsx` | 上傳/匯入類彈窗 |
 | `UploadContactOverlay` | `UploadContactOverlay.tsx` | 上傳聯絡人類彈窗 |
+| ⭐ `ForecastDeleteDeniedOverlay` | `ForecastDeleteDeniedOverlay.tsx` | **錯誤警示彈窗範本**（操作不符合條件時） |
+
+---
+
+## ⭐ 錯誤提示規範（Error Alert）
+
+> **⚠️ 禁止**：當操作不符合條件需要提示使用者錯誤時，**禁止使用 `toast.error`、`sonner`、或自製 `fixed div`**。必須使用以下標準 Alert 彈窗。
+
+### 標準錯誤警示彈窗結構
+
+參考範本：`ForecastDeleteDeniedOverlay.tsx`、`QuotationPrintListPage.tsx`（廠商不一致警示）
+
+```tsx
+import { BaseOverlay } from './BaseOverlay';
+
+// 1. State 控制顯示/隱藏
+const [showAlert, setShowAlert] = useState(false);
+
+// 2. 觸發條件不符合時開啟
+if (/* 不符合條件 */) {
+  setShowAlert(true);
+  return;
+}
+
+// 3. JSX
+{showAlert && (
+  <BaseOverlay onClose={() => setShowAlert(false)} maxWidth="480px" maxHeight="280px">
+
+    {/* 頂部警示列 */}
+    <div className="shrink-0 flex items-center gap-[12px] pl-[4px] pr-[16px] py-[4px] border-b border-[rgba(145,158,171,0.12)]">
+      {/* 紅色警示 Icon */}
+      <div className="flex items-center justify-center rounded-[12px] shrink-0 size-[48px] bg-[rgba(255,86,48,0.08)]">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M12 9v4M12 16.5h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+            stroke="#FF5630" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </div>
+      {/* 標題 */}
+      <p className="flex-1 font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] leading-[22px] text-[#1c252e]">
+        錯誤標題
+      </p>
+      {/* 關閉按鈕 */}
+      <button
+        onClick={() => setShowAlert(false)}
+        className="flex items-center justify-center w-[36px] h-[36px] rounded-full hover:bg-[rgba(145,158,171,0.12)] transition-colors shrink-0"
+      >
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <path d="M15 5L5 15M5 5l10 10" stroke="#637381" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+      </button>
+    </div>
+
+    {/* 說明文字區 */}
+    <div className="flex-1 flex items-center px-[24px] py-[20px]">
+      <p className="font-['Public_Sans:Regular',sans-serif] text-[14px] text-[#637381] leading-[22px]">
+        錯誤說明文字，可用 <strong className="text-[#1c252e]">粗體</strong> 強調關鍵字。
+      </p>
+    </div>
+
+    {/* 底部確認按鈕 */}
+    <div className="shrink-0 flex items-center justify-end px-[20px] py-[12px] border-t border-[rgba(145,158,171,0.12)] bg-[rgba(255,86,48,0.04)]">
+      <button
+        onClick={() => setShowAlert(false)}
+        className="flex items-center justify-center h-[36px] px-[20px] rounded-[8px] bg-[#1c252e] hover:bg-[#2c3540] transition-colors"
+      >
+        <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-white leading-none">確認</span>
+      </button>
+    </div>
+  </BaseOverlay>
+)}
+```
+
+### 視覺規格
+
+| 項目 | 規格 |
+|------|------|
+| 彈窗尺寸 | `maxWidth="480px" maxHeight="280px"`（純訊息型）；若需列出資料則加大 |
+| Icon 容器 | `size-[48px] rounded-[12px] bg-[rgba(255,86,48,0.08)]`（淡紅底） |
+| Icon | 三角形警示 SVG，`stroke="#FF5630"`，24×24 |
+| 標題 | `font-semibold text-[14px] text-[#1c252e]` |
+| 說明文字 | `text-[14px] text-[#637381]`，關鍵字用 `<strong className="text-[#1c252e]">` 強調 |
+| 底部背景 | `bg-[rgba(255,86,48,0.04)]`（極淡紅） |
+| 確認按鈕 | `bg-[#1c252e] hover:bg-[#2c3540]`，`h-[36px] px-[20px] rounded-[8px]` |
+| 參考來源 | `ForecastDeleteDeniedOverlay.tsx`、`QuotationPrintListPage.tsx` |
 
 ---
 
@@ -624,7 +708,7 @@ const autoFitWidth = useCallback((key: ColKey) => {
       className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] text-[#004680] leading-[24px] whitespace-nowrap cursor-pointer select-none px-[10px] py-[16px] hover:opacity-70 transition-opacity"
     >操作一</span>
 
-    {/* ④ 操作間分隔：| 字符（淡灰） */}
+    {/* ④ 操作間分隔：只有多個 CTA 時才加 | 字符，單一 CTA 不需要分隔線 */}
     <span className="text-[rgba(145,158,171,0.4)] select-none">|</span>
 
     {/* ⑤ 操作按鈕二 */}
@@ -942,6 +1026,109 @@ const [perPage, setPerPage] = useState(50);
 ```
 
 ---
+
+### 6. ⭐ 功能列表頁的正確 Layout 結構（避免出現多餘分隔線/弧角）
+
+> **問題根源**：`StandardDataTable` 自帶 `rounded-[16px] shadow` 的 card 外框。若在外層再包一個 card div，兩層 card 疊加會在搜尋列下方出現一條奇怪分隔線，以及表格左上角出現露出的弧角。
+
+#### ✅ 正確結構：一個外層 card 包住搜尋列 + StandardDataTable
+
+```tsx
+// 參考：PartsMaintenancePage.tsx、QuotationPrintListPage.tsx
+
+return (
+  {/* 唯一的 card wrapper，包含所有內容 */}
+  <div className="bg-white flex flex-col h-full relative rounded-[16px] shadow-[0px_0px_2px_0px_rgba(145,158,171,0.2),0px_12px_24px_-4px_rgba(145,158,171,0.12)] w-full overflow-hidden">
+
+    {/* A. Tabs（如有）*/}
+    ...
+
+    {/* B. 搜尋列：無 border-b，無額外 shadow/rounded */}
+    <div className="shrink-0 flex gap-[16px] items-center px-[20px] py-[20px]">
+      <DropdownSelect ... />
+      <SearchField ... />
+    </div>
+
+    {/* C. StandardDataTable：必須加 className="rounded-none shadow-none" */}
+    <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+      <StandardDataTable
+        ...
+        className="rounded-none shadow-none"
+      />
+    </div>
+  </div>
+);
+```
+
+#### ❌ 錯誤結構（勿用）
+
+```tsx
+// ❌ 錯誤：外層 card + 內層 StandardDataTable card = 兩層 card 疊加
+<div className="bg-white flex flex-col h-full relative rounded-[16px] shadow-[...] overflow-hidden">
+  <div className="shrink-0 border-b ...">  {/* ❌ 加了 border-b */}
+    <SearchField />
+  </div>
+  <div className="flex-1 min-h-0">
+    <StandardDataTable />  {/* ❌ 沒有 className="rounded-none shadow-none" */}
+  </div>
+</div>
+```
+
+#### 關鍵規則
+
+| 規則 | 說明 |
+|------|------|
+| 搜尋列 **不加** `border-b` | 見規範 2，加了會變成多餘分隔線 |
+| `StandardDataTable` 嵌入時必加 `className="rounded-none shadow-none"` | 去掉自帶的 card 圓角，否則左上角露出弧角 |
+| 整頁只有**一個** card wrapper div | 外層 card 提供圓角 shadow，不再需要 StandardDataTable 自帶的 card 樣式 |
+
+---
+
+### 7. ⭐ Checkbox 事件處理規範（避免雙重 toggle 互相抵銷）
+
+> **問題根源**：`CheckboxIcon` 的 `onChange` 和外層 `<button>` / container `div` 的 `onClick` 同時呼叫同一個 handler，導致 toggle 被執行兩次，functional state update 疊加後回到原始狀態，看起來像「點不到」。
+
+#### ✅ 正確寫法：handler 只交由一方呼叫
+
+```tsx
+{/* ✅ row checkbox cell：cell div 只負責 stopPropagation，handler 由 CheckboxIcon.onChange 呼叫 */}
+<div
+  data-is-checkbox="true"   // 必加，讓 useHorizontalDragScroll 跳過此區域
+  onClick={e => e.stopPropagation()}  // 只阻止事件繼續冒泡到 row，不呼叫 handler
+>
+  <CheckboxIcon checked={selectedIds.has(row.id)} onChange={() => handleToggleRow(row.id)} />
+</div>
+
+{/* ✅ 全選 button：button 負責呼叫，CheckboxIcon 不再傳 onChange */}
+<button onClick={handleSelectAll}>
+  <CheckboxIcon checked={isAllSelected} indeterminate={isSomeSelected} />
+  {/* ❌ 錯誤寫法：onChange={handleSelectAll} — 會和 button.onClick 各呼叫一次，兩次 toggle 抵銷 */}
+</button>
+```
+
+#### ❌ 錯誤寫法
+
+```tsx
+{/* ❌ 錯誤：cell div 和 CheckboxIcon 都呼叫 handler → 執行兩次 → 抵銷 */}
+<div onClick={e => { e.stopPropagation(); handleToggleRow(row.id); }}>
+  <CheckboxIcon onChange={() => handleToggleRow(row.id)} />
+</div>
+
+{/* ❌ 錯誤：button 和 CheckboxIcon 都呼叫 handler */}
+<button onClick={handleSelectAll}>
+  <CheckboxIcon onChange={handleSelectAll} />
+</button>
+```
+
+#### 規則摘要
+
+| 情境 | 誰呼叫 handler | CheckboxIcon |
+|------|---------------|---------------|
+| row checkbox cell | `CheckboxIcon.onChange` | 有 `onChange` |
+| 全選 button（Selection Toolbar 或表頭） | `button.onClick` | **無** `onChange` |
+| row checkbox cell 的外層 div | 只 `stopPropagation()` | — |
+
+> ⚠️ **所有 checkbox cell container 必須加 `data-is-checkbox="true"`**，讓 `useHorizontalDragScroll` 排除這個區域，否則整個 checkbox 欄只有 SVG 本身可以點擊（外圈空白會被 drag scroll 攔截）。
 
 
 ### ✅ 應該做
