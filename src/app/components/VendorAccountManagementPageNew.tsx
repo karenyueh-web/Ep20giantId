@@ -4,6 +4,7 @@ import type { PageType } from './MainLayout';
 import { VendorDetailPage } from './VendorDetailPage';
 import type { UserRole } from '../App';
 import { VendorManagementTable } from './VendorManagementTable';
+import type { VendorData } from './VendorManagementTable';
 import { ColumnSelector } from './ColumnSelector';
 import { FilterDialog, type FilterCondition } from './FilterDialog';
 import { TableToolbar } from './TableToolbar';
@@ -86,6 +87,7 @@ export default function VendorAccountManagementPageNew({
   const [columnsVersion, setColumnsVersion] = useState(0);
   const [filters, setFilters] = useState<FilterCondition[]>([]);
   const [appliedFilters, setAppliedFilters] = useState<FilterCondition[]>([]);
+  const [selectedVendor, setSelectedVendor] = useState<VendorData | null>(null);
 
   // 獲取當前登入用戶的email
   const [currentUserEmail] = useState<string>(() => {
@@ -100,7 +102,8 @@ export default function VendorAccountManagementPageNew({
     }
   }, [pendingVendorApproval]);
 
-  const handleVendorClick = () => {
+  const handleVendorClick = (vendor: VendorData) => {
+    setSelectedVendor(vendor);
     setDetailPageTab('vendor');
     setShowDetailPage(true);
   };
@@ -197,6 +200,7 @@ export default function VendorAccountManagementPageNew({
         onBack={() => setShowDetailPage(false)}
         userRole={userRole}
         defaultTab={detailPageTab}
+        vendor={selectedVendor}
         pendingVendorApproval={pendingVendorApproval}
         onClearPendingApproval={onClearPendingApproval}
       />

@@ -6,6 +6,7 @@ import { SalesAccountForm } from './SalesAccountForm';
 import { SalesAccountDetailOverlay } from './SalesAccountDetailOverlay';
 import { VendorContactsForm } from './VendorContactsForm';
 import { ResponsivePageLayout } from './ResponsivePageLayout';
+import type { VendorData } from './VendorManagementTable';
 
 interface VendorDetailPageProps {
   currentPage: PageType;
@@ -21,6 +22,7 @@ interface VendorDetailPageProps {
     epCode: string;
   } | null;
   onClearPendingApproval?: () => void;
+  vendor?: VendorData | null;
 }
 
 // Tab組件
@@ -192,19 +194,18 @@ function Radio({ checked, onChange, label, disabled = false }: RadioProps) {
 }
 
 // 廠商資訊表單內容
-function VendorInfoForm() {
-  const STORAGE_KEY = 'vendor_000100531_mainProducts';
-  const SPECIAL_SETTINGS_KEY = 'vendor_000100531_specialSettings';
-  
-  const [vendorCode] = useState('000100531');
-  const [vendorName] = useState('久廣');
-  const [vendorFullName] = useState('久廣實業股份有限公司');
-  const [axCode] = useState('');
-  const [phone] = useState('+886-37-756558');
-  const [fax] = useState('+886-3-7750836');
-  const [address] = useState('苗栗縣通霄鎮中正路73號');
-  
-  // 從 localStorage 讀取初始值，如果沒有就使用默認值
+function VendorInfoForm({ vendor }: { vendor?: VendorData | null }) {
+  const vendorCode     = vendor?.code     ?? '—';
+  const vendorName     = vendor?.name     ?? '—';
+  const vendorFullName = vendor?.fullName ?? '—';
+  const phone          = vendor?.phone    ?? '—';
+  const address        = vendor?.address  ?? '—';
+  const axCode         = '';   // VendorData 目前無此欄位，留空
+  const fax            = '';   // VendorData 目前無此欄位，留空
+  const defaultMainProducts = vendor?.mainProducts ?? '';
+
+  const STORAGE_KEY          = `vendor_${vendorCode}_mainProducts`;
+  const SPECIAL_SETTINGS_KEY = `vendor_${vendorCode}_specialSettings`;
   const getInitialMainProducts = () => {
     const saved = localStorage.getItem(STORAGE_KEY);
     return saved || '車架/前叉/吊耳/止栓/把手套/煞車附件/變速器固定座/座墊/座墊桿/標紙/螺絲';
@@ -225,8 +226,12 @@ function VendorInfoForm() {
     };
   };
   
-  const [mainProducts, setMainProducts] = useState(getInitialMainProducts());
+  const [mainProducts, setMainProducts] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return saved ?? defaultMainProducts;
+  });
   const [showSaveSuccess, setShowSaveSuccess] = useState(false);
+  const [editingMainProducts, setEditingMainProducts] = useState(false);
 
   // 特殊參與設定
   const initialSettings = getInitialSpecialSettings();
@@ -294,7 +299,7 @@ function VendorInfoForm() {
                 </div>
               </div>
             </div>
-            <p className="font-['Public_Sans:Medium','Noto_Sans_JP:Medium',sans-serif] font-medium leading-[18px] relative shrink-0 text-[#1c252e] text-[13px]">久廣(0001000531)</p>
+            <p className="font-['Public_Sans:Medium','Noto_Sans_JP:Medium',sans-serif] font-medium leading-[18px] relative shrink-0 text-[#1c252e] text-[13px]">{vendorName}({vendorCode})</p>
           </div>
           <button 
             onClick={handleSave}
@@ -319,197 +324,94 @@ function VendorInfoForm() {
         
         {/* 表單框架 */}
         <div className="border border-[#919eab] border-solid rounded-[8px] p-[20px]">
-          <div className="flex flex-col gap-[5px]">
-            {/* 第一行：廠商代碼、廠商簡稱、廠商完整名稱 */}
-            <div className="flex gap-[40px] w-full">
-              {/* 廠商代碼：固定寬度 */}
-              <div className="flex gap-[10px] items-center w-[260px]">
-                <div className="w-[80px]">
-                  <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold leading-[22px] text-[#1c252e] text-[14px] whitespace-nowrap">廠商代碼</p>
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-start py-[10px]">
-                    <div className="flex-1 rounded-[8px] relative">
-                      <div aria-hidden="true" className="absolute border border-[rgba(145,158,171,0.16)] border-solid inset-0 pointer-events-none rounded-[8px]" />
-                      <div className="flex items-center justify-center">
-                        <div className="flex gap-[12px] items-center justify-center pl-[12px] pr-[8px] py-[6px] w-full">
-                          <input
-                            type="text"
-                            value={vendorCode}
-                            readOnly
-                            className="flex-1 font-['Inter:Regular',sans-serif] font-normal leading-[1.4] text-[#1c252e] text-[14px] bg-transparent border-none outline-none"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              {/* 剩餘空間平均分配給兩組 */}
-              <div className="flex flex-1 gap-[20px]">
-                {/* 廠商簡稱組 */}
-                <div className="flex flex-1 gap-[10px] items-center">
-                  <div className="flex items-center shrink-0">
-                    <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold leading-[22px] text-[#1c252e] text-[14px] whitespace-nowrap">廠商簡稱</p>
-                  </div>
-                  <div className="flex flex-1 items-start py-[10px]">
-                    <div className="flex-1 rounded-[8px] relative">
-                      <div aria-hidden="true" className="absolute border border-[rgba(145,158,171,0.16)] border-solid inset-0 pointer-events-none rounded-[8px]" />
-                      <div className="flex items-center justify-center">
-                        <div className="flex gap-[12px] items-center justify-center pl-[12px] pr-[8px] py-[6px] w-full">
-                          <input
-                            type="text"
-                            value={vendorName}
-                            readOnly
-                            className="flex-1 font-['Inter:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[1.4] text-[#1c252e] text-[14px] bg-transparent border-none outline-none"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* 廠商完整名稱組 */}
-                <div className="flex flex-1 gap-[10px] items-center">
-                  <div className="flex items-center shrink-0">
-                    <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold leading-[22px] text-[#1c252e] text-[14px] whitespace-nowrap">廠商完整名稱</p>
-                  </div>
-                  <div className="flex flex-1 items-center justify-end py-[10px]">
-                    <div className="flex-1 rounded-[8px] relative">
-                      <div aria-hidden="true" className="absolute border border-[rgba(145,158,171,0.16)] border-solid inset-0 pointer-events-none rounded-[8px]" />
-                      <div className="flex items-center justify-center">
-                        <div className="flex gap-[12px] items-center justify-center pl-[12px] pr-[8px] py-[6px] w-full">
-                          <input
-                            type="text"
-                            value={vendorFullName}
-                            readOnly
-                            className="flex-1 font-['Inter:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[1.4] text-[#1c252e] text-[14px] bg-transparent border-none outline-none"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+          {/* ── 共用樣式常數（inline 方便複用） ── */}
+          {/* 每行用 grid-cols-3，標籤 w-[88px] 固定，value flex-1 */}
+
+          {/* 第一行：廠商代碼 ｜ 廠商簡稱 ｜ 廠商完整名稱 */}
+          <div className="grid grid-cols-3 gap-x-[24px]">
+            {/* 廠商代碼 */}
+            <div className="flex items-center gap-[8px] py-[8px]">
+              <p className="w-[88px] shrink-0 font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-[#1c252e] whitespace-nowrap">廠商代碼</p>
+              <div className="flex-1 rounded-[8px] relative">
+                <div aria-hidden="true" className="absolute border border-[rgba(145,158,171,0.16)] border-solid inset-0 pointer-events-none rounded-[8px]" />
+                <input type="text" value={vendorCode} readOnly className="w-full px-[12px] py-[6px] font-['Inter:Regular',sans-serif] font-normal text-[14px] text-[#1c252e] bg-transparent border-none outline-none" />
               </div>
             </div>
-
-            {/* 第二行：AX廠商代碼、電話、傳真 */}
-            <div className="flex gap-[10px] w-full">
-              <div className="flex flex-1 gap-[10px] items-center">
-                <div className="flex items-center">
-                  <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold leading-[22px] text-[#1c252e] text-[14px] whitespace-nowrap">AX廠商代碼</p>
-                </div>
-                <div className="flex flex-1 items-center justify-end py-[10px]">
-                  <div className="flex-1 rounded-[8px] relative">
-                    <div aria-hidden="true" className="absolute border border-[rgba(145,158,171,0.16)] border-solid inset-0 pointer-events-none rounded-[8px]" />
-                    <div className="flex items-center justify-center">
-                      <div className="flex gap-[12px] items-center justify-center pl-[12px] pr-[8px] py-[6px] w-full">
-                        <input
-                          type="text"
-                          value={axCode}
-                          readOnly
-                          className="flex-1 font-['Inter:Regular',sans-serif] font-normal leading-[1.4] text-[#1c252e] text-[14px] bg-transparent border-none outline-none"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex flex-1 gap-[10px] items-center">
-                <div className="flex items-center">
-                  <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold leading-[22px] text-[#1c252e] text-[14px] whitespace-nowrap">電話</p>
-                </div>
-                <div className="flex flex-1 items-center justify-end py-[10px]">
-                  <div className="flex-1 rounded-[8px] relative">
-                    <div aria-hidden="true" className="absolute border border-[rgba(145,158,171,0.16)] border-solid inset-0 pointer-events-none rounded-[8px]" />
-                    <div className="flex items-center justify-center">
-                      <div className="flex gap-[12px] items-center justify-center pl-[12px] pr-[8px] py-[6px] w-full">
-                        <input
-                          type="text"
-                          value={phone}
-                          readOnly
-                          className="flex-1 font-['Inter:Regular',sans-serif] font-normal leading-[1.4] text-[#1c252e] text-[14px] bg-transparent border-none outline-none"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex flex-1 gap-[10px] items-center">
-                <div className="flex items-center">
-                  <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold leading-[22px] text-[#1c252e] text-[14px] whitespace-nowrap">傳真</p>
-                </div>
-                <div className="flex flex-1 items-center justify-end py-[10px]">
-                  <div className="flex-1 rounded-[8px] relative">
-                    <div aria-hidden="true" className="absolute border border-[rgba(145,158,171,0.16)] border-solid inset-0 pointer-events-none rounded-[8px]" />
-                    <div className="flex items-center justify-center">
-                      <div className="flex gap-[12px] items-center justify-center pl-[12px] pr-[8px] py-[6px] w-full">
-                        <input
-                          type="text"
-                          value={fax}
-                          readOnly
-                          className="flex-1 font-['Inter:Regular',sans-serif] font-normal leading-[1.4] text-[#1c252e] text-[14px] bg-transparent border-none outline-none"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
+            {/* 廠商簡稱 */}
+            <div className="flex items-center gap-[8px] py-[8px]">
+              <p className="w-[88px] shrink-0 font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-[#1c252e] whitespace-nowrap">廠商簡稱</p>
+              <div className="flex-1 rounded-[8px] relative">
+                <div aria-hidden="true" className="absolute border border-[rgba(145,158,171,0.16)] border-solid inset-0 pointer-events-none rounded-[8px]" />
+                <input type="text" value={vendorName} readOnly className="w-full px-[12px] py-[6px] font-['Inter:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[14px] text-[#1c252e] bg-transparent border-none outline-none" />
               </div>
             </div>
-
-            {/* 第三行：地址 */}
-            <div className="flex items-center w-full">
-              <div className="flex flex-1 gap-[10px] items-center">
-                <div className="w-[51px]">
-                  <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold leading-[22px] text-[#1c252e] text-[14px] whitespace-nowrap">地址</p>
-                </div>
-                <div className="flex-1">
-                  <div className="flex justify-end">
-                    <div className="flex items-start justify-end pl-[10px] py-[10px] w-full">
-                      <div className="flex-1 rounded-[8px] relative">
-                        <div aria-hidden="true" className="absolute border border-[rgba(145,158,171,0.16)] border-solid inset-0 pointer-events-none rounded-[8px]" />
-                        <div className="flex items-center justify-center">
-                          <div className="flex gap-[12px] items-center justify-center pl-[12px] pr-[8px] py-[6px] w-full">
-                            <input
-                              type="text"
-                              value={address}
-                              readOnly
-                              className="flex-1 font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[#1c252e] text-[14px] bg-transparent border-none outline-none"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+            {/* 廠商完整名稱 */}
+            <div className="flex items-center gap-[8px] py-[8px]">
+              <p className="w-[88px] shrink-0 font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-[#1c252e] whitespace-nowrap">廠商完整名稱</p>
+              <div className="flex-1 rounded-[8px] relative">
+                <div aria-hidden="true" className="absolute border border-[rgba(145,158,171,0.16)] border-solid inset-0 pointer-events-none rounded-[8px]" />
+                <input type="text" value={vendorFullName} readOnly className="w-full px-[12px] py-[6px] font-['Inter:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[14px] text-[#1c252e] bg-transparent border-none outline-none" />
               </div>
             </div>
+          </div>
 
-            {/* 第四行：主要營業產品 */}
-            <div className="flex items-center w-full">
-              <div className="flex flex-1 gap-[39px] items-center">
-                <div className="w-[51px]">
-                  <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold leading-[22px] text-[#1c252e] text-[14px] whitespace-nowrap">主要營業產品</p>
-                </div>
-                <div className="flex items-center justify-center pl-[10px] py-[10px] w-[906px]">
-                  <div className="flex-1 rounded-[8px] relative">
-                    <div aria-hidden="true" className="absolute border border-[#1c252e] border-solid inset-0 pointer-events-none rounded-[8px]" />
-                    <div className="flex items-center justify-center">
-                      <div className="flex gap-[12px] items-center justify-center pl-[12px] pr-[8px] py-[6px] w-full">
-                        <input
-                          type="text"
-                          value={mainProducts}
-                          onChange={(e) => setMainProducts(e.target.value)}
-                          className="flex-1 [text-decoration-skip-ink:none] decoration-solid font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[#1c252e] text-[14px] underline bg-transparent border-none outline-none"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
+          {/* 第二行：AX廠商代碼 ｜ 電話 ｜ 傳真 */}
+          <div className="grid grid-cols-3 gap-x-[24px]">
+            <div className="flex items-center gap-[8px] py-[8px]">
+              <p className="w-[88px] shrink-0 font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-[#1c252e] whitespace-nowrap">AX廠商代碼</p>
+              <div className="flex-1 rounded-[8px] relative">
+                <div aria-hidden="true" className="absolute border border-[rgba(145,158,171,0.16)] border-solid inset-0 pointer-events-none rounded-[8px]" />
+                <input type="text" value={axCode} readOnly className="w-full px-[12px] py-[6px] font-['Inter:Regular',sans-serif] font-normal text-[14px] text-[#1c252e] bg-transparent border-none outline-none" />
               </div>
+            </div>
+            <div className="flex items-center gap-[8px] py-[8px]">
+              <p className="w-[88px] shrink-0 font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-[#1c252e] whitespace-nowrap">電話</p>
+              <div className="flex-1 rounded-[8px] relative">
+                <div aria-hidden="true" className="absolute border border-[rgba(145,158,171,0.16)] border-solid inset-0 pointer-events-none rounded-[8px]" />
+                <input type="text" value={phone} readOnly className="w-full px-[12px] py-[6px] font-['Inter:Regular',sans-serif] font-normal text-[14px] text-[#1c252e] bg-transparent border-none outline-none" />
+              </div>
+            </div>
+            <div className="flex items-center gap-[8px] py-[8px]">
+              <p className="w-[88px] shrink-0 font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-[#1c252e] whitespace-nowrap">傳真</p>
+              <div className="flex-1 rounded-[8px] relative">
+                <div aria-hidden="true" className="absolute border border-[rgba(145,158,171,0.16)] border-solid inset-0 pointer-events-none rounded-[8px]" />
+                <input type="text" value={fax} readOnly className="w-full px-[12px] py-[6px] font-['Inter:Regular',sans-serif] font-normal text-[14px] text-[#1c252e] bg-transparent border-none outline-none" />
+              </div>
+            </div>
+          </div>
+
+          {/* 第三行：地址（全寬） */}
+          <div className="flex items-center gap-[8px] py-[8px]">
+            <p className="w-[88px] shrink-0 font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-[#1c252e] whitespace-nowrap">地址</p>
+            <div className="flex-1 rounded-[8px] relative">
+              <div aria-hidden="true" className="absolute border border-[rgba(145,158,171,0.16)] border-solid inset-0 pointer-events-none rounded-[8px]" />
+              <input type="text" value={address} readOnly className="w-full px-[12px] py-[6px] font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[14px] text-[#1c252e] bg-transparent border-none outline-none" />
+            </div>
+          </div>
+
+          {/* 第四行：主要營業產品（全寬，點擊編輯） */}
+          <div className="flex items-center gap-[8px] py-[8px]">
+            <p className="w-[88px] shrink-0 font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-[#1c252e] whitespace-nowrap">主要營業產品</p>
+            <div className="flex-1">
+              {editingMainProducts ? (
+                <input
+                  type="text"
+                  autoFocus
+                  value={mainProducts}
+                  onChange={(e) => setMainProducts(e.target.value)}
+                  onBlur={() => setEditingMainProducts(false)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') setEditingMainProducts(false); }}
+                  className="w-full font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[14px] text-[#1c252e] border border-[#1c252e] rounded-[8px] px-[12px] py-[6px] outline-none"
+                />
+              ) : (
+                <span
+                  onClick={() => setEditingMainProducts(true)}
+                  className="[text-decoration-skip-ink:none] decoration-solid font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[14px] text-[#005eb8] underline cursor-pointer hover:opacity-70 transition-opacity break-all"
+                  title="點擊編輯"
+                >
+                  {mainProducts || '（點擊填寫）'}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -569,6 +471,7 @@ function ContentArea({
   onTabChange, 
   onBack,
   onAccountClick,
+  vendor,
   pendingVendorApproval,
   onClearPendingApproval
 }: { 
@@ -576,6 +479,7 @@ function ContentArea({
   onTabChange: (tab: TabType) => void; 
   onBack: () => void;
   onAccountClick: (account: any) => void;
+  vendor?: VendorData | null;
   pendingVendorApproval?: {
     name: string;
     email: string;
@@ -591,7 +495,7 @@ function ContentArea({
         <Tabs activeTab={activeTab} onTabChange={onTabChange} onBack={onBack} />
         
         {/* 內容 */}
-        {activeTab === 'vendor' && <VendorInfoForm />}
+        {activeTab === 'vendor' && <VendorInfoForm vendor={vendor} />}
         {activeTab === 'sales' && (
           <SalesAccountForm 
             onAccountClick={onAccountClick} 
@@ -605,7 +509,7 @@ function ContentArea({
   );
 }
 
-export function VendorDetailPage({ currentPage, onPageChange, onLogout, onBack, defaultTab, userRole, pendingVendorApproval, onClearPendingApproval }: VendorDetailPageProps) {
+export function VendorDetailPage({ currentPage, onPageChange, onLogout, onBack, defaultTab, userRole, vendor, pendingVendorApproval, onClearPendingApproval }: VendorDetailPageProps) {
   const [activeTab, setActiveTab] = useState<TabType>(defaultTab || 'vendor');
   const [selectedAccount, setSelectedAccount] = useState<any>(null);
   const vendorName = '久廣'; // 廠商簡稱
@@ -646,6 +550,7 @@ export function VendorDetailPage({ currentPage, onPageChange, onLogout, onBack, 
         onTabChange={setActiveTab} 
         onBack={onBack} 
         onAccountClick={setSelectedAccount}
+        vendor={vendor}
         pendingVendorApproval={pendingVendorApproval}
         onClearPendingApproval={onClearPendingApproval}
       />

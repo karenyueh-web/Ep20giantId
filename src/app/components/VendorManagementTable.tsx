@@ -23,7 +23,7 @@ interface FilterCondition {
 }
 
 interface VendorManagementTableProps {
-  onVendorClick: () => void;
+  onVendorClick: (vendor: VendorData) => void;
   onSalesClick: () => void;
   vendorNameFilter: string;
   salesPersonFilter: string;
@@ -63,6 +63,7 @@ export const MOCK_VENDORS: VendorData[] = [
   { id: 15, code: '0001000059', name: '金盛元工業', fullName: '金盛元工業股份有限公司',       phone: '+886-4-55555555', address: '彰化縣員林市員東路一段500號',      salesCount: 1, mainProducts: '零件',                        salesNames: ['王小明'] },
   { id: 16, code: '0001000012', name: '台灣製造',   fullName: '台灣製造工業股份有限公司',     phone: '+886-4-66666666', address: '台中市西屯區工業區一路100號',      salesCount: 1, mainProducts: '零件',                        salesNames: ['陳品保'] },
   { id: 17, code: '0001000046', name: '速聯國際',   fullName: '速聯國際股份有限公司',         phone: '+886-3-77777777', address: '桃園市龜山區文化二路29號',         salesCount: 1, mainProducts: '零件',                        salesNames: ['李四'] },
+  { id: 18, code: '000100463',  name: '速聯',       fullName: '速聯(股)公司',                 phone: '+886-3-88888888', address: '桃園市龜山區工業三路99號',         salesCount: 1, mainProducts: '變速器/零件',                 salesNames: ['王小明'] },
 ];
 
 
@@ -269,7 +270,7 @@ export function VendorManagementTable({
       return (
         <button 
           className="[text-decoration-skip-ink:none] decoration-solid font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[#005eb8] text-[14px] underline cursor-pointer truncate hover:opacity-70 transition-opacity text-left"
-          onClick={onVendorClick}
+          onClick={() => onVendorClick(vendor)}
           title={`${vendor.name}(${vendor.code})`}
         >
           {vendor.name}({vendor.code})

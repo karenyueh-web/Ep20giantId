@@ -20,6 +20,7 @@ import {
   getEsgMaterials,
 } from '@/app/components/esgMaterialData';
 import { StandardDataTable, type StandardColumn } from '@/app/components/StandardDataTable';
+import QuotationPrintPage from '@/app/components/QuotationPrintPage';
 
 // ── Props ────────────────────────────────────────────────────────────────────
 
@@ -46,6 +47,7 @@ export default function PartsMaintenanceDetailPage({
   onSave,
 }: PartsMaintenanceDetailPageProps) {
   const [activeTab, setActiveTab] = useState<TabId>('info');
+  const [showPrint, setShowPrint] = useState(false);
 
   // ── 歷程相關狀態 ──────────────────────────────────────────────────────────
   const [showHistory, setShowHistory] = useState(false);
@@ -203,6 +205,17 @@ export default function PartsMaintenanceDetailPage({
   };
 
   // ── Render ───────────────────────────────────────────────────────────────
+
+  // 列印報價單：切換為全頁列印預覽
+  if (showPrint) {
+    return (
+      <QuotationPrintPage
+        part={part}
+        onBack={() => setShowPrint(false)}
+      />
+    );
+  }
+
   return (
     <>
       <Toaster />
@@ -267,6 +280,7 @@ export default function PartsMaintenanceDetailPage({
             onUpdateBrand={updateBrand}
             onSave={handleSave}
             onShowHistory={() => setShowHistory(true)}
+            onPrint={() => setShowPrint(true)}
           />
         ) : (
           <MaterialCompositionTab
@@ -332,6 +346,7 @@ interface InfoContentProps {
   onUpdateBrand: (id: number, field: keyof BrandSetting, value: string) => void;
   onSave: () => void;
   onShowHistory: () => void;
+  onPrint: () => void;
 }
 
 function InfoContent({
@@ -360,6 +375,7 @@ function InfoContent({
   onUpdateBrand,
   onSave,
   onShowHistory,
+  onPrint,
 }: InfoContentProps) {
   return (
     <div className="space-y-[24px]">
@@ -402,7 +418,7 @@ function InfoContent({
             儲存
           </button>
           <button
-            onClick={() => toast('功能開發中')}
+            onClick={onPrint}
             className="bg-[#1c252e] text-white rounded-[8px] h-[40px] min-w-[100px] px-[20px] text-[14px] font-semibold hover:bg-[#2d3a47] transition-colors"
           >
             列印報價單
