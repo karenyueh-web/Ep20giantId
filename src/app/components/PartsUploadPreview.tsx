@@ -75,50 +75,48 @@ function isRemarkRow(row: Record<string, string>): boolean {
 /**
  * 嘗試將各種日期格式解析為 YYYYMMDD。
  * 支援: YYYYMMDD, YYYY/MM/DD, YYYY-MM-DD, YYYY.MM.DD, Excel 數值日期
- * @returns 正規化後的 YYYYMMDD 字串，若無法解析回傳 null
+ * @returns 正規化後的 YYYY/MM/DD 字串，若無法解析回傳 null
  */
 export function normalizeDateToYYYYMMDD(val: string): string | null {
   const s = val.trim();
   if (!s) return null;
 
-  // 嘗試 YYYYMMDD（純 8 位數字）
+  /** 小工具：組合輸出的 YYYY/MM/DD */
+  const fmt = (y: number, m: number, d: number) =>
+    `${y}/${String(m).padStart(2, '0')}/${String(d).padStart(2, '0')}`;
+
+  // YYYYMMDD（純 8 位數字）
   if (/^\d{8}$/.test(s)) {
     const y = parseInt(s.slice(0, 4), 10);
     const m = parseInt(s.slice(4, 6), 10);
     const d = parseInt(s.slice(6, 8), 10);
-    if (isValidDate(y, m, d)) return s;
+    if (isValidDate(y, m, d)) return fmt(y, m, d);
     return null;
   }
 
-  // 嘗試 YYYY/MM/DD 或 YYYY-MM-DD 或 YYYY.MM.DD
+  // YYYY/MM/DD 或 YYYY-MM-DD 或 YYYY.MM.DD
   const match = s.match(/^(\d{4})[/\-.](\d{1,2})[/\-.](\d{1,2})$/);
   if (match) {
     const y = parseInt(match[1], 10);
     const m = parseInt(match[2], 10);
     const d = parseInt(match[3], 10);
-    if (isValidDate(y, m, d)) {
-      return `${y}${String(m).padStart(2, '0')}${String(d).padStart(2, '0')}`;
-    }
+    if (isValidDate(y, m, d)) return fmt(y, m, d);
     return null;
   }
 
-  // 嘗試 Excel 序號日期（純數字，通常 > 40000）
+  // Excel 日期序號（純數字，小於 19000101）
   if (/^\d+$/.test(s) && parseInt(s, 10) > 19000101) {
-    // 非 YYYYMMDD 也非序號的大數字，無法處理
     return null;
   }
   if (/^\d+$/.test(s)) {
     const serial = parseInt(s, 10);
     if (serial > 1 && serial < 100000) {
-      // Excel 日期序號
-      const epoch = new Date(1899, 11, 30); // Excel epoch
-      const date = new Date(epoch.getTime() + serial * 86400000);
+      const epoch = new Date(1899, 11, 30);
+      const date  = new Date(epoch.getTime() + serial * 86400000);
       const y = date.getFullYear();
       const m = date.getMonth() + 1;
       const d = date.getDate();
-      if (y >= 2000 && y <= 2100) {
-        return `${y}${String(m).padStart(2, '0')}${String(d).padStart(2, '0')}`;
-      }
+      if (y >= 2000 && y <= 2100) return fmt(y, m, d);
     }
   }
 
@@ -213,15 +211,13 @@ export function validateUploadData(
       if (value && value.trim()) {
         const normalized = normalizeDateToYYYYMMDD(value);
         if (!normalized) {
-          errors.push({ field, message: `日期格式錯誤` });
+          errors.push({ field, message: `日期格式錯誤（請使用 YYYY/MM/DD，例：2026/07/30）` });
         } else {
-          // 過去日期檢查
+          // 過去日期檢查（normalized 格式為 YYYY/MM/DD）
           const today = new Date();
           today.setHours(0, 0, 0, 0);
-          const y = parseInt(normalized.slice(0, 4), 10);
-          const m = parseInt(normalized.slice(4, 6), 10) - 1;
-          const d = parseInt(normalized.slice(6, 8), 10);
-          const inputDate = new Date(y, m, d);
+          const [y, m, d] = normalized.split('/').map(Number);
+          const inputDate = new Date(y, m - 1, d);
           if (inputDate < today) {
             errors.push({ field, message: `日期不得填過去日期` });
           } else {

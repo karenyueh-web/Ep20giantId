@@ -539,6 +539,22 @@ export interface PartUploadRow2 {
  *
  * @returns 更新的筆數
  */
+/**
+ * 將 YYYYMMDD 轉換為系統登打格式 YYYY/MM/DD
+ * 若已是 YYYY/MM/DD 或空字串，則原樣回傳
+ */
+function yyyymmddToSystemFormat(s: string): string {
+  const v = s.trim();
+  if (!v) return v;
+  // 已是 YYYY/MM/DD 格式，不需轉換
+  if (/^\d{4}\/\d{2}\/\d{2}$/.test(v)) return v;
+  // YYYYMMDD 轉換
+  if (/^\d{8}$/.test(v)) {
+    return `${v.slice(0, 4)}/${v.slice(4, 6)}/${v.slice(6, 8)}`;
+  }
+  return v;
+}
+
 export function bulkUpdateParts(
   sheet1Rows: Record<string, string>[],
   sheet2Rows: Record<string, string>[],
@@ -583,10 +599,10 @@ export function bulkUpdateParts(
 
     const orig = workingParts[idx];
 
-    // 1. 解析欄位值
-    const qaCompletionDate  = row['廠商QA認證完成日期'] ?? '';
-    const sampleDate        = row['可配合日期'] ?? '';
-    const firstDeliveryDate = row['首次交貨可出貨日期'] ?? '';
+    // 1. 解析欄位値（日期從 YYYYMMDD 轉換為系統格式 YYYY/MM/DD）
+    const qaCompletionDate  = yyyymmddToSystemFormat(row['廠商QA認證完成日期'] ?? '');
+    const sampleDate        = yyyymmddToSystemFormat(row['可配合日期'] ?? '');
+    const firstDeliveryDate = yyyymmddToSystemFormat(row['首次交貨可出貨日期'] ?? '');
     const vendorPartNo      = row['廠商料號'] ?? '';
     const grossWeight       = row['毛重'] ?? '';
     const netWeight         = row['淨重'] ?? '';
@@ -595,7 +611,7 @@ export function bulkUpdateParts(
     const syncDtcDte        = syncDtcDteRaw === 'Y';
 
     // 2. 品牌設定（覆蓋）
-    const newBrands = brandMap.get(key) ?? orig.brandSettings;
+    const newBrands = brandMap.get(key) ?? (orig.brandSettings ?? []);
 
     // 3. 報價狀態判定
     const hasQuote =

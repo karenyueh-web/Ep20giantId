@@ -213,6 +213,19 @@ export async function downloadQuotationTemplate(parts: PartRecord[]): Promise<vo
       };
     }
 
+    // 日期欄位設定文字格式（YYYY/MM/DD），引導用户輸入正確格式
+    const dateColLabels = ['廠商QA認證完成日期', '可配合日期', '首次交貨可出貨日期'];
+    for (const label of dateColLabels) {
+      const colIdx = SHEET1_COLS.findIndex(c => c.label === label);
+      if (colIdx >= 0) {
+        const cell = row.getCell(colIdx + 1);
+        // 設定文字格式（不強制 Excel 日期型別，避免輸出數字序號）
+        if (!cell.value || cell.value === '') {
+          cell.numFmt = '@'; // 文字格式，保留原始輸入
+        }
+      }
+    }
+
     // 同步DTC/DTE Data Validation（Y/N）
     const syncIdx = SHEET1_COLS.findIndex(c => c.label === '同步DTC/DTE');
     if (syncIdx >= 0) {
@@ -405,24 +418,28 @@ export async function downloadQuotationTemplate(parts: PartRecord[]): Promise<vo
   ws3.getColumn(dateSampleCol).width = 36;
 
   const dateExamples = [
-    { format: 'YYYYMMDD', desc: '標準格式（例：20260102）' },
-    { format: 'YYYY/MM/DD', desc: '系統自動轉為 YYYYMMDD' },
-    { format: 'YYYY-MM-DD', desc: '系統自動轉為 YYYYMMDD' },
+    { format: 'YYYY/MM/DD', desc: '主要格式（例：2026/01/02）「建議使用」' },
+    { format: 'YYYYMMDD',   desc: '也可接受（例：20260102）' },
+    { format: 'YYYY-MM-DD', desc: '也可接受（例：2026-01-02）' },
   ];
   dateExamples.forEach((ex, i) => {
     const rowNum = i + 2;
     const fmtCell = ws3.getCell(rowNum, dateCol);
     fmtCell.value = ex.format;
-    fmtCell.font = FONT_NORMAL;
+    fmtCell.font = i === 0 ? { ...FONT_NORMAL, bold: true } : FONT_NORMAL;
     fmtCell.border = THIN_BORDER;
-    fmtCell.fill = FILL_GREEN_LIGHT;
+    fmtCell.fill = i === 0
+      ? { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } }  // 黃底強調主要格式
+      : FILL_GREEN_LIGHT;
     fmtCell.alignment = ALIGNMENT_LEFT;
 
     const descCell = ws3.getCell(rowNum, dateSampleCol);
     descCell.value = ex.desc;
-    descCell.font = FONT_NORMAL;
+    descCell.font = i === 0 ? { ...FONT_NORMAL, bold: true } : FONT_NORMAL;
     descCell.border = THIN_BORDER;
-    descCell.fill = FILL_GREEN_LIGHT;
+    descCell.fill = i === 0
+      ? { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } }
+      : FILL_GREEN_LIGHT;
     descCell.alignment = ALIGNMENT_LEFT;
   });
 

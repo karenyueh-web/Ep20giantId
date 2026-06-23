@@ -342,7 +342,26 @@ export function PartsUploadOverlay({ onClose, pendingParts, onConfirm }: PartsUp
 
   // ── 確認匯入 ──
   const handleConfirmImport = () => {
-    onConfirm?.(parsedSheet1, parsedSheet2);
+    if (!previewSummary) return;
+
+    // 只取驗證通過（passed）的 sheet1 列，避免 noInput 空列覆蓋掉現有資料
+    const passedSheet1Indices = new Set(
+      previewSummary.sheet1Results
+        .filter(r => r.status === 'passed')
+        .map(r => r.rowIndex)
+    );
+    const filteredSheet1 = parsedSheet1.filter((_, idx) => passedSheet1Indices.has(idx));
+
+    // 對應的 sheet2 列：只保留 material|plant|purchaseOrg 有出現在 filteredSheet1 的列
+    const passedKeys = new Set(
+      filteredSheet1.map(r => `${r['物料'] ?? ''}|${r['工廠'] ?? ''}|${r['採購組織'] ?? ''}`)
+    );
+    const filteredSheet2 = parsedSheet2.filter(r => {
+      const key = `${r['物料'] ?? ''}|${r['工廠'] ?? ''}|${r['採購組織'] ?? ''}`;
+      return passedKeys.has(key);
+    });
+
+    onConfirm?.(filteredSheet1, filteredSheet2);
   };
 
   // ── 是否在預覽模式 ──

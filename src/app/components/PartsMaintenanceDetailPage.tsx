@@ -66,7 +66,7 @@ export default function PartsMaintenanceDetailPage({
 
   // ── Brand settings state ─────────────────────────────────────────────────
   const [brandSettings, setBrandSettings] = useState<BrandSetting[]>(
-    () => part.brandSettings.map(bs => ({ ...bs })),
+    () => (part.brandSettings ?? []).map(bs => ({ ...bs })),
   );
 
   // ── Material compositions state ──────────────────────────────────────────

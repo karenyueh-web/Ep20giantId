@@ -365,10 +365,13 @@ export default function PartsMaintenancePage({
     [handleMaterialClick],
   );
 
+  // ── 上傳 Overlay 狀態（必須在所有 early return 之前宣告，符合 React Hooks 規則）────
+  const [showUploadOverlay, setShowUploadOverlay] = useState(false);
+
   // ── Detail 頁渲染 ──────────────────────────────────────────────────────────
   if (viewingPart) {
     return (
-      <div className="bg-white flex flex-col min-h-full relative rounded-[16px] shadow-[0px_0px_2px_0px_rgba(145,158,171,0.2),0px_12px_24px_-4px_rgba(145,158,171,0.12)] w-full">
+      <div className="bg-white flex flex-col h-full relative rounded-[16px] shadow-[0px_0px_2px_0px_rgba(145,158,171,0.2),0px_12px_24px_-4px_rgba(145,158,171,0.12)] w-full overflow-y-auto custom-scrollbar">
         <PartsMaintenanceDetailPage
           part={viewingPart}
           onClose={handleBackToList}
@@ -378,8 +381,6 @@ export default function PartsMaintenancePage({
     );
   }
 
-  // ── 上傳 Overlay 狀態 ─────────────────────────────────────────────
-  const [showUploadOverlay, setShowUploadOverlay] = useState(false);
 
   // ── action button（Toolbar 右側）────────────────────────────────────────────
   const actionButton = (
