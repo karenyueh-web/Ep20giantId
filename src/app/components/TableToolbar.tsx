@@ -64,6 +64,8 @@ interface TableToolbarProps {
   onExportScheduleChange?: () => void;
   /** 提供此 callback 即在 Export 下拉選單中顯示「下載出貨單範本」選項 */
   onDownloadShipmentTemplate?: () => void;
+  /** 提供此 callback 即在 Export 下拉選單中顯示「下載零件資訊範本」選項 */
+  onDownloadPartsTemplate?: () => void;
 }
 
 export function TableToolbar({
@@ -79,8 +81,9 @@ export function TableToolbar({
   onExportCsv,
   onExportScheduleChange,
   onDownloadShipmentTemplate,
+  onDownloadPartsTemplate,
 }: TableToolbarProps) {
-  const hasExport = !!(onExportExcel || onExportCsv || onExportScheduleChange || onDownloadShipmentTemplate);
+  const hasExport = !!(onExportExcel || onExportCsv || onExportScheduleChange || onDownloadShipmentTemplate || onDownloadPartsTemplate);
   const [showExportDropdown, setShowExportDropdown] = useState(false);
 
   // 每個按鈕區塊的 ref，用來計算 popup 定位
@@ -256,6 +259,24 @@ export function TableToolbar({
                       <div className="flex flex-col gap-[2px] min-w-0">
                         <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#1c252e]">下載出貨單範本</p>
                         <p className="font-['Public_Sans:Regular',sans-serif] text-[11px] text-[#919eab]">依目前列表匯出可填寫的出貨單 .csv 範本</p>
+                      </div>
+                    </button>
+                  )}
+                  {/* 下載零件資訊範本 */}
+                  {onDownloadPartsTemplate && (
+                    <button
+                      className="w-full flex items-start gap-[10px] px-[14px] py-[10px] hover:bg-[rgba(145,158,171,0.06)] transition-colors text-left"
+                      onClick={() => { onDownloadPartsTemplate(); setShowExportDropdown(false); }}
+                    >
+                      <div className="mt-[2px] shrink-0">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#118d57" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="3" width="18" height="18" rx="2" />
+                          <path d="M3 9h18M3 15h18M9 3v18M15 3v18" />
+                        </svg>
+                      </div>
+                      <div className="flex flex-col gap-[2px] min-w-0">
+                        <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#1c252e]">下載零件資訊範本</p>
+                        <p className="font-['Public_Sans:Regular',sans-serif] text-[11px] text-[#919eab]">下載可填寫的零件報價 .xlsx 範本</p>
                       </div>
                     </button>
                   )}

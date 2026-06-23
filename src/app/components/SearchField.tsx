@@ -106,6 +106,10 @@ export function SearchField({ label, value, onChange, placeholder = ' ', type = 
         <div className="absolute top-[58px] left-0 z-[100]">
           <SimpleDatePicker
             selectedDate={value}
+            minDate={(() => {
+              const t = new Date();
+              return `${t.getFullYear()}/${String(t.getMonth()+1).padStart(2,'0')}/${String(t.getDate()).padStart(2,'0')}`;
+            })()}
             onDateSelect={(date) => {
               onChange(date);
               setShowPicker(false);

@@ -60,6 +60,8 @@ export interface StandardDataTableProps<T extends { id: number }> {
   onExportCsv?: () => void;
   /** Toolbar 匯出 Excel 回調 */
   onExportExcel?: () => void;
+  /** Toolbar Export 下拉選單「下載零件資訊範本」回調 */
+  onDownloadPartsTemplate?: () => void;
   /** Toolbar 右側自訂按鈕區 */
   actionButton?: ReactNode;
   /** 空資料時的提示文字 */
@@ -97,6 +99,7 @@ export function StandardDataTable<T extends { id: number }>({
   storageKey,
   onExportCsv,
   onExportExcel,
+  onDownloadPartsTemplate,
   actionButton,
   emptyText = '無符合條件的資料',
   rowHeight = 64,
@@ -327,6 +330,7 @@ export function StandardDataTable<T extends { id: number }>({
         onFiltersClick={() => setShowFilterDialog(v => !v)}
         onExportCsv={onExportCsv}
         onExportExcel={onExportExcel}
+        onDownloadPartsTemplate={onDownloadPartsTemplate}
         actionButton={actionButton}
         columnsButton={
           <ColumnSelector

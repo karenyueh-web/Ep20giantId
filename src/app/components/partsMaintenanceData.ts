@@ -493,3 +493,203 @@ export function updatePart(updated: PartRecord): void {
 export function setAllParts(parts: PartRecord[]): void {
   _parts = parts;
 }
+
+// ── 批次上傳資料型別 ─────────────────────────────────────────────────────────
+
+export interface PartUploadRow1 {
+  material: string;
+  plant: string;
+  purchaseOrg: string;
+  qaCompletionDate: string;
+  sampleDate: string;
+  firstDeliveryDate: string;
+  vendorPartNo: string;
+  grossWeight: string;
+  netWeight: string;
+  weightUnit: string;
+  syncDtcDte: 'Y' | 'N' | '';
+}
+
+export interface PartUploadRow2 {
+  material: string;
+  plant: string;
+  purchaseOrg: string;
+  brand: string;
+  unitPrice: string;
+  currency: string;
+  quoteQty: string;
+  leadTime: string;
+  moq: string;
+  tradeTerms: string;
+  tradeTermsPlace: string;
+  quoteUnit: string;
+  productType: string;
+}
+
+/**
+ * Excel 批次上傳寫入函式（Phase 4）
+ * 處理邏輯與系統登打 handleSave 完全一致：
+ *   1. 更新基本資料欄位
+ *   2. 覆蓋品牌設定（以上傳的為準）
+ *   3. 更新 syncDtcDte
+ *   4. 報價狀態判定
+ *   5. 只更新 savedAt（不更新 updatedAt）
+ *   6. DTC/DTE 同步（工廠=GTM1 且 syncDtcDte=Y 時）
+ *   7. 歷程紀錄
+ *
+ * @returns 更新的筆數
+ */
+export function bulkUpdateParts(
+  sheet1Rows: Record<string, string>[],
+  sheet2Rows: Record<string, string>[],
+): number {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const savedAt = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+
+  // 建立 sheet2 的 grouping：以 material|plant|purchaseOrg 為 key
+  const brandMap = new Map<string, BrandSetting[]>();
+  for (const row of sheet2Rows) {
+    const key = `${row['物料'] ?? ''}|${row['工廠'] ?? ''}|${row['採購組織'] ?? ''}`;
+    if (!brandMap.has(key)) brandMap.set(key, []);
+    brandMap.get(key)!.push({
+      id: Date.now() + Math.random(),
+      brand:           row['品牌'] ?? '',
+      unitPrice:       row['採購單價'] ?? '',
+      currency:        row['幣別'] ?? '',
+      quoteQty:        row['報價數量'] ?? '',
+      leadTime:        row['Lead Time'] ?? '',
+      moq:             row['MOQ'] ?? '',
+      tradeTerms:      row['國貿條件'] ?? '',
+      tradeTermsPlace: row['國貿條件約定地點'] ?? '',
+      quoteUnit:       row['報價單位'] ?? '',
+      productType:     row['標準品/客製品'] ?? '',
+    });
+  }
+
+  let updatedCount = 0;
+  let workingParts = [..._parts];
+
+  for (const row of sheet1Rows) {
+    const material    = row['物料'] ?? '';
+    const plant       = row['工廠'] ?? '';
+    const purchaseOrg = row['採購組織'] ?? '';
+    const key         = `${material}|${plant}|${purchaseOrg}`;
+
+    const idx = workingParts.findIndex(
+      p => p.material === material && p.plant === plant && p.purchaseOrg === purchaseOrg
+    );
+    if (idx < 0) continue;
+
+    const orig = workingParts[idx];
+
+    // 1. 解析欄位值
+    const qaCompletionDate  = row['廠商QA認證完成日期'] ?? '';
+    const sampleDate        = row['可配合日期'] ?? '';
+    const firstDeliveryDate = row['首次交貨可出貨日期'] ?? '';
+    const vendorPartNo      = row['廠商料號'] ?? '';
+    const grossWeight       = row['毛重'] ?? '';
+    const netWeight         = row['淨重'] ?? '';
+    const weightUnit        = row['重量單位'] ?? '';
+    const syncDtcDteRaw     = (row['同步DTC/DTE'] ?? '').trim().toUpperCase();
+    const syncDtcDte        = syncDtcDteRaw === 'Y';
+
+    // 2. 品牌設定（覆蓋）
+    const newBrands = brandMap.get(key) ?? orig.brandSettings;
+
+    // 3. 報價狀態判定
+    const hasQuote =
+      qaCompletionDate.trim() !== '' ||
+      sampleDate.trim() !== ''       ||
+      firstDeliveryDate.trim() !== '' ||
+      vendorPartNo.trim() !== '';
+    const quoteStatus: 'quoted' | 'pending' = hasQuote ? 'quoted' : 'pending';
+
+    // 4. 歷程紀錄——逐欄比對
+    const changes: string[] = [];
+    if (qaCompletionDate !== orig.qaCompletionDate)
+      changes.push(`廠商QA計畫完成日期: ${orig.qaCompletionDate || '(空)'}→${qaCompletionDate || '(空)'}`);
+    if (sampleDate !== orig.sampleDate)
+      changes.push(`可送樣日: ${orig.sampleDate || '(空)'}→${sampleDate || '(空)'}`);
+    if (firstDeliveryDate !== orig.firstDeliveryDate)
+      changes.push(`預計首批可供貨日: ${orig.firstDeliveryDate || '(空)'}→${firstDeliveryDate || '(空)'}`);
+    if (vendorPartNo !== orig.vendorPartNo)
+      changes.push(`廠商料號: ${orig.vendorPartNo || '(空)'}→${vendorPartNo || '(空)'}`);
+    if (grossWeight !== orig.grossWeight)
+      changes.push(`毛重: ${orig.grossWeight}→${grossWeight}`);
+    if (netWeight !== orig.netWeight)
+      changes.push(`淨重: ${orig.netWeight}→${netWeight}`);
+    if (weightUnit !== orig.weightUnit)
+      changes.push(`重量單位: ${orig.weightUnit}→${weightUnit}`);
+    if (syncDtcDte !== orig.syncDtcDte)
+      changes.push(`同步DTC/DTE: ${orig.syncDtcDte ? '是' : '否'}→${syncDtcDte ? '是' : '否'}`);
+    // 品牌設定：簡單記錄覆蓋事實
+    if (JSON.stringify(newBrands) !== JSON.stringify(orig.brandSettings)) {
+      changes.push(`品牌設定：覆蓋為 ${newBrands.length} 筆`);
+    }
+
+    const historyEntry: PartHistoryEntry = {
+      date:     savedAt,
+      event:    'Excel 批次上傳',
+      operator: `廠商-${orig.vendorName}`,
+      remark:   changes.length > 0 ? changes.join('；') : '無變更',
+    };
+
+    const updated: PartRecord = {
+      ...orig,
+      qaCompletionDate,
+      sampleDate,
+      firstDeliveryDate,
+      vendorPartNo,
+      grossWeight,
+      netWeight,
+      weightUnit,
+      syncDtcDte,
+      brandSettings: newBrands,
+      quoteStatus,
+      savedAt,
+      // updatedAt 不更新（中台同步時間）
+      history: [...(orig.history ?? []), historyEntry],
+    };
+    workingParts[idx] = updated;
+    updatedCount++;
+
+    // 5. DTC/DTE 同步（工廠=GTM1 且 syncDtcDte=Y）
+    if (plant === 'GTM1' && syncDtcDte) {
+      const syncTargets = workingParts
+        .map((p, i) => ({ p, i }))
+        .filter(({ p }) =>
+          p.vendorCode   === orig.vendorCode &&
+          p.material     === orig.material   &&
+          p.purchaseOrg  === orig.purchaseOrg &&
+          p.longDescription === orig.longDescription &&
+          (p.plant === 'DTC1' || p.plant === 'DTE1')
+        );
+      for (const { p: target, i: tIdx } of syncTargets) {
+        const syncHistoryEntry: PartHistoryEntry = {
+          date:     savedAt,
+          event:    'Excel 批次上傳（DTC/DTE 同步）',
+          operator: `廠商-${orig.vendorName}`,
+          remark:   `由 GTM1 同步：${changes.join('；') || '無變更'}`,
+        };
+        workingParts[tIdx] = {
+          ...target,
+          qaCompletionDate,
+          sampleDate,
+          firstDeliveryDate,
+          vendorPartNo,
+          grossWeight,
+          netWeight,
+          weightUnit,
+          brandSettings: newBrands.map(b => ({ ...b, id: Date.now() + Math.random() })),
+          quoteStatus,
+          savedAt,
+          history: [...(target.history ?? []), syncHistoryEntry],
+        };
+      }
+    }
+  }
+
+  _parts = workingParts;
+  return updatedCount;
+}

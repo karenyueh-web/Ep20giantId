@@ -17,7 +17,10 @@ import {
   LAST_SYNC_TIME,
   getParts,
   setAllParts,
+  bulkUpdateParts,
 } from './partsMaintenanceData';
+import { downloadQuotationTemplate } from './PartsUploadManager';
+import { PartsUploadOverlay } from './PartsUploadOverlay';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 interface PartsMaintenancePageProps {
@@ -375,12 +378,15 @@ export default function PartsMaintenancePage({
     );
   }
 
+  // ── 上傳 Overlay 狀態 ─────────────────────────────────────────────
+  const [showUploadOverlay, setShowUploadOverlay] = useState(false);
+
   // ── action button（Toolbar 右側）────────────────────────────────────────────
   const actionButton = (
     <div className="flex items-center gap-[12px]">
-      {userRole !== 'vendor' && (
+      {userRole !== 'vendor' && activeTab === 'pending' && (
         <button
-          onClick={() => toast('功能開發中')}
+          onClick={() => setShowUploadOverlay(true)}
           className="flex items-center gap-[6px] h-[36px] px-[16px] rounded-[8px] bg-[#1c252e] text-white text-[14px] font-medium hover:bg-[#2d3a46] transition-colors whitespace-nowrap shrink-0"
         >
           上傳零件資訊
@@ -439,7 +445,7 @@ export default function PartsMaintenancePage({
       </div>
 
       {/* ── B. Filter area (no border-b) ── */}
-      <div className="shrink-0 flex gap-[16px] items-center px-[20px] py-[20px]">
+      <div className="shrink-0 grid grid-cols-4 gap-[16px] items-start px-[20px] py-[20px]">
         <DropdownSelect
           label="採購組織"
           value={filterPurchaseOrg}
@@ -480,8 +486,32 @@ export default function PartsMaintenancePage({
           onExportCsv={() => {
             toast('匯出 CSV 功能開發中');
           }}
+          onDownloadPartsTemplate={
+            activeTab === 'pending'
+              ? () => {
+                  const pendingParts = displayData.filter(p => p.quoteStatus === 'pending') as unknown as PartRecord[];
+                  downloadQuotationTemplate(pendingParts);
+                }
+              : undefined
+          }
         />
       </div>
+
+      {/* ── 上傳 Overlay ── */}
+      {showUploadOverlay && (
+        <PartsUploadOverlay
+          onClose={() => setShowUploadOverlay(false)}
+          pendingParts={displayData.filter(p => p.quoteStatus === 'pending') as unknown as PartRecord[]}
+          onConfirm={(sheet1Data, sheet2Data) => {
+            // Phase 4：批次寫入
+            const count = bulkUpdateParts(sheet1Data, sheet2Data);
+            setShowUploadOverlay(false);
+            // 刷新列表（從 module store 重新取得最新資料）
+            setPartsData([...getParts()]);
+            toast.success(`匯入完成：成功更新 ${count} 筆零件資料`);
+          }}
+        />
+      )}
 
       <Toaster />
     </div>
