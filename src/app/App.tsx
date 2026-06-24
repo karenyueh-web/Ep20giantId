@@ -23,6 +23,7 @@ import { OrderScheduleInquiryPage } from "@/app/components/OrderScheduleInquiryP
 import PartsMaintenancePage from "@/app/components/PartsMaintenancePage";
 import QuotationPrintListPage from "@/app/components/QuotationPrintListPage";
 import EsgMaterialPage from "@/app/components/EsgMaterialPage";
+import SampleOrderListPage from "@/app/components/SampleOrderListPage";
 import { ResponsivePageLayout } from "@/app/components/ResponsivePageLayout";
 import { LoginPage } from "@/app/components/LoginPage";
 import { RegisterPage } from "@/app/components/RegisterPage";
@@ -403,6 +404,18 @@ export default function App() {
           </ResponsivePageLayout>
         );
       case 'parts-sample':
+        return (
+          <ResponsivePageLayout
+            currentPage={currentPage}
+            onPageChange={handlePageChange}
+            onLogout={handleLogout}
+            userRole={userRole}
+            title="索樣單"
+            breadcrumb="零件/索樣 • 索樣單"
+          >
+            <SampleOrderListPage userRole={userRole} />
+          </ResponsivePageLayout>
+        );
       case 'quality-report':
       case 'quality-hazard':
       case 'quality-other':

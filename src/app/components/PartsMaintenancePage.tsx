@@ -20,6 +20,7 @@ import {
 } from './partsMaintenanceData';
 import { downloadQuotationTemplate } from './PartsUploadManager';
 import { PartsUploadOverlay } from './PartsUploadOverlay';
+import { CreateSampleOrderOverlay } from './CreateSampleOrderOverlay';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 interface PartsMaintenancePageProps {
@@ -169,6 +170,45 @@ export default function PartsMaintenancePage({
 
   // ── Tabs ────────────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<TabId>('all');
+
+  // ── Checkbox 選取（受控）─────────────────────────────────────────────────────
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+
+  const handleToggleRow = useCallback((id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }, []);
+
+  const handleToggleAll = useCallback((ids: number[]) => {
+    setSelectedIds((prev) => {
+      const allSelected = ids.every((id) => prev.has(id));
+      if (allSelected) {
+        const next = new Set(prev);
+        ids.forEach((id) => next.delete(id));
+        return next;
+      }
+      return new Set([...prev, ...ids]);
+    });
+  }, []);
+
+  // ── 開立索樣單 Overlay ────────────────────────────────────────────────────
+  const [showCreateSampleOrder, setShowCreateSampleOrder] = useState(false);
+  const [multiVendorAlert, setMultiVendorAlert] = useState(false);
+
+  const handleOpenCreateSampleOrder = useCallback(() => {
+    const selectedParts = partsData.filter((p) => selectedIds.has(p.id));
+    if (selectedParts.length === 0) return;
+    // 若選取多個廠商，顯示錯誤
+    const uniqueVendors = new Set(selectedParts.map((p) => p.vendorCode));
+    if (uniqueVendors.size > 1) {
+      setMultiVendorAlert(true);
+      return;
+    }
+    setShowCreateSampleOrder(true);
+  }, [selectedIds, partsData]);
 
   // ── Filters ─────────────────────────────────────────────────────────────────
   const [filterPurchaseOrg, setFilterPurchaseOrg] = useState('');
@@ -480,6 +520,19 @@ export default function PartsMaintenancePage({
           data={displayData}
           storageKey="parts-maintenance-list-v2"
           showCheckbox={userRole !== 'vendor'}
+          selectedIds={selectedIds}
+          onToggleRow={handleToggleRow}
+          onToggleAll={handleToggleAll}
+          batchActions={
+            selectedIds.size > 0 ? (
+              <span
+                onClick={handleOpenCreateSampleOrder}
+                className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] text-[#004680] leading-[24px] whitespace-nowrap cursor-pointer select-none px-[10px] py-[16px] hover:opacity-70 transition-opacity"
+              >
+                開立索樣單
+              </span>
+            ) : null
+          }
           actionButton={actionButton}
           externalFilteredData={displayData}
           updateTime={LAST_SYNC_TIME}
@@ -496,6 +549,58 @@ export default function PartsMaintenancePage({
           }
         />
       </div>
+
+      {/* ── 開立索樣單 Overlay ── */}
+      {showCreateSampleOrder && (
+        <CreateSampleOrderOverlay
+          selectedParts={partsData.filter((p) => selectedIds.has(p.id))}
+          onClose={() => setShowCreateSampleOrder(false)}
+          onCreated={(orderNo) => {
+            setShowCreateSampleOrder(false);
+            setSelectedIds(new Set());
+            toast.success(`已開立索樣單（${orderNo} 等，狀態：草稿 DR）`);
+          }}
+        />
+      )}
+
+      {/* ── 多廠商錯誤提示 ── */}
+      {multiVendorAlert && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.3)' }}>
+          <div className="bg-white rounded-[16px] shadow-[-40px_40px_80px_0px_rgba(145,158,171,0.24)] overflow-hidden" style={{ maxWidth: '480px', width: '100%', margin: '0 16px' }}>
+            <div className="flex items-center gap-[12px] pl-[4px] pr-[16px] py-[4px] border-b border-[rgba(145,158,171,0.12)]">
+              <div className="flex items-center justify-center rounded-[12px] shrink-0 size-[48px] bg-[rgba(255,86,48,0.08)]">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 9v4M12 16.5h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+                    stroke="#FF5630" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <p className="flex-1 font-semibold text-[14px] leading-[22px] text-[#1c252e]">無法開立索樣單</p>
+              <button
+                onClick={() => setMultiVendorAlert(false)}
+                className="flex items-center justify-center w-[36px] h-[36px] rounded-full hover:bg-[rgba(145,158,171,0.12)] transition-colors shrink-0"
+              >
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                  <path d="M15 5L5 15M5 5l10 10" stroke="#637381" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </button>
+            </div>
+            <div className="flex-1 flex items-center px-[24px] py-[20px]">
+              <p className="text-[14px] text-[#637381] leading-[22px]">
+                已選取的零件包含<strong className="text-[#1c252e]">多個不同廠商</strong>，<br />
+                開立索樣單時請確保所有零件屬於<strong className="text-[#1c252e]">同一廠商</strong>。
+              </p>
+            </div>
+            <div className="flex items-center justify-end px-[20px] py-[12px] border-t border-[rgba(145,158,171,0.12)] bg-[rgba(255,86,48,0.04)]">
+              <button
+                onClick={() => setMultiVendorAlert(false)}
+                className="flex items-center justify-center h-[36px] px-[20px] rounded-[8px] bg-[#1c252e] hover:bg-[#2c3540] transition-colors"
+              >
+                <span className="font-semibold text-[13px] text-white leading-none">確認</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── 上傳 Overlay ── */}
       {showUploadOverlay && (
