@@ -513,7 +513,7 @@ const MINI_SUBMENUS: Record<string, { label: string; page?: PageType }[]> = {
     { label: '發票設定',      page: 'invoice-settings' },
   ],
   parts: [
-    { label: '零件資訊維護',  page: 'parts-maintain' },
+    { label: '零件資訊',  page: 'parts-maintain' },
     { label: '列印報價單',    page: 'parts-quote' },
     { label: '索樣單',        page: 'parts-sample' },
   ],
@@ -893,18 +893,18 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
         </div>
       </div>
 
-      {/* 1. 零件/索樣維護 */}
+      {/* 1. 零件/索樣 */}
       <div className="w-full">
         <NavItem 
           icon={<PartsIcon />} 
-          label="零件/索樣維護" 
+          label="零件/索樣" 
           hasSubmenu 
           isExpanded={expandedMenus.includes('parts')}
           onClick={() => toggleMenu('parts')}
         />
         {expandedMenus.includes('parts') && (
           <div className="w-full">
-            <SubMenuItem label="零件資訊維護" page="parts-maintain" onNavigate={onPageChange} isActive={currentPage === 'parts-maintain'} />
+            <SubMenuItem label="零件資訊" page="parts-maintain" onNavigate={onPageChange} isActive={currentPage === 'parts-maintain'} />
             <SubMenuItem label="列印報價單" page="parts-quote" onNavigate={onPageChange} isActive={currentPage === 'parts-quote'} />
             <SubMenuItem label="索樣單" page="parts-sample" onNavigate={onPageChange} isActive={currentPage === 'parts-sample'} />
           </div>

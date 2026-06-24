@@ -25,8 +25,8 @@ const PAGE_META: Partial<Record<string, { title: string; breadcrumb: string }>> 
   'invoice-list':           { title: '發票查詢',        breadcrumb: '發票作業 • 發票查詢' },
   'invoice-settings':       { title: '發票設定',        breadcrumb: '發票作業 • 發票設定' },
   // 零件/索樣維護（parts-maintain 已實作，不在此列）
-  'parts-quote':            { title: '列印報價單',      breadcrumb: '零件/索樣維護 • 列印報價單' },
-  'parts-sample':           { title: '索樣單',          breadcrumb: '零件/索樣維護 • 索樣單' },
+  'parts-quote':            { title: '列印報價單',      breadcrumb: '零件/索樣 • 列印報價單' },
+  'parts-sample':           { title: '索樣單',          breadcrumb: '零件/索樣 • 索樣單' },
   // 品保作業
   'quality-report':         { title: '檢驗/測試報告',  breadcrumb: '品保作業 • 檢驗/測試報告' },
   'quality-hazard':         { title: '危害物質管理',    breadcrumb: '品保作業 • 危害物質管理' },
