@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Toaster } from '@/app/components/ui/sonner';
 import { StandardDataTable, type StandardColumn } from './StandardDataTable';
 import { SearchField } from './SearchField';
+import { SampleOrderDetailOverlay } from './SampleOrderDetailOverlay';
 import {
   getSampleOrders,
   deleteSampleOrders,
@@ -62,6 +63,9 @@ interface SampleOrderListPageProps {
 export default function SampleOrderListPage({ userRole: _userRole }: SampleOrderListPageProps) {
   // ── 資料 state ──────────────────────────────────────────────────────────────
   const [orders, setOrders] = useState<SampleOrderRecord[]>(() => getSampleOrders());
+
+  // ── 明細彈窗 state ──────────────────────────────────────────────────────
+  const [detailOrder, setDetailOrder] = useState<SampleOrderRecord | null>(null);
 
   // ── Tab ─────────────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<TabId>('all');
@@ -203,7 +207,10 @@ export default function SampleOrderListPage({ userRole: _userRole }: SampleOrder
         renderCell: (_val, row) => (
           <button
             className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] text-[#1677ff] underline hover:text-[#0958d9] transition-colors cursor-pointer truncate w-full text-left"
-            onClick={() => toast(`索樣單明細：${row.orderNo}（開發中）`)}
+            onClick={() => {
+              const found = orders.find((o) => o.id === row.id);
+              if (found) setDetailOrder(found);
+            }}
           >
             {row.material}
           </button>
@@ -368,6 +375,19 @@ export default function SampleOrderListPage({ userRole: _userRole }: SampleOrder
       </div>
 
       <Toaster />
+
+      {/* ── 索樣單明細彈窗 ── */}
+      {detailOrder && (
+        <SampleOrderDetailOverlay
+          order={detailOrder}
+          onClose={() => setDetailOrder(null)}
+          onUpdated={(updated) => {
+            setOrders([...getSampleOrders()]);
+            setDetailOrder(null);
+            toast.success(`索樣單 ${updated.orderNo} 已回覆採購`);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -21,6 +21,8 @@ import {
 import { downloadQuotationTemplate } from './PartsUploadManager';
 import { PartsUploadOverlay } from './PartsUploadOverlay';
 import { CreateSampleOrderOverlay } from './CreateSampleOrderOverlay';
+import { SampleOrderDetailOverlay } from './SampleOrderDetailOverlay';
+import { getSampleOrders, type SampleOrderRecord } from './sampleOrderData';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 interface PartsMaintenancePageProps {
@@ -197,6 +199,7 @@ export default function PartsMaintenancePage({
   // ── 開立索樣單 Overlay ────────────────────────────────────────────────────
   const [showCreateSampleOrder, setShowCreateSampleOrder] = useState(false);
   const [multiVendorAlert, setMultiVendorAlert] = useState(false);
+  const [detailOrder, setDetailOrder] = useState<SampleOrderRecord | null>(null);
 
   const handleOpenCreateSampleOrder = useCallback(() => {
     const selectedParts = partsData.filter((p) => selectedIds.has(p.id));
@@ -558,8 +561,19 @@ export default function PartsMaintenancePage({
           onCreated={(orderNo) => {
             setShowCreateSampleOrder(false);
             setSelectedIds(new Set());
-            toast.success(`已開立索樣單（${orderNo} 等，狀態：草稿 DR）`);
+            // 開立後自動開啟明細彈窗
+            const allOrders = getSampleOrders();
+            const found = allOrders.find((o) => o.orderNo === orderNo);
+            if (found) setDetailOrder(found);
           }}
+        />
+      )}
+
+      {/* ── 索樣單明細彈窗 ── */}
+      {detailOrder && (
+        <SampleOrderDetailOverlay
+          order={detailOrder}
+          onClose={() => setDetailOrder(null)}
         />
       )}
 

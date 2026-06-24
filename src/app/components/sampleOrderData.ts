@@ -115,10 +115,14 @@ export interface SampleOrderRecord {
   material: string;
   /** 長規格敘述 */
   longDescription: string;
+  /** 廠商商料號 */
+  vendorMaterialNo?: string;
   /** 索樣日期（YYYY/MM/DD） */
   sampleDate: string;
   /** 需求日期（YYYY/MM/DD） */
   demandDate: string;
+  /** 需求數量 */
+  demandQty?: number;
   /** 重新索樣 */
   resample: boolean;
   /** 索樣類型 */
@@ -131,6 +135,15 @@ export interface SampleOrderRecord {
   createdAt: string;
   /** 最後更新時間 */
   updatedAt: string;
+  // ── 廠商回覆欄位（狀態 V 以後才有值） ─────────────────────────────────
+  /** 樣品送達日 */
+  vendorShipDate?: string;
+  /** 實際送樣日 */
+  actualShipDate?: string;
+  /** 首批可供貨日 */
+  availableDate?: string;
+  /** 廠商日產能 */
+  vendorDailyCapacity?: number;
 }
 
 // ── 序號產生器 ──────────────────────────────────────────────────────────────
@@ -152,18 +165,24 @@ let _sampleOrders: SampleOrderRecord[] = [
     status: 'V',
     vendorCode: '000100463',
     vendorName: '速聯',
-    purchaseOrg: 'GEM採購組織',
+    purchaseOrg: '1101',
     plant: 'GTM1',
-    material: '1129-CSL0075-L01',
-    longDescription: 'SRAM EAGLE AXS GROUPSET 12-SPD COMPLETE SET',
-    sampleDate: '2024/12/25',
+    material: '1330-BASAD1-003',
+    longDescription: 'G9 Pique ADV PRO 29 0 (15)(拉伸無膜樣+數位無膜樣) CARBON SMOKE/G-CHO1',
+    vendorMaterialNo: '411U12C14S4002',
+    sampleDate: '2025/01/01',
     demandDate: '2025/02/01',
+    demandQty: 4,
     resample: true,
     sampleType: 'D',
     remark: '開發樣品需於年前確認',
     createdBy: '王大明',
-    createdAt: '2024/12/20 09:30',
-    updatedAt: '2024/12/20 09:30',
+    createdAt: '2025/01/01 12:00',
+    updatedAt: '2025/01/01 12:00',
+    vendorShipDate: '2025/02/10',
+    actualShipDate: '2025/02/10',
+    availableDate: '2025/02/10',
+    vendorDailyCapacity: 4,
   },
   {
     id: 2,
@@ -232,8 +251,10 @@ let _sampleOrders: SampleOrderRecord[] = [
     plant: 'DTC1',
     material: '1129-SHM0013-B02',
     longDescription: 'SHIMANO DURA-ACE R9200 BRAKE CALIPER FRONT',
+    vendorMaterialNo: 'SHM-BR-R9200-F',
     sampleDate: '2024/12/10',
     demandDate: '2025/01/20',
+    demandQty: 2,
     resample: true,
     sampleType: 'G',
     remark: '',
@@ -252,14 +273,20 @@ let _sampleOrders: SampleOrderRecord[] = [
     plant: 'GTM1',
     material: '1129-MCN0044-C03',
     longDescription: 'MAXXIS MINION DHF 29X2.5 3C EXO TIRE',
+    vendorMaterialNo: 'MX-MINION-DHF-29',
     sampleDate: '2024/11/20',
     demandDate: '2024/12/30',
+    demandQty: 6,
     resample: false,
     sampleType: 'G',
     remark: '廠商已回覆，待採購確認',
     createdBy: '林怡君',
     createdAt: '2024/11/15 10:00',
     updatedAt: '2024/11/25 16:30',
+    vendorShipDate: '2024/12/15',
+    actualShipDate: '2024/12/16',
+    availableDate: '2024/12/20',
+    vendorDailyCapacity: 10,
   },
   {
     id: 7,
@@ -273,12 +300,17 @@ let _sampleOrders: SampleOrderRecord[] = [
     longDescription: 'MAXXIS MINION DHR II 29X2.4 3C EXO TIRE',
     sampleDate: '2024/11/20',
     demandDate: '2024/12/30',
+    demandQty: 4,
     resample: false,
     sampleType: 'G',
     remark: '',
     createdBy: '林怡君',
     createdAt: '2024/11/15 10:05',
     updatedAt: '2024/11/25 16:35',
+    vendorShipDate: '2024/12/15',
+    actualShipDate: '2024/12/17',
+    availableDate: '2024/12/22',
+    vendorDailyCapacity: 8,
   },
   {
     id: 8,
@@ -433,4 +465,27 @@ export function updateSampleOrderStatus(ids: number[], status: SampleOrderStatus
   _sampleOrders = _sampleOrders.map((r) =>
     ids.includes(r.id) ? { ...r, status, updatedAt: ts } : r,
   );
+}
+
+/** 廠商回覆：更新回覆欄位並將狀態推進到 B（採購確認中） */
+export function updateSampleOrderVendorReply(
+  id: number,
+  reply: {
+    vendorShipDate?: string;
+    actualShipDate?: string;
+    availableDate?: string;
+    vendorDailyCapacity?: number;
+  },
+): SampleOrderRecord | null {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const ts = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  let found: SampleOrderRecord | null = null;
+  _sampleOrders = _sampleOrders.map((r) => {
+    if (r.id !== id) return r;
+    const updated: SampleOrderRecord = { ...r, ...reply, status: 'B', updatedAt: ts };
+    found = updated;
+    return updated;
+  });
+  return found;
 }

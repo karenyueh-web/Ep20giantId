@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { BaseOverlay } from './BaseOverlay';
-import { SearchField } from './SearchField';
 import { DropdownSelect } from './DropdownSelect';
+import { SimpleDatePicker } from './SimpleDatePicker';
 import {
   addSampleOrder,
   SAMPLE_TYPE_OPTIONS,
@@ -11,7 +11,7 @@ import {
 } from './sampleOrderData';
 import type { PartRecord } from './partsMaintenanceData';
 
-// ── FloatingInput（局部定義，符合 Overlay 規範）────────────────────────────
+// ── FloatingInput（帶浮動標籤，唯讀 / 可編輯）──────────────────────────────
 function FloatingInput({
   label,
   value,
@@ -30,7 +30,9 @@ function FloatingInput({
       <div
         aria-hidden="true"
         className="absolute inset-0 pointer-events-none rounded-[8px] border border-solid"
-        style={{ borderColor: readOnly ? 'rgba(145,158,171,0.10)' : 'rgba(145,158,171,0.2)' }}
+        style={{
+          borderColor: readOnly ? 'rgba(145,158,171,0.10)' : 'rgba(145,158,171,0.2)',
+        }}
       />
       <div className="absolute flex items-center left-[14px] px-[2px] top-[-5px] z-10">
         <div className="absolute bg-white h-[2px] left-0 right-0 top-[5px]" />
@@ -43,7 +45,7 @@ function FloatingInput({
       ) : (
         <textarea
           className="w-full rounded-[8px] px-[14px] pt-[18px] pb-[10px] text-[14px] text-[#1c252e] outline-none bg-transparent border-0 leading-[22px]"
-          style={{ resize: 'vertical', minHeight: '54px' }}
+          style={{ resize: 'none', minHeight: '54px' }}
           value={value}
           onChange={(e) => onChange?.(e.target.value)}
           placeholder={placeholder}
@@ -54,12 +56,156 @@ function FloatingInput({
   );
 }
 
+// ── NumberInput（帶浮動標籤的數字輸入）────────────────────────────────────────
+function NumberInput({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <div className="relative w-full" style={{ minHeight: '54px' }}>
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 pointer-events-none rounded-[8px] border border-solid"
+        style={{ borderColor: 'rgba(145,158,171,0.2)' }}
+      />
+      <div className="absolute flex items-center left-[14px] px-[2px] top-[-5px] z-10">
+        <div className="absolute bg-white h-[2px] left-0 right-0 top-[5px]" />
+        <p style={{ fontSize: '12px', fontWeight: 600, color: '#637381' }}>{label}</p>
+      </div>
+      <input
+        type="number"
+        className="w-full rounded-[8px] px-[14px] pt-[18px] pb-[10px] text-[14px] text-[#1c252e] outline-none bg-transparent border-0 leading-[22px]"
+        style={{ minHeight: '54px', WebkitAppearance: 'none', MozAppearance: 'textfield' }}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        min={1}
+      />
+    </div>
+  );
+}
+
+// ── DateInput（帶浮動標籤的日期選擇器，與 FloatingInput 結構完全一致）─────────────
+function DateInput({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [showPicker, setShowPicker] = useState(false);
+
+  return (
+    <div className="relative w-full overflow-hidden" style={{ minHeight: '54px' }}>
+      {/* 一致的框線 overlay */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 pointer-events-none rounded-[8px] border border-solid"
+        style={{ borderColor: 'rgba(145,158,171,0.2)' }}
+      />
+      {/* 浮動標籤 */}
+      <div className="absolute flex items-center left-[14px] px-[2px] top-[-5px] z-10">
+        <div className="absolute bg-white h-[2px] left-0 right-0 top-[5px]" />
+        <p style={{ fontSize: '12px', fontWeight: 600, color: '#637381' }}>{label}</p>
+      </div>
+      {/* 內容區：日期文字 + calendar icon */}
+      <div
+        className="flex items-center w-full cursor-pointer select-none"
+        style={{ minHeight: '54px', paddingLeft: '14px', paddingRight: '10px', paddingTop: '18px', paddingBottom: '10px' }}
+        onClick={() => setShowPicker((p) => !p)}
+      >
+        <span
+          className="flex-1 text-[14px] leading-[22px] truncate"
+          style={{ color: value ? '#1c252e' : '#919eab' }}
+        >
+          {value || '選擇日期'}
+        </span>
+        {/* 清除 */}
+        {value && (
+          <div
+            className="flex items-center justify-center shrink-0 size-[24px] rounded-full hover:bg-[rgba(145,158,171,0.12)] transition-colors mr-[4px]"
+            onClick={(e) => { e.stopPropagation(); onChange(''); }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+              <path d="M18 6L6 18M6 6l12 12" stroke="#919EAB" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+        )}
+        {/* Calendar icon */}
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="shrink-0">
+          <rect x="3" y="4" width="18" height="18" rx="2" fill="#637381" opacity="0.2" />
+          <path d="M3 9h18M8 2v4M16 2v4" stroke="#637381" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      </div>
+      {/* 日曆 */}
+      {showPicker && (
+        <div className="absolute top-[58px] left-0 z-[100]">
+          <SimpleDatePicker
+            selectedDate={value}
+            onDateSelect={(date) => { onChange(date); setShowPicker(false); }}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── InfoField：純文字 key-value 顯示 ────────────────────────────────────────
+function InfoField({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex flex-col gap-[2px]">
+      <p className="text-[11px] font-semibold leading-[16px]" style={{ color: '#919eab' }}>
+        {label}
+      </p>
+      <p className="text-[13px] leading-[20px] font-medium" style={{ color: '#1c252e' }}>
+        {value || '—'}
+      </p>
+    </div>
+  );
+}
+
+// ── SectionBox：帶標籤邊框的區塊容器 ─────────────────────────────────────────
+function SectionBox({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <p
+        className="text-[12px] font-semibold leading-[18px] mb-[10px]"
+        style={{ color: '#637381' }}
+      >
+        {title}
+      </p>
+      <div
+        className="rounded-[12px] p-[16px] flex flex-col gap-[16px]"
+        style={{
+          border: '1px solid rgba(145,158,171,0.20)',
+          backgroundColor: 'rgba(145,158,171,0.02)',
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
 // ── Props ─────────────────────────────────────────────────────────────────────
 interface CreateSampleOrderOverlayProps {
-  /** 已選取的零件清單（至少一筆） */
   selectedParts: PartRecord[];
   onClose: () => void;
-  /** 成功建立後回調 */
   onCreated: (orderNo: string) => void;
 }
 
@@ -69,37 +215,42 @@ export function CreateSampleOrderOverlay({
   onClose,
   onCreated,
 }: CreateSampleOrderOverlayProps) {
-  // 從第一筆零件帶入共用欄位（廠商、採購組織、工廠）
   const firstPart = selectedParts[0];
 
-  const [sampleDate, setSampleDate] = useState('');
-  const [demandDate, setDemandDate] = useState('');
-  const [sampleType, setSampleType] = useState<string>('D');
-  const [resample, setResample] = useState<string>('否');
-  const [remark, setRemark] = useState('');
-  const [submitted, setSubmitted] = useState(false);
+  // 巨大需求欄位
+  const [demandDate,  setDemandDate]  = useState('');
+  const [sampleType,  setSampleType]  = useState<string>('D');
+  const [resample,    setResample]    = useState<string>('否');
+  const [demandQty,   setDemandQty]   = useState('');
+  const [remark,      setRemark]      = useState('');
+  const [submitted,   setSubmitted]   = useState(false);
 
-  // 逐筆零件為每筆各開立一張索樣單
+  const resampleOptions = [
+    { value: '否', label: '否' },
+    { value: '是', label: '是' },
+  ];
+
   const handleSubmit = () => {
     setSubmitted(true);
-    if (!sampleDate || !demandDate) return;
+    if (!demandDate) return;
 
     let lastOrderNo = '';
     selectedParts.forEach((part) => {
       const record = addSampleOrder({
-        status: 'DR',
-        vendorCode: part.vendorCode,
-        vendorName: part.vendorName,
-        purchaseOrg: part.purchaseOrg,
-        plant: part.plant,
-        material: part.material,
+        status:          'DR',
+        vendorCode:      part.vendorCode,
+        vendorName:      part.vendorName,
+        purchaseOrg:     part.purchaseOrg,
+        plant:           part.plant,
+        material:        part.material,
         longDescription: part.longDescription,
-        sampleDate,
+        sampleDate:      demandDate,
         demandDate,
-        resample: resample === '是',
-        sampleType: sampleType as SampleType,
+        demandQty:       demandQty ? Number(demandQty) : undefined,
+        resample:        resample === '是',
+        sampleType:      sampleType as SampleType,
         remark,
-        createdBy: '王大明', // Mock 登入用戶
+        createdBy:       '王大明',
       });
       lastOrderNo = record.orderNo;
     });
@@ -107,15 +258,11 @@ export function CreateSampleOrderOverlay({
     onCreated(lastOrderNo);
   };
 
-  const resampleOptions = [
-    { value: '否', label: '否' },
-    { value: '是', label: '是' },
-  ];
-
   return (
-    <BaseOverlay onClose={onClose} maxWidth="640px" maxHeight="90vh">
+    <BaseOverlay onClose={onClose} maxWidth="680px" maxHeight="92vh">
       <div className="relative w-full h-full flex flex-col">
-        {/* 關閉按鈕 */}
+
+        {/* ── 關閉按鈕 ── */}
         <button
           className="absolute left-[20px] top-[20px] z-10 cursor-pointer hover:opacity-70 transition-opacity"
           onClick={onClose}
@@ -130,132 +277,142 @@ export function CreateSampleOrderOverlay({
           </svg>
         </button>
 
-        {/* 標題列 */}
-        <div className="shrink-0 px-[50px] pt-[50px] pb-[20px] border-b border-[rgba(145,158,171,0.12)]">
+        {/* ══════════════════════════════════════════════════════════════
+            HEADER
+        ══════════════════════════════════════════════════════════════ */}
+        <div
+          className="shrink-0 px-[52px] pt-[20px] pb-[14px] border-b"
+          style={{ borderColor: 'rgba(145,158,171,0.12)' }}
+        >
           <p className="font-semibold text-[18px] leading-[28px] text-[#1c252e]">
             開立索樣單
           </p>
-          <p className="text-[13px] text-[#637381] mt-[4px]">
+          <p className="text-[13px] mt-[2px]" style={{ color: '#919eab' }}>
             共 {selectedParts.length} 筆零件，每筆各開立一張索樣單（狀態：草稿 DR）
           </p>
         </div>
 
-        {/* 內容區（可捲動） */}
-        <div className="flex-1 overflow-y-auto px-[50px] py-[24px] flex flex-col gap-[16px]">
-          {/* 唯讀欄位 */}
-          <div className="grid grid-cols-2 gap-[16px]">
-            <FloatingInput
-              label="廠商(編號)"
-              value={`${firstPart.vendorName}(${firstPart.vendorCode})`}
-              readOnly
-            />
-            <FloatingInput
-              label="採購組織"
-              value={firstPart.purchaseOrg}
-              readOnly
-            />
-            <FloatingInput
-              label="工廠"
-              value={firstPart.plant}
-              readOnly
-            />
-            <FloatingInput
-              label="零件數量"
-              value={`${selectedParts.length} 筆`}
-              readOnly
-            />
-          </div>
+        {/* ══════════════════════════════════════════════════════════════
+            可捲動內容區
+        ══════════════════════════════════════════════════════════════ */}
+        <div className="flex-1 overflow-y-auto px-[24px] py-[20px] flex flex-col gap-[20px] custom-scrollbar">
 
-          {/* 可編輯欄位 */}
-          <div className="grid grid-cols-2 gap-[16px]">
-            <SearchField
-              label="索樣日期"
-              value={sampleDate}
-              onChange={setSampleDate}
-              type="date"
-            />
-            <SearchField
-              label="需求日期"
-              value={demandDate}
-              onChange={setDemandDate}
-              type="date"
-            />
-            <DropdownSelect
-              label="索樣類型"
-              value={sampleType}
-              onChange={setSampleType}
-              options={SAMPLE_TYPE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
-            />
-            <DropdownSelect
-              label="重新索樣"
-              value={resample}
-              onChange={setResample}
-              options={resampleOptions}
-            />
-          </div>
+          {/* ── 區塊一：索樣零件清單 ────────────────────────────────── */}
+          <SectionBox title="索樣零件清單">
+            {/* 廠商 / 採購組織 / 工廠（唯讀資訊） */}
+            <div className="grid grid-cols-3 gap-[16px]">
+              <InfoField label="廠商(編號)" value={`${firstPart.vendorName}(${firstPart.vendorCode})`} />
+              <InfoField label="採購組織"   value={firstPart.purchaseOrg} />
+              <InfoField label="工廠"       value={firstPart.plant} />
+            </div>
 
-          {/* 備註 */}
-          <FloatingInput
-            label="備註"
-            value={remark}
-            onChange={setRemark}
-            placeholder="選填備註..."
-          />
+            {/* 分隔線 */}
+            <div style={{ height: '1px', backgroundColor: 'rgba(145,158,171,0.12)' }} />
 
-          {/* 零件清單 */}
-          <div>
-            <p className="text-[12px] font-semibold text-[#637381] mb-[8px]">索樣零件清單</p>
-            <div className="border border-[rgba(145,158,171,0.16)] rounded-[8px] overflow-hidden">
+            {/* 零件表格 */}
+            <div className="rounded-[8px] overflow-hidden" style={{ border: '1px solid rgba(145,158,171,0.16)' }}>
               {/* 表頭 */}
-              <div className="grid grid-cols-[1fr_2fr] bg-[#f4f6f8] px-[16px] py-[8px] gap-[16px]">
-                <span className="text-[12px] font-semibold text-[#637381]">料號</span>
-                <span className="text-[12px] font-semibold text-[#637381]">長規格敘述</span>
+              <div
+                className="grid px-[14px] py-[8px] gap-[16px]"
+                style={{
+                  backgroundColor: '#f4f6f8',
+                  gridTemplateColumns: '1fr 2fr',
+                }}
+              >
+                <span className="text-[12px] font-semibold" style={{ color: '#637381' }}>料號</span>
+                <span className="text-[12px] font-semibold" style={{ color: '#637381' }}>長規格敘述</span>
               </div>
               {/* 資料列 */}
-              <div className="max-h-[200px] overflow-y-auto">
+              <div className="max-h-[180px] overflow-y-auto custom-scrollbar">
                 {selectedParts.map((part, i) => (
                   <div
                     key={part.id}
-                    className="grid grid-cols-[1fr_2fr] px-[16px] py-[10px] gap-[16px] border-t border-[rgba(145,158,171,0.08)]"
-                    style={{ backgroundColor: i % 2 === 0 ? 'white' : 'rgba(145,158,171,0.02)' }}
+                    className="grid px-[14px] py-[10px] gap-[16px]"
+                    style={{
+                      gridTemplateColumns: '1fr 2fr',
+                      borderTop: '1px solid rgba(145,158,171,0.08)',
+                      backgroundColor: i % 2 === 0 ? 'white' : 'rgba(145,158,171,0.02)',
+                    }}
                   >
-                    <span className="text-[13px] text-[#1c252e] font-medium truncate">
+                    <span className="text-[13px] font-medium truncate" style={{ color: '#1c252e' }}>
                       {part.material}
                     </span>
-                    <span className="text-[13px] text-[#637381] truncate">
+                    <span className="text-[13px] truncate" style={{ color: '#637381' }}>
                       {part.longDescription}
                     </span>
                   </div>
                 ))}
               </div>
             </div>
-          </div>
+          </SectionBox>
+
+          {/* ── 區塊二：巨大需求 ─────────────────────────────────────── */}
+          <SectionBox title="巨大需求">
+            <div className="grid grid-cols-2 gap-[16px]">
+              {/* 重新索樣 */}
+              <DropdownSelect
+                label="重新索樣"
+                value={resample}
+                onChange={setResample}
+                options={resampleOptions}
+              />
+
+              {/* 索樣類型 */}
+              <DropdownSelect
+                label="索樣類型"
+                value={sampleType}
+                onChange={setSampleType}
+                options={SAMPLE_TYPE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+              />
+
+              {/* 樣品需求日 */}
+              <DateInput
+                label="樣品需求日"
+                value={demandDate}
+                onChange={setDemandDate}
+              />
+
+              {/* 需求數量 */}
+              <NumberInput
+                label="需求數量"
+                value={demandQty}
+                onChange={setDemandQty}
+                placeholder="請輸入數量"
+              />
+            </div>
+          </SectionBox>
+
         </div>
 
-        {/* 底部送出按鈕 */}
-        <div className="shrink-0 px-[50px] py-[20px] border-t border-[rgba(145,158,171,0.12)]">
+        {/* ══════════════════════════════════════════════════════════════
+            CTA 底部按鈕列
+        ══════════════════════════════════════════════════════════════ */}
+        <div
+          className="shrink-0 flex gap-[12px] px-[24px] py-[16px] border-t"
+          style={{ borderColor: 'rgba(145,158,171,0.12)' }}
+        >
           {/* 驗證錯誤提示 */}
-          {submitted && (!sampleDate || !demandDate) && (
-            <p className="text-[12px] text-[#ff5630] mb-[12px]">
-              ⚠ 請填寫索樣日期與需求日期
+          {submitted && !demandDate && (
+            <p className="absolute left-[24px] bottom-[60px] text-[12px]" style={{ color: '#ff5630' }}>
+              ⚠ 請填寫樣品需求日
             </p>
           )}
-          <div className="flex gap-[12px]">
-            <button
-              onClick={onClose}
-              className="flex-1 h-[36px] rounded-[8px] border border-[rgba(145,158,171,0.32)] text-[14px] font-medium text-[#637381] hover:bg-[rgba(145,158,171,0.08)] transition-colors"
-            >
-              取消
-            </button>
-            <button
-              onClick={handleSubmit}
-              className="flex-1 h-[36px] rounded-[8px] flex items-center justify-center hover:bg-[#004680] transition-colors"
-              style={{ backgroundColor: '#00559c' }}
-            >
-              <p className="font-bold text-[14px] text-white">開立索樣單</p>
-            </button>
-          </div>
+          <button
+            onClick={onClose}
+            className="flex-1 h-[36px] rounded-[8px] border text-[14px] font-medium hover:bg-[rgba(145,158,171,0.08)] transition-colors"
+            style={{ borderColor: 'rgba(145,158,171,0.32)', color: '#637381' }}
+          >
+            取消
+          </button>
+          <button
+            onClick={handleSubmit}
+            className="flex-1 h-[36px] rounded-[8px] flex items-center justify-center hover:bg-[#004680] transition-colors"
+            style={{ backgroundColor: '#00559c' }}
+          >
+            <p className="font-bold text-[14px] text-white">開立索樣單</p>
+          </button>
         </div>
+
       </div>
     </BaseOverlay>
   );
