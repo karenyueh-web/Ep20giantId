@@ -22,7 +22,6 @@ import { measureTextWidth } from './table/tableUtils';
 import { SimpleDatePicker } from './SimpleDatePicker';
 import { TRACK_DATA, type TrackRecord } from './invoiceSettingsStore';
 import { DropdownSelect } from './DropdownSelect';
-import { UpdateTimeLabel } from './UpdateTimeLabel';
 import { ActionCellButtons } from './ActionButtons';
 import { INVOICE_TYPE_OPTIONS } from './invoiceDetailData';
 
@@ -373,9 +372,7 @@ function TrackTab() {
         onFiltersClick={() => setShowFilterDialog(v => !v)}
         onExportCsv={() => { /* TODO */ }}
         actionButton={
-          <span className="ml-[8px]">
-            <UpdateTimeLabel label="資料更新時間" currentTime={dataUpdateTime} />
-          </span>
+          <span />
         }
         columnsButton={
           <ColumnSelector
@@ -490,6 +487,7 @@ function TrackTab() {
           itemsPerPage={perPage}
           onPageChange={setPage}
           onItemsPerPageChange={n => { setPerPage(n); setPage(1); }}
+          updateTime={dataUpdateTime}
         />
       </div>
     </div>
@@ -855,6 +853,7 @@ function DeadlineTab() {
           itemsPerPage={perPage}
           onPageChange={setPage}
           onItemsPerPageChange={n => { setPerPage(n); setPage(1); }}
+          updateTime={dataUpdateTime}
         />
       </div>
 
@@ -1760,6 +1759,7 @@ function FactoryTaxTab() {
           itemsPerPage={perPage}
           onPageChange={setPage}
           onItemsPerPageChange={n => { setPerPage(n); setPage(1); }}
+          updateTime={dataUpdateTime}
         />
       </div>
 

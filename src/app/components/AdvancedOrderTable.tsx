@@ -140,6 +140,8 @@ interface AdvancedOrderTableProps {
    * 同時隱藏右側的 ... 操作欄。
    */
   onDocNoClick?: (row: OrderRow) => void;
+  /** 資料更新時間，傳入後顯示在右下角 pagination 列 */
+  updateTime?: string;
 }
 
 // ===== 差異天數計算工具 =====
@@ -731,6 +733,7 @@ export function AdvancedOrderTable({
   forceShowCheckbox = false,
   batchActions,
   onDocNoClick,
+  updateTime,
 }: AdvancedOrderTableProps) {
   const { scrollContainerRef, handleMouseDown, canDragScroll } = useHorizontalDragScroll();
 
@@ -1386,6 +1389,7 @@ export function AdvancedOrderTable({
             itemsPerPage={rowsPerPage}
             onPageChange={setCurrentPage}
             onItemsPerPageChange={(n) => { setRowsPerPage(n); setCurrentPage(1); }}
+            updateTime={updateTime}
           />
         </div>
       </div>

@@ -26,7 +26,6 @@ import {
   loadInvoiceRecords, initInvoiceStore, saveInvoiceRecords, INVOICE_STATUS_CONFIG,
   type InvoiceRecord, type InvoiceStatus,
 } from './invoiceStore';
-import { UpdateTimeLabel } from './UpdateTimeLabel';
 
 // ── Tab 定義 ──────────────────────────────────────────────────────────────────
 
@@ -568,13 +567,7 @@ export function InvoiceListPage({ onViewInvoice }: InvoiceListPageProps = {}) {
         onColumnsClick={() => { setTempColumns(JSON.parse(JSON.stringify(columns))); setShowColumnSelector(v => !v); }}
         onFiltersClick={() => setShowFilterDialog(v => !v)}
         onExportCsv={() => { /* TODO */ }}
-        actionButton={
-          (['P', 'S', 'F'] as (InvoiceStatus | 'ALL')[]).includes(activeTab) ? (
-            <span className="ml-[8px]">
-              <UpdateTimeLabel label="更新時間" currentTime={updateTime} />
-            </span>
-          ) : undefined
-        }
+        actionButton={undefined}
         columnsButton={
           <ColumnSelector
             columns={tempColumns as Parameters<typeof ColumnSelector>[0]['columns']}
@@ -731,6 +724,7 @@ export function InvoiceListPage({ onViewInvoice }: InvoiceListPageProps = {}) {
           itemsPerPage={perPage}
           onPageChange={setPage}
           onItemsPerPageChange={n => { setPerPage(n); setPage(1); }}
+          updateTime={(['P', 'S', 'F'] as (InvoiceStatus | 'ALL')[]).includes(activeTab) ? updateTime : undefined}
         />
       </div>
     </div>

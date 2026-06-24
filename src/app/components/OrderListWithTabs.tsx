@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { NextUpdateTooltip } from './UpdateTimeLabel';
 import svgPaths from "@/imports/svg-imw9bns98t";
 import { OrderDetail } from './OrderDetail';
 import { AdvancedOrderTable, getOrderColumns, defaultOrderColumns, computeRowDayDiff } from './AdvancedOrderTable';
@@ -985,23 +984,6 @@ export function OrderListWithTabs({ defaultTab = 'NP', userRole }: OrderListWith
               hideBatchReply={activeTab === 'B' || activeTab === 'CK' || activeTab === 'CL'}
               hideBatchCorrection={true}
             />
-            {/* 資料更新時間 */}
-            <NextUpdateTooltip currentTime="2025/05/05 12:30">
-              <div className="flex gap-0 h-[36px] items-center shrink-0 rounded-[8px] border border-[#005eb8] border-solid overflow-hidden">
-                <div className="bg-white flex items-center justify-center px-[12px] h-full">
-                  <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold leading-[22px] text-[#005eb8] text-[13px] whitespace-nowrap">
-                    資料更新時間:2025/05/05 12:30
-                  </p>
-                </div>
-                <div className="bg-[#005eb8] flex items-center justify-center h-full w-[36px] shrink-0 cursor-pointer hover:bg-[#004a94]">
-                  <div className="shrink-0 size-[20px]">
-                    <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 20 20">
-                      <path d={svgPaths.pe11c500} fill="white" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </NextUpdateTooltip>
           </div>
         }
       />
@@ -1052,6 +1034,7 @@ export function OrderListWithTabs({ defaultTab = 'NP', userRole }: OrderListWith
           ) : undefined
         }
         initialColumns={tableInitialColumns}
+        updateTime="2025/05/05 12:30"
       />
         );
       })()}

@@ -1,6 +1,4 @@
 import { useState } from 'react';
-import { NextUpdateTooltip } from './UpdateTimeLabel';
-import svgPaths from "@/imports/svg-imw9bns98t";
 import { OrderDetail } from './OrderDetail';
 import { AdvancedOrderTable, getOrderColumns, defaultOrderColumns } from './AdvancedOrderTable';
 import type { OrderRow, OrderColumn, ScheduleLine } from './AdvancedOrderTable';
@@ -548,32 +546,6 @@ export function ExchangeOrderListWithTabs({ userRole }: { userRole?: string }) {
           </div>
         </div>
       </div>
-
-      {/* ── Search bar（ALL Tab 兩列佈局 + StatusMultiSelect；其餘單列）───── */}
-      <div className="relative shrink-0 w-full" style={{ borderBottom: 'none' }}>
-        {activeTab === 'ALL' ? (
-          <div className="flex flex-col gap-[12px] px-[20px] pt-[20px] pb-[16px]" style={{ borderBottom: 'none' }}>
-            {/* Row 1: 單號序號 + 訂單狀態 */}
-            <div className="flex gap-[16px] items-start">
-              <SearchField label="單號序號" value={docSeqNoSearch} onChange={setDocSeqNoSearch} />
-              <StatusMultiSelect label="訂單狀態" selected={statusFilter} onChange={setStatusFilter} options={EXCHANGE_STATUS_OPTIONS} />
-            </div>
-            {/* Row 2: 訂單日期起迄 */}
-            <div className="flex gap-[16px] items-center">
-              <SearchField label="訂單日期(起)" value={orderDateFrom} onChange={setOrderDateFrom} type="date" />
-              <SearchField label="訂單日期(迄)" value={orderDateTo}   onChange={setOrderDateTo}   type="date" />
-              <div className="flex-1" />
-            </div>
-          </div>
-        ) : (
-          <div className="flex gap-[16px] items-center px-[20px] py-[20px]" style={{ borderBottom: 'none' }}>
-            <SearchField label="單號序號"     value={docSeqNoSearch} onChange={setDocSeqNoSearch} />
-            <SearchField label="訂單日期(起)" value={orderDateFrom}  onChange={setOrderDateFrom} type="date" />
-            <SearchField label="訂單日期(迄)" value={orderDateTo}    onChange={setOrderDateTo}   type="date" />
-          </div>
-        )}
-      </div>
-
       {/* ── Toolbar（對齊一般訂單：Columns / Filters / Export / 批次回覆）──── */}
       <TableToolbar
         resultsCount={getFilteredCount()}
@@ -609,23 +581,6 @@ export function ExchangeOrderListWithTabs({ userRole }: { userRole?: string }) {
               hideBatchReplySplit
               hideBatchCorrection
             />
-            {/* 資料更新時間 */}
-            <NextUpdateTooltip currentTime="2025/05/05 12:30">
-              <div className="flex gap-0 h-[36px] items-center shrink-0 rounded-[8px] border border-[#005eb8] border-solid overflow-hidden">
-                <div className="bg-white flex items-center justify-center px-[12px] h-full">
-                  <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold leading-[22px] text-[#005eb8] text-[13px] whitespace-nowrap">
-                    資料更新時間:2025/05/05 12:30
-                  </p>
-                </div>
-                <div className="bg-[#005eb8] flex items-center justify-center h-full w-[36px] shrink-0 cursor-pointer hover:bg-[#004a94]">
-                  <div className="shrink-0 size-[20px]">
-                    <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 20 20">
-                      <path d={svgPaths.pe11c500} fill="white" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </NextUpdateTooltip>
           </div>
         }
       />
@@ -655,6 +610,7 @@ export function ExchangeOrderListWithTabs({ userRole }: { userRole?: string }) {
             onSelectAll={handleSelectAll}
             onBatchAction={handleBatchAction}
             initialColumns={tableInitialColumns}
+            updateTime="2025/05/05 12:30"
           />
         );
       })()}

@@ -84,6 +84,8 @@ export interface StandardDataTableProps<T extends { id: number }> {
   batchActions?: ReactNode;
   /** 覆寫外層容器的額外 className（例如嵌入其他 card 時可用 rounded-none 去掉圓角）*/
   className?: string;
+  /** 資料更新時間，傳入後顯示在右下角 pagination 列 */
+  updateTime?: string;
 }
 
 
@@ -111,6 +113,7 @@ export function StandardDataTable<T extends { id: number }>({
   onRowClick,
   batchActions,
   className,
+  updateTime,
 }: StandardDataTableProps<T>) {
   const { scrollContainerRef, handleMouseDown, canDragScroll } = useHorizontalDragScroll();
 
@@ -496,6 +499,7 @@ export function StandardDataTable<T extends { id: number }>({
           itemsPerPage={perPage}
           onPageChange={setPage}
           onItemsPerPageChange={n => { setPerPage(n); setPage(1); }}
+          updateTime={updateTime}
         />
       </div>
     </div>

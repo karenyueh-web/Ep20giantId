@@ -1,5 +1,4 @@
 import { useState, useMemo } from 'react';
-import { NextUpdateTooltip } from './UpdateTimeLabel';
 import { AdvancedForecastTable, defaultForecastColumns, forecastOrderMockData, type ForecastColumn, type ForecastOrderRow } from './AdvancedForecastTable';
 import { SearchField } from './SearchField';
 import { DropdownSelect } from './DropdownSelect';
@@ -267,36 +266,26 @@ export function ForecastOrderListWithTabs() {
         onExportCsv={handleExportCsv}
         actionButton={
           <div className="flex items-center gap-[8px] shrink-0">
-            {/* ── 資料更新按鈕 ── */}
-            <NextUpdateTooltip currentTime={lastUpdated}>
-              <div className="flex h-[36px] rounded-[8px] overflow-hidden shrink-0" style={{ boxShadow: 'none' }}>
-                {/* 左：時間顯示 */}
-                <div className="flex items-center px-[12px] border border-r-0 border-[rgba(0,94,184,0.48)] rounded-l-[8px] bg-white min-w-0">
-                  <span className="font-['Roboto:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[#005eb8] text-[12px] tracking-[0.4px] whitespace-nowrap leading-[16px]">
-                    資料更新時間:{lastUpdated}
-                  </span>
-                </div>
-                {/* 右：重新整理圖示 */}
-                <button
-                  onClick={handleRefresh}
-                  disabled={refreshing}
-                  className="flex items-center justify-center w-[40px] bg-[#005eb8] hover:bg-[#004680] transition-colors rounded-r-[8px] border border-[#005eb8] shrink-0 disabled:opacity-70"
+            {/* 重新整理按鈕 */}
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              title="重新整理"
+              className="flex items-center justify-center w-[36px] h-[36px] rounded-[8px] bg-[#005eb8] hover:bg-[#004680] transition-colors border border-[#005eb8] shrink-0 disabled:opacity-70"
+            >
+              <div className="w-[20px] h-[20px] flex items-center justify-center">
+                <svg
+                  className={refreshing ? 'animate-spin' : ''}
+                  style={{ width: '14.58px', height: '15.25px' }}
+                  fill="none"
+                  viewBox="0 0 14.5833 15.2472"
                 >
-                  <div className="w-[20px] h-[20px] flex items-center justify-center">
-                    <svg
-                      className={refreshing ? 'animate-spin' : ''}
-                      style={{ width: '14.58px', height: '15.25px' }}
-                      fill="none"
-                      viewBox="0 0 14.5833 15.2472"
-                    >
-                      <path d={svgRefresh.p326f900} fill="white" />
-                    </svg>
-                  </div>
-                </button>
+                  <path d={svgRefresh.p326f900} fill="white" />
+                </svg>
               </div>
-            </NextUpdateTooltip>
+            </button>
 
-            {/* ── 新增 ── */}
+            {/* 新增 */}
             <button
               onClick={handleAdd}
               className="flex items-center gap-[6px] h-[36px] px-[14px] rounded-[8px] bg-[#1c252e] hover:bg-[#2c3540] transition-colors shrink-0"
@@ -317,6 +306,7 @@ export function ForecastOrderListWithTabs() {
         columnsVersion={columnsVersion}
         appliedFilters={appliedFilters}
         onDeleteRows={handleDeleteRows}
+        updateTime={lastUpdated}
       />
 
       {/* ── 無權限刪除 Overlay ───────────────────────────────────────────── */}

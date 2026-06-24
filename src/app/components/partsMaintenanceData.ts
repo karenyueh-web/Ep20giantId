@@ -639,9 +639,23 @@ export function bulkUpdateParts(
       changes.push(`重量單位: ${orig.weightUnit}→${weightUnit}`);
     if (syncDtcDte !== orig.syncDtcDte)
       changes.push(`同步DTC/DTE: ${orig.syncDtcDte ? '是' : '否'}→${syncDtcDte ? '是' : '否'}`);
-    // 品牌設定：簡單記錄覆蓋事實
+    // 品牌設定：逐筆記錄詳細內容
     if (JSON.stringify(newBrands) !== JSON.stringify(orig.brandSettings)) {
-      changes.push(`品牌設定：覆蓋為 ${newBrands.length} 筆`);
+      if (newBrands.length === 0) {
+        changes.push('品牌設定：清除所有品牌');
+      } else {
+        const brandDetails = newBrands.map(b => {
+          const parts: string[] = [`品牌=${b.brand || '(空)'}`, `單價=${b.unitPrice || '(空)'} ${b.currency || ''}`.trim()];
+          if (b.quoteQty)    parts.push(`報價量=${b.quoteQty}`);
+          if (b.leadTime)    parts.push(`Lead Time=${b.leadTime}`);
+          if (b.moq)         parts.push(`MOQ=${b.moq}`);
+          if (b.tradeTerms)  parts.push(`國貿=${b.tradeTerms}${b.tradeTermsPlace ? ` ${b.tradeTermsPlace}` : ''}`);
+          if (b.quoteUnit)   parts.push(`單位=${b.quoteUnit}`);
+          if (b.productType) parts.push(`品類=${b.productType}`);
+          return `[${parts.join('、')}]`;
+        }).join(' ');
+        changes.push(`品牌設定：${brandDetails}`);
+      }
     }
 
     const historyEntry: PartHistoryEntry = {

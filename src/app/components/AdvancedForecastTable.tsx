@@ -202,6 +202,8 @@ interface AdvancedForecastTableProps {
   columnsVersion?: number;
   appliedFilters?: FilterCondition[];
   onDeleteRows?: (ids: Set<number>) => void;
+  /** 資料更新時間，傳入後顯示在右下角 pagination 列 */
+  updateTime?: string;
 }
 
 const CHECKBOX_COL_W = 88;
@@ -214,6 +216,7 @@ export function AdvancedForecastTable({
   columnsVersion,
   appliedFilters,
   onDeleteRows,
+  updateTime,
 }: AdvancedForecastTableProps) {
   const { scrollContainerRef, handleMouseDown, canDragScroll } = useHorizontalDragScroll();
 
@@ -534,6 +537,7 @@ export function AdvancedForecastTable({
             itemsPerPage={rowsPerPage}
             onPageChange={handlePageChange}
             onItemsPerPageChange={handleRowsPerPageChange}
+            updateTime={updateTime}
           />
         </div>
       </div>

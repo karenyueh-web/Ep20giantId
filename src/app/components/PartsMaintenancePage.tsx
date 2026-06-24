@@ -5,7 +5,6 @@ import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
 import { Toaster } from '@/app/components/ui/sonner';
 import { StandardDataTable, type StandardColumn } from './StandardDataTable';
-import { UpdateTimeLabel } from './UpdateTimeLabel';
 import { DropdownSelect } from './DropdownSelect';
 import { SearchField } from './SearchField';
 import PartsMaintenanceDetailPage from './PartsMaintenanceDetailPage';
@@ -393,7 +392,6 @@ export default function PartsMaintenancePage({
           上傳零件資訊
         </button>
       )}
-      <UpdateTimeLabel label="資料更新時間" currentTime={LAST_SYNC_TIME} />
     </div>
   );
 
@@ -484,6 +482,7 @@ export default function PartsMaintenancePage({
           showCheckbox={userRole !== 'vendor'}
           actionButton={actionButton}
           externalFilteredData={displayData}
+          updateTime={LAST_SYNC_TIME}
           onExportCsv={() => {
             toast('匯出 CSV 功能開發中');
           }}
