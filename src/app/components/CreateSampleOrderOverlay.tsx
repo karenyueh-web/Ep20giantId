@@ -7,8 +7,12 @@ import { DropdownSelect } from './DropdownSelect';
 import { SimpleDatePicker } from './SimpleDatePicker';
 import {
   addSampleOrder,
+  addSampleOrderHistory,
+  findLatestExistingSampleOrder,
+  getStatusDef,
   SAMPLE_TYPE_OPTIONS,
   type SampleType,
+  type SampleOrderRecord,
 } from './sampleOrderData';
 import type { PartRecord } from './partsMaintenanceData';
 
@@ -314,15 +318,30 @@ export function CreateSampleOrderOverlay({
   const [demandQty,   setDemandQty]   = useState('');
   const [submitted,   setSubmitted]   = useState(false);
 
+  // ── 重複索樣檢核 ─────────────────────────────────────────────────────────
+  const [duplicateError, setDuplicateError] = useState<{ part: PartRecord; existing: SampleOrderRecord } | null>(null);
+  const [resampleConfirm, setResampleConfirm] = useState<{
+    targetStatus: 'DR' | 'V';
+    existing: SampleOrderRecord;
+  } | null>(null);
+
   const resampleOptions = [
     { value: '否', label: '否' },
     { value: '是', label: '是' },
   ];
 
-  const handleSubmit = (targetStatus: 'DR' | 'V') => {
-    setSubmitted(true);
-    // 巨大需求必填驗證
-    if (!demandDate || !demandQty) return;
+  // 切換重新索樣時清除重複錯誤
+  const handleResampleChange = (v: string) => {
+    setResample(v);
+    setDuplicateError(null);
+  };
+
+  // ── 實際建立邏輯（通過所有檢核後呼叫）─────────────────────────────────────
+  const doCreate = (targetStatus: 'DR' | 'V', prevOrder?: SampleOrderRecord) => {
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const ts = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    const statusLabel = targetStatus === 'DR' ? '草稿' : '轉交廠商';
 
     let lastOrderNo = '';
     selectedParts.forEach((part) => {
@@ -342,9 +361,53 @@ export function CreateSampleOrderOverlay({
         createdBy:       '王大明',
       });
       lastOrderNo = record.orderNo;
+
+      // ── 寫入歷程 ──
+      if (prevOrder) {
+        const prevStatusDef = getStatusDef(prevOrder.status);
+        addSampleOrderHistory(record.id, {
+          date: ts,
+          event: `重新索樣開立（${statusLabel}）`,
+          operator: '王大明',
+          remark: `先前索樣單：${prevOrder.orderNo}（狀態：${prevStatusDef.label}(${prevOrder.status})）`,
+        });
+      } else {
+        addSampleOrderHistory(record.id, {
+          date: ts,
+          event: `開立索樣單（${statusLabel}）`,
+          operator: '王大明',
+          remark: '',
+        });
+      }
     });
 
     onCreated(lastOrderNo);
+  };
+
+  // ── 提交入口（含重複檢核）────────────────────────────────────────────────
+  const handleSubmit = (targetStatus: 'DR' | 'V') => {
+    setSubmitted(true);
+    setDuplicateError(null);
+    // 巨大需求必填驗證
+    if (!demandDate || !demandQty) return;
+
+    // ── 重複檢核：逐筆零件檢查是否已有非 DR 索樣單 ──
+    for (const part of selectedParts) {
+      const existing = findLatestExistingSampleOrder(part.material, part.vendorCode, part.plant);
+      if (existing) {
+        if (resample !== '是') {
+          // 阻擋：尚未勾選重新索樣
+          setDuplicateError({ part, existing });
+          return;
+        }
+        // 已勾選重新索樣 → 顯示確認 Alert
+        setResampleConfirm({ targetStatus, existing });
+        return;
+      }
+    }
+
+    // 無重複 → 直接開立
+    doCreate(targetStatus);
   };
 
   return (
@@ -442,7 +505,7 @@ export function CreateSampleOrderOverlay({
               <DropdownSelect
                 label="重新索樣"
                 value={resample}
-                onChange={setResample}
+                onChange={handleResampleChange}
                 options={resampleOptions}
               />
 
@@ -476,6 +539,22 @@ export function CreateSampleOrderOverlay({
                 ⚠ 請填寫樣品需求日及需求數量
               </p>
             )}
+
+            {/* 重複索樣錯誤提示 */}
+            {duplicateError && (
+              <div
+                className="flex items-start gap-[8px] px-[12px] py-[10px] rounded-[8px] mt-[-4px]"
+                style={{ backgroundColor: 'rgba(255,171,0,0.08)', border: '1px solid rgba(255,171,0,0.24)' }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="shrink-0 mt-[2px]">
+                  <path d="M12 9v4M12 16.5h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+                    stroke="#B76E00" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <p className="text-[12px] leading-[18px]" style={{ color: '#B76E00' }}>
+                  此零件近期已有進行中的索樣單紀錄（{duplicateError.existing.orderNo}，狀態：{getStatusDef(duplicateError.existing.status).label}({duplicateError.existing.status})），如需再次索樣，請將「重新索樣」設定為「是」
+                </p>
+              </div>
+            )}
           </SectionBox>
 
         </div>
@@ -504,6 +583,80 @@ export function CreateSampleOrderOverlay({
         </div>
 
       </div>
+
+      {/* ── 重新索樣確認 Alert ── */}
+      {resampleConfirm && (() => {
+        const existingStatusDef = getStatusDef(resampleConfirm.existing.status);
+        return (
+          <div className="fixed inset-0 z-[300] flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.3)' }}>
+            <div className="bg-white rounded-[16px] shadow-[-40px_40px_80px_0px_rgba(145,158,171,0.24)] overflow-hidden" style={{ maxWidth: '480px', width: '100%', margin: '0 16px' }}>
+              {/* Header */}
+              <div className="flex items-center gap-[12px] pl-[4px] pr-[16px] py-[4px] border-b border-[rgba(145,158,171,0.12)]">
+                <div className="flex items-center justify-center rounded-[12px] shrink-0 size-[48px] bg-[rgba(255,171,0,0.08)]">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 9v4M12 16.5h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+                      stroke="#FFAB00" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
+                <p className="flex-1 font-semibold text-[14px] leading-[22px] text-[#1c252e]">重新索樣確認</p>
+                <button
+                  onClick={() => setResampleConfirm(null)}
+                  className="flex items-center justify-center w-[36px] h-[36px] rounded-full hover:bg-[rgba(145,158,171,0.12)] transition-colors shrink-0"
+                >
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path d="M15 5L5 15M5 5l10 10" stroke="#637381" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                </button>
+              </div>
+              {/* Content */}
+              <div className="px-[24px] py-[20px]">
+                <p className="text-[14px] text-[#637381] leading-[22px] mb-[12px]">
+                  此零件近期已有進行中的索樣單紀錄：
+                </p>
+                <div className="flex flex-col gap-[6px] pl-[8px] mb-[16px]">
+                  <p className="text-[13px] leading-[20px]">
+                    <span style={{ color: '#919eab' }}>• 索樣單號：</span>
+                    <span className="font-semibold" style={{ color: '#1c252e' }}>{resampleConfirm.existing.orderNo}</span>
+                  </p>
+                  <p className="text-[13px] leading-[20px]">
+                    <span style={{ color: '#919eab' }}>• 建立日期：</span>
+                    <span className="font-semibold" style={{ color: '#1c252e' }}>{resampleConfirm.existing.createdAt}</span>
+                  </p>
+                  <p className="text-[13px] leading-[20px]">
+                    <span style={{ color: '#919eab' }}>• 狀態：</span>
+                    <span className="font-semibold" style={{ color: '#1c252e' }}>{existingStatusDef.label}({resampleConfirm.existing.status})</span>
+                  </p>
+                </div>
+                <p className="text-[14px] text-[#637381] leading-[22px]">
+                  是否確認要再次索樣？
+                </p>
+              </div>
+              {/* Footer */}
+              <div className="flex items-center justify-end gap-[12px] px-[20px] py-[12px] border-t border-[rgba(145,158,171,0.12)] bg-[rgba(255,171,0,0.03)]">
+                <button
+                  onClick={() => setResampleConfirm(null)}
+                  className="flex items-center justify-center h-[36px] px-[16px] rounded-[8px] border text-[13px] font-medium hover:bg-[rgba(145,158,171,0.08)] transition-colors"
+                  style={{ borderColor: 'rgba(145,158,171,0.32)', color: '#637381' }}
+                >
+                  取消
+                </button>
+                <button
+                  onClick={() => {
+                    const { targetStatus, existing } = resampleConfirm;
+                    setResampleConfirm(null);
+                    doCreate(targetStatus, existing);
+                  }}
+                  className="flex items-center justify-center h-[36px] px-[16px] rounded-[8px] hover:bg-[#2c3540] transition-colors"
+                  style={{ backgroundColor: '#1c252e' }}
+                >
+                  <span className="font-semibold text-[13px] text-white leading-none">確認重新索樣</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
     </BaseOverlay>
   );
 }

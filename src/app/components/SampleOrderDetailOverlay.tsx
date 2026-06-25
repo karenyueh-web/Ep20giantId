@@ -5,8 +5,10 @@ import { createPortal } from 'react-dom';
 import { BaseOverlay } from './BaseOverlay';
 import { DropdownSelect } from './DropdownSelect';
 import { SimpleDatePicker } from './SimpleDatePicker';
+import { OrderHistory } from './OrderHistory';
 import {
   getStatusDef,
+  getSampleOrderHistory,
   SAMPLE_TYPE_OPTIONS,
   updateSampleOrderVendorReply,
   type SampleOrderRecord,
@@ -297,13 +299,16 @@ export function SampleOrderDetailOverlay({
   const readonly  = isReadonlyStatus(order.status);
   const canReply  = order.status === 'V';
 
-  // 廠商回覆欄位
-  const [vendorShipDate, setVendorShipDate]           = useState(order.vendorShipDate ?? '');
-  const [actualShipDate, setActualShipDate]           = useState(order.actualShipDate ?? '');
+  // 廠商回覆欄位（V 狀態時，樣品達交日 / 實際送樣日預設帶入樣品需求日）
+  const [vendorShipDate, setVendorShipDate]           = useState(order.vendorShipDate ?? (order.status === 'V' ? order.demandDate : ''));
+  const [actualShipDate, setActualShipDate]           = useState(order.actualShipDate ?? (order.status === 'V' ? order.demandDate : ''));
   const [availableDate, setAvailableDate]             = useState(order.availableDate ?? '');
   const [vendorDailyCapacity, setVendorDailyCapacity] = useState(
     order.vendorDailyCapacity != null ? String(order.vendorDailyCapacity) : '',
   );
+
+  // ── 歷程彈窗 ──
+  const [showHistory, setShowHistory] = useState(false);
 
   const handleReply = () => {
     const updated = updateSampleOrderVendorReply(order.id, {
@@ -372,6 +377,7 @@ export function SampleOrderDetailOverlay({
           <button
             className="flex items-center gap-[5px] h-[30px] px-[10px] rounded-[8px] hover:bg-[rgba(145,158,171,0.12)] transition-colors shrink-0"
             title="歷程記錄"
+            onClick={() => setShowHistory(true)}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
               <path
@@ -576,6 +582,18 @@ export function SampleOrderDetailOverlay({
         )}
 
       </div>
+
+      {/* ── 索樣單歷程彈窗 ── */}
+      {showHistory && (
+        <OrderHistory
+          onClose={() => setShowHistory(false)}
+          entries={getSampleOrderHistory(order.id)}
+          titleLabel="索樣單歷程"
+          correctionDocNo={order.orderNo}
+          correctionDocNoLabel="索樣單號"
+        />
+      )}
+
     </BaseOverlay>
   );
 }

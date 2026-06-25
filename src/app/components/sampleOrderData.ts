@@ -498,3 +498,44 @@ export function updateSampleOrderVendorReply(
   notifySampleOrderChange();
   return found;
 }
+
+// ── 索樣單歷程 Store ────────────────────────────────────────────────────────
+
+export interface SampleHistoryEntry {
+  date: string;       // 'YYYY/MM/DD HH:mm'
+  event: string;      // e.g. '開立索樣單（轉交廠商）'
+  operator: string;   // e.g. '王大明'
+  remark: string;
+}
+
+let _sampleOrderHistory: Record<number, SampleHistoryEntry[]> = {};
+
+export function addSampleOrderHistory(id: number, entry: SampleHistoryEntry): void {
+  if (!_sampleOrderHistory[id]) {
+    _sampleOrderHistory[id] = [];
+  }
+  _sampleOrderHistory[id] = [entry, ..._sampleOrderHistory[id]];
+}
+
+export function getSampleOrderHistory(id: number): SampleHistoryEntry[] {
+  return _sampleOrderHistory[id] ?? [];
+}
+
+// ── 重複檢核：取最近一筆非 DR 狀態的索樣單 ──────────────────────────────────
+
+/** 檢查同一零件（material + vendorCode + plant）是否已有非 DR 索樣單，回傳最近一筆 */
+export function findLatestExistingSampleOrder(
+  material: string,
+  vendorCode: string,
+  plant: string,
+): SampleOrderRecord | undefined {
+  return _sampleOrders
+    .filter(
+      (o) =>
+        o.material === material &&
+        o.vendorCode === vendorCode &&
+        o.plant === plant &&
+        o.status !== 'DR',
+    )
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+}
