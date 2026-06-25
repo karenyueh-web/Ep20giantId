@@ -456,7 +456,7 @@ export function StandardDataTable<T extends { id: number }>({
                     <div
                       key={`${row.id}-${col.key}`}
                       style={{ width: col.width, minWidth: col.minWidth }}
-                      className={`flex items-center px-[16px] overflow-hidden shrink-0 ${isLastNormal ? '' : 'border-r border-[rgba(145,158,171,0.08)]'}`}
+                      className={`flex items-center px-[16px] overflow-hidden shrink-0 text-[14px] ${isLastNormal ? '' : 'border-r border-[rgba(145,158,171,0.08)]'}`}
                     >
                       {renderCellValue(col, row)}
                     </div>

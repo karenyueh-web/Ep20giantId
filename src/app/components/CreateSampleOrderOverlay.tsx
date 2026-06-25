@@ -388,9 +388,9 @@ export function CreateSampleOrderOverlay({
 
           {/* ── 區塊一：索樣零件清單 ────────────────────────────────── */}
           <SectionBox title="索樣零件清單">
-            {/* 廠商 / 採購組織 / 工廠（唯讀資訊） */}
+            {/* 供應商 / 採購組織 / 工廠（唯讀資訊） */}
             <div className="grid grid-cols-3 gap-[16px]">
-              <InfoField label="廠商(編號)" value={`${firstPart.vendorName}(${firstPart.vendorCode})`} />
+              <InfoField label="供應商(編號)" value={`${firstPart.vendorName}(${firstPart.vendorCode})`} />
               <InfoField label="採購組織"   value={firstPart.purchaseOrg} />
               <InfoField label="工廠"       value={firstPart.plant} />
             </div>

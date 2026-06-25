@@ -410,10 +410,10 @@ export function SampleOrderDetailOverlay({
               <InfoField label="採購組織" value={order.purchaseOrg} />
             </div>
 
-            {/* 第二列：工廠 / 廠商商料號 */}
+            {/* 第二列：工廠 / 供應商料號 */}
             <div className="grid grid-cols-3 gap-[16px]">
               <InfoField label="工廠"     value={order.plant} />
-              <InfoField label="廠商商料號" value={order.vendorMaterialNo ?? ''} />
+              <InfoField label="供應商料號" value={order.vendorMaterialNo ?? ''} />
             </div>
           </SectionBox>
 
@@ -465,15 +465,15 @@ export function SampleOrderDetailOverlay({
             </div>
           </SectionBox>
 
-          {/* ── 區塊三：廠商回覆（狀態 V/B/SC 才顯示）─────────────── */}
-          {(order.status === 'V' || order.status === 'B' || order.status === 'SC') && (
+          {/* ── 區塊三：廠商回覆（狀態 V/B/SC/CC/CL 顯示）─────────────── */}
+          {(order.status === 'V' || order.status === 'B' || order.status === 'SC' || order.status === 'CC' || order.status === 'CL') && (
             <SectionBox title="廠商回覆" highlight={canReply}>
               <div className="grid grid-cols-2 gap-[16px]">
-                {/* 樣品送達日 */}
+                {/* 樣品達交日 */}
                 {canReply ? (
-                  <DateInput label="樣品送達日" value={vendorShipDate} onChange={setVendorShipDate} />
+                  <DateInput label="樣品達交日" value={vendorShipDate} onChange={setVendorShipDate} />
                 ) : (
-                  <FloatingInput label="樣品送達日" value={order.vendorShipDate ?? ''} readOnly />
+                  <FloatingInput label="樣品達交日" value={order.vendorShipDate ?? ''} readOnly />
                 )}
 
                 {/* 實際送樣日 */}

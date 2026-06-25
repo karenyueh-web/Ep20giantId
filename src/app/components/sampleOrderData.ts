@@ -113,7 +113,7 @@ export interface SampleOrderRecord {
   material: string;
   /** 長規格敘述 */
   longDescription: string;
-  /** 廠商商料號 */
+  /** 供應商料號 */
   vendorMaterialNo?: string;
   /** 索樣日期（YYYY/MM/DD） */
   sampleDate: string;
@@ -134,7 +134,7 @@ export interface SampleOrderRecord {
   /** 最後更新時間 */
   updatedAt: string;
   // ── 廠商回覆欄位（狀態 V 以後才有值） ─────────────────────────────────
-  /** 樣品送達日 */
+  /** 樣品達交日 */
   vendorShipDate?: string;
   /** 實際送樣日 */
   actualShipDate?: string;
@@ -431,7 +431,13 @@ let _sampleOrders: SampleOrderRecord[] = [
   },
 ];
 
-// ── Store 操作函式 ────────────────────────────────────────────────────────────
+// ── Store 操作函式 ──────────────────────────────────────────────────────────────────
+
+function notifySampleOrderChange() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('sampleOrdersChanged'));
+  }
+}
 
 export function getSampleOrders(): SampleOrderRecord[] {
   return _sampleOrders;
@@ -450,11 +456,13 @@ export function addSampleOrder(record: Omit<SampleOrderRecord, 'id' | 'orderNo' 
     updatedAt: ts,
   };
   _sampleOrders = [newRecord, ..._sampleOrders];
+  notifySampleOrderChange();
   return newRecord;
 }
 
 export function deleteSampleOrders(ids: number[]): void {
   _sampleOrders = _sampleOrders.filter((r) => !ids.includes(r.id));
+  notifySampleOrderChange();
 }
 
 export function updateSampleOrderStatus(ids: number[], status: SampleOrderStatus): void {
@@ -464,6 +472,7 @@ export function updateSampleOrderStatus(ids: number[], status: SampleOrderStatus
   _sampleOrders = _sampleOrders.map((r) =>
     ids.includes(r.id) ? { ...r, status, updatedAt: ts } : r,
   );
+  notifySampleOrderChange();
 }
 
 /** 廠商回覆：更新回覆欄位並將狀態推進到 B（採購確認中） */
@@ -486,5 +495,6 @@ export function updateSampleOrderVendorReply(
     found = updated;
     return updated;
   });
+  notifySampleOrderChange();
   return found;
 }

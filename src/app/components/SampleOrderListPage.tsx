@@ -175,7 +175,12 @@ export default function SampleOrderListPage({ userRole: _userRole }: SampleOrder
   }, []);
 
   // ── 欄位定義（依示意圖）───────────────────────────────────────────────────
-  type PartWithVendorDisplay = SampleOrderRecord & { vendorDisplay: string; resampleLabel: string };
+  type PartWithVendorDisplay = SampleOrderRecord & {
+    vendorDisplay: string;
+    resampleLabel: string;
+    sampleTypeLabel: string;
+    updatedInfo: string;
+  };
 
   const displayData: PartWithVendorDisplay[] = useMemo(
     () =>
@@ -183,26 +188,29 @@ export default function SampleOrderListPage({ userRole: _userRole }: SampleOrder
         ...o,
         vendorDisplay: `${o.vendorName}(${o.vendorCode})`,
         resampleLabel: o.resample ? '是' : '否',
+        sampleTypeLabel: o.sampleType === 'D' ? 'D(開發樣)' : 'G(量產品)',
+        updatedInfo: `${o.createdBy}-${o.updatedAt}`,
       })),
     [filteredData],
   );
 
   const columns: StandardColumn<PartWithVendorDisplay>[] = useMemo(
     () => [
-      { key: 'vendorDisplay', label: '廠商(編號)', width: 170, minWidth: 130 },
-      { key: 'purchaseOrg',   label: '採購組織',   width: 110, minWidth: 90 },
       { key: 'orderNo',       label: '索樣單號',   width: 110, minWidth: 90 },
       {
         key: 'status',
-        label: '索樣單狀態',
+        label: '狀態',
         width: 100,
         minWidth: 80,
         renderCell: (_val, row) => <StatusBadge status={row.status} />,
       },
+      { key: 'vendorDisplay', label: '供應商(編號)', width: 170, minWidth: 130 },
+      { key: 'purchaseOrg',   label: '採購組織',   width: 110, minWidth: 90 },
+      { key: 'plant',         label: '工廠',       width: 70,  minWidth: 60 },
       {
         key: 'material',
         label: '料號',
-        width: 180,
+        width: 170,
         minWidth: 140,
         renderCell: (_val, row) => (
           <button
@@ -216,23 +224,30 @@ export default function SampleOrderListPage({ userRole: _userRole }: SampleOrder
           </button>
         ),
       },
-      { key: 'sampleDate',   label: '索樣日期', width: 110, minWidth: 90 },
-      { key: 'demandDate',   label: '需求日期', width: 110, minWidth: 90 },
-      { key: 'resampleLabel', label: '重新索樣', width: 90,  minWidth: 70 },
-      {
-        key: 'sampleType',
-        label: '索樣類型',
-        width: 100,
-        minWidth: 80,
-        renderCell: (_val, row) => (
-          <span className="text-[14px] text-[#1c252e]">
-            {row.sampleType === 'D' ? 'D(開發樣)'
-              : row.sampleType === 'G' ? 'G(量產品)'
-              : row.sampleType === 'E' ? 'E(工程樣)'
-              : 'S(特殊樣)'}
-          </span>
-        ),
-      },
+      { key: 'longDescription',    label: '長規格敘述',   width: 260, minWidth: 180 },
+      { key: 'vendorMaterialNo',   label: '供應商料號',   width: 140, minWidth: 100, renderCell: (val) => <span className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] text-[14px] leading-[22px]">{val || '—'}</span> },
+      { key: 'resampleLabel',      label: '重新索樣',     width: 80,  minWidth: 70 },
+      { key: 'sampleTypeLabel',    label: '索樣類型',     width: 100, minWidth: 80 },
+      { key: 'demandDate',         label: '樣品需求日',   width: 110, minWidth: 90 },
+      { key: 'demandQty',          label: '需求數量',     width: 90,  minWidth: 70, renderCell: (val) => <span className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] text-[14px] leading-[22px]">{val ?? '—'}</span> },
+      { key: 'vendorShipDate',     label: '樣品達交日',   width: 110, minWidth: 90, renderCell: (_val, row) => {
+        if (!row.vendorShipDate) return <span className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] text-[14px] leading-[22px] text-[#919eab]">—</span>;
+        const isLate = row.vendorShipDate > row.demandDate;
+        const bothSafe = (!row.vendorShipDate || row.vendorShipDate <= row.demandDate) && (!row.actualShipDate || row.actualShipDate <= row.demandDate);
+        const color = isLate ? '#ff5630' : bothSafe ? '#118d57' : '#1c252e';
+        return <span className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] text-[14px] leading-[22px]" style={{ color }}>{row.vendorShipDate}</span>;
+      }},
+      { key: 'actualShipDate',     label: '實際送樣日',   width: 110, minWidth: 90, renderCell: (_val, row) => {
+        if (!row.actualShipDate) return <span className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] text-[14px] leading-[22px] text-[#919eab]">—</span>;
+        const isLate = row.actualShipDate > row.demandDate;
+        const bothSafe = (!row.vendorShipDate || row.vendorShipDate <= row.demandDate) && (!row.actualShipDate || row.actualShipDate <= row.demandDate);
+        const color = isLate ? '#ff5630' : bothSafe ? '#118d57' : '#1c252e';
+        return <span className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] text-[14px] leading-[22px]" style={{ color }}>{row.actualShipDate}</span>;
+      }},
+      { key: 'availableDate',      label: '首批可供貨日', width: 120, minWidth: 100, renderCell: (val) => <span className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] text-[14px] leading-[22px]">{val || '—'}</span> },
+      { key: 'vendorDailyCapacity', label: '廠商日產能',  width: 100, minWidth: 80, renderCell: (val) => <span className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] text-[14px] leading-[22px]">{val ?? '—'}</span> },
+      { key: 'createdAt',          label: '建立時間',     width: 140, minWidth: 110 },
+      { key: 'updatedInfo',        label: '更新時間',     width: 190, minWidth: 150 },
     ],
     [],
   );

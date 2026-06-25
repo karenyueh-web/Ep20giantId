@@ -7,6 +7,7 @@ import Settings from "@/imports/Settings";
 import { mockVendorsSuccess, mockVendorsFail } from '@/imports/廠商帳號審核-4007-9767';
 import { useLanguage, type Language } from './LanguageContext';
 import { useSidebar } from './SidebarContext';
+import { getSampleOrders } from './sampleOrderData';
 
 // 用戶頭像組件
 function Img() {
@@ -412,9 +413,10 @@ interface SubMenuItemProps {
   onClick?: () => void;
   page?: PageType;
   onNavigate?: (page: PageType) => void;
+  badge?: string;
 }
 
-function SubMenuItem({ label, isActive, onClick, page, onNavigate }: SubMenuItemProps) {
+function SubMenuItem({ label, isActive, onClick, page, onNavigate, badge }: SubMenuItemProps) {
   const handleClick = onClick ?? (page && onNavigate ? () => onNavigate(page) : undefined);
   return (
     <div 
@@ -434,6 +436,11 @@ function SubMenuItem({ label, isActive, onClick, page, onNavigate }: SubMenuItem
               </div>
             </div>
           </div>
+          {badge && (
+            <div className="bg-[#ffe9d5] content-stretch flex gap-[6px] h-[24px] items-center justify-center min-w-[24px] px-[6px] py-0 relative rounded-[6px] shrink-0" data-name="✳️ info">
+              <p className="css-ew64yg font-['Public_Sans:Bold',sans-serif] font-bold leading-[20px] relative shrink-0 text-[#7a0916] text-[12px] text-center">{badge}</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -811,6 +818,21 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
   const vendorAccountReviewCount = mockVendorsSuccess.length + mockVendorsFail.length;
   const vendorAccountReviewBadge = vendorAccountReviewCount > 0 ? `${vendorAccountReviewCount}` : undefined;
 
+  // 索樣單未關閉狀態數量（V + B + SC），監聽資料變更即時更新
+  const [sampleOrderBadge, setSampleOrderBadge] = useState<string | undefined>(() => {
+    const count = getSampleOrders().filter(o => o.status === 'V' || o.status === 'B' || o.status === 'SC').length;
+    return count > 0 ? String(count) : undefined;
+  });
+
+  useEffect(() => {
+    const handler = () => {
+      const count = getSampleOrders().filter(o => o.status === 'V' || o.status === 'B' || o.status === 'SC').length;
+      setSampleOrderBadge(count > 0 ? String(count) : undefined);
+    };
+    window.addEventListener('sampleOrdersChanged', handler);
+    return () => window.removeEventListener('sampleOrdersChanged', handler);
+  }, []);
+
   // ── MINI layout ──────────────────────────────────────────────────────────
   if (isMini) {
     return (
@@ -906,7 +928,9 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
           <div className="w-full">
             <SubMenuItem label="零件資訊" page="parts-maintain" onNavigate={onPageChange} isActive={currentPage === 'parts-maintain'} />
             <SubMenuItem label="列印報價單" page="parts-quote" onNavigate={onPageChange} isActive={currentPage === 'parts-quote'} />
-            <SubMenuItem label="索樣單" page="parts-sample" onNavigate={onPageChange} isActive={currentPage === 'parts-sample'} />
+            <SubMenuItem label="索樣單" page="parts-sample" onNavigate={onPageChange} isActive={currentPage === 'parts-sample'}
+              badge={sampleOrderBadge}
+            />
           </div>
         )}
       </div>
