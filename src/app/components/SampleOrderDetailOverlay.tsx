@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { BaseOverlay } from './BaseOverlay';
 import { DropdownSelect } from './DropdownSelect';
-import { SearchField } from './SearchField';
+import { SimpleDatePicker } from './SimpleDatePicker';
 import {
   getStatusDef,
   SAMPLE_TYPE_OPTIONS,
@@ -37,7 +38,7 @@ function FloatingInput({
       />
       <div className="absolute flex items-center left-[14px] px-[2px] top-[-5px] z-10">
         <div className="absolute bg-white h-[2px] left-0 right-0 top-[5px]" />
-        <p style={{ fontSize: '12px', fontWeight: 600, color: '#637381' }}>{label}</p>
+        <p className="relative" style={{ fontSize: '12px', fontWeight: 600, color: '#637381' }}>{label}</p>
       </div>
       {readOnly ? (
         <p className="w-full rounded-[8px] px-[14px] pt-[18px] pb-[10px] text-[14px] text-[#637381] leading-[22px] bg-[rgba(145,158,171,0.04)]">
@@ -82,7 +83,7 @@ function NumberInput({
       />
       <div className="absolute flex items-center left-[14px] px-[2px] top-[-5px] z-10">
         <div className="absolute bg-white h-[2px] left-0 right-0 top-[5px]" />
-        <p style={{ fontSize: '12px', fontWeight: 600, color: '#637381' }}>{label}</p>
+        <p className="relative" style={{ fontSize: '12px', fontWeight: 600, color: '#637381' }}>{label}</p>
       </div>
       {readOnly ? (
         <p className="w-full rounded-[8px] px-[14px] pt-[18px] pb-[10px] text-[14px] text-[#637381] leading-[22px] bg-[rgba(145,158,171,0.04)]">
@@ -97,6 +98,119 @@ function NumberInput({
           onChange={(e) => onChange?.(e.target.value)}
           placeholder={placeholder}
         />
+      )}
+    </div>
+  );
+}
+
+// ── DateInput（帶浮動標籤的日期選擇器，使用 portal 避免 overflow 截斷）───────────
+function DateInput({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [showPicker, setShowPicker] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const pickerRef = useRef<HTMLDivElement>(null);
+  const [pickerPos, setPickerPos] = useState<{ left: number; top: number }>({ left: 0, top: 0 });
+
+  const handleToggle = () => {
+    if (!showPicker) setShowPicker(true);
+    else setShowPicker(false);
+  };
+
+  // 開啟後量測高度並重新定位
+  useEffect(() => {
+    if (!showPicker) return;
+    requestAnimationFrame(() => {
+      if (!containerRef.current || !pickerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const pickerH = pickerRef.current.offsetHeight;
+      setPickerPos({ left: rect.left, top: rect.top - pickerH - 4 });
+    });
+  }, [showPicker]);
+
+  // 點擊外部關閉
+  useEffect(() => {
+    if (!showPicker) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (
+        containerRef.current && !containerRef.current.contains(target) &&
+        pickerRef.current && !pickerRef.current.contains(target)
+      ) {
+        setShowPicker(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showPicker]);
+
+  // 滾動時重新計算位置
+  useEffect(() => {
+    if (!showPicker) return;
+    const onScroll = () => {
+      if (!containerRef.current || !pickerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const pickerH = pickerRef.current.offsetHeight;
+      setPickerPos({ left: rect.left, top: rect.top - pickerH - 4 });
+    };
+    window.addEventListener('scroll', onScroll, true);
+    return () => window.removeEventListener('scroll', onScroll, true);
+  }, [showPicker]);
+
+  return (
+    <div className="relative w-full" ref={containerRef} style={{ minHeight: '54px' }}>
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 pointer-events-none rounded-[8px] border border-solid"
+        style={{ borderColor: 'rgba(145,158,171,0.2)' }}
+      />
+      <div className="absolute flex items-center left-[14px] px-[2px] top-[-5px] z-10">
+        <div className="absolute bg-white h-[2px] left-0 right-0 top-[5px]" />
+        <p className="relative" style={{ fontSize: '12px', fontWeight: 600, color: '#637381' }}>{label}</p>
+      </div>
+      <div
+        className="flex items-center w-full cursor-pointer select-none"
+        style={{ minHeight: '54px', paddingLeft: '14px', paddingRight: '10px', paddingTop: '18px', paddingBottom: '10px' }}
+        onClick={handleToggle}
+      >
+        <span
+          className="flex-1 text-[14px] leading-[22px] truncate"
+          style={{ color: value ? '#1c252e' : '#919eab' }}
+        >
+          {value || '選擇日期'}
+        </span>
+        {value && (
+          <div
+            className="flex items-center justify-center shrink-0 size-[24px] rounded-full hover:bg-[rgba(145,158,171,0.12)] transition-colors mr-[4px]"
+            onClick={(e) => { e.stopPropagation(); onChange(''); }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+              <path d="M18 6L6 18M6 6l12 12" stroke="#919EAB" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+        )}
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="shrink-0">
+          <rect x="3" y="4" width="18" height="18" rx="2" fill="#637381" opacity="0.2" />
+          <path d="M3 9h18M8 2v4M16 2v4" stroke="#637381" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      </div>
+      {showPicker && createPortal(
+        <div
+          ref={pickerRef}
+          style={{ position: 'fixed', left: pickerPos.left, top: pickerPos.top, zIndex: 9999 }}
+        >
+          <SimpleDatePicker
+            selectedDate={value}
+            onDateSelect={(date) => { onChange(date); setShowPicker(false); }}
+          />
+        </div>,
+        document.body,
       )}
     </div>
   );
@@ -120,16 +234,18 @@ function InfoField({ label, value }: { label: string; value: string }) {
 function SectionBox({
   title,
   children,
+  highlight = false,
 }: {
   title: string;
   children: React.ReactNode;
+  highlight?: boolean;
 }) {
   return (
     <div>
       {/* 區塊標題 */}
       <p
         className="text-[12px] font-semibold leading-[18px] mb-[10px]"
-        style={{ color: '#637381' }}
+        style={{ color: highlight ? '#0065A9' : '#637381' }}
       >
         {title}
       </p>
@@ -137,8 +253,16 @@ function SectionBox({
       <div
         className="rounded-[12px] p-[16px] flex flex-col gap-[16px]"
         style={{
-          border: '1px solid rgba(145,158,171,0.20)',
-          backgroundColor: 'rgba(145,158,171,0.02)',
+          border: highlight
+            ? '1.5px solid rgba(0, 101, 169, 0.35)'
+            : '1px solid rgba(145,158,171,0.20)',
+          backgroundColor: highlight
+            ? 'rgba(0, 101, 169, 0.02)'
+            : 'rgba(145,158,171,0.02)',
+          boxShadow: highlight
+            ? '0 2px 12px 0 rgba(0, 101, 169, 0.10), 0 0 0 1px rgba(0, 101, 169, 0.06)'
+            : 'none',
+          transition: 'border-color 0.2s, box-shadow 0.2s',
         }}
       >
         {children}
@@ -153,10 +277,7 @@ function isReadonlyStatus(status: SampleOrderStatus): boolean {
 }
 
 function getSampleTypeLabel(t: string) {
-  return t === 'D' ? 'D(開發樣)'
-    : t === 'G' ? 'G(量產品)'
-    : t === 'E' ? 'E(工程樣)'
-    : 'S(特殊樣)';
+  return t === 'D' ? 'D(開發樣)' : 'G(量產品)';
 }
 
 // ── Props ─────────────────────────────────────────────────────────────────────
@@ -195,8 +316,11 @@ export function SampleOrderDetailOverlay({
     onClose();
   };
 
+  // DR 狀態沒有廠商回覆區，用 autoHeight
+  const useAutoHeight = order.status === 'DR';
+
   return (
-    <BaseOverlay onClose={onClose} maxWidth="680px" maxHeight="92vh">
+    <BaseOverlay onClose={onClose} maxWidth="680px" {...(useAutoHeight ? { autoHeight: true } : { maxHeight: '92vh' })}>
       <div className="relative w-full h-full flex flex-col">
 
         {/* ── 關閉按鈕 ── */}
@@ -294,7 +418,7 @@ export function SampleOrderDetailOverlay({
           </SectionBox>
 
           {/* ── 區塊二：巨大需求 ─────────────────────────────────────── */}
-          <SectionBox title="巨大需求">
+          <SectionBox title="巨大需求" highlight={order.status === 'DR'}>
             <div className="grid grid-cols-2 gap-[16px]">
               {/* 重新索樣 */}
               {order.status === 'DR' ? (
@@ -326,7 +450,7 @@ export function SampleOrderDetailOverlay({
 
               {/* 樣品需求日 */}
               {order.status === 'DR' ? (
-                <SearchField label="樣品需求日" value={order.demandDate} onChange={() => {}} type="date" />
+                <DateInput label="樣品需求日" value={order.demandDate} onChange={() => {}} />
               ) : (
                 <FloatingInput label="樣品需求日" value={order.demandDate} readOnly />
               )}
@@ -343,25 +467,25 @@ export function SampleOrderDetailOverlay({
 
           {/* ── 區塊三：廠商回覆（狀態 V/B/SC 才顯示）─────────────── */}
           {(order.status === 'V' || order.status === 'B' || order.status === 'SC') && (
-            <SectionBox title="廠商回覆">
+            <SectionBox title="廠商回覆" highlight={canReply}>
               <div className="grid grid-cols-2 gap-[16px]">
                 {/* 樣品送達日 */}
                 {canReply ? (
-                  <SearchField label="樣品送達日" value={vendorShipDate} onChange={setVendorShipDate} type="date" />
+                  <DateInput label="樣品送達日" value={vendorShipDate} onChange={setVendorShipDate} />
                 ) : (
                   <FloatingInput label="樣品送達日" value={order.vendorShipDate ?? ''} readOnly />
                 )}
 
                 {/* 實際送樣日 */}
                 {canReply ? (
-                  <SearchField label="實際送樣日" value={actualShipDate} onChange={setActualShipDate} type="date" />
+                  <DateInput label="實際送樣日" value={actualShipDate} onChange={setActualShipDate} />
                 ) : (
                   <FloatingInput label="實際送樣日" value={order.actualShipDate ?? ''} readOnly />
                 )}
 
                 {/* 首批可供貨日 */}
                 {canReply ? (
-                  <SearchField label="首批可供貨日" value={availableDate} onChange={setAvailableDate} type="date" />
+                  <DateInput label="首批可供貨日" value={availableDate} onChange={setAvailableDate} />
                 ) : (
                   <FloatingInput label="首批可供貨日" value={order.availableDate ?? ''} readOnly />
                 )}
@@ -382,10 +506,6 @@ export function SampleOrderDetailOverlay({
             </SectionBox>
           )}
 
-          {/* 備註（有才顯示） */}
-          {order.remark && (
-            <FloatingInput label="備註" value={order.remark} readOnly />
-          )}
 
         </div>
 
@@ -397,31 +517,60 @@ export function SampleOrderDetailOverlay({
             className="shrink-0 flex gap-[12px] px-[24px] py-[16px] border-t"
             style={{ borderColor: 'rgba(145,158,171,0.12)' }}
           >
-            <button
-              onClick={onClose}
-              className="flex-1 h-[36px] rounded-[8px] border text-[14px] font-medium hover:bg-[rgba(145,158,171,0.08)] transition-colors"
-              style={{ borderColor: 'rgba(145,158,171,0.32)', color: '#637381' }}
-            >
-              取消
-            </button>
+            {order.status === 'DR' && (
+              <>
+                <button
+                  onClick={onClose}
+                  className="flex-1 h-[36px] rounded-[8px] border text-[14px] font-medium hover:bg-[rgba(145,158,171,0.08)] transition-colors"
+                  style={{ borderColor: 'rgba(145,158,171,0.32)', color: '#637381' }}
+                >
+                  暫存草稿
+                </button>
+                <button
+                  onClick={onClose}
+                  className="flex-1 h-[36px] rounded-[8px] flex items-center justify-center hover:bg-[#004680] transition-colors"
+                  style={{ backgroundColor: '#00559c' }}
+                >
+                  <p className="font-bold text-[14px] text-white">轉交廠商</p>
+                </button>
+              </>
+            )}
 
             {order.status === 'V' && (
-              <button
-                onClick={handleReply}
-                className="flex-1 h-[36px] rounded-[8px] flex items-center justify-center hover:bg-[#004680] transition-colors"
-                style={{ backgroundColor: '#00559c' }}
-              >
-                <p className="font-bold text-[14px] text-white">回覆採購</p>
-              </button>
+              <>
+                <button
+                  onClick={onClose}
+                  className="flex-1 h-[36px] rounded-[8px] border text-[14px] font-medium hover:bg-[rgba(145,158,171,0.08)] transition-colors"
+                  style={{ borderColor: 'rgba(145,158,171,0.32)', color: '#637381' }}
+                >
+                  取消
+                </button>
+                <button
+                  onClick={handleReply}
+                  className="flex-1 h-[36px] rounded-[8px] flex items-center justify-center hover:bg-[#004680] transition-colors"
+                  style={{ backgroundColor: '#00559c' }}
+                >
+                  <p className="font-bold text-[14px] text-white">回覆採購</p>
+                </button>
+              </>
             )}
 
             {order.status === 'B' && (
-              <button
-                className="flex-1 h-[36px] rounded-[8px] flex items-center justify-center hover:bg-[#004680] transition-colors"
-                style={{ backgroundColor: '#00559c' }}
-              >
-                <p className="font-bold text-[14px] text-white">完結</p>
-              </button>
+              <>
+                <button
+                  onClick={onClose}
+                  className="flex-1 h-[36px] rounded-[8px] border text-[14px] font-medium hover:bg-[rgba(145,158,171,0.08)] transition-colors"
+                  style={{ borderColor: 'rgba(145,158,171,0.32)', color: '#637381' }}
+                >
+                  取消
+                </button>
+                <button
+                  className="flex-1 h-[36px] rounded-[8px] flex items-center justify-center hover:bg-[#004680] transition-colors"
+                  style={{ backgroundColor: '#00559c' }}
+                >
+                  <p className="font-bold text-[14px] text-white">完結</p>
+                </button>
+              </>
             )}
           </div>
         )}

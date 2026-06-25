@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { BaseOverlay } from './BaseOverlay';
 import { DropdownSelect } from './DropdownSelect';
 import { SimpleDatePicker } from './SimpleDatePicker';
@@ -36,7 +37,7 @@ function FloatingInput({
       />
       <div className="absolute flex items-center left-[14px] px-[2px] top-[-5px] z-10">
         <div className="absolute bg-white h-[2px] left-0 right-0 top-[5px]" />
-        <p style={{ fontSize: '12px', fontWeight: 600, color: '#637381' }}>{label}</p>
+        <p className="relative" style={{ fontSize: '12px', fontWeight: 600, color: '#637381' }}>{label}</p>
       </div>
       {readOnly ? (
         <p className="w-full rounded-[8px] px-[14px] pt-[18px] pb-[10px] text-[14px] text-[#637381] leading-[22px] bg-[rgba(145,158,171,0.04)]">
@@ -77,7 +78,7 @@ function NumberInput({
       />
       <div className="absolute flex items-center left-[14px] px-[2px] top-[-5px] z-10">
         <div className="absolute bg-white h-[2px] left-0 right-0 top-[5px]" />
-        <p style={{ fontSize: '12px', fontWeight: 600, color: '#637381' }}>{label}</p>
+        <p className="relative" style={{ fontSize: '12px', fontWeight: 600, color: '#637381' }}>{label}</p>
       </div>
       <input
         type="number"
@@ -103,9 +104,79 @@ function DateInput({
   onChange: (v: string) => void;
 }) {
   const [showPicker, setShowPicker] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const pickerRef = useRef<HTMLDivElement>(null);
+  const [pickerPos, setPickerPos] = useState<{ left: number; top: number }>({ left: 0, top: 0 });
+
+  // 計算座標（固定向上展開，底部對齊欄位上方）
+  const calcPosition = useCallback(() => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const pickerH = pickerRef.current?.offsetHeight ?? 340;
+    setPickerPos({
+      left: rect.left,
+      top: rect.top - pickerH - 4,
+    });
+  }, []);
+
+  const handleToggle = () => {
+    if (!showPicker) {
+      // 先開啟讓 picker 渲染，再計算位置
+      setShowPicker(true);
+    } else {
+      setShowPicker(false);
+    }
+  };
+
+  // 開啟後量測高度並重新定位
+  useEffect(() => {
+    if (!showPicker) return;
+    // 等一幀讓 picker 渲染完畢
+    requestAnimationFrame(() => {
+      if (!containerRef.current || !pickerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const pickerH = pickerRef.current.offsetHeight;
+      setPickerPos({
+        left: rect.left,
+        top: rect.top - pickerH - 4,
+      });
+    });
+  }, [showPicker]);
+
+  // 點擊外部關閉
+  useEffect(() => {
+    if (!showPicker) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (
+        containerRef.current && !containerRef.current.contains(target) &&
+        pickerRef.current && !pickerRef.current.contains(target)
+      ) {
+        setShowPicker(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showPicker]);
+
+  // 滾動時重新計算位置
+  useEffect(() => {
+    if (!showPicker) return;
+    const onScroll = () => {
+      if (!containerRef.current || !pickerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const pickerH = pickerRef.current.offsetHeight;
+      setPickerPos({
+        left: rect.left,
+        top: rect.top - pickerH - 4,
+      });
+    };
+    window.addEventListener('scroll', onScroll, true);
+    return () => window.removeEventListener('scroll', onScroll, true);
+  }, [showPicker]);
 
   return (
-    <div className="relative w-full overflow-hidden" style={{ minHeight: '54px' }}>
+    <div className="relative w-full" ref={containerRef} style={{ minHeight: '54px' }}>
       {/* 一致的框線 overlay */}
       <div
         aria-hidden="true"
@@ -115,13 +186,13 @@ function DateInput({
       {/* 浮動標籤 */}
       <div className="absolute flex items-center left-[14px] px-[2px] top-[-5px] z-10">
         <div className="absolute bg-white h-[2px] left-0 right-0 top-[5px]" />
-        <p style={{ fontSize: '12px', fontWeight: 600, color: '#637381' }}>{label}</p>
+        <p className="relative" style={{ fontSize: '12px', fontWeight: 600, color: '#637381' }}>{label}</p>
       </div>
       {/* 內容區：日期文字 + calendar icon */}
       <div
         className="flex items-center w-full cursor-pointer select-none"
         style={{ minHeight: '54px', paddingLeft: '14px', paddingRight: '10px', paddingTop: '18px', paddingBottom: '10px' }}
-        onClick={() => setShowPicker((p) => !p)}
+        onClick={handleToggle}
       >
         <span
           className="flex-1 text-[14px] leading-[22px] truncate"
@@ -146,14 +217,23 @@ function DateInput({
           <path d="M3 9h18M8 2v4M16 2v4" stroke="#637381" strokeWidth="1.8" strokeLinecap="round" />
         </svg>
       </div>
-      {/* 日曆 */}
-      {showPicker && (
-        <div className="absolute top-[58px] left-0 z-[100]">
+      {/* 日曆（portal 渲染到 body，徹底脫離 modal DOM） */}
+      {showPicker && createPortal(
+        <div
+          ref={pickerRef}
+          style={{
+            position: 'fixed',
+            left: pickerPos.left,
+            top: pickerPos.top,
+            zIndex: 9999,
+          }}
+        >
           <SimpleDatePicker
             selectedDate={value}
             onDateSelect={(date) => { onChange(date); setShowPicker(false); }}
           />
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
@@ -177,23 +257,33 @@ function InfoField({ label, value }: { label: string; value: string }) {
 function SectionBox({
   title,
   children,
+  highlight = false,
 }: {
   title: string;
   children: React.ReactNode;
+  highlight?: boolean;
 }) {
   return (
     <div>
       <p
         className="text-[12px] font-semibold leading-[18px] mb-[10px]"
-        style={{ color: '#637381' }}
+        style={{ color: highlight ? '#0065A9' : '#637381' }}
       >
         {title}
       </p>
       <div
         className="rounded-[12px] p-[16px] flex flex-col gap-[16px]"
         style={{
-          border: '1px solid rgba(145,158,171,0.20)',
-          backgroundColor: 'rgba(145,158,171,0.02)',
+          border: highlight
+            ? '1.5px solid rgba(0, 101, 169, 0.35)'
+            : '1px solid rgba(145,158,171,0.20)',
+          backgroundColor: highlight
+            ? 'rgba(0, 101, 169, 0.02)'
+            : 'rgba(145,158,171,0.02)',
+          boxShadow: highlight
+            ? '0 2px 12px 0 rgba(0, 101, 169, 0.10), 0 0 0 1px rgba(0, 101, 169, 0.06)'
+            : 'none',
+          transition: 'border-color 0.2s, box-shadow 0.2s',
         }}
       >
         {children}
@@ -219,10 +309,9 @@ export function CreateSampleOrderOverlay({
 
   // 巨大需求欄位
   const [demandDate,  setDemandDate]  = useState('');
-  const [sampleType,  setSampleType]  = useState<string>('D');
+  const [sampleType,  setSampleType]  = useState<string>('G');
   const [resample,    setResample]    = useState<string>('否');
   const [demandQty,   setDemandQty]   = useState('');
-  const [remark,      setRemark]      = useState('');
   const [submitted,   setSubmitted]   = useState(false);
 
   const resampleOptions = [
@@ -230,14 +319,15 @@ export function CreateSampleOrderOverlay({
     { value: '是', label: '是' },
   ];
 
-  const handleSubmit = () => {
+  const handleSubmit = (targetStatus: 'DR' | 'V') => {
     setSubmitted(true);
-    if (!demandDate) return;
+    // 巨大需求必填驗證
+    if (!demandDate || !demandQty) return;
 
     let lastOrderNo = '';
     selectedParts.forEach((part) => {
       const record = addSampleOrder({
-        status:          'DR',
+        status:          targetStatus,
         vendorCode:      part.vendorCode,
         vendorName:      part.vendorName,
         purchaseOrg:     part.purchaseOrg,
@@ -249,7 +339,6 @@ export function CreateSampleOrderOverlay({
         demandQty:       demandQty ? Number(demandQty) : undefined,
         resample:        resample === '是',
         sampleType:      sampleType as SampleType,
-        remark,
         createdBy:       '王大明',
       });
       lastOrderNo = record.orderNo;
@@ -259,7 +348,7 @@ export function CreateSampleOrderOverlay({
   };
 
   return (
-    <BaseOverlay onClose={onClose} maxWidth="680px" maxHeight="92vh">
+    <BaseOverlay onClose={onClose} maxWidth="680px" autoHeight>
       <div className="relative w-full h-full flex flex-col">
 
         {/* ── 關閉按鈕 ── */}
@@ -288,7 +377,7 @@ export function CreateSampleOrderOverlay({
             開立索樣單
           </p>
           <p className="text-[13px] mt-[2px]" style={{ color: '#919eab' }}>
-            共 {selectedParts.length} 筆零件，每筆各開立一張索樣單（狀態：草稿 DR）
+            共 {selectedParts.length} 筆零件，每筆各開立一張索樣單
           </p>
         </div>
 
@@ -347,7 +436,7 @@ export function CreateSampleOrderOverlay({
           </SectionBox>
 
           {/* ── 區塊二：巨大需求 ─────────────────────────────────────── */}
-          <SectionBox title="巨大需求">
+          <SectionBox title="巨大需求" highlight>
             <div className="grid grid-cols-2 gap-[16px]">
               {/* 重新索樣 */}
               <DropdownSelect
@@ -380,6 +469,13 @@ export function CreateSampleOrderOverlay({
                 placeholder="請輸入數量"
               />
             </div>
+
+            {/* 驗證錯誤提示 */}
+            {submitted && (!demandDate || !demandQty) && (
+              <p className="text-[12px] mt-[-8px]" style={{ color: '#ff5630' }}>
+                ⚠ 請填寫樣品需求日及需求數量
+              </p>
+            )}
           </SectionBox>
 
         </div>
@@ -391,25 +487,19 @@ export function CreateSampleOrderOverlay({
           className="shrink-0 flex gap-[12px] px-[24px] py-[16px] border-t"
           style={{ borderColor: 'rgba(145,158,171,0.12)' }}
         >
-          {/* 驗證錯誤提示 */}
-          {submitted && !demandDate && (
-            <p className="absolute left-[24px] bottom-[60px] text-[12px]" style={{ color: '#ff5630' }}>
-              ⚠ 請填寫樣品需求日
-            </p>
-          )}
           <button
-            onClick={onClose}
+            onClick={() => handleSubmit('DR')}
             className="flex-1 h-[36px] rounded-[8px] border text-[14px] font-medium hover:bg-[rgba(145,158,171,0.08)] transition-colors"
             style={{ borderColor: 'rgba(145,158,171,0.32)', color: '#637381' }}
           >
-            取消
+            暫存草稿
           </button>
           <button
-            onClick={handleSubmit}
+            onClick={() => handleSubmit('V')}
             className="flex-1 h-[36px] rounded-[8px] flex items-center justify-center hover:bg-[#004680] transition-colors"
             style={{ backgroundColor: '#00559c' }}
           >
-            <p className="font-bold text-[14px] text-white">開立索樣單</p>
+            <p className="font-bold text-[14px] text-white">轉交廠商</p>
           </button>
         </div>
 

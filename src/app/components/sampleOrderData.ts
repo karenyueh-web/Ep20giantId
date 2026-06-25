@@ -86,13 +86,11 @@ export function getStatusDef(code: SampleOrderStatus): SampleOrderStatusDef {
 
 // ── 索樣類型 ────────────────────────────────────────────────────────────────
 
-export type SampleType = 'D' | 'G' | 'E' | 'S';
+export type SampleType = 'D' | 'G';
 
 export const SAMPLE_TYPE_OPTIONS: { value: SampleType; label: string }[] = [
   { value: 'D', label: 'D(開發樣)' },
   { value: 'G', label: 'G(量產品)' },
-  { value: 'E', label: 'E(工程樣)' },
-  { value: 'S', label: 'S(特殊樣)' },
 ];
 
 // ── 介面定義 ────────────────────────────────────────────────────────────────
@@ -152,7 +150,8 @@ let _orderSeq = 94;
 
 function genOrderNo(): string {
   _orderSeq += 1;
-  return `G2500${_orderSeq}`;
+  const yearSuffix = String(new Date().getFullYear()).slice(-2);
+  return `G${yearSuffix}${String(_orderSeq).padStart(5, '0')}`;
 }
 
 // ── Mock 資料 Store（模組記憶體，頁面切換不遺失）───────────────────────────
