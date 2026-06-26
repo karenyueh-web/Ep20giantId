@@ -472,7 +472,7 @@ export function SampleOrderDetailOverlay({
           </SectionBox>
 
           {/* ── 區塊三：廠商回覆（狀態 V/B/SC/CC/CL 顯示）─────────────── */}
-          {(order.status === 'V' || order.status === 'B' || order.status === 'SC' || order.status === 'CC' || order.status === 'CL') && (
+          {(order.status === 'V' || order.status === 'SC' || order.status === 'CC' || order.status === 'CL') && (
             <SectionBox title="廠商回覆" highlight={canReply}>
               <div className="grid grid-cols-2 gap-[16px]">
                 {/* 樣品達交日 */}
@@ -561,7 +561,7 @@ export function SampleOrderDetailOverlay({
               </>
             )}
 
-            {order.status === 'B' && (
+            {order.status === 'SC' && (
               <>
                 <button
                   onClick={onClose}

@@ -29,8 +29,7 @@ const TABS: TabDef[] = [
   { id: 'all', label: 'All' },
   { id: 'DR',  label: '草稿(DR)',        status: 'DR' },
   { id: 'V',   label: '廠商確認中(V)',   status: 'V' },
-  { id: 'B',   label: '採購確認中(B)',   status: 'B' },
-  { id: 'SC',  label: '索樣已確認(SC)', status: 'SC' },
+  { id: 'SC',  label: '廠商已回覆(SC)', status: 'SC' },
   { id: 'CC',  label: '取消(CC)',        status: 'CC' },
   { id: 'CL',  label: '關閉結案(CL)',   status: 'CL' },
 ];
@@ -298,8 +297,8 @@ export default function SampleOrderListPage({ userRole: _userRole }: SampleOrder
         {TABS.map((tab) => {
           const isActive = activeTab === tab.id;
           const count = tab.status ? tabCounts[tab.status] : orders.length;
-          // 只有 All / DR / V / B / SC 顯示統計數，CC 和 CL 不顯示
-          const BADGE_TABS: TabId[] = ['DR', 'V', 'B', 'SC'];
+          // 只有 All / DR / V / SC 顯示統計數，CC 和 CL 不顯示
+          const BADGE_TABS: TabId[] = ['DR', 'V', 'SC'];
           const showBadge = BADGE_TABS.includes(tab.id) && count !== undefined && count > 0;
 
           // Badge 顏色：依各狀態的色票，All 用灰

@@ -2,7 +2,7 @@
 
 // ── 狀態定義 ────────────────────────────────────────────────────────────────
 
-export type SampleOrderStatus = 'DR' | 'V' | 'B' | 'SC' | 'CL' | 'CC';
+export type SampleOrderStatus = 'DR' | 'V' | 'SC' | 'CL' | 'CC';
 
 export interface SampleOrderStatusDef {
   code: SampleOrderStatus;
@@ -39,24 +39,14 @@ export const SAMPLE_ORDER_STATUSES: SampleOrderStatusDef[] = [
     textColor: '#1677ff',
   },
   {
-    code: 'B',
-    label: '採購確認中',
-    tabLabel: '採購確認中(B)',
+    code: 'SC',
+    label: '廠商已回覆',
+    tabLabel: '廠商已回覆(SC)',
     oldCode: 'RP',
     definition: '廠商回覆後',
     note: '整採可執行取消、完結',
     bgColor: 'rgba(255,171,0,0.16)',
     textColor: '#b76e00',
-  },
-  {
-    code: 'SC',
-    label: '索樣已確認',
-    tabLabel: '索樣已確認(SC)',
-    oldCode: '',
-    definition: '',
-    note: '確認後單據內容不可再調整，僅整採可執行取消',
-    bgColor: 'rgba(34,197,94,0.16)',
-    textColor: '#118d57',
   },
   {
     code: 'CL',
@@ -261,11 +251,11 @@ let _sampleOrders: SampleOrderRecord[] = [
     createdAt: '2024/12/05 14:25',
     updatedAt: '2024/12/05 14:25',
   },
-  // ── B 採購確認中 ─────────────────────────────────────────────────────────
+  // ── SC 廠商已回覆 ─────────────────────────────────────────────────────────
   {
     id: 6,
     orderNo: 'G2500071',
-    status: 'B',
+    status: 'SC',
     vendorCode: '000100215',
     vendorName: '麥克納馬拉',
     purchaseOrg: 'GEM採購組織',
@@ -290,7 +280,7 @@ let _sampleOrders: SampleOrderRecord[] = [
   {
     id: 7,
     orderNo: 'G2500072',
-    status: 'B',
+    status: 'SC',
     vendorCode: '000100215',
     vendorName: '麥克納馬拉',
     purchaseOrg: 'GEM採購組織',
@@ -314,7 +304,7 @@ let _sampleOrders: SampleOrderRecord[] = [
   {
     id: 8,
     orderNo: 'G2500073',
-    status: 'B',
+    status: 'SC',
     vendorCode: '000100463',
     vendorName: '速聯',
     purchaseOrg: 'GEM採購組織',
@@ -330,7 +320,7 @@ let _sampleOrders: SampleOrderRecord[] = [
     createdAt: '2024/11/20 11:00',
     updatedAt: '2024/11/28 09:15',
   },
-  // ── SC 索樣已確認 ─────────────────────────────────────────────────────────
+  // ── SC 廠商已回覆（原已確認） ──────────────────────────────────────────────
   {
     id: 9,
     orderNo: 'G2500055',
@@ -475,7 +465,7 @@ export function updateSampleOrderStatus(ids: number[], status: SampleOrderStatus
   notifySampleOrderChange();
 }
 
-/** 廠商回覆：更新回覆欄位並將狀態推進到 B（採購確認中） */
+/** 廠商回覆：更新回覆欄位並將狀態推進到 SC（廠商已回覆） */
 export function updateSampleOrderVendorReply(
   id: number,
   reply: {
@@ -491,7 +481,7 @@ export function updateSampleOrderVendorReply(
   let found: SampleOrderRecord | null = null;
   _sampleOrders = _sampleOrders.map((r) => {
     if (r.id !== id) return r;
-    const updated: SampleOrderRecord = { ...r, ...reply, status: 'B', updatedAt: ts };
+    const updated: SampleOrderRecord = { ...r, ...reply, status: 'SC', updatedAt: ts };
     found = updated;
     return updated;
   });
