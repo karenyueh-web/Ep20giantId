@@ -397,12 +397,18 @@ export default function SampleOrderListPage({ userRole: _userRole }: SampleOrder
             setDetailOrder(null);
             if (updated.status === 'V') {
               setActiveTab('V');
-              toast.success(`索樣單 ${updated.orderNo} 已轉交廠商`);
+              if (updated.needsFullVendorReply) {
+                // SC → V 退回廠商補填
+                toast(`索樣單 ${updated.orderNo} 已退回廠商補填，通知信已發送給廠商業務`);
+              } else {
+                // DR → V 轉交廠商
+                toast.success(`索樣單 ${updated.orderNo} 已轉交廠商，通知信已發送給廠商業務`);
+              }
             } else if (updated.status === 'DR') {
               setActiveTab('DR');
               toast(`索樣單 ${updated.orderNo} 已暫存草稿`);
             } else if (updated.status === 'SC') {
-              toast.success(`索樣單 ${updated.orderNo} 已回覆採購`);
+              toast.success(`索樣單 ${updated.orderNo} 已回覆採購，通知信已發送給整合採購`);
             } else if (updated.status === 'CC') {
               setActiveTab('CC');
               toast(`索樣單 ${updated.orderNo} 已取消`);

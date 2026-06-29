@@ -21,6 +21,22 @@ import {
   type SampleOrderRecord,
   type SampleOrderStatus,
 } from './sampleOrderData';
+import { buildEmail1, buildEmail2, buildEmail3, buildEmail4 } from './sampleOrderEmail';
+
+// Mock AD 帳號 Email 對照（實際由後端查詢 AD）
+const MOCK_AD_EMAIL: Record<string, string> = {
+  '王大明': 'wang.daming@giant-bicycles.com',
+  '李小華': 'li.xiaohua@giant-bicycles.com',
+};
+
+/** Mock 寄信（後端實作時替換為真實 API call） */
+function sendEmailMock(email: ReturnType<typeof buildEmail1>) {
+  // eslint-disable-next-line no-console
+  console.info(
+    `[EP Email Mock] 寄出信${email.emailNo} | ${email.subjectZh}`,
+    `\n收件人：${email.recipientQuery}`,
+  );
+}
 
 // ── FloatingInput（帶浮動標籤，唯讀 / 可編輯）──────────────────────────────────────
 function FloatingInput({
@@ -423,6 +439,20 @@ export function SampleOrderDetailOverlay({
       ].filter(Boolean).join('，'),
     });
     if (updated) onUpdated?.(updated);
+
+    // 觸發寄信：首次回覆 → 信二；補填後回覆 → 信四
+    const latestOrder: SampleOrderRecord = {
+      ...order,
+      vendorShipDate,
+      actualShipDate: actualShipDate || undefined,
+      availableDate: availableDate || undefined,
+      vendorDailyCapacity: capNum > 0 ? capNum : undefined,
+      status: 'SC',
+    };
+    const email = order.needsFullVendorReply
+      ? buildEmail4(latestOrder)
+      : buildEmail2(latestOrder);
+    sendEmailMock(email);
     onClose();
   };
 
@@ -495,6 +525,18 @@ export function SampleOrderDetailOverlay({
       ].filter(Boolean).join('，'),
     });
     if (updated) onUpdated?.(updated);
+
+    // 觸發寄信：信一（DR→V）
+    const latestOrder: SampleOrderRecord = {
+      ...order,
+      resample: drResample === '是',
+      sampleType: drSampleType,
+      demandDate: drDemandDate,
+      demandQty: Number(drDemandQty),
+      status: 'V',
+    };
+    const createdByEmail = MOCK_AD_EMAIL[order.createdBy] ?? `${order.createdBy}@giant-bicycles.com`;
+    sendEmailMock(buildEmail1(latestOrder, createdByEmail));
     onClose();
   };
 
@@ -615,6 +657,14 @@ export function SampleOrderDetailOverlay({
     });
     if (updated) onUpdated?.(updated);
     setShowIncompleteDialog(false);
+
+    // 觸發寄信：信三（SC→V）
+    const createdByEmail = MOCK_AD_EMAIL[order.createdBy] ?? `${order.createdBy}@giant-bicycles.com`;
+    sendEmailMock(buildEmail3(
+      { ...order, status: 'V', updatedAt: ts },
+      missingFields,
+      createdByEmail,
+    ));
     onClose();
   };
 
