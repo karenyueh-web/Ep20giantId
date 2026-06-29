@@ -16,6 +16,7 @@ import {
   updateSampleOrderStatus,
   updateSampleOrderVendorReply,
   updateSampleOrderDraft,
+  updateSCSuppFields,
   addSampleOrderHistory,
   type SampleOrderRecord,
   type SampleOrderStatus,
@@ -385,6 +386,13 @@ export function SampleOrderDetailOverlay({
   const [showHistory, setShowHistory] = useState(false);
   // 回覆採購按下後才觸發紅框
   const [replySubmitted, setReplySubmitted] = useState(false);
+  // SC 狀態：廠商回覆區全部欄位可調整
+  const [scVendorShipDate,     setScVendorShipDate]     = useState(order.vendorShipDate     ?? '');
+  const [scVendorDailyCapacity, setScVendorDailyCapacity] = useState(
+    order.vendorDailyCapacity != null ? String(order.vendorDailyCapacity) : '',
+  );
+  const [scAvailableDate,  setScAvailableDate]  = useState(order.availableDate  ?? '');
+  const [scActualShipDate, setScActualShipDate] = useState(order.actualShipDate ?? '');
 
   const handleReply = () => {
     setReplySubmitted(true);
@@ -470,14 +478,52 @@ export function SampleOrderDetailOverlay({
     onClose();
   };
 
-  // SC：關閉結案（先檢查廠商回覆欄位完整性）
+  // SC：儲存（保持 SC 狀態，存全部廠商回覆欄位）
+  const handleSaveSC = () => {
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const ts = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    const capNum = Number(scVendorDailyCapacity);
+    const updated = updateSampleOrderVendorReply(order.id, {
+      vendorShipDate:      scVendorShipDate     || undefined,
+      vendorDailyCapacity: scVendorDailyCapacity && Number.isInteger(capNum) && capNum > 0 ? capNum : undefined,
+      availableDate:       scAvailableDate      || undefined,
+      actualShipDate:      scActualShipDate     || undefined,
+    });
+    addSampleOrderHistory(order.id, {
+      date: ts,
+      event: '廠商回覆資料已更新',
+      operator: '王大明',
+      remark: [
+        scVendorShipDate     ? `樣品達交日：${scVendorShipDate}`           : null,
+        capNum > 0           ? `日產能：${capNum}`                             : null,
+        scAvailableDate      ? `首批可供貨日：${scAvailableDate}`       : null,
+        scActualShipDate     ? `實際送樣日：${scActualShipDate}`           : null,
+      ].filter(Boolean).join('，'),
+    });
+    if (updated) onUpdated?.(updated);
+    onClose();
+  };
+
+  // SC：關閉結案（先存全部 SC 欄位，再檢查完整性）
   const handleCloseToCL = () => {
-    // 檢查廠商回覆必填欄位
+    const capNum = Number(scVendorDailyCapacity);
+    const capOk  = scVendorDailyCapacity && Number.isInteger(capNum) && capNum > 0;
+
+    // 先存目前所有 SC 欄位
+    updateSampleOrderVendorReply(order.id, {
+      vendorShipDate:      scVendorShipDate || undefined,
+      vendorDailyCapacity: capOk ? capNum  : undefined,
+      availableDate:       scAvailableDate  || undefined,
+      actualShipDate:      scActualShipDate || undefined,
+    });
+
+    // 檢查必填欄位（以 local state 為主）
     const missing: string[] = [];
-    if (!order.vendorShipDate) missing.push('樣品達交日');
-    if (!order.actualShipDate) missing.push('實際送樣日');
-    if (!order.availableDate)  missing.push('首批可供貨日');
-    if (order.vendorDailyCapacity == null) missing.push('廠商日產能');
+    if (!scVendorShipDate)  missing.push('樣品達交日');
+    if (!capOk)             missing.push('廠商日產能');
+    if (!scActualShipDate)  missing.push('實際送樣日');
+    if (!scAvailableDate)   missing.push('首批可供貨日');
 
     if (missing.length > 0) {
       setMissingFields(missing);
@@ -696,7 +742,7 @@ export function SampleOrderDetailOverlay({
           {(order.status === 'V' || order.status === 'SC' || order.status === 'CC' || order.status === 'CL') && (
             <SectionBox
               title="廠商回覆"
-              highlight={canReply}
+              highlight={canReply || order.status === 'SC'}
               titleExtra={canReply && order.needsFullVendorReply ? (
                 <span className="flex items-center gap-[4px]">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" className="shrink-0">
@@ -707,7 +753,7 @@ export function SampleOrderDetailOverlay({
               ) : undefined}
             >
               <div className="grid grid-cols-2 gap-[16px]">
-                {/* 樣品達交日：必填 */}
+                {/* 樣品達交日：V 必填，SC 可調整 */}
                 {canReply ? (
                   <DateInput
                     label="樣品達交日"
@@ -716,6 +762,13 @@ export function SampleOrderDetailOverlay({
                     hasError={replySubmitted && !vendorShipDate}
                     required
                     isLate={!!vendorShipDate && !!order.demandDate && vendorShipDate > order.demandDate}
+                  />
+                ) : order.status === 'SC' ? (
+                  <DateInput
+                    label="樣品達交日"
+                    value={scVendorShipDate}
+                    onChange={setScVendorShipDate}
+                    isLate={!!scVendorShipDate && !!order.demandDate && scVendorShipDate > order.demandDate}
                   />
                 ) : (
                   <FloatingInput
@@ -726,16 +779,20 @@ export function SampleOrderDetailOverlay({
                   />
                 )}
 
-                {/* 廠商日產能：必填（與樣品達交日並排在第一行） */}
+                {/* 廠商日產能：V 必填，SC 可調整 */}
                 <NumberInput
                   label="廠商日產能"
                   value={
-                    canReply
-                      ? vendorDailyCapacity
-                      : (order.vendorDailyCapacity != null ? String(order.vendorDailyCapacity) : '')
+                    canReply ? vendorDailyCapacity
+                    : order.status === 'SC' ? scVendorDailyCapacity
+                    : (order.vendorDailyCapacity != null ? String(order.vendorDailyCapacity) : '')
                   }
-                  onChange={canReply ? setVendorDailyCapacity : undefined}
-                  readOnly={!canReply}
+                  onChange={
+                    canReply ? setVendorDailyCapacity
+                    : order.status === 'SC' ? setScVendorDailyCapacity
+                    : undefined
+                  }
+                  readOnly={!canReply && order.status !== 'SC'}
                   placeholder="請輸入日產能"
                   hasError={replySubmitted && canReply && (!vendorDailyCapacity || !Number.isInteger(Number(vendorDailyCapacity)) || Number(vendorDailyCapacity) <= 0)}
                   required={canReply}
@@ -743,14 +800,16 @@ export function SampleOrderDetailOverlay({
                   step={1}
                 />
 
-                {/* 首批可供貨日：退回補填時必填 */}
+                {/* 首批可供貨日：V 退回補填時必填；SC 可調整 */}
                 {canReply ? (
                   <DateInput label="首批可供貨日" value={availableDate} onChange={setAvailableDate} hasError={!!order.needsFullVendorReply && !availableDate} />
+                ) : order.status === 'SC' ? (
+                  <DateInput label="首批可供貨日" value={scAvailableDate} onChange={setScAvailableDate} />
                 ) : (
                   <FloatingInput label="首批可供貨日" value={order.availableDate ?? ''} readOnly />
                 )}
 
-                {/* 實際送樣日：退回補填時必填（移到第二行後半） */}
+                {/* 實際送樣日：V 退回補填時必填；SC 可調整 */}
                 {canReply ? (
                   <DateInput
                     label="實際送樣日"
@@ -758,6 +817,13 @@ export function SampleOrderDetailOverlay({
                     onChange={setActualShipDate}
                     hasError={!!order.needsFullVendorReply && !actualShipDate}
                     isLate={!!actualShipDate && !!order.demandDate && actualShipDate > order.demandDate}
+                  />
+                ) : order.status === 'SC' ? (
+                  <DateInput
+                    label="實際送樣日"
+                    value={scActualShipDate}
+                    onChange={setScActualShipDate}
+                    isLate={!!scActualShipDate && !!order.demandDate && scActualShipDate > order.demandDate}
                   />
                 ) : (
                   <FloatingInput
@@ -841,6 +907,13 @@ export function SampleOrderDetailOverlay({
                   style={{ borderColor: 'rgba(255,86,48,0.5)', color: '#ff5630' }}
                 >
                   取消索樣
+                </button>
+                <button
+                  onClick={handleSaveSC}
+                  className="flex-1 h-[36px] rounded-[8px] border text-[14px] font-medium hover:opacity-80 transition-opacity"
+                  style={{ backgroundColor: '#22c55e', borderColor: '#16a34a', color: '#fff' }}
+                >
+                  儲存
                 </button>
                 <button
                   onClick={handleCloseToCL}

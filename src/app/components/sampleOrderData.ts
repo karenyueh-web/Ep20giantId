@@ -525,6 +525,26 @@ export function updateSampleOrderVendorReply(
   return found;
 }
 
+/** SC 補填：在 SC 狀態下更新首批可供貨日 / 實際送樣日，不改變 status */
+export function updateSCSuppFields(
+  id: number,
+  fields: { availableDate?: string; actualShipDate?: string },
+): SampleOrderRecord | null {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const ts = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  let found: SampleOrderRecord | null = null;
+  _sampleOrders = _sampleOrders.map((r) => {
+    if (r.id !== id) return r;
+    const updated: SampleOrderRecord = { ...r, ...fields, updatedAt: ts };
+    found = updated;
+    return updated;
+  });
+  notifySampleOrderChange();
+  return found;
+}
+
+
 /** 草稿更新：更新 DR 的可編輯欄位，可選擇同時轉交廠商（status → V） */
 export function updateSampleOrderDraft(
   id: number,
