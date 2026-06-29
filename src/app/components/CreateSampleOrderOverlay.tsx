@@ -370,20 +370,28 @@ export function CreateSampleOrderOverlay({
       lastOrderNo = record.orderNo;
 
       // ── 寫入歷程 ──
+      const sampleTypeLabel = SAMPLE_TYPE_OPTIONS.find(o => o.value === sampleType)?.label ?? sampleType;
+      const orderRemark = [
+        `索樣類型：${sampleTypeLabel}`,
+        demandDate  ? `樣品需求日：${demandDate}`  : null,
+        demandQty   ? `需求數量：${demandQty}`      : null,
+        resample === '是' ? '重新索樣：是'           : null,
+      ].filter(Boolean).join('，');
+
       if (prevOrder) {
         const prevStatusDef = getStatusDef(prevOrder.status);
         addSampleOrderHistory(record.id, {
           date: ts,
           event: `重新索樣開立（${statusLabel}）`,
           operator: '王大明',
-          remark: `先前索樣單：${prevOrder.orderNo}（狀態：${prevStatusDef.label}(${prevOrder.status})）`,
+          remark: `先前索樣單：${prevOrder.orderNo}（狀態：${prevStatusDef.label}(${prevOrder.status})）；${orderRemark}`,
         });
       } else {
         addSampleOrderHistory(record.id, {
           date: ts,
           event: `開立索樣單（${statusLabel}）`,
           operator: '王大明',
-          remark: '',
+          remark: orderRemark,
         });
       }
     });

@@ -399,12 +399,28 @@ export function SampleOrderDetailOverlay({
     const shipEmpty  = !vendorShipDate;
     const capNum     = Number(vendorDailyCapacity);
     const capInvalid = !vendorDailyCapacity || !Number.isInteger(capNum) || capNum <= 0;
-    if (shipEmpty || capInvalid) return; // 紅框已透過 hasError 顯示，不需 alert
+    if (shipEmpty || capInvalid) return;
+
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const ts = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+
     const updated = updateSampleOrderVendorReply(order.id, {
       vendorShipDate,
       actualShipDate,
       availableDate,
       vendorDailyCapacity: vendorDailyCapacity ? Number(vendorDailyCapacity) : undefined,
+    });
+    addSampleOrderHistory(order.id, {
+      date: ts,
+      event: '回覆採購',
+      operator: '王大明',
+      remark: [
+        vendorShipDate      ? `樣品達交日：${vendorShipDate}`       : null,
+        capNum > 0          ? `日產能：${capNum}`                        : null,
+        availableDate       ? `首批可供貨日：${availableDate}`  : null,
+        actualShipDate      ? `實際送樣日：${actualShipDate}`      : null,
+      ].filter(Boolean).join('，'),
     });
     if (updated) onUpdated?.(updated);
     onClose();
@@ -417,6 +433,10 @@ export function SampleOrderDetailOverlay({
       window.alert('「需求數量」需為大於 0 的整數');
       return;
     }
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const ts = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    const sampleTypeLabel = SAMPLE_TYPE_OPTIONS.find(o => o.value === drSampleType)?.label ?? drSampleType;
     const updated = updateSampleOrderDraft(
       order.id,
       {
@@ -425,8 +445,19 @@ export function SampleOrderDetailOverlay({
         demandDate: drDemandDate,
         demandQty: Number(drDemandQty),
       },
-      false, // 保持 DR
+      false,
     );
+    addSampleOrderHistory(order.id, {
+      date: ts,
+      event: '草稿已儲存',
+      operator: '王大明',
+      remark: [
+        `索樣類型：${sampleTypeLabel}`,
+        drDemandDate  ? `樣品需求日：${drDemandDate}`  : null,
+        drDemandQty   ? `需求數量：${drDemandQty}`         : null,
+        drResample === '是' ? '重新索樣：是' : null,
+      ].filter(Boolean).join('，'),
+    });
     if (updated) onUpdated?.(updated);
     onClose();
   };
@@ -438,6 +469,10 @@ export function SampleOrderDetailOverlay({
       window.alert('「需求數量」需為大於 0 的整數');
       return;
     }
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const ts = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    const sampleTypeLabel = SAMPLE_TYPE_OPTIONS.find(o => o.value === drSampleType)?.label ?? drSampleType;
     const updated = updateSampleOrderDraft(
       order.id,
       {
@@ -446,8 +481,19 @@ export function SampleOrderDetailOverlay({
         demandDate: drDemandDate,
         demandQty: Number(drDemandQty),
       },
-      true, // 推進到 V
+      true,
     );
+    addSampleOrderHistory(order.id, {
+      date: ts,
+      event: '轉交廠商',
+      operator: '王大明',
+      remark: [
+        `索樣類型：${sampleTypeLabel}`,
+        drDemandDate  ? `樣品需求日：${drDemandDate}`  : null,
+        drDemandQty   ? `需求數量：${drDemandQty}`         : null,
+        drResample === '是' ? '重新索樣：是' : null,
+      ].filter(Boolean).join('，'),
+    });
     if (updated) onUpdated?.(updated);
     onClose();
   };
@@ -484,23 +530,31 @@ export function SampleOrderDetailOverlay({
     const pad = (n: number) => String(n).padStart(2, '0');
     const ts = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
     const capNum = Number(scVendorDailyCapacity);
+    const capOk  = scVendorDailyCapacity && Number.isInteger(capNum) && capNum > 0;
+
     const updated = updateSampleOrderVendorReply(order.id, {
-      vendorShipDate:      scVendorShipDate     || undefined,
-      vendorDailyCapacity: scVendorDailyCapacity && Number.isInteger(capNum) && capNum > 0 ? capNum : undefined,
-      availableDate:       scAvailableDate      || undefined,
-      actualShipDate:      scActualShipDate     || undefined,
+      vendorShipDate:      scVendorShipDate || undefined,
+      vendorDailyCapacity: capOk ? capNum   : undefined,
+      availableDate:       scAvailableDate  || undefined,
+      actualShipDate:      scActualShipDate || undefined,
     });
-    addSampleOrderHistory(order.id, {
-      date: ts,
-      event: '廠商回覆資料已更新',
-      operator: '王大明',
-      remark: [
-        scVendorShipDate     ? `樣品達交日：${scVendorShipDate}`           : null,
-        capNum > 0           ? `日產能：${capNum}`                             : null,
-        scAvailableDate      ? `首批可供貨日：${scAvailableDate}`       : null,
-        scActualShipDate     ? `實際送樣日：${scActualShipDate}`           : null,
-      ].filter(Boolean).join('，'),
-    });
+
+    // 只記錄本次有變動的欄位
+    const origCapStr = order.vendorDailyCapacity != null ? String(order.vendorDailyCapacity) : '';
+    const changes: string[] = [];
+    if (scVendorShipDate  !== (order.vendorShipDate  ?? '')) changes.push(`樣品達交日：${scVendorShipDate  || '（清空）'}`);
+    if (scVendorDailyCapacity !== origCapStr)                changes.push(`日產能：${scVendorDailyCapacity || '（清空）'}`);
+    if (scAvailableDate   !== (order.availableDate   ?? '')) changes.push(`首批可供貨日：${scAvailableDate  || '（清空）'}`);
+    if (scActualShipDate  !== (order.actualShipDate  ?? '')) changes.push(`實際送樣日：${scActualShipDate  || '（清空）'}`);
+
+    if (changes.length > 0) {
+      addSampleOrderHistory(order.id, {
+        date: ts,
+        event: '廠商回覆資料已更新',
+        operator: '王大明',
+        remark: changes.join('，'),
+      });
+    }
     if (updated) onUpdated?.(updated);
     onClose();
   };
@@ -910,8 +964,8 @@ export function SampleOrderDetailOverlay({
                 </button>
                 <button
                   onClick={handleSaveSC}
-                  className="flex-1 h-[36px] rounded-[8px] border text-[14px] font-medium hover:opacity-80 transition-opacity"
-                  style={{ backgroundColor: '#22c55e', borderColor: '#16a34a', color: '#fff' }}
+                  className="flex-1 h-[36px] rounded-[8px] text-[14px] font-medium hover:opacity-80 transition-opacity"
+                  style={{ backgroundColor: '#118D57', color: '#fff' }}
                 >
                   儲存
                 </button>
