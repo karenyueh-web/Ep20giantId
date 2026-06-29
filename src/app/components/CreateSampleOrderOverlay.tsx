@@ -67,22 +67,28 @@ function NumberInput({
   value,
   onChange,
   placeholder,
+  hasError = false,
+  required = false,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
+  hasError?: boolean;
+  required?: boolean;
 }) {
   return (
     <div className="relative w-full" style={{ minHeight: '54px' }}>
       <div
         aria-hidden="true"
         className="absolute inset-0 pointer-events-none rounded-[8px] border border-solid"
-        style={{ borderColor: 'rgba(145,158,171,0.2)' }}
+        style={{ borderColor: hasError ? '#ff5630' : 'rgba(145,158,171,0.2)' }}
       />
       <div className="absolute flex items-center left-[14px] px-[2px] top-[-5px] z-10">
         <div className="absolute bg-white h-[2px] left-0 right-0 top-[5px]" />
-        <p className="relative" style={{ fontSize: '12px', fontWeight: 600, color: '#637381' }}>{label}</p>
+        <p className="relative" style={{ fontSize: '12px', fontWeight: 600, color: hasError ? '#ff5630' : '#637381' }}>
+          {label}{(required || hasError) && <span style={{ marginLeft: '3px', color: hasError ? '#ff5630' : '#637381' }}>*</span>}
+        </p>
       </div>
       <input
         type="number"
@@ -92,6 +98,7 @@ function NumberInput({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         min={1}
+        step={1}
       />
     </div>
   );
@@ -388,8 +395,10 @@ export function CreateSampleOrderOverlay({
   const handleSubmit = (targetStatus: 'DR' | 'V') => {
     setSubmitted(true);
     setDuplicateError(null);
-    // 巨大需求必填驗證
-    if (!demandDate || !demandQty) return;
+    // 巨大需求必填驗證：數量需為正整數
+    const qtyNum = Number(demandQty);
+    const qtyInvalid = !demandQty || !Number.isInteger(qtyNum) || qtyNum <= 0;
+    if (!demandDate || qtyInvalid) return;
 
     // ── 重複檢核：逐筆零件檢查是否已有非 DR 索樣單 ──
     for (const part of selectedParts) {
@@ -530,15 +539,26 @@ export function CreateSampleOrderOverlay({
                 value={demandQty}
                 onChange={setDemandQty}
                 placeholder="請輸入數量"
+                hasError={submitted && (!demandQty || !Number.isInteger(Number(demandQty)) || Number(demandQty) <= 0)}
+                required
+                min={1}
+                step={1}
               />
             </div>
 
             {/* 驗證錯誤提示 */}
-            {submitted && (!demandDate || !demandQty) && (
-              <p className="text-[12px] mt-[-8px]" style={{ color: '#ff5630' }}>
-                ⚠ 請填寫樣品需求日及需求數量
-              </p>
-            )}
+            {submitted && (() => {
+              const dateEmpty = !demandDate;
+              const qtyNum = Number(demandQty);
+              const qtyInvalid = !demandQty || !Number.isInteger(qtyNum) || qtyNum <= 0;
+              if (!dateEmpty && !qtyInvalid) return null;
+              const msg = dateEmpty && qtyInvalid
+                ? '⚠ 請填寫樣品需求日，且需求數量需為大於 0 的整數'
+                : dateEmpty
+                ? '⚠ 請填寫樣品需求日'
+                : '⚠ 需求數量需為大於 0 的整數';
+              return <p className="text-[12px] mt-[-8px]" style={{ color: '#ff5630' }}>{msg}</p>;
+            })()}
 
             {/* 重複索樣錯誤提示 */}
             {duplicateError && (

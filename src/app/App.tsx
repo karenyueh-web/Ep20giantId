@@ -374,6 +374,7 @@ export default function App() {
             <PartsMaintenancePage
               userRole={userRole}
               onBreadcrumbChange={(title, bc) => { setPartsTitle(title); setPartsBreadcrumb(bc); }}
+              onNavigateToSampleList={() => handlePageChange('parts-sample')}
             />
           </ResponsivePageLayout>
         );

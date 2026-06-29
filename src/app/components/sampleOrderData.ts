@@ -132,15 +132,27 @@ export interface SampleOrderRecord {
   availableDate?: string;
   /** 廠商日產能 */
   vendorDailyCapacity?: number;
+  // ── 取消索樣（CC 狀態才有值） ────────────────────────────────────────────
+  /** 取消原因 */
+  cancelReason?: string;
+  // ── 退回廠商補填旗標 ──────────────────────────────────────────────
+  /** 被整山採購退回廠商補填：true 時廠商回覆全部欄位必填 */
+  needsFullVendorReply?: boolean;
 }
 
-// ── 序號產生器 ──────────────────────────────────────────────────────────────
-
-let _orderSeq = 94;
+// 依年度獨立計算流水號：跨年自動歸零
+let _orderSeqYear = new Date().getFullYear();
+let _orderSeq = 0; // 2026 年尚無 mock 資料，從 0 開始（第一張產生 G2600001）
 
 function genOrderNo(): string {
+  const currentYear = new Date().getFullYear();
+  if (currentYear !== _orderSeqYear) {
+    // 跨年 → 重置
+    _orderSeqYear = currentYear;
+    _orderSeq = 0;
+  }
   _orderSeq += 1;
-  const yearSuffix = String(new Date().getFullYear()).slice(-2);
+  const yearSuffix = String(currentYear).slice(-2);
   return `G${yearSuffix}${String(_orderSeq).padStart(5, '0')}`;
 }
 
@@ -465,6 +477,30 @@ export function updateSampleOrderStatus(ids: number[], status: SampleOrderStatus
   notifySampleOrderChange();
 }
 
+/** 取消索樣：SC → CC，同時寫入取消原因 */
+export function cancelSampleOrder(id: number, reason: string): SampleOrderRecord | null {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const ts = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  _sampleOrders = _sampleOrders.map((r) =>
+    r.id === id ? { ...r, status: 'CC', cancelReason: reason, updatedAt: ts } : r,
+  );
+  notifySampleOrderChange();
+  return _sampleOrders.find((r) => r.id === id) ?? null;
+}
+
+/** 退回廠商補填：SC → V，標記需要補齊全部廠商回覆欄位 */
+export function revertSampleOrderToV(id: number): SampleOrderRecord | null {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const ts = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  _sampleOrders = _sampleOrders.map((r) =>
+    r.id === id ? { ...r, status: 'V', needsFullVendorReply: true, updatedAt: ts } : r,
+  );
+  notifySampleOrderChange();
+  return _sampleOrders.find((r) => r.id === id) ?? null;
+}
+
 /** 廠商回覆：更新回覆欄位並將狀態推進到 SC（廠商已回覆） */
 export function updateSampleOrderVendorReply(
   id: number,
@@ -482,6 +518,37 @@ export function updateSampleOrderVendorReply(
   _sampleOrders = _sampleOrders.map((r) => {
     if (r.id !== id) return r;
     const updated: SampleOrderRecord = { ...r, ...reply, status: 'SC', updatedAt: ts };
+    found = updated;
+    return updated;
+  });
+  notifySampleOrderChange();
+  return found;
+}
+
+/** 草稿更新：更新 DR 的可編輯欄位，可選擇同時轉交廠商（status → V） */
+export function updateSampleOrderDraft(
+  id: number,
+  fields: {
+    resample: boolean;
+    sampleType: string;
+    demandDate: string;
+    demandQty?: number;
+  },
+  submit: boolean, // true = 轉交廠商（DR→V），false = 暫存草稿（保持 DR）
+): SampleOrderRecord | null {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const ts = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  let found: SampleOrderRecord | null = null;
+  _sampleOrders = _sampleOrders.map((r) => {
+    if (r.id !== id) return r;
+    const updated: SampleOrderRecord = {
+      ...r,
+      ...fields,
+      sampleType: fields.sampleType as SampleOrderRecord['sampleType'],
+      status: submit ? 'V' : 'DR',
+      updatedAt: ts,
+    };
     found = updated;
     return updated;
   });

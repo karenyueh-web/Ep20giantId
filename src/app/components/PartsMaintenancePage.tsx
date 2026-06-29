@@ -22,12 +22,13 @@ import { downloadQuotationTemplate } from './PartsUploadManager';
 import { PartsUploadOverlay } from './PartsUploadOverlay';
 import { CreateSampleOrderOverlay } from './CreateSampleOrderOverlay';
 import { SampleOrderDetailOverlay } from './SampleOrderDetailOverlay';
-import { getSampleOrders, type SampleOrderRecord } from './sampleOrderData';
+import { type SampleOrderRecord } from './sampleOrderData';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 interface PartsMaintenancePageProps {
   userRole: string; // 'vendor' | 'procurement' | 'giant'
   onBreadcrumbChange?: (title: string, breadcrumb: string) => void;
+  onNavigateToSampleList?: () => void;
 }
 
 // ── Tab 定義 ───────────────────────────────────────────────────────────────────
@@ -163,6 +164,7 @@ function NotifyBadge({ status, sentAt }: { status: 'sent' | 'unsent'; sentAt?: s
 export default function PartsMaintenancePage({
   userRole,
   onBreadcrumbChange,
+  onNavigateToSampleList,
 }: PartsMaintenancePageProps) {
   // ── List / Detail 切換 ────────────────────────────────────────────────────
   const [viewingPart, setViewingPart] = useState<PartRecord | null>(null);
@@ -558,13 +560,11 @@ export default function PartsMaintenancePage({
         <CreateSampleOrderOverlay
           selectedParts={partsData.filter((p) => selectedIds.has(p.id))}
           onClose={() => setShowCreateSampleOrder(false)}
-          onCreated={(orderNo) => {
+          onCreated={(_orderNo) => {
             setShowCreateSampleOrder(false);
             setSelectedIds(new Set());
-            // 開立後自動開啟明細彈窗
-            const allOrders = getSampleOrders();
-            const found = allOrders.find((o) => o.orderNo === orderNo);
-            if (found) setDetailOrder(found);
+            // 開立後跳轉到索樣單列表（ALL 分頁）
+            onNavigateToSampleList?.();
           }}
         />
       )}

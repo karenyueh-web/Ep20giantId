@@ -195,7 +195,20 @@ export default function SampleOrderListPage({ userRole: _userRole }: SampleOrder
 
   const columns: StandardColumn<PartWithVendorDisplay>[] = useMemo(
     () => [
-      { key: 'orderNo',       label: '索樣單號',   width: 110, minWidth: 90 },
+      {
+        key: 'orderNo',
+        label: '索樣單號',
+        width: 110,
+        minWidth: 90,
+        renderCell: (_val, row) => (
+          <button
+            className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] text-[#1677ff] underline hover:text-[#0958d9] transition-colors cursor-pointer truncate w-full text-left"
+            onClick={() => setDetailOrder(row)}
+          >
+            {row.orderNo}
+          </button>
+        ),
+      },
       {
         key: 'status',
         label: '狀態',
@@ -206,23 +219,7 @@ export default function SampleOrderListPage({ userRole: _userRole }: SampleOrder
       { key: 'vendorDisplay', label: '供應商(編號)', width: 170, minWidth: 130 },
       { key: 'purchaseOrg',   label: '採購組織',   width: 110, minWidth: 90 },
       { key: 'plant',         label: '工廠',       width: 70,  minWidth: 60 },
-      {
-        key: 'material',
-        label: '料號',
-        width: 170,
-        minWidth: 140,
-        renderCell: (_val, row) => (
-          <button
-            className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] text-[#1677ff] underline hover:text-[#0958d9] transition-colors cursor-pointer truncate w-full text-left"
-            onClick={() => {
-              const found = orders.find((o) => o.id === row.id);
-              if (found) setDetailOrder(found);
-            }}
-          >
-            {row.material}
-          </button>
-        ),
-      },
+      { key: 'material',      label: '料號',       width: 170, minWidth: 140 },
       { key: 'longDescription',    label: '長規格敘述',   width: 260, minWidth: 180 },
       { key: 'vendorMaterialNo',   label: '供應商料號',   width: 140, minWidth: 100, renderCell: (val) => <span className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] text-[14px] leading-[22px]">{val || '—'}</span> },
       { key: 'resampleLabel',      label: '重新索樣',     width: 80,  minWidth: 70 },
@@ -398,7 +395,23 @@ export default function SampleOrderListPage({ userRole: _userRole }: SampleOrder
           onUpdated={(updated) => {
             setOrders([...getSampleOrders()]);
             setDetailOrder(null);
-            toast.success(`索樣單 ${updated.orderNo} 已回覆採購`);
+            if (updated.status === 'V') {
+              setActiveTab('V');
+              toast.success(`索樣單 ${updated.orderNo} 已轉交廠商`);
+            } else if (updated.status === 'DR') {
+              setActiveTab('DR');
+              toast(`索樣單 ${updated.orderNo} 已暫存草稿`);
+            } else if (updated.status === 'SC') {
+              toast.success(`索樣單 ${updated.orderNo} 已回覆採購`);
+            } else if (updated.status === 'CC') {
+              setActiveTab('CC');
+              toast(`索樣單 ${updated.orderNo} 已取消`);
+            } else if (updated.status === 'CL') {
+              setActiveTab('CL');
+              toast.success(`索樣單 ${updated.orderNo} 已關閉結案`);
+            } else {
+              toast.success(`索樣單 ${updated.orderNo} 已更新`);
+            }
           }}
         />
       )}
