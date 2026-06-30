@@ -987,11 +987,11 @@ export function SampleOrderDetailOverlay({
             {order.status === 'V' && (
               <>
                 <button
-                  onClick={onClose}
-                  className="flex-1 h-[36px] rounded-[8px] border text-[14px] font-medium hover:bg-[rgba(145,158,171,0.08)] transition-colors"
-                  style={{ borderColor: 'rgba(145,158,171,0.32)', color: '#637381' }}
+                  onClick={() => { setCancelReason(''); setShowCancelDialog(true); }}
+                  className="flex-1 h-[36px] rounded-[8px] border text-[14px] font-medium transition-colors hover:bg-[rgba(255,86,48,0.08)]"
+                  style={{ borderColor: 'rgba(255,86,48,0.5)', color: '#ff5630' }}
                 >
-                  取消
+                  取消索樣
                 </button>
                 <button
                   onClick={handleReply}

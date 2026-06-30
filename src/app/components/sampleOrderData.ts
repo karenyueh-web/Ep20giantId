@@ -489,6 +489,17 @@ export function cancelSampleOrder(id: number, reason: string): SampleOrderRecord
   return _sampleOrders.find((r) => r.id === id) ?? null;
 }
 
+/** 批次取消索樣：將多筆狀態設為 CC，並寫入相同的取消原因 */
+export function batchCancelSampleOrders(ids: number[], reason: string): void {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const ts = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  _sampleOrders = _sampleOrders.map((r) =>
+    ids.includes(r.id) ? { ...r, status: 'CC' as SampleOrderStatus, cancelReason: reason, updatedAt: ts } : r,
+  );
+  notifySampleOrderChange();
+}
+
 /** 退回廠商補填：SC → V，標記需要補齊全部廠商回覆欄位 */
 export function revertSampleOrderToV(id: number): SampleOrderRecord | null {
   const now = new Date();

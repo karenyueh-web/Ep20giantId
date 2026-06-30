@@ -6,10 +6,13 @@ import { Toaster } from '@/app/components/ui/sonner';
 import { StandardDataTable, type StandardColumn } from './StandardDataTable';
 import { SearchField } from './SearchField';
 import { SampleOrderDetailOverlay } from './SampleOrderDetailOverlay';
+import SampleOrderPrintPage from './SampleOrderPrintPage';
 import {
   getSampleOrders,
   deleteSampleOrders,
   updateSampleOrderStatus,
+  batchCancelSampleOrders,
+  addSampleOrderHistory,
   getStatusDef,
   SAMPLE_ORDER_STATUSES,
   type SampleOrderRecord,
@@ -65,6 +68,14 @@ export default function SampleOrderListPage({ userRole: _userRole }: SampleOrder
 
   // ── 明細彈窗 state ──────────────────────────────────────────────────────
   const [detailOrder, setDetailOrder] = useState<SampleOrderRecord | null>(null);
+
+  // ── 列印模式 state ──────────────────────────────────────────────────────────
+  const [printMode, setPrintMode] = useState(false);
+  const [printOrders, setPrintOrders] = useState<SampleOrderRecord[]>([]);
+
+  // ── 批次取消 Dialog state ───────────────────────────────────────────────────
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
 
   // ── Tab ─────────────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<TabId>('all');
@@ -140,13 +151,6 @@ export default function SampleOrderListPage({ userRole: _userRole }: SampleOrder
   }, [tabFilteredData, filterDateFrom, filterDateTo, filterMaterial, filterVendor]);
 
   // ── 批次操作 ────────────────────────────────────────────────────────────────
-  const handleCancelSelected = useCallback(() => {
-    const ids = Array.from(selectedIds);
-    updateSampleOrderStatus(ids, 'CC');
-    setOrders([...getSampleOrders()]);
-    setSelectedIds(new Set());
-    toast(`已取消 ${ids.length} 筆索樣單`);
-  }, [selectedIds]);
 
   const handleDeleteSelected = useCallback(() => {
     // 只允許刪除草稿（DR）
@@ -169,9 +173,50 @@ export default function SampleOrderListPage({ userRole: _userRole }: SampleOrder
     }
   }, [selectedIds, orders]);
 
+  // 開啟批次取消 Dialog
+  const handleCancelSelected = useCallback(() => {
+    if (selectedIds.size === 0) return;
+    setCancelReason('');
+    setCancelDialogOpen(true);
+  }, [selectedIds]);
+
+  // 確認批次取消
+  const handleConfirmBatchCancel = useCallback(() => {
+    const reason = cancelReason.trim();
+    if (!reason) return;
+    const ids = Array.from(selectedIds);
+
+    // 執行批次取消（狀態 → CC，寫入 cancelReason）
+    batchCancelSampleOrders(ids, reason);
+
+    // 寫入歷程：每張索樣單各記錄一筆
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const ts = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    const operator = localStorage.getItem('currentUserName') || localStorage.getItem('currentUserEmail') || '';
+    ids.forEach((id) => {
+      addSampleOrderHistory(id, {
+        date: ts,
+        event: '批次取消索樣單',
+        operator,
+        remark: reason,
+      });
+    });
+
+    setOrders([...getSampleOrders()]);
+    setSelectedIds(new Set());
+    setCancelDialogOpen(false);
+    setCancelReason('');
+    toast.success(`已取消 ${ids.length} 筆索樣單`);
+  }, [selectedIds, cancelReason]);
+
   const handlePrintSelected = useCallback(() => {
-    toast('列印功能開發中');
-  }, []);
+    const ids = Array.from(selectedIds);
+    const selected = orders.filter((o) => ids.includes(o.id));
+    if (selected.length === 0) return;
+    setPrintOrders(selected);
+    setPrintMode(true);
+  }, [selectedIds, orders]);
 
   // ── 欄位定義（依示意圖）───────────────────────────────────────────────────
   type PartWithVendorDisplay = SampleOrderRecord & {
@@ -253,7 +298,7 @@ export default function SampleOrderListPage({ userRole: _userRole }: SampleOrder
     <span
       onClick={handleCancelSelected}
       className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] text-[#004680] leading-[24px] whitespace-nowrap cursor-pointer select-none px-[10px] py-[16px] hover:opacity-70 transition-opacity"
-    >取消索樣單</span>
+    >批次取消索樣單</span>
   );
   const CTA_DELETE = (
     <span
@@ -284,6 +329,16 @@ export default function SampleOrderListPage({ userRole: _userRole }: SampleOrder
     }
     return <>{CTA_CANCEL}{SEP}{CTA_PRINT}</>;
   })() : null;
+
+  // ── 列印模式：替換整個頁面內容 ─────────────────────────────────────────────
+  if (printMode) {
+    return (
+      <SampleOrderPrintPage
+        orders={printOrders}
+        onBack={() => setPrintMode(false)}
+      />
+    );
+  }
 
   // ── 渲染 ─────────────────────────────────────────────────────────────────────
   return (
@@ -420,6 +475,57 @@ export default function SampleOrderListPage({ userRole: _userRole }: SampleOrder
             }
           }}
         />
+      )}
+
+      {/* ── 批次取消索樣單 Dialog ───────────────────────────────────────────── */}
+      {cancelDialogOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(28,37,62,0.35)' }}>
+          <div className="bg-white rounded-[16px] shadow-[0_8px_32px_0_rgba(28,37,62,0.18)] w-[400px] mx-[16px] overflow-hidden">
+            {/* dialog header */}
+            <div className="flex items-center gap-[10px] px-[20px] py-[14px] border-b" style={{ borderColor: 'rgba(145,158,171,0.12)' }}>
+              <div className="flex items-center justify-center w-[36px] h-[36px] rounded-[10px]" style={{ backgroundColor: 'rgba(255,86,48,0.10)' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 9v4M12 16.5h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+                    stroke="#ff5630" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <div>
+                <p className="font-semibold text-[15px] leading-[22px]" style={{ color: '#1c252e' }}>批次取消索樣</p>
+                <p className="text-[12px] leading-[18px]" style={{ color: '#637381' }}>已選取 <strong>{selectedIds.size}</strong> 筆索樣單</p>
+              </div>
+            </div>
+            {/* dialog body */}
+            <div className="px-[20px] pt-[16px] pb-[12px] flex flex-col gap-[10px]">
+              <p className="text-[13px] leading-[20px]" style={{ color: '#637381' }}>請輸入取消原因（必填）</p>
+              <textarea
+                className="w-full rounded-[8px] border px-[12px] py-[10px] text-[14px] leading-[22px] outline-none resize-none"
+                style={{ borderColor: 'rgba(145,158,171,0.32)', color: '#1c252e', minHeight: '80px' }}
+                placeholder="請說明取消索樣原因…"
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                autoFocus
+              />
+            </div>
+            {/* dialog footer */}
+            <div className="flex gap-[10px] px-[20px] py-[14px] border-t" style={{ borderColor: 'rgba(145,158,171,0.12)' }}>
+              <button
+                onClick={() => setCancelDialogOpen(false)}
+                className="flex-1 h-[36px] rounded-[8px] border text-[14px] font-medium hover:bg-[rgba(145,158,171,0.08)] transition-colors"
+                style={{ borderColor: 'rgba(145,158,171,0.32)', color: '#637381' }}
+              >
+                返回
+              </button>
+              <button
+                onClick={handleConfirmBatchCancel}
+                disabled={!cancelReason.trim()}
+                className="flex-1 h-[36px] rounded-[8px] text-[14px] font-bold text-white transition-colors"
+                style={{ backgroundColor: cancelReason.trim() ? '#ff5630' : 'rgba(255,86,48,0.35)', cursor: cancelReason.trim() ? 'pointer' : 'not-allowed' }}
+              >
+                確認取消
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
