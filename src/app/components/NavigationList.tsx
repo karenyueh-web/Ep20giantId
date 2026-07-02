@@ -249,6 +249,17 @@ function AccountIcon() {
   );
 }
 
+function SystemSettingsIcon() {
+  return (
+    <div className="relative shrink-0 size-[24px]" data-name="icon">
+      <svg className="block size-full" fill="none" viewBox="0 0 24 24">
+        <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.63-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1115.6 12 3.611 3.611 0 0112 15.6z" fill="var(--fill-0, #637381)" opacity="0.4"/>
+        <circle cx="12" cy="12" r="2.5" fill="var(--fill-0, #637381)"/>
+      </svg>
+    </div>
+  );
+}
+
 function VendorApprovalIcon() {
   return (
     <div className="relative shrink-0 size-[24px]" data-name="icon">
@@ -548,6 +559,10 @@ const MINI_SUBMENUS: Record<string, { label: string; page?: PageType }[]> = {
     { label: '廠商帳號管理',  page: 'vendor-account-management' },
     { label: '巨大帳號管理',  page: 'giant-account-management' },
   ],
+  system: [
+    { label: '權限設定',      page: 'permission-settings' },
+    { label: '排程設定',      page: 'schedule-settings' },
+  ],
 };
 
 // ─── Mini Flyout Panel (rendered via portal) ─────────────────────────────────
@@ -728,6 +743,7 @@ function MiniNavLayout({ currentPage, onPageChange, onLogout }: MiniNavLayoutPro
       <NavItemMini icon={<QualityIcon />} label="廠商評價" onClick={() => {}} />
       <MiniSubmenuItem menuId="shipment-tw" icon={<ShippingIcon />} label="出貨台灣" onShow={showFlyout} onHide={startHide} />
       <MiniSubmenuItem menuId="account" icon={<AccountIcon />} label="帳號管理" isActive={['vendor-account-management','giant-account-management'].includes(currentPage)} onShow={showFlyout} onHide={startHide} />
+      <MiniSubmenuItem menuId="system" icon={<SystemSettingsIcon />} label="系統設定" isActive={['permission-settings','schedule-settings'].includes(currentPage)} onShow={showFlyout} onHide={startHide} />
 
       {/* Logout */}
       {onLogout && (
@@ -794,6 +810,9 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
     }
     if (['esg-material', 'esg-maintain'].includes(currentPage)) {
       autoExpanded.push('esg');
+    }
+    if (['permission-settings', 'schedule-settings'].includes(currentPage)) {
+      autoExpanded.push('system');
     }
     
     return autoExpanded;
@@ -1167,6 +1186,33 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
               isActive={currentPage === 'giant-account-management'}
               onClick={() => onPageChange('giant-account-management')}
               page="giant-account-management"
+            />
+          </div>
+        )}
+      </div>
+
+      {/* 13. 系統設定 */}
+      <div className="w-full">
+        <NavItem 
+          icon={<SystemSettingsIcon />} 
+          label="系統設定" 
+          hasSubmenu 
+          isExpanded={expandedMenus.includes('system')}
+          onClick={() => toggleMenu('system')}
+        />
+        {expandedMenus.includes('system') && (
+          <div className="w-full">
+            <SubMenuItem 
+              label="權限設定" 
+              isActive={currentPage === 'permission-settings'}
+              onClick={() => onPageChange('permission-settings')}
+              page="permission-settings"
+            />
+            <SubMenuItem 
+              label="排程設定" 
+              isActive={currentPage === 'schedule-settings'}
+              onClick={() => onPageChange('schedule-settings')}
+              page="schedule-settings"
             />
           </div>
         )}

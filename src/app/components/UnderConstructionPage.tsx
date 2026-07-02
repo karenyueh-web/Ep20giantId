@@ -41,6 +41,7 @@ const PAGE_META: Partial<Record<string, { title: string; breadcrumb: string }>> 
   'shipment-tw-order':      { title: '訂單查詢',        breadcrumb: '出貨台灣捷安特 • 訂單查詢' },
   'shipment-tw-shipping':   { title: '出貨單查詢',      breadcrumb: '出貨台灣捷安特 • 出貨單查詢' },
   'shipment-tw-print':      { title: '列印外箱貼紙',    breadcrumb: '出貨台灣捷安特 • 列印外箱貼紙' },
+  'schedule-settings':      { title: '排程設定',        breadcrumb: '系統設定 • 排程設定' },
 };
 
 // ── Mock 骨架列（假資料，背景模糊用） ──────────────────────────────────────────

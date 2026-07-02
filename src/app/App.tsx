@@ -5,6 +5,7 @@ import { QualityAbnormalFullPage } from "@/app/components/QualityAbnormalFullPag
 import VendorAccountManagementPageNew from "@/app/components/VendorAccountManagementPageNew";
 import { VendorAccountReviewPageNew } from "@/app/components/VendorAccountReviewPageNew";
 import { GiantAccountManagementPageNew } from "@/app/components/GiantAccountManagementPageNew";
+import { PermissionSettingsPage } from "@/app/components/PermissionSettingsPage";
 import { UnderConstructionPage } from "@/app/components/UnderConstructionPage";
 import { ShippingBasicSettingsPage } from "@/app/components/ShippingBasicSettingsPage";
 import { ShipmentCreatePage } from "@/app/components/ShipmentCreatePage";
@@ -417,6 +418,9 @@ export default function App() {
             <SampleOrderListPage userRole={userRole} />
           </ResponsivePageLayout>
         );
+      case 'permission-settings':
+        return <PermissionSettingsPage currentPage={currentPage} onPageChange={handlePageChange} onLogout={handleLogout} userRole={userRole} />;
+      case 'schedule-settings':
       case 'quality-report':
       case 'quality-hazard':
       case 'quality-other':

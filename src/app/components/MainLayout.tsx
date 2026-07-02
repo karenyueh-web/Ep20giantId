@@ -30,6 +30,8 @@ export type PageType =
   | 'shipment-tw-order' | 'shipment-tw-shipping' | 'shipment-tw-print'
   // ── MANAGEMENT > 帳號管理 ──
   | 'vendor-account-management' | 'giant-account-management'
+  // ── MANAGEMENT > 系統設定 ──
+  | 'permission-settings' | 'schedule-settings'
   // ── 個人設定 ──
   | 'personal-settings';
 
