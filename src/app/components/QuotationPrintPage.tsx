@@ -79,8 +79,38 @@ export default function QuotationPrintPage({ part, parts, selectedBrandIds, onBa
     if (!printArea) { window.print(); return; }
 
     const cloned = printArea.cloneNode(true) as HTMLElement;
-    cloned.querySelectorAll('[data-no-print]').forEach(el => {
-      (el as HTMLElement).style.display = 'none';
+
+    // ① 移除不列印的元素（預覽分頁線等）
+    cloned.querySelectorAll('[data-no-print]').forEach(el => el.remove());
+
+    // ② 清掉螢幕視覺樣式
+    cloned.querySelectorAll('.quotation-page-block').forEach(el => {
+      const e = el as HTMLElement;
+      e.style.boxShadow   = 'none';
+      e.style.overflow    = 'visible';
+      e.style.height      = 'auto';
+      e.style.minHeight   = '0';
+      e.style.width       = '100%';
+      e.style.margin      = '0';
+      e.style.padding     = '10mm 12mm';
+      e.style.boxSizing   = 'border-box';
+      e.style.display     = 'block';
+    });
+
+    // ③ 在外層 wrapper div 設 page-break（避免 :last-child 問題）
+    const wrappers = cloned.querySelectorAll('.shipment-doc-wrapper > div');
+    wrappers.forEach((el, idx) => {
+      const e = el as HTMLElement;
+      e.style.pageBreakAfter = idx < wrappers.length - 1 ? 'always' : 'auto';
+    });
+
+    // ③ 清掉 wrapper 的 flex 置中
+    cloned.querySelectorAll('.shipment-doc-wrapper').forEach(el => {
+      const e = el as HTMLElement;
+      e.style.display       = 'block';
+      e.style.width         = '100%';
+      e.style.alignItems    = '';
+      e.style.flexDirection = '';
     });
 
     const htmlContent = [
@@ -90,14 +120,12 @@ export default function QuotationPrintPage({ part, parts, selectedBrandIds, onBa
       '  <meta charset="UTF-8" />',
       '  <title>報價單</title>',
       '  <style>',
-      '    @page { size: A4 portrait; margin: 12mm; }',
+      '    @page { size: A4 portrait; margin: 0; }',
       '    *, *::before, *::after { box-sizing: border-box; }',
       '    html, body { margin: 0; padding: 0; background: white; font-family: "Noto Sans TC","微軟正黑體",sans-serif; }',
       '    table { border-collapse: collapse; width: 100%; }',
-      '    td, th { border: 1px solid #555; padding: 2px 4px; font-size: 11px; vertical-align: middle; }',
-      '    [data-no-print] { display: none; }',
-      '    /* 移除預覽卡片的外框裝飾，列印時不需要 */',
-      '    .shipment-doc-wrapper { border: none !important; box-shadow: none !important; border-radius: 0 !important; padding: 0 !important; max-width: none !important; }',
+      '    td, th { border: 1px solid #555; padding: 2px 4px; font-size: 11px; vertical-align: middle; word-break: break-all; }',
+      '    .shipment-doc-wrapper { border: none !important; box-shadow: none !important; border-radius: 0 !important; padding: 0 !important; max-width: none !important; width: 100% !important; display: block !important; }',
       '  </style>',
       '</head>',
       '<body>' + cloned.innerHTML + '</body>',
@@ -172,8 +200,10 @@ export default function QuotationPrintPage({ part, parts, selectedBrandIds, onBa
         </div>
       </div>
 
-      {/* ── 預覽區 ───────────────────────────────────────────────────────── */}
-      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar bg-[#f4f6f8] px-[32px] py-[28px] quotation-print-area">
+      {/* ── 預覽區：灰底可捲動，多頁 A4 白卡垂直排列 ────────────── */}
+      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar bg-[#dde1e7] quotation-print-area"
+        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '32px 24px', gap: '0' }}
+      >
         {activeTab === 'zh'
           ? <ZhQuotationDoc parts={effectiveParts} selectedBrandIds={effectiveBrandIds} />
           : <EnQuotationDoc parts={effectiveParts} selectedBrandIds={effectiveBrandIds} />
@@ -185,23 +215,19 @@ export default function QuotationPrintPage({ part, parts, selectedBrandIds, onBa
 
 // ── 中文報價單文件 ────────────────────────────────────────────────────────────
 function ZhQuotationDoc({ parts, selectedBrandIds }: { parts: PartRecord[]; selectedBrandIds: Set<number> | null }) {
-  // 取廠商完整名稱（以第一筆物料的廠商代表）
   const firstPart = parts[0];
   const vendorFull = firstPart
     ? (MOCK_VENDORS.find(v => v.code === firstPart.vendorCode)?.fullName ??
        MOCK_VENDORS.find(v => v.name === firstPart.vendorName)?.fullName ??
        firstPart.vendorName)
     : '';
-  // 取當前登入 email
   const userEmail  = localStorage.getItem('currentUserEmail') ?? '';
-  // 列印日期
   const printedAt  = new Date().toLocaleString('zh-TW', {
     year: 'numeric', month: '2-digit', day: '2-digit',
     hour: '2-digit', minute: '2-digit', second: '2-digit',
     hour12: false,
   }).replace(/\//g, '/');
 
-  // 展開所有明細（跨物料 × 品牌設定），依 selectedBrandIds 過濾
   type QuoteLine = BrandSetting & { _part: PartRecord };
   const lines: QuoteLine[] = parts.flatMap((p) =>
     p.brandSettings
@@ -209,129 +235,156 @@ function ZhQuotationDoc({ parts, selectedBrandIds }: { parts: PartRecord[]; sele
       .map((bs) => ({ ...bs, _part: p }))
   );
 
-  // ── 樣式常數 ──────────────────────────────────────────────────────────────
+  const ROWS_FIRST_PAGE = 12;  // 第一頁有表頭+公司資訊，可用空間較少
+  const ROWS_OTHER_PAGE = 18;  // 後續頁無表頭但有 thead，可放更多列
+  const FOOTER_ROWS = 8;       // 頁尾（生效日+備註條款）約佔 8 行空間
+  const pages: QuoteLine[][] = [];
+  let cursor = 0;
+  while (cursor < lines.length) {
+    const limit = pages.length === 0 ? ROWS_FIRST_PAGE : ROWS_OTHER_PAGE;
+    pages.push(lines.slice(cursor, cursor + limit));
+    cursor += limit;
+  }
+  if (pages.length === 0) pages.push([]);
+
+  // 判斷頁尾能否合併到最後一頁
+  const lastPageLimit = pages.length === 1 ? ROWS_FIRST_PAGE : ROWS_OTHER_PAGE;
+  const lastPageRows = pages[pages.length - 1].length;
+  const footerFitsOnLastPage = lastPageRows <= lastPageLimit - FOOTER_ROWS;
+  const totalPages = footerFitsOnLastPage ? pages.length : pages.length + 1;
+
   const border = '1px solid #555';
-  const td: React.CSSProperties = { border, padding: '3px 5px', fontSize: '11px', verticalAlign: 'middle' };
-  const th: React.CSSProperties = { ...td, fontWeight: 'bold', background: '#f0f0f0', textAlign: 'center', whiteSpace: 'nowrap' };
+  const td: React.CSSProperties = { border, padding: '3px 5px', fontSize: '11px', verticalAlign: 'middle', wordBreak: 'break-all' };
+  const th: React.CSSProperties = { ...td, fontWeight: 'bold', background: '#f0f0f0', textAlign: 'center', wordBreak: 'break-all', whiteSpace: 'normal', lineHeight: '1.3' };
 
-  return (
-    <div
-      className="shipment-doc-wrapper"
-      style={{
-        width: '100%', maxWidth: '720px', margin: '0 auto',
-        background: 'white', padding: '20px 24px',
-        fontFamily: "'Noto Sans TC','Noto Sans JP','微軟正黑體',sans-serif",
-        fontSize: '12px', color: '#000',
-        border: '1px solid rgba(145,158,171,0.2)',
-        borderRadius: '8px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-        boxSizing: 'border-box',
-      }}
-    >
-      {/* ① 頁首：Logo（左）+ 列印日期 / 電話 / 傳真（右）*/}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
-        <GiantLogo />
-        <div style={{ textAlign: 'right', fontSize: '11px', lineHeight: '1.7' }}>
-          <div>列印日期：{printedAt}</div>
-          <div>{COMPANY_PHONE}</div>
-          <div>{COMPANY_FAX}</div>
-        </div>
-      </div>
-
-      {/* ② To / 窗口 */}
-      <div style={{ fontSize: '12px', lineHeight: '1.8', marginBottom: '6px' }}>
-        <div>To: {vendorFull}({firstPart?.vendorCode ?? ''})</div>
-        <div>窗口: {userEmail}</div>
-      </div>
-
-      {/* ③ 標題 */}
-      <div style={{ textAlign: 'center', fontSize: '16px', fontWeight: 'bold', letterSpacing: '2px', margin: '8px 0 12px' }}>
-        {COMPANY_NAME} 報價單
-      </div>
-
-      {/* ④ 明細表格 */}
-      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <thead>
-          <tr>
-            <th style={{ ...th, width: '6%' }}>物料群組</th>
-            <th style={{ ...th, width: '10%' }}>物料料號</th>
-            <th style={{ ...th, width: '5%' }}>GMC工廠</th>
-            <th style={{ ...th, width: '20%' }}>長規格敍述</th>
-            <th style={{ ...th, width: '10%' }}>供應商料號</th>
-            <th style={{ ...th, width: '5%' }}>報價單位</th>
-            <th style={{ ...th, width: '6%' }}>採購單價</th>
-            <th style={{ ...th, width: '5%' }}>幣別</th>
-            <th style={{ ...th, width: '7%' }}>客戶品牌</th>
-            <th style={{ ...th, width: '8%' }}>標準品/<br/>客製品</th>
-            <th style={{ ...th, width: '5%' }}>Lead Time</th>
-            <th style={{ ...th, width: '13%' }}>國貿條件</th>
-          </tr>
-        </thead>
-        <tbody>
-          {lines.length === 0 ? (
-            <tr>
-              <td colSpan={12} style={{ ...td, textAlign: 'center', color: '#919eab' }}>
-                尚無品牌設定資料
-              </td>
-            </tr>
-          ) : (
-            lines.map((b, i) => (
-              <tr key={i}>
-                {/* L1 物料群組：待確認資料來源，暫顯示空白 */}
-                <td style={td}></td>
-                {/* L2 物料料號 */}
-                <td style={td}>{b._part.material}</td>
-                {/* L3 GMC工廠 */}
-                <td style={{ ...td, textAlign: 'center' }}>{b._part.plant}</td>
-                {/* L4 長規格敍述 */}
-                <td style={td}>{b._part.longDescription}</td>
-                {/* L5 供應商料號 */}
-                <td style={td}>{b._part.vendorPartNo}</td>
-                {/* L6 報價單位 */}
-                <td style={{ ...td, textAlign: 'center' }}>{b.quoteUnit}</td>
-                {/* L7 採購單價 */}
-                <td style={{ ...td, textAlign: 'right' }}>{b.unitPrice ? Number(b.unitPrice).toLocaleString() : ''}</td>
-                {/* L8 幣別 */}
-                <td style={{ ...td, textAlign: 'center' }}>{b.currency}</td>
-                {/* L9 客戶品牌 */}
-                <td style={td}>{b.brand}</td>
-                {/* L10 標準品/客製品 */}
-                <td style={{ ...td, textAlign: 'center' }}>{b.productType}</td>
-                {/* L11 Lead Time */}
-                <td style={{ ...td, textAlign: 'center' }}>{b.leadTime}</td>
-                {/* L12 國貿條件 */}
-                <td style={td}>{b.tradeTerms}{b.tradeTermsPlace ? ` (${b.tradeTermsPlace})` : ''}</td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
-
-      {/* ⑤ 表尾 */}
-      <div style={{ marginTop: '20px', fontSize: '12px', lineHeight: '1.8' }}>
-        {/* F1 生效日留白 */}
+  // -- 頁尾內容（生效日 + 備註條款）--
+  const FooterContent = () => (
+    <>
+      <div style={{ marginTop: '16px', fontSize: '12px', lineHeight: '1.8' }}>
         <div>生效日（西元年/月/日）：</div>
-        {/* F2 廠商簽章留白 */}
         <div style={{ marginTop: '4px' }}>廠商簽章：</div>
       </div>
-
-      {/* F3 固定備註 */}
       <div style={{ marginTop: '16px', fontSize: '10.5px', lineHeight: '1.7', color: '#222' }}>
-        {FOOTER_NOTES_ZH.map((note, i) => (
-          <div key={i} style={{ marginBottom: '4px' }}>
-            {`${i + 1}. `}
+        {FOOTER_NOTES_ZH.map((note, ni) => (
+          <div key={ni} style={{ marginBottom: '4px' }}>
+            {`${ni + 1}. `}
             {note.split('\n').map((line, j) => (
-              <span key={j}>
-                {j > 0 && <br />}
-                {j > 0 ? <span style={{ paddingLeft: '16px' }}>{line}</span> : line}
-              </span>
+              <span key={j}>{j > 0 && <br />}{j > 0 ? <span style={{ paddingLeft: '16px' }}>{line}</span> : line}</span>
             ))}
           </div>
         ))}
       </div>
+    </>
+  );
+
+  // -- Common table head (repeated each page) ----------------------------
+  const TableHead = () => (
+    <thead>
+      <tr>
+        <th style={th}>物料群組</th>
+        <th style={th}>物料料號</th>
+        <th style={th}>GMC工廠</th>
+        <th style={th}>長規格敍述</th>
+        <th style={th}>供應商料號</th>
+        <th style={th}>報價單位</th>
+        <th style={th}>採購單價</th>
+        <th style={th}>幣別</th>
+        <th style={th}>客戶品牌</th>
+        <th style={th}>標準品/<br/>客製品</th>
+        <th style={th}>Lead<br/>Time</th>
+        <th style={th}>國貿條件</th>
+      </tr>
+    </thead>
+  );
+
+
+  return (
+    <div className="shipment-doc-wrapper" style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', fontFamily: "'Noto Sans TC','Noto Sans JP',sans-serif", fontSize: '12px', color: '#000', boxSizing: 'border-box' }}>
+      {pages.map((pageLines, pageIndex) => {
+        const isLastPage = pageIndex === pages.length - 1;
+        return (
+          <div key={pageIndex}>
+            <div className="quotation-page-block" style={{ width: '794px', minHeight: '1123px', background: 'white', boxShadow: '0 4px 24px rgba(0,0,0,0.18)', padding: '32px 40px', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              {pageIndex === 0 && (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                    <GiantLogo />
+                    <div style={{ textAlign: 'right', fontSize: '11px', lineHeight: '1.7' }}>
+                      <div>列印日期：{printedAt}</div>
+                      <div>{COMPANY_PHONE}</div>
+                      <div>{COMPANY_FAX}</div>
+                    </div>
+                  </div>
+                  <div style={{ fontSize: '12px', lineHeight: '1.8', marginBottom: '6px' }}>
+                    <div>To: {vendorFull}({firstPart?.vendorCode ?? ''})</div>
+                    <div>窗口: {userEmail}</div>
+                  </div>
+                  <div style={{ textAlign: 'center', fontSize: '16px', fontWeight: 'bold', letterSpacing: '2px', margin: '8px 0 12px' }}>
+                    {COMPANY_NAME} 報價單
+                  </div>
+                </>
+              )}
+              <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+                <colgroup>
+                  <col style={{ width: '6%' }} /><col style={{ width: '11%' }} /><col style={{ width: '5%' }} />
+                  <col style={{ width: '20%' }} /><col style={{ width: '10%' }} /><col style={{ width: '5%' }} />
+                  <col style={{ width: '6%' }} /><col style={{ width: '5%' }} /><col style={{ width: '7%' }} />
+                  <col style={{ width: '8%' }} /><col style={{ width: '7%' }} /><col style={{ width: '10%' }} />
+                </colgroup>
+                <TableHead />
+                <tbody>
+                  {pageLines.length === 0 ? (
+                    <tr><td colSpan={12} style={{ ...td, textAlign: 'center', color: '#919eab' }}>尚無品牌設定資料</td></tr>
+                  ) : pageLines.map((b, i) => (
+                    <tr key={i}>
+                      <td style={td}></td>
+                      <td style={td}>{b._part.material}</td>
+                      <td style={{ ...td, textAlign: 'center' }}>{b._part.plant}</td>
+                      <td style={td}>{b._part.longDescription}</td>
+                      <td style={td}>{b._part.vendorPartNo}</td>
+                      <td style={{ ...td, textAlign: 'center' }}>{b.quoteUnit}</td>
+                      <td style={{ ...td, textAlign: 'right' }}>{b.unitPrice ? Number(b.unitPrice).toLocaleString() : ''}</td>
+                      <td style={{ ...td, textAlign: 'center' }}>{b.currency}</td>
+                      <td style={td}>{b.brand}</td>
+                      <td style={{ ...td, textAlign: 'center' }}>{b.productType}</td>
+                      <td style={{ ...td, textAlign: 'center' }}>{b.leadTime}</td>
+                      <td style={td}>{b.tradeTerms}{b.tradeTermsPlace ? ` (${b.tradeTermsPlace})` : ''}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {/* 如果是最後一頁且空間夠，頁尾直接接在表格後 */}
+              {isLastPage && footerFitsOnLastPage && <FooterContent />}
+              <div data-no-print="true" style={{ marginTop: 'auto', paddingTop: '8px', textAlign: 'right', fontSize: '11px', color: '#888' }}>
+                {pageIndex + 1} / {totalPages}
+              </div>
+            </div>
+            <div data-no-print="true" style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '16px 0', color: '#aaa', fontSize: '13px' }}>
+              <div style={{ flex: 1, height: '1px', background: 'repeating-linear-gradient(to right, #bbb 0, #bbb 6px, transparent 6px, transparent 12px)' }} />
+              <span style={{ padding: '2px 14px', color: '#777', fontSize: '13px', letterSpacing: '1px', whiteSpace: 'nowrap' }}>
+                第 {pageIndex + 1} 頁 / 共 {totalPages} 頁
+              </span>
+              <div style={{ flex: 1, height: '1px', background: 'repeating-linear-gradient(to right, #bbb 0, #bbb 6px, transparent 6px, transparent 12px)' }} />
+            </div>
+          </div>
+        );
+      })}
+      {/* 頁尾獨立一頁（僅在最後一頁塞不下時才顯示）*/}
+      {!footerFitsOnLastPage && (
+        <div>
+          <div className="quotation-page-block" style={{ width: '794px', minHeight: '1123px', background: 'white', boxShadow: '0 4px 24px rgba(0,0,0,0.18)', padding: '32px 40px', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <FooterContent />
+            <div data-no-print="true" style={{ marginTop: 'auto', paddingTop: '8px', textAlign: 'right', fontSize: '11px', color: '#888' }}>
+              {totalPages} / {totalPages}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+
 
 // ── 英文報價單文件 ────────────────────────────────────────────────────────────
 function EnQuotationDoc({ parts, selectedBrandIds }: { parts: PartRecord[]; selectedBrandIds: Set<number> | null }) {
@@ -355,6 +408,24 @@ function EnQuotationDoc({ parts, selectedBrandIds }: { parts: PartRecord[]; sele
       .map((bs) => ({ ...bs, _part: p }))
   );
 
+  const ROWS_FIRST_PAGE = 12;
+  const ROWS_OTHER_PAGE = 18;
+  const FOOTER_ROWS = 8;
+  const pages: QuoteLine[][] = [];
+  let cursor = 0;
+  while (cursor < lines.length) {
+    const limit = pages.length === 0 ? ROWS_FIRST_PAGE : ROWS_OTHER_PAGE;
+    pages.push(lines.slice(cursor, cursor + limit));
+    cursor += limit;
+  }
+  if (pages.length === 0) pages.push([]);
+
+  // 判斷頁尾能否合併到最後一頁
+  const lastPageLimit = pages.length === 1 ? ROWS_FIRST_PAGE : ROWS_OTHER_PAGE;
+  const lastPageRows = pages[pages.length - 1].length;
+  const footerFitsOnLastPage = lastPageRows <= lastPageLimit - FOOTER_ROWS;
+  const totalPages = footerFitsOnLastPage ? pages.length : pages.length + 1;
+
   // ── 樣式常數 ──────────────────────────────────────────────────────────────
   const border = '1px solid #555';
   const td: React.CSSProperties = { border, padding: '3px 5px', fontSize: '10.5px', verticalAlign: 'middle' };
@@ -370,121 +441,130 @@ function EnQuotationDoc({ parts, selectedBrandIds }: { parts: PartRecord[]; sele
     fontSize: '10px',
   };
 
-  return (
-    <div
-      className="shipment-doc-wrapper"
-      style={{
-        width: '100%', maxWidth: '720px', margin: '0 auto',
-        background: 'white', padding: '20px 24px',
-        fontFamily: "'Noto Sans TC','Noto Sans JP',Arial,sans-serif",
-        fontSize: '12px', color: '#000',
-        border: '1px solid rgba(145,158,171,0.2)',
-        borderRadius: '8px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-        boxSizing: 'border-box',
-      }}
-    >
-      {/* ① Header: Logo (left) + Print Date / TEL / FAX (right) */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
-        <GiantLogo />
-        <div style={{ textAlign: 'right', fontSize: '11px', lineHeight: '1.7' }}>
-          <div>Print Date: {printedAt}</div>
-          <div>{COMPANY_PHONE}</div>
-          <div>{COMPANY_FAX}</div>
-        </div>
-      </div>
-
-      {/* ② To / Contact Window */}
-      <div style={{ fontSize: '12px', lineHeight: '1.8', marginBottom: '6px' }}>
-        <div>To: {vendorFull}({firstPart?.vendorCode ?? ''})</div>
-        <div>Contact Window: {userEmail}</div>
-      </div>
-
-      {/* ③ Title */}
-      <div style={{ textAlign: 'center', fontSize: '16px', fontWeight: 'bold', letterSpacing: '1px', margin: '8px 0 12px' }}>
-        GIANT Quotation Notification
-      </div>
-
-      {/* ④ Detail Table */}
-      <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-        <colgroup>
-          <col style={{ width: '7%' }} />   {/* Material Group */}
-          <col style={{ width: '11%' }} />  {/* Giant Part NO */}
-          <col style={{ width: '5%' }} />   {/* Factory */}
-          <col style={{ width: '18%' }} />  {/* Item Description */}
-          <col style={{ width: '10%' }} />  {/* Vendor Part NO */}
-          <col style={{ width: '6%' }} />   {/* Quotation Unit */}
-          <col style={{ width: '7%' }} />   {/* Unit Price */}
-          <col style={{ width: '6%' }} />   {/* Currency */}
-          <col style={{ width: '7%' }} />   {/* Brand */}
-          <col style={{ width: '7%' }} />   {/* STD/CUS */}
-          <col style={{ width: '7%' }} />   {/* Lead Time */}
-          <col style={{ width: '9%' }} />   {/* Incoterms */}
-        </colgroup>
-        <thead>
-          <tr>
-            <th style={th}>Material Group</th>
-            <th style={th}>Giant Part NO</th>
-            <th style={th}>Factory</th>
-            <th style={th}>Item Description</th>
-            <th style={th}>Vendor Part NO</th>
-            <th style={th}>Quotation Unit</th>
-            <th style={th}>Unit Price</th>
-            <th style={th}>Currency</th>
-            <th style={th}>Brand</th>
-            <th style={th}>STD / CUS</th>
-            <th style={th}>Lead Time</th>
-            <th style={th}>Incoterms</th>
-          </tr>
-        </thead>
-        <tbody>
-          {lines.length === 0 ? (
-            <tr>
-              <td colSpan={12} style={{ ...td, textAlign: 'center', color: '#919eab' }}>
-                No brand setting data available
-              </td>
-            </tr>
-          ) : (
-            lines.map((b, i) => (
-              <tr key={i}>
-                <td style={{ ...td, wordBreak: 'break-all' }}></td>
-                <td style={{ ...td, wordBreak: 'break-all' }}>{b._part.material}</td>
-                <td style={{ ...td, textAlign: 'center' }}>{b._part.plant}</td>
-                <td style={{ ...td, wordBreak: 'break-word' }}>{b._part.longDescription}</td>
-                <td style={{ ...td, wordBreak: 'break-all' }}>{b._part.vendorPartNo}</td>
-                <td style={{ ...td, textAlign: 'center' }}>{b.quoteUnit}</td>
-                <td style={{ ...td, textAlign: 'right' }}>{b.unitPrice ? Number(b.unitPrice).toLocaleString() : ''}</td>
-                <td style={{ ...td, textAlign: 'center' }}>{b.currency}</td>
-                <td style={{ ...td, wordBreak: 'break-word' }}>{b.brand}</td>
-                <td style={{ ...td, textAlign: 'center' }}>{b.productType}</td>
-                <td style={{ ...td, textAlign: 'center' }}>{b.leadTime}</td>
-                <td style={{ ...td, wordBreak: 'break-word' }}>{b.tradeTerms}{b.tradeTermsPlace ? ` (${b.tradeTermsPlace})` : ''}</td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
-
-      {/* ⑤ Footer */}
-      <div style={{ marginTop: '20px', fontSize: '12px', lineHeight: '1.8' }}>
+  // -- 頁尾內容 --
+  const FooterContent = () => (
+    <>
+      <div style={{ marginTop: '16px', fontSize: '12px', lineHeight: '1.8' }}>
         <div>Effective Date (Day/Month/Year):</div>
         <div style={{ marginTop: '4px' }}>Signature:</div>
       </div>
-
-      {/* F3 Footer Notes */}
       <div style={{ marginTop: '16px', fontSize: '10.5px', lineHeight: '1.7', color: '#222' }}>
-        {FOOTER_NOTES_EN.map((note, i) => (
-          <div key={i} style={{ marginBottom: '4px' }}>
-            {`${i + 1}. `}
+        {FOOTER_NOTES_EN.map((note, ni) => (
+          <div key={ni} style={{ marginBottom: '4px' }}>
+            {`${ni + 1}. `}
             {note.split('\n').map((line, j) => (
-              <span key={j}>
-                {j > 0 && <br />}
-                {j > 0 ? <span style={{ paddingLeft: '16px' }}>{line}</span> : line}
-              </span>
+              <span key={j}>{j > 0 && <br />}{j > 0 ? <span style={{ paddingLeft: '16px' }}>{line}</span> : line}</span>
             ))}
           </div>
         ))}
       </div>
+    </>
+  );
+
+  const EnTableHead = () => (
+    <thead>
+      <tr>
+        <th style={th}>Material Group</th>
+        <th style={th}>Giant Part NO</th>
+        <th style={th}>Factory</th>
+        <th style={th}>Item Description</th>
+        <th style={th}>Vendor Part NO</th>
+        <th style={th}>Quotation Unit</th>
+        <th style={th}>Unit Price</th>
+        <th style={th}>Currency</th>
+        <th style={th}>Brand</th>
+        <th style={th}>STD / CUS</th>
+        <th style={th}>Lead Time</th>
+        <th style={th}>Incoterms</th>
+      </tr>
+    </thead>
+  );
+
+
+  return (
+    <div className="shipment-doc-wrapper" style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', fontFamily: "'Noto Sans TC','Noto Sans JP',Arial,sans-serif", fontSize: '12px', color: '#000', boxSizing: 'border-box' }}>
+      {pages.map((pageLines, pageIndex) => {
+        const isLastPage = pageIndex === pages.length - 1;
+        return (
+          <div key={pageIndex}>
+            <div className="quotation-page-block" style={{ width: '794px', minHeight: '1123px', background: 'white', boxShadow: '0 4px 24px rgba(0,0,0,0.18)', padding: '32px 40px', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              {pageIndex === 0 && (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                    <GiantLogo />
+                    <div style={{ textAlign: 'right', fontSize: '11px', lineHeight: '1.7' }}>
+                      <div>Print Date: {printedAt}</div>
+                      <div>{COMPANY_PHONE}</div>
+                      <div>{COMPANY_FAX}</div>
+                    </div>
+                  </div>
+                  <div style={{ fontSize: '12px', lineHeight: '1.8', marginBottom: '6px' }}>
+                    <div>To: {vendorFull}({firstPart?.vendorCode ?? ''})</div>
+                    <div>Contact Window: {userEmail}</div>
+                  </div>
+                  <div style={{ textAlign: 'center', fontSize: '16px', fontWeight: 'bold', letterSpacing: '1px', margin: '8px 0 12px' }}>
+                    GIANT Quotation Notification
+                  </div>
+                </>
+              )}
+              <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+                <colgroup>
+                  <col style={{ width: '7%' }} /><col style={{ width: '11%' }} /><col style={{ width: '5%' }} />
+                  <col style={{ width: '18%' }} /><col style={{ width: '10%' }} /><col style={{ width: '6%' }} />
+                  <col style={{ width: '7%' }} /><col style={{ width: '6%' }} /><col style={{ width: '7%' }} />
+                  <col style={{ width: '7%' }} /><col style={{ width: '7%' }} /><col style={{ width: '9%' }} />
+                </colgroup>
+                <EnTableHead />
+                <tbody>
+                  {pageLines.length === 0 ? (
+                    <tr><td colSpan={12} style={{ ...td, textAlign: 'center', color: '#919eab' }}>No brand setting data available</td></tr>
+                  ) : pageLines.map((b, i) => (
+                    <tr key={i}>
+                      <td style={{ ...td, wordBreak: 'break-all' }}></td>
+                      <td style={{ ...td, wordBreak: 'break-all' }}>{b._part.material}</td>
+                      <td style={{ ...td, textAlign: 'center' }}>{b._part.plant}</td>
+                      <td style={{ ...td, wordBreak: 'break-word' }}>{b._part.longDescription}</td>
+                      <td style={{ ...td, wordBreak: 'break-all' }}>{b._part.vendorPartNo}</td>
+                      <td style={{ ...td, textAlign: 'center' }}>{b.quoteUnit}</td>
+                      <td style={{ ...td, textAlign: 'right' }}>{b.unitPrice ? Number(b.unitPrice).toLocaleString() : ''}</td>
+                      <td style={{ ...td, textAlign: 'center' }}>{b.currency}</td>
+                      <td style={{ ...td, wordBreak: 'break-word' }}>{b.brand}</td>
+                      <td style={{ ...td, textAlign: 'center' }}>{b.productType}</td>
+                      <td style={{ ...td, textAlign: 'center' }}>{b.leadTime}</td>
+                      <td style={{ ...td, wordBreak: 'break-word' }}>{b.tradeTerms}{b.tradeTermsPlace ? ` (${b.tradeTermsPlace})` : ''}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {/* 如果是最後一頁且空間夠，頁尾直接接在表格後 */}
+              {isLastPage && footerFitsOnLastPage && <FooterContent />}
+              <div data-no-print="true" style={{ marginTop: 'auto', paddingTop: '8px', textAlign: 'right', fontSize: '11px', color: '#888' }}>
+                {pageIndex + 1} / {totalPages}
+              </div>
+            </div>
+            <div data-no-print="true" style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '16px 0', color: '#aaa', fontSize: '13px' }}>
+              <div style={{ flex: 1, height: '1px', background: 'repeating-linear-gradient(to right, #bbb 0, #bbb 6px, transparent 6px, transparent 12px)' }} />
+              <span style={{ padding: '2px 14px', color: '#777', fontSize: '13px', letterSpacing: '1px', whiteSpace: 'nowrap' }}>
+                Page {pageIndex + 1} of {totalPages}
+              </span>
+              <div style={{ flex: 1, height: '1px', background: 'repeating-linear-gradient(to right, #bbb 0, #bbb 6px, transparent 6px, transparent 12px)' }} />
+            </div>
+          </div>
+        );
+      })}
+      {/* 頁尾獨立一頁（僅在最後一頁塞不下時才顯示）*/}
+      {!footerFitsOnLastPage && (
+        <div>
+          <div className="quotation-page-block" style={{ width: '794px', minHeight: '1123px', background: 'white', boxShadow: '0 4px 24px rgba(0,0,0,0.18)', padding: '32px 40px', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <FooterContent />
+            <div data-no-print="true" style={{ marginTop: 'auto', paddingTop: '8px', textAlign: 'right', fontSize: '11px', color: '#888' }}>
+              {totalPages} / {totalPages}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+

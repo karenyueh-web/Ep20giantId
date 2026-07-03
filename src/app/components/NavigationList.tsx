@@ -1120,7 +1120,9 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
       {/* 8. 產險資料維護 */}
       <NavItem 
         icon={<InsuranceIcon />} 
-        label="產險資料維護" 
+        label="產險資料維護"
+        isActive={currentPage === 'insurance-maintain'}
+        onClick={() => onPageChange('insurance-maintain')}
       />
 
       {/* 9. ESG */}
@@ -1143,7 +1145,9 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
       {/* 10. 廠商評價 */}
       <NavItem 
         icon={<QualityIcon />} 
-        label="廠商評價" 
+        label="廠商評價"
+        isActive={currentPage === 'vendor-evaluation'}
+        onClick={() => onPageChange('vendor-evaluation')}
       />
 
       {/* 11. 出貨台灣捷安特 */}

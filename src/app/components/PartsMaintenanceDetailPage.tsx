@@ -287,10 +287,12 @@ export default function PartsMaintenanceDetailPage({
             part={part}
             compositions={materialCompositions}
             onAdd={(mc) => {
-              const next = [...materialCompositions, mc];
-              setMaterialCompositions(next);
-              // 即時寫入 store，切頁後不會遺失
-              updatePart({ ...part, materialCompositions: next });
+              setMaterialCompositions(prev => {
+                const next = [...prev, mc];
+                // 即時寫入 store，使用 next 保證是最新內容
+                updatePart({ ...part, materialCompositions: next });
+                return next;
+              });
             }}
             onDelete={(id) => {
               const next = materialCompositions.filter(mc => mc.id !== id);
@@ -664,22 +666,24 @@ function MaterialCompositionTab({ part, compositions, onAdd, onDelete }: Materia
     [compositions],
   );
 
-  const handleConfirmAdd = useCallback((record: EsgMaterialRecord) => {
+  const handleConfirmAdd = useCallback((records: EsgMaterialRecord[]) => {
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, '0');
     const dateStr = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())}`;
-    const newMc: MaterialComposition = {
-      id: Date.now(),
-      esgMaterialId: record.id,
-      nameTw: record.nameTw,
-      nameCn: record.nameCn,
-      nameEn: record.nameEn,
-      carbonEmission: record.carbonEmission,
-      createdBy: '目前使用者',
-      createdAt: dateStr,
-    };
-    onAdd(newMc);
-    toast('已新增成分：' + record.nameTw);
+    records.forEach((record, i) => {
+      const newMc: MaterialComposition = {
+        id: Date.now() + i,
+        esgMaterialId: record.id,
+        nameTw: record.nameTw,
+        nameCn: record.nameCn,
+        nameEn: record.nameEn,
+        carbonEmission: record.carbonEmission,
+        createdBy: '目前使用者',
+        createdAt: dateStr,
+      };
+      onAdd(newMc);
+    });
+    toast(`已新增 ${records.length} 筆成分`);
     setShowSelectOverlay(false);
   }, [onAdd]);
 
@@ -819,12 +823,12 @@ function MaterialCompositionTab({ part, compositions, onAdd, onDelete }: Materia
 interface MaterialSelectOverlayProps {
   usedEsgIds: Set<number>;
   onClose: () => void;
-  onConfirm: (record: EsgMaterialRecord) => void;
+  onConfirm: (records: EsgMaterialRecord[]) => void;
 }
 
 function MaterialSelectOverlay({ usedEsgIds, onClose, onConfirm }: MaterialSelectOverlayProps) {
   const [search, setSearch] = useState('');
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   // ESC 關閉
   useEffect(() => {
@@ -843,14 +847,23 @@ function MaterialSelectOverlay({ usedEsgIds, onClose, onConfirm }: MaterialSelec
     );
   }, [search]);
 
-  const selectedRecord = useMemo(
-    () => getEsgMaterials().find(m => m.id === selectedId) ?? null,
-    [selectedId],
+  const toggleSelect = (id: number) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectedRecords = useMemo(
+    () => getEsgMaterials().filter(m => selectedIds.has(m.id)),
+    [selectedIds],
   );
 
   const handleConfirm = () => {
-    if (!selectedRecord) return;
-    onConfirm(selectedRecord);
+    if (selectedRecords.length === 0) return;
+    onConfirm(selectedRecords);
   };
 
   return (
@@ -912,35 +925,40 @@ function MaterialSelectOverlay({ usedEsgIds, onClose, onConfirm }: MaterialSelec
             ) : (
               filtered.map(m => {
                 const isUsed = usedEsgIds.has(m.id);
-                const isSelected = selectedId === m.id;
+                const isSelected = selectedIds.has(m.id);
                 return (
                   <button
                     key={m.id}
                     disabled={isUsed}
-                    onClick={() => setSelectedId(isUsed ? null : m.id)}
+                    onClick={() => !isUsed && toggleSelect(m.id)}
                     className={[
                       'w-full text-left px-[16px] py-[10px] border-b border-[rgba(145,158,171,0.08)] transition-colors',
                       isUsed ? 'opacity-40 cursor-not-allowed bg-transparent' :
                         isSelected ? 'bg-[#e8f4fe]' : 'hover:bg-[rgba(145,158,171,0.04)] cursor-pointer',
                     ].join(' ')}
                   >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className={`text-[14px] font-medium ${isSelected ? 'text-[#00559c]' : 'text-[#1c252e]'}`}>
-                          {m.nameTw}
-                        </p>
-                        <p className="text-[12px] text-[#637381] mt-[2px]">{m.nameEn}</p>
-                      </div>
-                      <div className="flex items-center gap-[8px] shrink-0">
-                        {isUsed && (
-                          <span className="text-[11px] text-[#919eab] bg-[#f4f6f8] px-[6px] py-[2px] rounded-[4px]">已新增</span>
-                        )}
+                    <div className="flex items-center gap-[12px]">
+                      {/* Checkbox */}
+                      <div className={[
+                        'w-[18px] h-[18px] rounded-[4px] border-2 flex items-center justify-center shrink-0 transition-colors',
+                        isUsed ? 'border-[#c4cdd5] bg-[#f4f6f8]' :
+                          isSelected ? 'border-[#00559c] bg-[#00559c]' : 'border-[#c4cdd5] bg-white',
+                      ].join(' ')}>
                         {isSelected && (
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                            <path d="M5 13l4 4L19 7" stroke="#00559c" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                          <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+                            <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                           </svg>
                         )}
                       </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-[14px] font-medium truncate ${isSelected ? 'text-[#00559c]' : 'text-[#1c252e]'}`}>
+                          {m.nameTw}
+                        </p>
+                        <p className="text-[12px] text-[#637381] mt-[2px] truncate">{m.nameEn}</p>
+                      </div>
+                      {isUsed && (
+                        <span className="text-[11px] text-[#919eab] bg-[#f4f6f8] px-[6px] py-[2px] rounded-[4px] shrink-0">已新增</span>
+                      )}
                     </div>
                   </button>
                 );
@@ -948,26 +966,38 @@ function MaterialSelectOverlay({ usedEsgIds, onClose, onConfirm }: MaterialSelec
             )}
           </div>
 
-          {/* 預覽區 */}
-          {selectedRecord && (
-            <div className="bg-[#f4f8fd] rounded-[8px] px-[16px] py-[12px] border border-[rgba(0,85,156,0.12)]">
-              <p className="text-[12px] font-semibold text-[#637381] mb-[6px]">已選擇材料資訊</p>
-              <p className="text-[13px] text-[#1c252e]">材料名(繁中)：<span className="font-medium">{selectedRecord.nameTw}</span></p>
-              <p className="text-[13px] text-[#1c252e] mt-[2px]">材料名(簡中)：<span className="font-medium">{selectedRecord.nameCn}</span></p>
-              <p className="text-[13px] text-[#1c252e] mt-[2px]">材料名(EN)：<span className="font-medium">{selectedRecord.nameEn}</span></p>
-              <p className="text-[13px] text-[#1c252e] mt-[2px]">碳排量：<span className="font-medium">{selectedRecord.carbonEmission} kg CO₂e</span></p>
+          {/* 已選清單預覽 */}
+          {selectedRecords.length > 0 && (
+            <div className="bg-[#f4f8fd] rounded-[8px] px-[16px] py-[10px] border border-[rgba(0,85,156,0.12)]">
+              <p className="text-[12px] font-semibold text-[#637381] mb-[8px]">已選擇 {selectedRecords.length} 筆材料</p>
+              <div className="flex flex-col gap-[4px] max-h-[88px] overflow-y-auto custom-scrollbar">
+                {selectedRecords.map(r => (
+                  <div key={r.id} className="flex items-center justify-between">
+                    <span className="text-[13px] text-[#1c252e] truncate flex-1">{r.nameTw}</span>
+                    <button
+                      onClick={() => toggleSelect(r.id)}
+                      className="ml-[8px] text-[#919eab] hover:text-[#d32f2f] transition-colors shrink-0"
+                      title="移除"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
+                        <path clipRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" fill="currentColor" fillRule="evenodd" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
           {/* 確認按鈕 */}
           <button
             onClick={handleConfirm}
-            disabled={!selectedRecord}
+            disabled={selectedRecords.length === 0}
             className="w-full h-[36px] rounded-[8px] flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#004680]"
             style={{ backgroundColor: '#00559c' }}
           >
             <p className="font-['Public_Sans:Bold',sans-serif] font-bold leading-[24px] text-white text-[14px]">
-              確認新增
+              {selectedRecords.length > 0 ? `確認新增（${selectedRecords.length} 筆）` : '確認新增'}
             </p>
           </button>
         </div>
