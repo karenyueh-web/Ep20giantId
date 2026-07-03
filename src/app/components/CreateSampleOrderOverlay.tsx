@@ -9,6 +9,7 @@ import {
   addSampleOrder,
   addSampleOrderHistory,
   findLatestExistingSampleOrder,
+  findAllExistingSampleOrders,
   getStatusDef,
   SAMPLE_TYPE_OPTIONS,
   type SampleType,
@@ -326,11 +327,12 @@ export function CreateSampleOrderOverlay({
   const [submitted,   setSubmitted]   = useState(false);
 
   // ── 重複索樣檢核 ─────────────────────────────────────────────────────────
-  const [duplicateError, setDuplicateError] = useState<{ part: PartRecord; existing: SampleOrderRecord } | null>(null);
+  const [duplicateError, setDuplicateError] = useState<{ part: PartRecord; existing: SampleOrderRecord; message: string } | null>(null);
   const [resampleConfirm, setResampleConfirm] = useState<{
     targetStatus: 'DR' | 'V';
     existing: SampleOrderRecord;
   } | null>(null);
+  const [noRecordWarning, setNoRecordWarning] = useState(false);
 
   const resampleOptions = [
     { value: '否', label: '否' },
@@ -403,23 +405,62 @@ export function CreateSampleOrderOverlay({
   const handleSubmit = (targetStatus: 'DR' | 'V') => {
     setSubmitted(true);
     setDuplicateError(null);
+    setNoRecordWarning(false);
     // 巨大需求必填驗證：數量需為正整數
     const qtyNum = Number(demandQty);
     const qtyInvalid = !demandQty || !Number.isInteger(qtyNum) || qtyNum <= 0;
     if (!demandDate || qtyInvalid) return;
 
-    // ── 重複檢核：逐筆零件檢查是否已有非 DR 索樣單 ──
-    for (const part of selectedParts) {
-      const existing = findLatestExistingSampleOrder(part.material, part.vendorCode, part.plant);
-      if (existing) {
-        if (resample !== '是') {
-          // 阻擋：尚未勾選重新索樣
-          setDuplicateError({ part, existing });
+    if (resample === '是') {
+      // ── 重新索樣檢核：查所有紀錄（含 DR）──
+      for (const part of selectedParts) {
+        const allOrders = findAllExistingSampleOrders(part.material, part.vendorCode, part.plant);
+
+        if (allOrders.length === 0) {
+          // 無任何索樣紀錄 → 警示
+          setNoRecordWarning(true);
           return;
         }
-        // 已勾選重新索樣 → 顯示確認 Alert
-        setResampleConfirm({ targetStatus, existing });
+
+        // 檢查是否有 DR 草稿
+        const draftOrder = allOrders.find(o => o.status === 'DR');
+        if (draftOrder) {
+          setDuplicateError({
+            part,
+            existing: draftOrder,
+            message: `此料號已有索樣單號 ${draftOrder.orderNo} 暫存中，請至索樣單確認`,
+          });
+          return;
+        }
+
+        // 檢查是否有進行中的單據（V / SC）
+        const activeOrder = allOrders.find(o => o.status !== 'CL' && o.status !== 'CC');
+        if (activeOrder) {
+          const statusLabel = getStatusDef(activeOrder.status).label;
+          setDuplicateError({
+            part,
+            existing: activeOrder,
+            message: `此料號已有進行中的索樣單（${activeOrder.orderNo}，狀態：${statusLabel}(${activeOrder.status})），須待索樣單取消或關閉後才能重新索樣`,
+          });
+          return;
+        }
+
+        // 全部都是 CL / CC → 允許重新索樣，顯示確認 Alert
+        setResampleConfirm({ targetStatus, existing: allOrders[0] });
         return;
+      }
+    } else {
+      // ── 重新索樣 = 否：原有邏輯，檢查非 DR 重複 ──
+      for (const part of selectedParts) {
+        const existing = findLatestExistingSampleOrder(part.material, part.vendorCode, part.plant);
+        if (existing) {
+          setDuplicateError({
+            part,
+            existing,
+            message: `此零件近期已有進行中的索樣單紀錄（${existing.orderNo}，狀態：${getStatusDef(existing.status).label}(${existing.status})），請至索樣單確認`,
+          });
+          return;
+        }
       }
     }
 
@@ -579,7 +620,7 @@ export function CreateSampleOrderOverlay({
                     stroke="#B76E00" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
                 <p className="text-[12px] leading-[18px]" style={{ color: '#B76E00' }}>
-                  此零件近期已有進行中的索樣單紀錄（{duplicateError.existing.orderNo}，狀態：{getStatusDef(duplicateError.existing.status).label}({duplicateError.existing.status})），如需再次索樣，請將「重新索樣」設定為「是」
+                  {duplicateError.message}
                 </p>
               </div>
             )}
@@ -611,6 +652,48 @@ export function CreateSampleOrderOverlay({
         </div>
 
       </div>
+
+      {/* ── 無索樣紀錄警示 Alert ── */}
+      {noRecordWarning && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.3)' }}>
+          <div className="bg-white rounded-[16px] shadow-[-40px_40px_80px_0px_rgba(145,158,171,0.24)] overflow-hidden" style={{ maxWidth: '480px', width: '100%', margin: '0 16px' }}>
+            {/* Header */}
+            <div className="flex items-center gap-[12px] pl-[4px] pr-[16px] py-[4px] border-b border-[rgba(145,158,171,0.12)]">
+              <div className="flex items-center justify-center rounded-[12px] shrink-0 size-[48px] bg-[rgba(24,144,255,0.08)]">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="#1677ff" strokeWidth="2" />
+                  <path d="M12 8v4M12 16h.01" stroke="#1677ff" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              </div>
+              <p className="flex-1 font-semibold text-[14px] leading-[22px] text-[#1c252e]">提示</p>
+              <button
+                onClick={() => setNoRecordWarning(false)}
+                className="flex items-center justify-center w-[36px] h-[36px] rounded-full hover:bg-[rgba(145,158,171,0.12)] transition-colors shrink-0"
+              >
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                  <path d="M15 5L5 15M5 5l10 10" stroke="#637381" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </button>
+            </div>
+            {/* Content */}
+            <div className="px-[24px] py-[20px]">
+              <p className="text-[14px] text-[#637381] leading-[22px]">
+                無索樣紀錄，請確認是否為重新索樣件
+              </p>
+            </div>
+            {/* Footer */}
+            <div className="flex items-center justify-end gap-[12px] px-[20px] py-[12px] border-t border-[rgba(145,158,171,0.12)]">
+              <button
+                onClick={() => setNoRecordWarning(false)}
+                className="flex items-center justify-center h-[36px] px-[16px] rounded-[8px] hover:bg-[#2c3540] transition-colors"
+                style={{ backgroundColor: '#1c252e' }}
+              >
+                <span className="font-semibold text-[13px] text-white leading-none">確認</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── 重新索樣確認 Alert ── */}
       {resampleConfirm && (() => {

@@ -627,3 +627,19 @@ export function findLatestExistingSampleOrder(
     )
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
 }
+
+/** 查詢同一零件所有索樣單紀錄（含 DR），按建立日期降冪排序 */
+export function findAllExistingSampleOrders(
+  material: string,
+  vendorCode: string,
+  plant: string,
+): SampleOrderRecord[] {
+  return _sampleOrders
+    .filter(
+      (o) =>
+        o.material === material &&
+        o.vendorCode === vendorCode &&
+        o.plant === plant,
+    )
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
