@@ -80,38 +80,40 @@ export default function QuotationPrintPage({ part, parts, selectedBrandIds, onBa
 
     const cloned = printArea.cloneNode(true) as HTMLElement;
 
-    // ① 移除不列印的元素（預覽分頁線等）
+    // ① 移除不列印的元素（頁碼、預覽分頁線等）
     cloned.querySelectorAll('[data-no-print]').forEach(el => el.remove());
 
-    // ② 清掉螢幕視覺樣式
+    // ② 把所有區塊合併成一個連續文件
     cloned.querySelectorAll('.quotation-page-block').forEach(el => {
       const e = el as HTMLElement;
-      e.style.boxShadow   = 'none';
-      e.style.overflow    = 'visible';
-      e.style.height      = 'auto';
-      e.style.minHeight   = '0';
-      e.style.width       = '100%';
-      e.style.margin      = '0';
-      e.style.padding     = '10mm 12mm';
-      e.style.boxSizing   = 'border-box';
-      e.style.display     = 'block';
-    });
-
-    // ③ 在外層 wrapper div 設 page-break（避免 :last-child 問題）
-    const wrappers = cloned.querySelectorAll('.shipment-doc-wrapper > div');
-    wrappers.forEach((el, idx) => {
-      const e = el as HTMLElement;
-      e.style.pageBreakAfter = idx < wrappers.length - 1 ? 'always' : 'auto';
+      e.style.cssText = '';
+      e.className = '';
     });
 
     // ③ 清掉 wrapper 的 flex 置中
     cloned.querySelectorAll('.shipment-doc-wrapper').forEach(el => {
       const e = el as HTMLElement;
-      e.style.display       = 'block';
-      e.style.width         = '100%';
-      e.style.alignItems    = '';
-      e.style.flexDirection = '';
+      e.style.cssText = '';
+      e.className = '';
     });
+
+    // ④ 合併所有 table 成一個（避免重複標題列）
+    const tables = cloned.querySelectorAll('table');
+    if (tables.length > 1) {
+      const mainTable = tables[0];
+      const mainTbody = mainTable.querySelector('tbody');
+      for (let i = 1; i < tables.length; i++) {
+        // 把後續 table 的 tbody 行移入第一個 table
+        const tbody = tables[i].querySelector('tbody');
+        if (tbody && mainTbody) {
+          while (tbody.firstChild) {
+            mainTbody.appendChild(tbody.firstChild);
+          }
+        }
+        // 移除重複的 table
+        tables[i].remove();
+      }
+    }
 
     const htmlContent = [
       '<!DOCTYPE html>',
@@ -120,12 +122,13 @@ export default function QuotationPrintPage({ part, parts, selectedBrandIds, onBa
       '  <meta charset="UTF-8" />',
       '  <title>報價單</title>',
       '  <style>',
-      '    @page { size: A4 portrait; margin: 0; }',
+      '    @page { size: A4 portrait; margin: 10mm 12mm; }',
       '    *, *::before, *::after { box-sizing: border-box; }',
-      '    html, body { margin: 0; padding: 0; background: white; font-family: "Noto Sans TC","微軟正黑體",sans-serif; }',
+      '    html, body { margin: 0; padding: 0; background: white; font-family: "Noto Sans TC","微軟正黑體",sans-serif; font-size: 12px; }',
       '    table { border-collapse: collapse; width: 100%; }',
       '    td, th { border: 1px solid #555; padding: 2px 4px; font-size: 11px; vertical-align: middle; word-break: break-all; }',
-      '    .shipment-doc-wrapper { border: none !important; box-shadow: none !important; border-radius: 0 !important; padding: 0 !important; max-width: none !important; width: 100% !important; display: block !important; }',
+      '    thead { display: table-header-group; }',
+      '    tr { page-break-inside: avoid; }',
       '  </style>',
       '</head>',
       '<body>' + cloned.innerHTML + '</body>',
