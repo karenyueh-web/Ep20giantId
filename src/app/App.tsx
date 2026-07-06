@@ -24,6 +24,7 @@ import { OrderScheduleInquiryPage } from "@/app/components/OrderScheduleInquiryP
 import PartsMaintenancePage from "@/app/components/PartsMaintenancePage";
 import QuotationPrintListPage from "@/app/components/QuotationPrintListPage";
 import EsgMaterialPage from "@/app/components/EsgMaterialPage";
+import EsgMaterialSummaryPage from "@/app/components/EsgMaterialSummaryPage";
 import SampleOrderListPage from "@/app/components/SampleOrderListPage";
 import { ResponsivePageLayout } from "@/app/components/ResponsivePageLayout";
 import { LoginPage } from "@/app/components/LoginPage";
@@ -377,6 +378,19 @@ export default function App() {
               onBreadcrumbChange={(title, bc) => { setPartsTitle(title); setPartsBreadcrumb(bc); }}
               onNavigateToSampleList={() => handlePageChange('parts-sample')}
             />
+          </ResponsivePageLayout>
+        );
+      case 'esg-material':
+        return (
+          <ResponsivePageLayout
+            currentPage={currentPage}
+            onPageChange={handlePageChange}
+            onLogout={handleLogout}
+            userRole={userRole}
+            title="物料成分總檔"
+            breadcrumb="ESG • 物料成分總檔"
+          >
+            <EsgMaterialSummaryPage userRole={userRole} />
           </ResponsivePageLayout>
         );
       case 'esg-maintain':

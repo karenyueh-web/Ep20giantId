@@ -740,7 +740,7 @@ function MaterialCompositionTab({ part, compositions, onAdd, onDelete }: Materia
     },
     {
       key: 'createdBy',
-      label: '建檔資訊',
+      label: '更新資訊',
       width: 240,
       minWidth: 160,
       renderCell: (_val, row) => (
