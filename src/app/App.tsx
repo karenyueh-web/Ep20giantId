@@ -21,6 +21,7 @@ import { CorrectionCreatePage } from "@/app/components/CorrectionCreatePage";
 import { CorrectionListWithTabs } from "@/app/components/CorrectionListWithTabs";
 import { HistoryCorrectionListPage } from "@/app/components/HistoryCorrectionListPage";
 import { OrderScheduleInquiryPage } from "@/app/components/OrderScheduleInquiryPage";
+import { ReceivingInquiryPage } from "@/app/components/ReceivingInquiryPage";
 import PartsMaintenancePage from "@/app/components/PartsMaintenancePage";
 import QuotationPrintListPage from "@/app/components/QuotationPrintListPage";
 import EsgMaterialPage from "@/app/components/EsgMaterialPage";
@@ -187,6 +188,19 @@ export default function App() {
         return <VendorAccountReviewPageNew currentPage={currentPage} onPageChange={handlePageChange} onLogout={handleLogout} userRole={userRole} onApproveVendor={handleVendorApproval} />;
       case 'giant-account-management':
         return <GiantAccountManagementPageNew currentPage={currentPage} onPageChange={handlePageChange} onLogout={handleLogout} userRole={userRole} />;
+      case 'receiving-inquiry':
+        return (
+          <ResponsivePageLayout
+            currentPage={currentPage}
+            onPageChange={handlePageChange}
+            onLogout={handleLogout}
+            userRole={userRole}
+            title="收料查詢"
+            breadcrumb="Overview • 收料查詢"
+          >
+            <ReceivingInquiryPage />
+          </ResponsivePageLayout>
+        );
       case 'schedule-inquiry':
         return (
           <ResponsivePageLayout

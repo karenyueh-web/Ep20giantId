@@ -1009,21 +1009,61 @@ className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-n
 
 ---
 
-### 2. 搜尋列不加裝飾線
+### 2. 搜尋列規範（不加裝飾線 + 平均欄寬 + 使用 SearchField）
 
-頁面中搜尋條件區塊（包含 `<SearchField>` / `<DropdownSelect>` 的區塊）**下方不加** `border-b`。
+頁面中搜尋條件區塊有三個強制規則：
+
+#### 2-1. 不加 `border-b`
+搜尋條件區塊**下方不加** `border-b`，TableToolbar 本身已有分隔效果。
+
+#### 2-2. ⭐ 搜尋欄位平均欄寬（必須遵守）
+每個搜尋欄位**必須**用 `<div className="flex-1 min-w-0">` 包裹，讓所有欄位自動平均分配可用寬度。  
+**禁止**用 `style={{ width: 'Xpx' }}` 或 `w-[Xpx]` 固定個別欄寬。
 
 ```tsx
-{/* ✅ 正確 */}
-<div className="shrink-0 flex gap-[16px] items-end flex-wrap px-[20px] pt-[16px] pb-[16px]">
-  ...
+{/* ✅ 正確：平均欄寬，每個欄位 flex-1 min-w-0 */}
+<div className="shrink-0 flex gap-[16px] items-center px-[20px] py-[20px]">
+  <div className="flex-1 min-w-0">
+    <DropdownSelect label="採購組織" value={...} onChange={...} options={...} />
+  </div>
+  <div className="flex-1 min-w-0">
+    <SearchField label="供應商" value={...} onChange={...} />
+  </div>
+  <div className="flex-1 min-w-0">
+    <SearchField label="料號" value={...} onChange={...} />
+  </div>
 </div>
 
-{/* ❌ 錯誤 */}
-<div className="shrink-0 flex gap-[16px] ... border-b border-[rgba(145,158,171,0.12)]">
-  ...
+{/* ❌ 錯誤：固定寬度，欄位不等寬 */}
+<div className="shrink-0 flex flex-wrap gap-[12px] items-end px-[20px] py-[16px]">
+  <div style={{ width: '200px' }}><DropdownSelect .../></div>
+  <div style={{ width: '220px' }}><input .../></div>  {/* ❌ 也禁止用原生 input */}
 </div>
 ```
+
+#### 2-3. 文字輸入欄位使用 `SearchField`，禁止用原生 `<input>`
+搜尋列中的文字輸入一律使用 `<SearchField>` 元件，**禁止自製 `<input>` + 自訂浮動 label**。
+
+```tsx
+{/* ✅ */}
+<SearchField label="供應商" value={keyword} onChange={setKeyword} placeholder="名稱或代碼關鍵字" />
+
+{/* ❌ 禁止 */}
+<div className="relative" style={{ width: '220px' }}>
+  <div className="absolute inset-0 ...border..." />
+  <p className="absolute ...label...">供應商</p>
+  <input type="text" className="w-full h-[54px]..." />
+</div>
+```
+
+| 規則 | 說明 |
+|------|------|
+| 容器 | `shrink-0 flex gap-[16px] items-center px-[20px] py-[20px]` |
+| 每個欄位 | `<div className="flex-1 min-w-0">` 包裹 |
+| 下拉 | `<DropdownSelect>` |
+| 文字輸入 | `<SearchField>` |
+| 裝飾線 | 無 `border-b` |
+| 參考來源 | `QuotationPrintListPage.tsx`（第 224–250 行）|
 
 ---
 
