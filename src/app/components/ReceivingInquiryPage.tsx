@@ -80,7 +80,7 @@ export const MOCK_RECEIVING_ROWS: ReceivingRow[] = [
     vendorName: '華銘',
     orderNo: '4500100001',
     orderSeq: '10',
-    orderDocSeq: '4500100001 / 10',
+    orderDocSeq: '450010000110',
     materialNo: '2201-FRM0641-A01',
     productName: '鋁合金車架',
     specification: 'ROAD FRAME ALLOY 700C SIZE M MATTE BLACK',
@@ -99,7 +99,7 @@ export const MOCK_RECEIVING_ROWS: ReceivingRow[] = [
     vendorName: '華銘',
     orderNo: '4500100001',
     orderSeq: '20',
-    orderDocSeq: '4500100001 / 20',
+    orderDocSeq: '450010000120',
     materialNo: '3301-WHL0641-A02',
     productName: '輪組',
     specification: 'WHEELSET 700C DISC BRAKE 12X100/142 BLACK',
@@ -118,7 +118,7 @@ export const MOCK_RECEIVING_ROWS: ReceivingRow[] = [
     vendorName: '華銘',
     orderNo: '4500100002',
     orderSeq: '10',
-    orderDocSeq: '4500100002 / 10',
+    orderDocSeq: '450010000210',
     materialNo: '4401-STM0641-B01',
     productName: '車把立管',
     specification: 'STEM ALLOY 31.8mm±6° 100mm SILVER',
@@ -137,7 +137,7 @@ export const MOCK_RECEIVING_ROWS: ReceivingRow[] = [
     vendorName: '華銘',
     orderNo: '4500800070',
     orderSeq: '20',
-    orderDocSeq: '4500800070 / 20',
+    orderDocSeq: '450080007020',
     materialNo: '5501-RIM0641-K02',
     productName: '輪框',
     specification: 'RIM ALLOY 700C 32H DISC SILVER',
@@ -156,7 +156,7 @@ export const MOCK_RECEIVING_ROWS: ReceivingRow[] = [
     vendorName: '華銘',
     orderNo: '4500800071',
     orderSeq: '10',
-    orderDocSeq: '4500800071 / 10',
+    orderDocSeq: '450080007110',
     materialNo: '6601-TIR0641-K03',
     productName: '車胎',
     specification: 'TIRE 700x23C FOLDING BEAD BLACK',
@@ -175,7 +175,7 @@ export const MOCK_RECEIVING_ROWS: ReceivingRow[] = [
     vendorName: '佳承精密',
     orderNo: '4500200011',
     orderSeq: '10',
-    orderDocSeq: '4500200011 / 10',
+    orderDocSeq: '450020001110',
     materialNo: '9901-HDL0045-E01',
     productName: '把手組',
     specification: 'HANDLEBAR 700mm FLAT ALLOY 31.8 BLACK',
@@ -194,7 +194,7 @@ export const MOCK_RECEIVING_ROWS: ReceivingRow[] = [
     vendorName: '佳承精密',
     orderNo: '4500200012',
     orderSeq: '10',
-    orderDocSeq: '4500200012 / 10',
+    orderDocSeq: '450020001210',
     materialNo: '1129-SAD0045-E02',
     productName: '坐墊',
     specification: 'SADDLE RACING 143mm BLACK',
@@ -213,7 +213,7 @@ export const MOCK_RECEIVING_ROWS: ReceivingRow[] = [
     vendorName: '久廣精密',
     orderNo: '4500300020',
     orderSeq: '10',
-    orderDocSeq: '4500300020 / 10',
+    orderDocSeq: '450030002010',
     materialNo: '2201-FRK0053-F01',
     productName: '前叉',
     specification: 'FORK CARBON TAPERED 1-1/8"-1.5" QR 100mm BLACK',
@@ -232,7 +232,7 @@ export const MOCK_RECEIVING_ROWS: ReceivingRow[] = [
     vendorName: '久廣精密',
     orderNo: '4500300021',
     orderSeq: '10',
-    orderDocSeq: '4500300021 / 10',
+    orderDocSeq: '450030002110',
     materialNo: '3301-DRL0053-F02',
     productName: '傳動撥鏈器',
     specification: 'DERAILLEUR REAR 11-SPEED SHIMANO COMPATIBLE',
@@ -251,7 +251,7 @@ export const MOCK_RECEIVING_ROWS: ReceivingRow[] = [
     vendorName: '久廣精密',
     orderNo: '4500300022',
     orderSeq: '10',
-    orderDocSeq: '4500300022 / 10',
+    orderDocSeq: '450030002210',
     materialNo: '4401-GRP0053-F03',
     productName: '握把',
     specification: 'GRIP LOCK-ON 130mm ERGONOMIC BLACK',
@@ -270,7 +270,7 @@ export const MOCK_RECEIVING_ROWS: ReceivingRow[] = [
     vendorName: '金盛元工業',
     orderNo: '4500400030',
     orderSeq: '10',
-    orderDocSeq: '4500400030 / 10',
+    orderDocSeq: '450040003010',
     materialNo: '6601-CHN0059-G01',
     productName: '鏈條',
     specification: 'CHAIN 11-SPEED 116L NICKEL PLATED',
@@ -289,7 +289,7 @@ export const MOCK_RECEIVING_ROWS: ReceivingRow[] = [
     vendorName: '台灣製造',
     orderNo: '4500500040',
     orderSeq: '10',
-    orderDocSeq: '4500500040 / 10',
+    orderDocSeq: '450050004010',
     materialNo: '7701-HDL0012-H01',
     productName: '車頭碗',
     specification: 'HEADSET INTEGRATED 1-1/8" CARTRIDGE BLACK',
@@ -308,7 +308,7 @@ export const MOCK_RECEIVING_ROWS: ReceivingRow[] = [
     vendorName: '台灣製造',
     orderNo: '4500500041',
     orderSeq: '10',
-    orderDocSeq: '4500500041 / 10',
+    orderDocSeq: '450050004110',
     materialNo: '8801-FRM0012-H02',
     productName: '車架',
     specification: 'FRAME ALLOY MTB 27.5 M MATTE GREY',
@@ -327,7 +327,7 @@ export const MOCK_RECEIVING_ROWS: ReceivingRow[] = [
     vendorName: '速聯國際',
     orderNo: '4500600050',
     orderSeq: '10',
-    orderDocSeq: '4500600050 / 10',
+    orderDocSeq: '450060005010',
     materialNo: '9901-BRK0046-I01',
     productName: '煞車卡鉗',
     specification: 'BRAKE CALIPER HYDRAULIC DISC FLAT MOUNT BLACK',
@@ -346,7 +346,7 @@ export const MOCK_RECEIVING_ROWS: ReceivingRow[] = [
     vendorName: '速聯國際',
     orderNo: '4500600051',
     orderSeq: '10',
-    orderDocSeq: '4500600051 / 10',
+    orderDocSeq: '450060005110',
     materialNo: '1129-FRK0046-I02',
     productName: '前叉避震',
     specification: 'FORK SUSPENSION 27.5 130mm TRAVEL 15x110 BOOST',
@@ -637,11 +637,12 @@ function ShippedNotReceivedTab({ onOrderDetail, onShipmentDetail }: ShippedNotRe
 
       {/* ── Toolbar ── */}
       <TableToolbar
-        resultCount={filteredData.length}
-        onToggleColumnSelector={() => setShowColSelector(v => !v)}
-        onToggleFilterDialog={() => setShowFilterDialog(v => !v)}
+        resultsCount={filteredData.length}
+        showColumnSelector={showColSelector}
+        showFilterDialog={showFilterDialog}
+        onColumnsClick={() => setShowColSelector(v => !v)}
+        onFiltersClick={() => setShowFilterDialog(v => !v)}
         onExportCsv={handleExportCsv}
-        filterCount={filters.length}
       />
 
       {/* ColumnSelector */}

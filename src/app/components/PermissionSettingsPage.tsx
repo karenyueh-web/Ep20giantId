@@ -42,8 +42,36 @@ const FEATURE_TREE: FeatureNode[] = [
       { id: 'overview-dashboard', label: 'Dashboard' },
       { id: 'overview-announcement', label: '公佈欄' },
       { id: 'overview-chat', label: 'Online Chat' },
-      { id: 'overview-receiving', label: '收料查詢' },
-      { id: 'overview-schedule', label: '排程總表查詢' },
+      {
+        id: 'overview-receiving',
+        label: '收料查詢',
+        children: [
+          {
+            id: 'overview-receiving-tabs',
+            label: '列表頁 Tab',
+            children: [
+              { id: 'overview-receiving-tab-shipped', label: '已出貨未收料' },
+              { id: 'overview-receiving-tab-unshipped', label: '應出貨未出貨' },
+              { id: 'overview-receiving-tab-outsource', label: '委外加工單狀況' },
+            ],
+          },
+        ],
+      },
+      {
+        id: 'overview-schedule',
+        label: '排程總表查詢',
+        children: [
+          {
+            id: 'overview-schedule-tabs',
+            label: '列表頁 Tab',
+            children: [
+              { id: 'overview-schedule-tab-all', label: 'ALL(全部)' },
+              { id: 'overview-schedule-tab-ck', label: '已確認(CK)' },
+              { id: 'overview-schedule-tab-cl', label: '關閉結案(CL)' },
+            ],
+          },
+        ],
+      },
     ],
   },
   {
