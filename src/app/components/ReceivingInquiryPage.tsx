@@ -2,8 +2,8 @@
  * ReceivingInquiryPage — Overview • 收料查詢
  *
  * TAB1：已出貨未收料（廠商已有出貨單，驗收量 = 0）
- * TAB2：延遲到貨（尚未實作，畫面建置中）
- * TAB3：委外加工單狀況（尚未實作，畫面建置中）
+ * TAB2：延遲到貨
+ * TAB3：委外加工單狀況（訂單類型 = Z3YD）
  */
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
@@ -91,6 +91,61 @@ export interface ShouldShipRow {
   expectedDelivery: string;       // 預計交期
   vendorCanDeliverDate: string;   // 廠商可交貨日期
   pmDeliveryDate: string;         // 生管用日期
+}
+
+// ── 委外加工單狀況 型別 ──────────────────────────────────────────────────────
+type OutsourceColKey =
+  | 'vendorCode'
+  | 'purchaseOrg'
+  | 'orderStatus'
+  | 'orderDocSeq'
+  | 'itemNo'
+  | 'vendorShipmentNo'
+  | 'materialNo'
+  | 'productName'
+  | 'specification'
+  | 'orderQty'
+  | 'shipQty'
+  | 'acceptQty'
+  | 'delayQty'
+  | 'deliveryDate'
+  | 'expectedDelivery'
+  | 'vendorCanDeliverDate'
+  | 'pmDeliveryDate'
+  | 'receiptDate'
+  | 'isReceived';
+
+interface OutsourceCol {
+  key: OutsourceColKey;
+  label: string;
+  width: number;
+  minWidth: number;
+  visible?: boolean;
+  align?: 'left' | 'center' | 'right';
+}
+
+export interface OutsourceRow {
+  id: string;
+  purchaseOrg: string;
+  orderStatus: 'CK' | 'CL';
+  vendorCode: string;
+  vendorName: string;
+  orderNo: string;
+  orderSeq: string;
+  orderDocSeq: string;
+  itemNo: string;
+  vendorShipmentNo: string;
+  materialNo: string;
+  productName: string;
+  specification: string;
+  orderQty: number;
+  shipQty: number;
+  acceptQty: number;
+  deliveryDate: string;
+  expectedDelivery: string;
+  vendorCanDeliverDate: string;
+  pmDeliveryDate: string;
+  receiptDate: string;
 }
 
 interface RecvCol {
@@ -552,7 +607,6 @@ const SHOULD_SHIP_DEFAULT_COLS: ShouldShipCol[] = [
   { key: 'productName',         label: '品名',           width: 140, minWidth: 100 },
   { key: 'specification',       label: '規格敘述',       width: 280, minWidth: 160, visible: false },
   { key: 'orderQty',            label: '訂貨量',         width: 90,  minWidth: 70  },
-  { key: 'shipQty',             label: '預計出貨量',     width: 100, minWidth: 80  },
   { key: 'expectedDelivery',    label: '預計交期',       width: 120, minWidth: 100 },
   { key: 'vendorCanDeliverDate',label: '廠商可交貨日期', width: 140, minWidth: 110 },
   { key: 'pmDeliveryDate',      label: '生管用日期',     width: 120, minWidth: 100 },
@@ -561,13 +615,495 @@ const SHOULD_SHIP_DEFAULT_COLS: ShouldShipCol[] = [
   { key: 'delayQty',            label: '延遲數量',         width: 90,  minWidth: 70, align: 'right' as const },
 ];
 
-const SHOULD_SHIP_STORAGE_KEY = 'receivingInquiry_shouldShip_v3_cols';
+const SHOULD_SHIP_STORAGE_KEY = 'receivingInquiry_shouldShip_v4_cols';
 const SHOULD_SHIP_DRAG_TYPE   = 'should-ship-col';
+
+// ── 委外加工單狀況 Mock 資料 ──────────────────────────────────────────────────
+export const MOCK_OUTSOURCE_ROWS: OutsourceRow[] = [
+  {
+    id: 'os-001', purchaseOrg: 'GEM採購', orderStatus: 'CK',
+    vendorCode: '0001000463', vendorName: '速聯',
+    orderNo: '4000350001', orderSeq: '20', orderDocSeq: '400035000120', itemNo: '1',
+    vendorShipmentNo: '202509170001',
+    materialNo: '1530-CD4S50-0001', productName: 'CD4S50 CADEX LV0 4S',
+    specification: '長牙襯管',
+    orderQty: 4, shipQty: 4, acceptQty: 4,
+    deliveryDate: '2025/07/08', expectedDelivery: '2025/07/08',
+    vendorCanDeliverDate: '2025/07/07', pmDeliveryDate: '2025/07/07',
+    receiptDate: '2025/07/07',
+  },
+  {
+    id: 'os-002', purchaseOrg: 'GEM採購', orderStatus: 'CK',
+    vendorCode: '0001000463', vendorName: '速聯',
+    orderNo: '4000350002', orderSeq: '10', orderDocSeq: '400035000210', itemNo: '1',
+    vendorShipmentNo: '202509170002',
+    materialNo: '1530-CD6S50-0002', productName: 'CD6S50 CADEX LV0 6S',
+    specification: '短牙襯管',
+    orderQty: 8, shipQty: 8, acceptQty: 0,
+    deliveryDate: '2025/07/08', expectedDelivery: '2025/07/08',
+    vendorCanDeliverDate: '2025/07/09', pmDeliveryDate: '2025/07/08',
+    receiptDate: '',
+  },
+  {
+    id: 'os-003', purchaseOrg: 'GEM採購', orderStatus: 'CK',
+    vendorCode: '0001000641', vendorName: '華銘',
+    orderNo: '4000360001', orderSeq: '10', orderDocSeq: '400036000110', itemNo: '1',
+    vendorShipmentNo: 'HS-20250707-001',
+    materialNo: '2201-FRM0641-Z3YD', productName: '品章車架加工',
+    specification: 'FRAME OUTSOURCE ALLOY 700C M BLACK',
+    orderQty: 30, shipQty: 30, acceptQty: 15,
+    deliveryDate: '2025/07/06', expectedDelivery: '2025/07/06',
+    vendorCanDeliverDate: '2025/07/06', pmDeliveryDate: '2025/07/05',
+    receiptDate: '2025/07/06',
+  },
+  {
+    id: 'os-004', purchaseOrg: 'GEM採購', orderStatus: 'CK',
+    vendorCode: '0001000641', vendorName: '華銘',
+    orderNo: '4000360002', orderSeq: '10', orderDocSeq: '400036000210', itemNo: '1',
+    vendorShipmentNo: 'HS-20250707-002',
+    materialNo: '3301-WHL0641-Z3YD', productName: '輪組加工裝配',
+    specification: 'WHEELSET OUTSOURCE 700C DISC BLACK',
+    orderQty: 20, shipQty: 20, acceptQty: 0,
+    deliveryDate: '2025/07/09', expectedDelivery: '2025/07/09',
+    vendorCanDeliverDate: '2025/07/10', pmDeliveryDate: '2025/07/09',
+    receiptDate: '',
+  },
+  {
+    id: 'os-005', purchaseOrg: 'GIANT採購', orderStatus: 'CK',
+    vendorCode: '0001000045', vendorName: '佳承精密',
+    orderNo: '4000370001', orderSeq: '10', orderDocSeq: '400037000110', itemNo: '1',
+    vendorShipmentNo: 'JC-20250706-001',
+    materialNo: '9901-HDL0045-Z3YD', productName: '把手加工',
+    specification: 'HANDLEBAR OUTSOURCE 700mm FLAT BLACK',
+    orderQty: 50, shipQty: 50, acceptQty: 50,
+    deliveryDate: '2025/07/05', expectedDelivery: '2025/07/05',
+    vendorCanDeliverDate: '2025/07/05', pmDeliveryDate: '2025/07/04',
+    receiptDate: '2025/07/05',
+  },
+  {
+    id: 'os-006', purchaseOrg: 'GIANT採購', orderStatus: 'CK',
+    vendorCode: '0001000045', vendorName: '佳承精密',
+    orderNo: '4000370002', orderSeq: '10', orderDocSeq: '400037000210', itemNo: '1',
+    vendorShipmentNo: 'JC-20250707-001',
+    materialNo: '1129-SAD0045-Z3YD', productName: '坐墊加工',
+    specification: 'SADDLE OUTSOURCE 143mm BLACK',
+    orderQty: 40, shipQty: 40, acceptQty: 20,
+    deliveryDate: '2025/07/07', expectedDelivery: '2025/07/07',
+    vendorCanDeliverDate: '2025/07/07', pmDeliveryDate: '2025/07/07',
+    receiptDate: '2025/07/07',
+  },
+  {
+    id: 'os-007', purchaseOrg: 'GEM採購', orderStatus: 'CL',
+    vendorCode: '0001000053', vendorName: '久廣精密',
+    orderNo: '4000380001', orderSeq: '10', orderDocSeq: '400038000110', itemNo: '1',
+    vendorShipmentNo: 'KG-20250706-001',
+    materialNo: '2201-FRK0053-Z3YD', productName: '前叉連件加工',
+    specification: 'FORK OUTSOURCE CARBON TAPERED BLACK',
+    orderQty: 15, shipQty: 15, acceptQty: 0,
+    deliveryDate: '2025/07/06', expectedDelivery: '2025/07/06',
+    vendorCanDeliverDate: '2025/07/08', pmDeliveryDate: '2025/07/06',
+    receiptDate: '',
+  },
+  {
+    id: 'os-008', purchaseOrg: 'GEM採購', orderStatus: 'CK',
+    vendorCode: '0001000053', vendorName: '久廣精密',
+    orderNo: '4000380002', orderSeq: '10', orderDocSeq: '400038000210', itemNo: '1',
+    vendorShipmentNo: 'KG-20250707-001',
+    materialNo: '3301-DRL0053-Z3YD', productName: '撥鏈器加工',
+    specification: 'DERAILLEUR OUTSOURCE 11-SPEED',
+    orderQty: 25, shipQty: 25, acceptQty: 25,
+    deliveryDate: '2025/07/07', expectedDelivery: '2025/07/07',
+    vendorCanDeliverDate: '2025/07/07', pmDeliveryDate: '2025/07/06',
+    receiptDate: '2025/07/07',
+  },
+  {
+    id: 'os-009', purchaseOrg: 'GEM採購', orderStatus: 'CK',
+    vendorCode: '0001000059', vendorName: '金盛元工業',
+    orderNo: '4000390001', orderSeq: '10', orderDocSeq: '400039000110', itemNo: '1',
+    vendorShipmentNo: 'JS-20250708-001',
+    materialNo: '6601-CHN0059-Z3YD', productName: '鏈條加工',
+    specification: 'CHAIN OUTSOURCE 11-SPEED 116L',
+    orderQty: 100, shipQty: 100, acceptQty: 0,
+    deliveryDate: '2025/07/09', expectedDelivery: '2025/07/09',
+    vendorCanDeliverDate: '2025/07/10', pmDeliveryDate: '2025/07/09',
+    receiptDate: '',
+  },
+  {
+    id: 'os-010', purchaseOrg: 'GIANT採購', orderStatus: 'CK',
+    vendorCode: '0001000012', vendorName: '台灣製造',
+    orderNo: '4000400001', orderSeq: '10', orderDocSeq: '400040000110', itemNo: '1',
+    vendorShipmentNo: 'TW-20250707-001',
+    materialNo: '7701-HDL0012-Z3YD', productName: '車頭碗加工',
+    specification: 'HEADSET OUTSOURCE 1-1/8" BLACK',
+    orderQty: 60, shipQty: 60, acceptQty: 60,
+    deliveryDate: '2025/07/06', expectedDelivery: '2025/07/06',
+    vendorCanDeliverDate: '2025/07/06', pmDeliveryDate: '2025/07/05',
+    receiptDate: '2025/07/06',
+  },
+  {
+    id: 'os-011', purchaseOrg: 'GIANT採購', orderStatus: 'CK',
+    vendorCode: '0001000046', vendorName: '速聯國際',
+    orderNo: '4000410001', orderSeq: '10', orderDocSeq: '400041000110', itemNo: '1',
+    vendorShipmentNo: 'SL-20250709-001',
+    materialNo: '9901-BRK0046-Z3YD', productName: '煞車卡鉗加工',
+    specification: 'BRAKE OUTSOURCE HYDRAULIC DISC BLACK',
+    orderQty: 20, shipQty: 20, acceptQty: 0,
+    deliveryDate: '2025/07/10', expectedDelivery: '2025/07/10',
+    vendorCanDeliverDate: '2025/07/11', pmDeliveryDate: '2025/07/10',
+    receiptDate: '',
+  },
+];
+
+// ── 委外加工單狀況 欄位定義 ───────────────────────────────────────────────────
+const OUTSOURCE_DEFAULT_COLS: OutsourceCol[] = [
+  { key: 'vendorCode',          label: '廠商(編號)',      width: 180, minWidth: 140, align: 'left'   },
+  { key: 'purchaseOrg',         label: '採購組織',        width: 110, minWidth: 90,  align: 'left'   },
+  { key: 'orderStatus',         label: '訂單狀態',        width: 90,  minWidth: 70,  align: 'center' },
+  { key: 'orderDocSeq',         label: '單號序號',        width: 180, minWidth: 140, align: 'left'   },
+  { key: 'itemNo',              label: '項次',            width: 70,  minWidth: 55,  align: 'center' },
+  { key: 'vendorShipmentNo',    label: '廠商出貨單號',    width: 160, minWidth: 120, align: 'left'   },
+  { key: 'materialNo',          label: '料號',            width: 200, minWidth: 150, align: 'left'   },
+  { key: 'productName',         label: '品名',            width: 160, minWidth: 120, align: 'left'   },
+  { key: 'specification',       label: '規格敘述',        width: 280, minWidth: 160, align: 'left',   visible: false },
+  { key: 'orderQty',            label: '訂貨量',          width: 90,  minWidth: 70,  align: 'right'  },
+  { key: 'shipQty',             label: '出貨量',          width: 90,  minWidth: 70,  align: 'right'  },
+  { key: 'acceptQty',           label: '驗收量',          width: 90,  minWidth: 70,  align: 'right'  },
+  { key: 'delayQty',            label: '延遲數量',        width: 90,  minWidth: 70,  align: 'right'  },
+  { key: 'deliveryDate',        label: '交貨日期',        width: 120, minWidth: 100, align: 'center' },
+  { key: 'expectedDelivery',    label: '預計交期',        width: 120, minWidth: 100, align: 'center' },
+  { key: 'vendorCanDeliverDate',label: '廠商可交貨日期',  width: 140, minWidth: 110, align: 'center', visible: false },
+  { key: 'pmDeliveryDate',      label: '生管用日期',      width: 120, minWidth: 100, align: 'center', visible: false },
+  { key: 'receiptDate',         label: '收料日期',        width: 120, minWidth: 100, align: 'center' },
+  { key: 'isReceived',          label: '是否收料',        width: 90,  minWidth: 70,  align: 'center' },
+];
+
+const OUTSOURCE_STORAGE_KEY = 'receivingInquiry_outsource_v1_cols';
+const OUTSOURCE_DRAG_TYPE   = 'outsource-col';
 
 // (ReadonlyField, OrderDetailOverlay, ShipmentDetailOverlay 已移除 —— 請使用現成的 OrderDetail 與 ShipmentDetailPage)
 
 
 // ── 畫面建置中（其他 TAB）────────────────────────────────────────────────────
+// ── TAB3：委外加工單狀況 ──────────────────────────────────────────────────────
+const RECEIVED_OPTIONS = [
+  { value: '',    label: '全部' },
+  { value: 'yes', label: '是' },
+  { value: 'no',  label: '否' },
+];
+
+interface OutsourceTabProps {
+  onOrderDetail: (row: OutsourceRow) => void;
+  onShipmentDetail: (row: OutsourceRow) => void;
+}
+function OutsourceTab({ onOrderDetail, onShipmentDetail }: OutsourceTabProps) {
+  const [timeRange, setTimeRange]                     = useState<TimeRange>('3d');
+  const [isReceivedFilter, setIsReceivedFilter]       = useState('');
+  const [vendorKeyword, setVendorKeyword]             = useState('');
+  const [orderDocSeqKeyword, setOrderDocSeqKeyword]   = useState('');
+  const [materialKeyword, setMaterialKeyword]         = useState('');
+
+  const [columns, setColumns] = useState<OutsourceCol[]>(() => {
+    try {
+      const saved = localStorage.getItem(OUTSOURCE_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved) as { key: OutsourceColKey; width: number; visible?: boolean }[];
+        const keyOrder = parsed.map(p => p.key);
+        const sorted = [...OUTSOURCE_DEFAULT_COLS].sort(
+          (a, b) => keyOrder.indexOf(a.key) - keyOrder.indexOf(b.key)
+        );
+        return sorted.map(c => {
+          const s = parsed.find(p => p.key === c.key);
+          return { ...c, width: s?.width ?? c.width, visible: s?.visible ?? true };
+        });
+      }
+    } catch {}
+    return OUTSOURCE_DEFAULT_COLS.map(c => ({ ...c, visible: c.visible !== false }));
+  });
+
+  const visibleColumns = useMemo(() => columns.filter(c => c.visible !== false), [columns]);
+  const totalWidth     = useMemo(() => visibleColumns.reduce((s, c) => s + c.width, 0), [visibleColumns]);
+
+  useEffect(() => {
+    localStorage.setItem(OUTSOURCE_STORAGE_KEY, JSON.stringify(columns.map(c => ({ key: c.key, width: c.width, visible: c.visible }))));
+  }, [columns]);
+
+  const [showColSelector, setShowColSelector]   = useState(false);
+  const [showFilterDialog, setShowFilterDialog] = useState(false);
+  const [filters, setFilters]                   = useState<FilterCondition[]>([]);
+  const [page, setPage]                         = useState(1);
+  const [rowsPerPage, setRowsPerPage]           = useState(20);
+  const [sortConfig, setSortConfig]             = useState<{ key: string | null; direction: 'asc' | 'desc' | null }>({ key: null, direction: null });
+
+  const updateColumnWidth = useCallback((key: string, width: number) => {
+    setColumns(prev => prev.map(c => c.key === key ? { ...c, width } : c));
+  }, []);
+
+  const autoFitWidth = useCallback((key: string) => {
+    const col = columns.find(c => c.key === key);
+    if (!col) return;
+    const headerW = measureTextWidth(col.label, '600 14px "Public Sans","Noto Sans JP",sans-serif') + 32 + 16;
+    let maxDataW = 0;
+    MOCK_OUTSOURCE_ROWS.forEach(row => {
+      const val = String((row as any)[key] ?? '');
+      const w = measureTextWidth(val, '14px "Public Sans","Noto Sans JP",sans-serif') + 32;
+      if (w > maxDataW) maxDataW = w;
+    });
+    setColumns(prev => prev.map(c => c.key === key ? { ...c, width: Math.max(col.minWidth, Math.ceil(Math.max(headerW, maxDataW))) } : c));
+  }, [columns]);
+
+  const moveColumn = useCallback((dragKey: string, hoverKey: string) => {
+    setColumns(prev => {
+      const arr = [...prev];
+      const from = arr.findIndex(c => c.key === dragKey);
+      const to   = arr.findIndex(c => c.key === hoverKey);
+      if (from < 0 || to < 0) return prev;
+      const [removed] = arr.splice(from, 1);
+      arr.splice(to, 0, removed);
+      return arr;
+    });
+  }, []);
+
+  const { scrollContainerRef, handleMouseDown, canDragScroll } = useHorizontalDragScroll();
+
+  // 時間範圍（以 deliveryDate 為基準）
+  const OS_BASE_DATE = new Date('2025-07-07');
+  const osCutoffDate = useMemo(() => {
+    const d = new Date(OS_BASE_DATE);
+    d.setDate(d.getDate() + getDaysFromRange(timeRange));
+    return d;
+  }, [timeRange]);
+
+  const filteredData = useMemo(() => {
+    let data = MOCK_OUTSOURCE_ROWS;
+    data = data.filter(r => {
+      if (!r.deliveryDate) return false;
+      const d = new Date(r.deliveryDate.replace(/\//g, '-'));
+      return d >= OS_BASE_DATE && d <= osCutoffDate;
+    });
+    if (isReceivedFilter === 'yes') data = data.filter(r => r.acceptQty > 0);
+    if (isReceivedFilter === 'no')  data = data.filter(r => r.acceptQty === 0);
+    if (vendorKeyword.trim()) {
+      const kw = vendorKeyword.trim().toLowerCase();
+      data = data.filter(r => r.vendorName.toLowerCase().includes(kw) || r.vendorCode.toLowerCase().includes(kw));
+    }
+    if (orderDocSeqKeyword.trim()) {
+      const kw = orderDocSeqKeyword.trim().toLowerCase();
+      data = data.filter(r => r.orderDocSeq.toLowerCase().includes(kw));
+    }
+    if (materialKeyword.trim()) {
+      const kw = materialKeyword.trim().toLowerCase();
+      data = data.filter(r => r.materialNo.toLowerCase().includes(kw));
+    }
+    filters.forEach(f => {
+      data = data.filter(row => {
+        const val  = String((row as any)[f.column] ?? '').toLowerCase();
+        const term = f.value.toLowerCase();
+        switch (f.operator) {
+          case 'contains':    return val.includes(term);
+          case 'equals':      return val === term;
+          case 'startsWith':  return val.startsWith(term);
+          case 'notContains': return !val.includes(term);
+          default:            return true;
+        }
+      });
+    });
+    return data;
+  }, [timeRange, isReceivedFilter, vendorKeyword, orderDocSeqKeyword, materialKeyword, filters, osCutoffDate]);
+
+  useEffect(() => { setPage(1); }, [timeRange, isReceivedFilter, vendorKeyword, orderDocSeqKeyword, materialKeyword, filters]);
+
+  const paginatedData = useMemo(() => {
+    const start = (page - 1) * rowsPerPage;
+    return filteredData.slice(start, start + rowsPerPage);
+  }, [filteredData, page, rowsPerPage]);
+
+  const colSelectorItems = useMemo(() => columns.map(c => ({ key: c.key, label: c.label, visible: c.visible !== false })), [columns]);
+  const filterColumns    = useMemo(() => columns.map(c => ({ key: c.key, label: c.label })), [columns]);
+
+  const handleExportCsv = useCallback(() => {
+    const header = visibleColumns.map(c => c.label).join(',');
+    const rows = filteredData.map(row =>
+      visibleColumns.map(c => `"${String((row as any)[c.key] ?? '').replace(/"/g, '""')}"`).join(',')
+    );
+    const csv  = [header, ...rows].join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = '委外加工單狀況.csv'; a.click();
+    URL.revokeObjectURL(url);
+  }, [filteredData, visibleColumns]);
+
+  const renderCell = (col: OutsourceCol, row: OutsourceRow) => {
+    switch (col.key) {
+      case 'vendorCode':
+        return <span className="font-['Public_Sans:Regular',sans-serif] text-[14px] text-[#1c252e]">{row.vendorName}（{row.vendorCode}）</span>;
+      case 'orderDocSeq':
+        return (
+          <button
+            className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] text-[#1677ff] underline hover:text-[#0958d9] transition-colors cursor-pointer text-left"
+            onClick={() => onOrderDetail(row)}
+          >
+            {row.orderDocSeq}
+          </button>
+        );
+      case 'vendorShipmentNo':
+        return (
+          <button
+            className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] text-[#1677ff] underline hover:text-[#0958d9] transition-colors cursor-pointer text-left"
+            onClick={() => onShipmentDetail(row)}
+          >
+            {row.vendorShipmentNo}
+          </button>
+        );
+      case 'orderStatus': {
+        const isCK = row.orderStatus === 'CK';
+        return (
+          <span className="inline-flex items-center px-[8px] py-[2px] rounded-[6px] text-[12px] font-semibold"
+            style={{ backgroundColor: isCK ? 'rgba(17,141,87,0.08)' : 'rgba(0,94,184,0.08)', color: isCK ? '#118d57' : '#005eb8' }}>
+            {row.orderStatus}
+          </span>
+        );
+      }
+      case 'delayQty': {
+        const qty = row.orderQty - row.acceptQty;
+        return <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px]" style={{ color: '#ff5630' }}>{qty}</span>;
+      }
+      case 'isReceived': {
+        const received = row.acceptQty > 0;
+        return (
+          <span className="inline-flex items-center px-[8px] py-[2px] rounded-[6px] text-[12px] font-semibold"
+            style={{ backgroundColor: received ? 'rgba(17,141,87,0.08)' : 'rgba(145,158,171,0.08)', color: received ? '#118d57' : '#637381' }}>
+            {received ? '是' : '否'}
+          </span>
+        );
+      }
+      case 'receiptDate':
+        return <span className="font-['Public_Sans:Regular',sans-serif] text-[14px]" style={{ color: row.receiptDate ? '#1c252e' : '#919eab' }}>{row.receiptDate || '—'}</span>;
+      case 'orderQty':
+      case 'shipQty':
+      case 'acceptQty':
+        return <span className="font-['Public_Sans:Regular',sans-serif] text-[14px] text-[#1c252e]">{(row as any)[col.key]}</span>;
+      default:
+        return (
+          <span className="font-['Public_Sans:Regular',sans-serif] text-[14px] text-[#1c252e] truncate block" title={String((row as any)[col.key] ?? '')}>
+            {(row as any)[col.key] || '—'}
+          </span>
+        );
+    }
+  };
+
+  return (
+    <>
+      {/* 時間回溯按鈕 */}
+      <div className="shrink-0 flex gap-[8px] items-center px-[20px] pt-[16px]">
+        {TIME_RANGE_BUTTONS.map(btn => (
+          <button key={btn.value} onClick={() => setTimeRange(btn.value)}
+            className={`h-[32px] px-[16px] rounded-[8px] text-[13px] font-semibold transition-colors font-['Public_Sans:SemiBold',sans-serif] ${
+              timeRange === btn.value
+                ? 'bg-[#1c252e] text-white'
+                : 'bg-[rgba(145,158,171,0.08)] text-[#637381] hover:bg-[rgba(145,158,171,0.16)]'
+            }`}>
+            {btn.label}
+          </button>
+        ))}
+      </div>
+
+      {/* 搜尋列 */}
+      <div className="shrink-0 flex gap-[16px] items-center px-[20px] py-[16px]">
+        <div className="flex-1 min-w-0">
+          <DropdownSelect label="是否收料" value={isReceivedFilter} onChange={setIsReceivedFilter} options={RECEIVED_OPTIONS} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <SearchField label="供應商" value={vendorKeyword} onChange={setVendorKeyword} placeholder="名稱或代碼關鍵字" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <SearchField label="單號序號" value={orderDocSeqKeyword} onChange={setOrderDocSeqKeyword} placeholder="單號序號關鍵字" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <SearchField label="料號" value={materialKeyword} onChange={setMaterialKeyword} placeholder="料號關鍵字" />
+        </div>
+      </div>
+
+      {/* Toolbar */}
+      <TableToolbar
+        resultsCount={filteredData.length}
+        showColumnSelector={showColSelector}
+        showFilterDialog={showFilterDialog}
+        onColumnsClick={() => setShowColSelector(v => !v)}
+        onFiltersClick={() => setShowFilterDialog(v => !v)}
+        onExportCsv={handleExportCsv}
+      />
+
+      {showColSelector && (
+        <ColumnSelector
+          columns={colSelectorItems}
+          onClose={() => setShowColSelector(false)}
+          onChange={updated => {
+            setColumns(prev =>
+              updated.map(u => { const col = prev.find(c => c.key === u.key); return col ? { ...col, visible: u.visible } : null; })
+                .filter(Boolean) as OutsourceCol[]
+            );
+          }}
+        />
+      )}
+
+      {showFilterDialog && (
+        <FilterDialog
+          columns={filterColumns} filters={filters}
+          onClose={() => setShowFilterDialog(false)}
+          onApply={f => { setFilters(f); setShowFilterDialog(false); }}
+        />
+      )}
+
+      {/* 表格 */}
+      <DndProvider backend={HTML5Backend}>
+        <div ref={scrollContainerRef} onMouseDown={handleMouseDown}
+          className={`flex-1 min-h-0 overflow-x-auto overflow-y-auto custom-scrollbar ${canDragScroll ? 'cursor-grab active:cursor-grabbing' : ''}`}>
+          <div style={{ minWidth: `${totalWidth}px` }}>
+            <div data-table-header="true" className="flex sticky top-0 z-10 border-b border-[rgba(145,158,171,0.08)]">
+              {visibleColumns.map((col, idx) => (
+                <DraggableColumnHeader key={col.key} column={col} index={idx}
+                  dragType={OUTSOURCE_DRAG_TYPE} isLast={idx === visibleColumns.length - 1}
+                  moveColumn={moveColumn} updateColumnWidth={updateColumnWidth} autoFitWidth={autoFitWidth}
+                  sortConfig={sortConfig}
+                  onSort={key => setSortConfig(prev =>
+                    prev.key === key
+                      ? { key, direction: prev.direction === 'asc' ? 'desc' : prev.direction === 'desc' ? null : 'asc' }
+                      : { key, direction: 'asc' }
+                  )}
+                />
+              ))}
+            </div>
+
+            {paginatedData.length === 0 ? (
+              <div className="flex items-center justify-center py-[60px]">
+                <span className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[#919eab] text-[14px]">查無資料</span>
+              </div>
+            ) : (
+              paginatedData.map((row, rowIdx) => (
+                <div key={row.id}
+                  className={`flex border-b border-[rgba(145,158,171,0.08)] hover:bg-[rgba(145,158,171,0.04)] transition-colors ${rowIdx % 2 === 0 ? '' : 'bg-[rgba(145,158,171,0.02)]'}`}>
+                  {visibleColumns.map((col, colIdx) => (
+                    <div key={col.key}
+                      style={colIdx === visibleColumns.length - 1 ? { minWidth: col.width, flex: 1 } : { width: col.width }}
+                      className={`flex items-center px-[16px] py-[12px] overflow-hidden ${colIdx < visibleColumns.length - 1 ? 'border-r border-[rgba(145,158,171,0.08)]' : ''} ${col.align === 'right' ? 'justify-end' : col.align === 'center' ? 'justify-center' : 'justify-start'}`}>
+                      {renderCell(col, row)}
+                    </div>
+                  ))}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </DndProvider>
+
+      <PaginationControls
+        total={filteredData.length} page={page} rowsPerPage={rowsPerPage}
+        onPageChange={setPage} onRowsPerPageChange={v => { setRowsPerPage(v); setPage(1); }}
+      />
+    </>
+  );
+}
+
 function UnderDevelopment({ title }: { title: string }) {
   return (
     <div className="flex-1 flex flex-col items-center justify-center gap-[24px] px-[40px]">
@@ -1479,7 +2015,12 @@ export function ReceivingInquiryPage() {
         />
       )}
       {activeTab === 'should-ship-not-shipped' && <ShouldShipNotShippedTab />}
-      {activeTab === 'outsource'               && <UnderDevelopment title="委外加工單狀況" />}
+      {activeTab === 'outsource' && (
+        <OutsourceTab
+          onOrderDetail={row => setOrderDetailRow(row as any)}
+          onShipmentDetail={row => setShipmentDetailRow(row as any)}
+        />
+      )}
     </div>
   );
 }
