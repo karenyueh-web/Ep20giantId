@@ -26,6 +26,7 @@ import PartsMaintenancePage from "@/app/components/PartsMaintenancePage";
 import QuotationPrintListPage from "@/app/components/QuotationPrintListPage";
 import EsgMaterialPage from "@/app/components/EsgMaterialPage";
 import EsgMaterialSummaryPage from "@/app/components/EsgMaterialSummaryPage";
+import { VendorEvaluationPage } from "@/app/components/VendorEvaluationPage";
 import SampleOrderListPage from "@/app/components/SampleOrderListPage";
 import { ResponsivePageLayout } from "@/app/components/ResponsivePageLayout";
 import { LoginPage } from "@/app/components/LoginPage";
@@ -456,6 +457,18 @@ export default function App() {
       case 'newparts-project':
       case 'newparts-settings':
       case 'vendor-evaluation':
+        return (
+          <ResponsivePageLayout
+            currentPage={currentPage}
+            onPageChange={handlePageChange}
+            onLogout={handleLogout}
+            userRole={userRole}
+            title="廠商評價"
+            breadcrumb="廠商評價 • 交貨準時率"
+          >
+            <VendorEvaluationPage />
+          </ResponsivePageLayout>
+        );
       case 'shipment-tw-order':
       case 'shipment-tw-shipping':
       case 'shipment-tw-print':
