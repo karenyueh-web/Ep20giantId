@@ -2,7 +2,7 @@
  * ReceivingInquiryPage — Overview • 收料查詢
  *
  * TAB1：已出貨未收料（廠商已有出貨單，驗收量 = 0）
- * TAB2：應出貨未出貨（尚未實作，畫面建置中）
+ * TAB2：延遲到貨（尚未實作，畫面建置中）
  * TAB3：委外加工單狀況（尚未實作，畫面建置中）
  */
 
@@ -39,6 +39,59 @@ type RecvColKey =
   | 'shipQty'
   | 'vendorShipmentNo'
   | 'deliveryDate';
+
+// ── 應出貨未出貨 型別 ────────────────────────────────────────────────────────
+type DeliveryDateType = 'expectedDelivery' | 'vendorCanDeliverDate' | 'pmDeliveryDate';
+
+type ShouldShipColKey =
+  | 'company'
+  | 'purchaseOrg'
+  | 'orderStatus'
+  | 'vendorCode'
+  | 'orderDocSeq'
+  | 'orderSeq'
+  | 'itemNo'
+  | 'materialNo'
+  | 'productName'
+  | 'specification'
+  | 'orderQty'
+  | 'shipQty'
+  | 'expectedDelivery'
+  | 'vendorCanDeliverDate'
+  | 'pmDeliveryDate'
+  | 'delayDays'
+  | 'acceptQty'
+  | 'delayQty';
+
+interface ShouldShipCol {
+  key: ShouldShipColKey;
+  label: string;
+  width: number;
+  minWidth: number;
+  visible?: boolean;
+}
+
+export interface ShouldShipRow {
+  id: string;
+  company: string;
+  purchaseOrg: string;
+  orderStatus: 'CK' | 'CL';
+  vendorCode: string;
+  vendorName: string;
+  orderNo: string;
+  orderSeq: string;
+  orderDocSeq: string;
+  itemNo: string;           // 項次
+  materialNo: string;
+  productName: string;
+  specification: string;
+  orderQty: number;
+  shipQty: number;          // 預計出貨量（待出）
+  acceptQty: number;              // 驗收量
+  expectedDelivery: string;       // 預計交期
+  vendorCanDeliverDate: string;   // 廠商可交貨日期
+  pmDeliveryDate: string;         // 生管用日期
+}
 
 interface RecvCol {
   key: RecvColKey;
@@ -384,6 +437,133 @@ const DEFAULT_COLS: RecvCol[] = [
 const STORAGE_KEY = 'receivingInquiry_shipped_v1_cols';
 const DRAG_TYPE   = 'recv-col';
 
+// ── 應出貨未出貨 Mock 資料 ────────────────────────────────────────────────────
+export const MOCK_SHOULD_SHIP_ROWS: ShouldShipRow[] = [
+  {
+    id: 'ss-001', company: '巨大機械', purchaseOrg: 'GEM採購', orderStatus: 'CK',
+    vendorCode: '0001000641', vendorName: '華銘', orderNo: '4500100010', orderSeq: '10',
+    orderDocSeq: '450010001010', itemNo: '1',
+    materialNo: '2201-FRM0641-A01', productName: '鋁合金車架',
+    specification: 'ROAD FRAME ALLOY 700C SIZE M MATTE BLACK',
+    orderQty: 80, shipQty: 80, acceptQty: 0,
+    expectedDelivery: '2025/07/08', vendorCanDeliverDate: '2025/07/08', pmDeliveryDate: '2025/07/07',
+  },
+  {
+    id: 'ss-002', company: '巨大機械', purchaseOrg: 'GEM採購', orderStatus: 'CK',
+    vendorCode: '0001000641', vendorName: '華銘', orderNo: '4500100010', orderSeq: '20',
+    orderDocSeq: '450010001020', itemNo: '2',
+    materialNo: '3301-WHL0641-A02', productName: '輪組',
+    specification: 'WHEELSET 700C DISC BRAKE 12X100/142 BLACK',
+    orderQty: 50, shipQty: 50, acceptQty: 20,
+    expectedDelivery: '2025/07/08', vendorCanDeliverDate: '2025/07/10', pmDeliveryDate: '2025/07/08',
+  },
+  {
+    id: 'ss-003', company: '巨大機械', purchaseOrg: 'GEM採購', orderStatus: 'CK',
+    vendorCode: '0001000641', vendorName: '華銘', orderNo: '4500100011', orderSeq: '10',
+    orderDocSeq: '450010001110', itemNo: '1',
+    materialNo: '4401-STM0641-B01', productName: '車把立管',
+    specification: 'STEM ALLOY 31.8mm±6° 100mm SILVER',
+    orderQty: 120, shipQty: 120, acceptQty: 0,
+    expectedDelivery: '2025/07/05', vendorCanDeliverDate: '2025/07/05', pmDeliveryDate: '2025/07/04',
+  },
+  {
+    id: 'ss-004', company: '捷安特', purchaseOrg: 'GIANT採購', orderStatus: 'CK',
+    vendorCode: '0001000045', vendorName: '佳承精密', orderNo: '4500200020', orderSeq: '10',
+    orderDocSeq: '450020002010', itemNo: '1',
+    materialNo: '9901-HDL0045-E01', productName: '把手組',
+    specification: 'HANDLEBAR 700mm FLAT ALLOY 31.8 BLACK',
+    orderQty: 70, shipQty: 70, acceptQty: 35,
+    expectedDelivery: '2025/07/12', vendorCanDeliverDate: '2025/07/14', pmDeliveryDate: '2025/07/12',
+  },
+  {
+    id: 'ss-005', company: '捷安特', purchaseOrg: 'GIANT採購', orderStatus: 'CL',
+    vendorCode: '0001000045', vendorName: '佳承精密', orderNo: '4500200021', orderSeq: '10',
+    orderDocSeq: '450020002110', itemNo: '1',
+    materialNo: '1129-SAD0045-E02', productName: '坐墊',
+    specification: 'SADDLE RACING 143mm BLACK',
+    orderQty: 60, shipQty: 60, acceptQty: 60,  // 完全驗收，不顯示
+    expectedDelivery: '2025/07/15', vendorCanDeliverDate: '2025/07/15', pmDeliveryDate: '2025/07/15',
+  },
+  {
+    id: 'ss-006', company: '巨大機械', purchaseOrg: 'GEM採購', orderStatus: 'CK',
+    vendorCode: '0001000053', vendorName: '久廣精密', orderNo: '4500300030', orderSeq: '10',
+    orderDocSeq: '450030003010', itemNo: '1',
+    materialNo: '2201-FRK0053-F01', productName: '前叉',
+    specification: 'FORK CARBON TAPERED 1-1/8"-1.5" QR 100mm BLACK',
+    orderQty: 25, shipQty: 25, acceptQty: 10,
+    expectedDelivery: '2025/07/03', vendorCanDeliverDate: '2025/07/05', pmDeliveryDate: '2025/07/03',
+  },
+  {
+    id: 'ss-007', company: '巨大機械', purchaseOrg: 'GEM採購', orderStatus: 'CK',
+    vendorCode: '0001000053', vendorName: '久廣精密', orderNo: '4500300031', orderSeq: '10',
+    orderDocSeq: '450030003110', itemNo: '1',
+    materialNo: '3301-DRL0053-F02', productName: '傳動撥鏈器',
+    specification: 'DERAILLEUR REAR 11-SPEED SHIMANO COMPATIBLE',
+    orderQty: 40, shipQty: 40, acceptQty: 0,
+    expectedDelivery: '2025/07/10', vendorCanDeliverDate: '2025/07/10', pmDeliveryDate: '2025/07/09',
+  },
+  {
+    id: 'ss-008', company: '巨大機械', purchaseOrg: 'GEM採購', orderStatus: 'CL',
+    vendorCode: '0001000059', vendorName: '金盛元工業', orderNo: '4500400040', orderSeq: '10',
+    orderDocSeq: '450040004010', itemNo: '1',
+    materialNo: '6601-CHN0059-G01', productName: '鏈條',
+    specification: 'CHAIN 11-SPEED 116L NICKEL PLATED',
+    orderQty: 300, shipQty: 300, acceptQty: 300, // 完全驗收，不顯示
+    expectedDelivery: '2025/07/20', vendorCanDeliverDate: '2025/07/22', pmDeliveryDate: '2025/07/20',
+  },
+  {
+    id: 'ss-009', company: '捷安特', purchaseOrg: 'GIANT採購', orderStatus: 'CK',
+    vendorCode: '0001000012', vendorName: '台灣製造', orderNo: '4500500050', orderSeq: '10',
+    orderDocSeq: '450050005010', itemNo: '1',
+    materialNo: '7701-HDL0012-H01', productName: '車頭碗',
+    specification: 'HEADSET INTEGRATED 1-1/8" CARTRIDGE BLACK',
+    orderQty: 90, shipQty: 90, acceptQty: 50,
+    expectedDelivery: '2025/07/06', vendorCanDeliverDate: '2025/07/07', pmDeliveryDate: '2025/07/06',
+  },
+  {
+    id: 'ss-010', company: '捷安特', purchaseOrg: 'GIANT採購', orderStatus: 'CK',
+    vendorCode: '0001000046', vendorName: '速聯國際', orderNo: '4500600060', orderSeq: '10',
+    orderDocSeq: '450060006010', itemNo: '1',
+    materialNo: '9901-BRK0046-I01', productName: '煞車卡鉗',
+    specification: 'BRAKE CALIPER HYDRAULIC DISC FLAT MOUNT BLACK',
+    orderQty: 35, shipQty: 35, acceptQty: 0,
+    expectedDelivery: '2025/07/25', vendorCanDeliverDate: '2025/07/28', pmDeliveryDate: '2025/07/25',
+  },
+  {
+    id: 'ss-011', company: '巨大機械', purchaseOrg: 'GEM採購', orderStatus: 'CK',
+    vendorCode: '0001000046', vendorName: '速聯國際', orderNo: '4500600061', orderSeq: '10',
+    orderDocSeq: '450060006110', itemNo: '1',
+    materialNo: '1129-FRK0046-I02', productName: '前叉避震',
+    specification: 'FORK SUSPENSION 27.5 130mm TRAVEL 15x110 BOOST',
+    orderQty: 30, shipQty: 30, acceptQty: 0,
+    expectedDelivery: '2025/08/01', vendorCanDeliverDate: '2025/08/03', pmDeliveryDate: '2025/08/01',
+  },
+];
+
+// ── 應出貨未出貨 欄位定義 ─────────────────────────────────────────────────────
+const SHOULD_SHIP_DEFAULT_COLS: ShouldShipCol[] = [
+  { key: 'company',              label: '廠商(編號)',     width: 180, minWidth: 140 },
+  { key: 'orderDocSeq',         label: '訂單號碼',       width: 180, minWidth: 150 },
+  { key: 'orderSeq',            label: '訂單序號',       width: 100, minWidth: 80  },
+  { key: 'purchaseOrg',         label: '採購組織',       width: 120, minWidth: 100 },
+  { key: 'orderStatus',         label: '訂單狀態',       width: 90,  minWidth: 80  },
+  { key: 'itemNo',              label: '項次',           width: 80,  minWidth: 60  },
+  { key: 'materialNo',          label: '料號',           width: 200, minWidth: 150 },
+  { key: 'productName',         label: '品名',           width: 140, minWidth: 100 },
+  { key: 'specification',       label: '規格敘述',       width: 280, minWidth: 160, visible: false },
+  { key: 'orderQty',            label: '訂貨量',         width: 90,  minWidth: 70  },
+  { key: 'shipQty',             label: '預計出貨量',     width: 100, minWidth: 80  },
+  { key: 'expectedDelivery',    label: '預計交期',       width: 120, minWidth: 100 },
+  { key: 'vendorCanDeliverDate',label: '廠商可交貨日期', width: 140, minWidth: 110 },
+  { key: 'pmDeliveryDate',      label: '生管用日期',     width: 120, minWidth: 100 },
+  { key: 'delayDays',           label: '延遲天數',       width: 90,  minWidth: 70, align: 'right' as const },
+  { key: 'acceptQty',           label: '驗收量',         width: 90,  minWidth: 70, align: 'right' as const },
+  { key: 'delayQty',            label: '延遲數量',         width: 90,  minWidth: 70, align: 'right' as const },
+];
+
+const SHOULD_SHIP_STORAGE_KEY = 'receivingInquiry_shouldShip_v3_cols';
+const SHOULD_SHIP_DRAG_TYPE   = 'should-ship-col';
+
 // (ReadonlyField, OrderDetailOverlay, ShipmentDetailOverlay 已移除 —— 請使用現成的 OrderDetail 與 ShipmentDetailPage)
 
 
@@ -407,6 +587,446 @@ function UnderDevelopment({ title }: { title: string }) {
         </p>
       </div>
     </div>
+  );
+}
+
+// ── TAB2：應出貨未出貨 ───────────────────────────────────────────────────────
+const DELIVERY_DATE_TYPE_OPTIONS = [
+  { value: 'expectedDelivery',     label: '預計交期' },
+  { value: 'vendorCanDeliverDate', label: '廠商可交貨日' },
+  { value: 'pmDeliveryDate',       label: '生管用交期' },
+];
+
+type TimeRange = '3d' | '1w' | '2w' | '1m';
+
+const TIME_RANGE_BUTTONS: { value: TimeRange; label: string }[] = [
+  { value: '3d', label: '3天內' },
+  { value: '1w', label: '一周內' },
+  { value: '2w', label: '二周內' },
+  { value: '1m', label: '一個月內' },
+];
+
+function getDaysFromRange(range: TimeRange): number {
+  switch (range) {
+    case '3d': return 3;
+    case '1w': return 7;
+    case '2w': return 14;
+    case '1m': return 30;
+  }
+}
+
+function ShouldShipNotShippedTab() {
+  // ── 時間範圍 ──
+  const [timeRange, setTimeRange] = useState<TimeRange>('3d');
+
+  // ── 搜尋狀態 ──
+  const [deliveryDateType, setDeliveryDateType] = useState<DeliveryDateType>('expectedDelivery');
+  const [purchaseOrg, setPurchaseOrg]           = useState('');
+  const [vendorKeyword, setVendorKeyword]       = useState('');
+  const [materialKeyword, setMaterialKeyword]   = useState('');
+
+  // ── 欄位設定 ──
+  const [columns, setColumns] = useState<ShouldShipCol[]>(() => {
+    try {
+      const saved = localStorage.getItem(SHOULD_SHIP_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved) as { key: ShouldShipColKey; width: number; visible?: boolean }[];
+        const keyOrder = parsed.map(p => p.key);
+        const sorted = [...SHOULD_SHIP_DEFAULT_COLS].sort(
+          (a, b) => keyOrder.indexOf(a.key) - keyOrder.indexOf(b.key)
+        );
+        return sorted.map(c => {
+          const s = parsed.find(p => p.key === c.key);
+          return { ...c, width: s?.width ?? c.width, visible: s?.visible ?? true };
+        });
+      }
+    } catch {}
+    return SHOULD_SHIP_DEFAULT_COLS.map(c => ({ ...c, visible: c.visible !== false }));
+  });
+
+  const visibleColumns = useMemo(() => columns.filter(c => c.visible !== false), [columns]);
+  const totalWidth = useMemo(() => visibleColumns.reduce((s, c) => s + c.width, 0), [visibleColumns]);
+
+  useEffect(() => {
+    const toSave = columns.map(c => ({ key: c.key, width: c.width, visible: c.visible }));
+    localStorage.setItem(SHOULD_SHIP_STORAGE_KEY, JSON.stringify(toSave));
+  }, [columns]);
+
+  // ── Toolbar 狀態 ──
+  const [showColSelector, setShowColSelector] = useState(false);
+  const [showFilterDialog, setShowFilterDialog] = useState(false);
+  const [filters, setFilters] = useState<FilterCondition[]>([]);
+  const [page, setPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(20);
+  const [sortConfig, setSortConfig] = useState<{ key: string | null; direction: 'asc' | 'desc' | null }>({ key: null, direction: null });
+
+  // ── DnD resize ──
+  const updateColumnWidth = useCallback((key: string, width: number) => {
+    setColumns(prev => prev.map(c => c.key === key ? { ...c, width } : c));
+  }, []);
+
+  const autoFitWidth = useCallback((key: string) => {
+    const col = columns.find(c => c.key === key);
+    if (!col) return;
+    const headerW = measureTextWidth(col.label, '600 14px "Public Sans","Noto Sans JP",sans-serif') + 32 + 16;
+    let maxDataW = 0;
+    MOCK_SHOULD_SHIP_ROWS.forEach(row => {
+      const val = String((row as any)[key] ?? '');
+      const w = measureTextWidth(val, '14px "Public Sans","Noto Sans JP",sans-serif') + 32;
+      if (w > maxDataW) maxDataW = w;
+    });
+    const bestFit = Math.max(col.minWidth, Math.ceil(Math.max(headerW, maxDataW)));
+    setColumns(prev => prev.map(c => c.key === key ? { ...c, width: bestFit } : c));
+  }, [columns]);
+
+  const moveColumn = useCallback((dragKey: string, hoverKey: string) => {
+    setColumns(prev => {
+      const arr = [...prev];
+      const from = arr.findIndex(c => c.key === dragKey);
+      const to   = arr.findIndex(c => c.key === hoverKey);
+      if (from < 0 || to < 0) return prev;
+      const [removed] = arr.splice(from, 1);
+      arr.splice(to, 0, removed);
+      return arr;
+    });
+  }, []);
+
+  const { scrollContainerRef, handleMouseDown, canDragScroll } = useHorizontalDragScroll();
+
+  // ── 以今日為基準計算時間範圍截止日 ──
+  // （Mock 資料中使用固定基準日 2025/07/07）
+  const BASE_DATE = new Date('2025-07-07');
+  const cutoffDate = useMemo(() => {
+    const d = new Date(BASE_DATE);
+    d.setDate(d.getDate() + getDaysFromRange(timeRange));
+    return d;
+  }, [timeRange]);
+
+  const dateKey = deliveryDateType;
+
+  // ── 篩選 ──
+  const filteredData = useMemo(() => {
+    let data = MOCK_SHOULD_SHIP_ROWS;
+
+    // 時間範圍篩選：交期在 BASE_DATE ~ cutoffDate 之間
+    data = data.filter(r => {
+      const dateStr = (r as any)[dateKey] as string;
+      if (!dateStr) return false;
+      const d = new Date(dateStr.replace(/\//g, '-'));
+      return d >= BASE_DATE && d <= cutoffDate;
+    });
+
+    // 驗收量不等於訂貨量（未完全到貨）
+    data = data.filter(r => r.acceptQty !== r.orderQty);
+
+    if (purchaseOrg) data = data.filter(r => r.purchaseOrg === purchaseOrg);
+    if (vendorKeyword.trim()) {
+      const kw = vendorKeyword.trim().toLowerCase();
+      data = data.filter(r =>
+        r.vendorName.toLowerCase().includes(kw) || r.vendorCode.toLowerCase().includes(kw)
+      );
+    }
+    if (materialKeyword.trim()) {
+      const kw = materialKeyword.trim().toLowerCase();
+      data = data.filter(r => r.materialNo.toLowerCase().includes(kw));
+    }
+    filters.forEach(f => {
+      data = data.filter(row => {
+        const val = String((row as any)[f.column] ?? '').toLowerCase();
+        const term = f.value.toLowerCase();
+        switch (f.operator) {
+          case 'contains':    return val.includes(term);
+          case 'equals':      return val === term;
+          case 'startsWith':  return val.startsWith(term);
+          case 'notContains': return !val.includes(term);
+          default:            return true;
+        }
+      });
+    });
+    return data;
+  }, [timeRange, dateKey, purchaseOrg, vendorKeyword, materialKeyword, filters, cutoffDate]);
+
+  useEffect(() => { setPage(1); }, [timeRange, deliveryDateType, purchaseOrg, vendorKeyword, materialKeyword, filters]);
+  const paginatedData = useMemo(() => {
+    const start = (page - 1) * rowsPerPage;
+    return filteredData.slice(start, start + rowsPerPage);
+  }, [filteredData, page, rowsPerPage]);
+
+  const colSelectorItems = useMemo(() =>
+    columns.map(c => ({ key: c.key, label: c.label, visible: c.visible !== false })),
+    [columns]
+  );
+  const filterColumns = useMemo(() =>
+    columns.map(c => ({ key: c.key, label: c.label })),
+    [columns]
+  );
+
+  const handleExportCsv = useCallback(() => {
+    const header = visibleColumns.map(c => c.label).join(',');
+    const rows = filteredData.map(row =>
+      visibleColumns.map(c => `"${String((row as any)[c.key] ?? '').replace(/"/g, '""')}"`).join(',')
+    );
+    const csv = [header, ...rows].join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = '延遲到貨.csv'; a.click();
+    URL.revokeObjectURL(url);
+  }, [filteredData, visibleColumns]);
+
+  // ── 儲存格渲染 ──
+  const renderCell = (col: ShouldShipCol, row: ShouldShipRow) => {
+    switch (col.key) {
+      case 'company':
+        return (
+          <span className="font-['Public_Sans:Regular',sans-serif] text-[14px] text-[#1c252e]">
+            {row.vendorName}（{row.vendorCode}）
+          </span>
+        );
+      case 'orderStatus': {
+        const isCK = row.orderStatus === 'CK';
+        return (
+          <span
+            className="inline-flex items-center px-[8px] py-[2px] rounded-[6px] text-[12px] font-semibold"
+            style={{
+              backgroundColor: isCK ? 'rgba(17,141,87,0.08)' : 'rgba(0,94,184,0.08)',
+              color: isCK ? '#118d57' : '#005eb8',
+            }}
+          >
+            {row.orderStatus}
+          </span>
+        );
+      }
+      case 'orderDocSeq':
+        return (
+          <span className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] text-[#1c252e]">
+            {row.orderDocSeq}
+          </span>
+        );
+      case 'expectedDelivery':
+      case 'vendorCanDeliverDate':
+      case 'pmDeliveryDate': {
+        // Highlight the active date type
+        const isActive = col.key === deliveryDateType;
+        const val = (row as any)[col.key] as string;
+        return (
+          <span
+            className="font-['Public_Sans:Regular',sans-serif] text-[14px]"
+            style={{ color: isActive ? '#005eb8' : '#1c252e', fontWeight: isActive ? 600 : 400 }}
+          >
+            {val || '—'}
+          </span>
+        );
+      }
+      case 'delayDays': {
+        // 延遲天數 = BASE_DATE - 選中的交期日期（天數），一律紅字顯示
+        const dateStr = (row as any)[deliveryDateType] as string;
+        if (!dateStr) return <span className="text-[#919eab] text-[14px]">—</span>;
+        const deliveryD = new Date(dateStr.replace(/\//g, '-'));
+        const diffMs = BASE_DATE.getTime() - deliveryD.getTime();
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        return (
+          <span
+            className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px]"
+            style={{ color: '#ff5630' }}
+          >
+            {Math.abs(diffDays)}
+          </span>
+        );
+      }
+      case 'orderQty':
+      case 'shipQty':
+      case 'acceptQty':
+        return (
+          <span className="font-['Public_Sans:Regular',sans-serif] text-[14px] text-[#1c252e]">
+            {(row as any)[col.key]}
+          </span>
+        );
+      case 'delayQty': {
+        // 延遲數量 = 訂貨量 - 驗收量，紅字顯示
+        const qty = row.orderQty - row.acceptQty;
+        return (
+          <span
+            className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px]"
+            style={{ color: '#ff5630' }}
+          >
+            {qty}
+          </span>
+        );
+      }
+      default:
+        return (
+          <span className="font-['Public_Sans:Regular',sans-serif] text-[14px] text-[#1c252e] truncate block" title={String((row as any)[col.key] ?? '')}>
+            {(row as any)[col.key] ?? '—'}
+          </span>
+        );
+    }
+  };
+
+  return (
+    <>
+      {/* ── 時間回溯按鈕 ── */}
+      <div className="shrink-0 flex gap-[8px] items-center px-[20px] pt-[16px]">
+        {TIME_RANGE_BUTTONS.map(btn => (
+          <button
+            key={btn.value}
+            onClick={() => setTimeRange(btn.value)}
+            className={`h-[32px] px-[16px] rounded-[8px] text-[13px] font-semibold transition-colors font-['Public_Sans:SemiBold',sans-serif] ${
+              timeRange === btn.value
+                ? 'bg-[#1c252e] text-white'
+                : 'bg-[rgba(145,158,171,0.08)] text-[#637381] hover:bg-[rgba(145,158,171,0.16)]'
+            }`}
+          >
+            {btn.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── 搜尋列 ── */}
+      <div className="shrink-0 flex gap-[16px] items-center px-[20px] py-[16px]">
+        {/* 交期類型 */}
+        <div className="flex-1 min-w-0">
+          <DropdownSelect
+            label="交期類型"
+            value={deliveryDateType}
+            onChange={v => setDeliveryDateType(v as DeliveryDateType)}
+            options={DELIVERY_DATE_TYPE_OPTIONS}
+          />
+        </div>
+        {/* 採購組織 */}
+        <div className="flex-1 min-w-0">
+          <DropdownSelect
+            label="採購組織"
+            value={purchaseOrg}
+            onChange={setPurchaseOrg}
+            options={PURCHASE_ORG_OPTIONS}
+          />
+        </div>
+        {/* 供應商 */}
+        <div className="flex-1 min-w-0">
+          <SearchField
+            label="供應商"
+            value={vendorKeyword}
+            onChange={setVendorKeyword}
+            placeholder="名稱或代碼關鍵字"
+          />
+        </div>
+        {/* 料號 */}
+        <div className="flex-1 min-w-0">
+          <SearchField
+            label="料號"
+            value={materialKeyword}
+            onChange={setMaterialKeyword}
+            placeholder="料號關鍵字"
+          />
+        </div>
+      </div>
+
+      {/* ── Toolbar ── */}
+      <TableToolbar
+        resultsCount={filteredData.length}
+        showColumnSelector={showColSelector}
+        showFilterDialog={showFilterDialog}
+        onColumnsClick={() => setShowColSelector(v => !v)}
+        onFiltersClick={() => setShowFilterDialog(v => !v)}
+        onExportCsv={handleExportCsv}
+      />
+
+      {/* ColumnSelector */}
+      {showColSelector && (
+        <ColumnSelector
+          columns={colSelectorItems}
+          onClose={() => setShowColSelector(false)}
+          onChange={updated => {
+            setColumns(prev =>
+              updated
+                .map(u => {
+                  const col = prev.find(c => c.key === u.key);
+                  return col ? { ...col, visible: u.visible } : null;
+                })
+                .filter(Boolean) as ShouldShipCol[]
+            );
+          }}
+        />
+      )}
+
+      {/* FilterDialog */}
+      {showFilterDialog && (
+        <FilterDialog
+          columns={filterColumns}
+          filters={filters}
+          onClose={() => setShowFilterDialog(false)}
+          onApply={f => { setFilters(f); setShowFilterDialog(false); }}
+        />
+      )}
+
+      {/* ── 表格 ── */}
+      <DndProvider backend={HTML5Backend}>
+        <div
+          ref={scrollContainerRef}
+          onMouseDown={handleMouseDown}
+          className={`flex-1 min-h-0 overflow-x-auto overflow-y-auto custom-scrollbar ${canDragScroll ? 'cursor-grab active:cursor-grabbing' : ''}`}
+        >
+          <div style={{ minWidth: `${totalWidth}px` }}>
+            {/* 表頭 */}
+            <div data-table-header="true" className="flex sticky top-0 z-10 border-b border-[rgba(145,158,171,0.08)]">
+              {visibleColumns.map((col, idx) => (
+                <DraggableColumnHeader
+                  key={col.key}
+                  column={col}
+                  index={idx}
+                  dragType={SHOULD_SHIP_DRAG_TYPE}
+                  isLast={idx === visibleColumns.length - 1}
+                  moveColumn={moveColumn}
+                  updateColumnWidth={updateColumnWidth}
+                  autoFitWidth={autoFitWidth}
+                  sortConfig={sortConfig}
+                  onSort={(key) => {
+                    setSortConfig(prev =>
+                      prev.key === key
+                        ? { key, direction: prev.direction === 'asc' ? 'desc' : prev.direction === 'desc' ? null : 'asc' }
+                        : { key, direction: 'asc' }
+                    );
+                  }}
+                />
+              ))}
+            </div>
+
+            {/* 資料列 */}
+            {paginatedData.length === 0 ? (
+              <div className="flex items-center justify-center py-[60px]">
+                <span className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[#919eab] text-[14px]">查無資料</span>
+              </div>
+            ) : (
+              paginatedData.map((row, rowIdx) => (
+                <div
+                  key={row.id}
+                  className={`flex border-b border-[rgba(145,158,171,0.08)] hover:bg-[rgba(145,158,171,0.04)] transition-colors ${rowIdx % 2 === 0 ? '' : 'bg-[rgba(145,158,171,0.02)]'}`}
+                >
+                  {visibleColumns.map((col, colIdx) => (
+                    <div
+                      key={col.key}
+                      style={colIdx === visibleColumns.length - 1 ? { minWidth: col.width, flex: 1 } : { width: col.width }}
+                      className={`flex items-center px-[16px] py-[12px] overflow-hidden ${colIdx < visibleColumns.length - 1 ? 'border-r border-[rgba(145,158,171,0.08)]' : ''}`}
+                    >
+                      {renderCell(col, row)}
+                    </div>
+                  ))}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </DndProvider>
+
+      {/* ── 分頁 ── */}
+      <PaginationControls
+        total={filteredData.length}
+        page={page}
+        rowsPerPage={rowsPerPage}
+        onPageChange={setPage}
+        onRowsPerPageChange={v => { setRowsPerPage(v); setPage(1); }}
+      />
+    </>
   );
 }
 
@@ -764,7 +1384,7 @@ function TabItem({ label, isActive, onClick }: { label: string; isActive: boolea
 // ── 主元件 ────────────────────────────────────────────────────────────────────
 const TABS: { key: ReceivingTab; label: string }[] = [
   { key: 'shipped-not-received',    label: '已出貨未收料' },
-  { key: 'should-ship-not-shipped', label: '應出貨未出貨' },
+  { key: 'should-ship-not-shipped', label: '延遲到貨' },
   { key: 'outsource',               label: '委外加工單狀況' },
 ];
 
@@ -858,7 +1478,7 @@ export function ReceivingInquiryPage() {
           onShipmentDetail={setShipmentDetailRow}
         />
       )}
-      {activeTab === 'should-ship-not-shipped' && <UnderDevelopment title="應出貨未出貨" />}
+      {activeTab === 'should-ship-not-shipped' && <ShouldShipNotShippedTab />}
       {activeTab === 'outsource'               && <UnderDevelopment title="委外加工單狀況" />}
     </div>
   );
