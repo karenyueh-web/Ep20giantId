@@ -4,6 +4,7 @@ import { CheckboxIcon } from './CheckboxIcon';
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
+import { RECEIVING_TABS } from '../config/receivingConfig';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -49,11 +50,7 @@ const FEATURE_TREE: FeatureNode[] = [
           {
             id: 'overview-receiving-tabs',
             label: '列表頁 Tab',
-            children: [
-              { id: 'overview-receiving-tab-shipped', label: '已出貨未收料' },
-              { id: 'overview-receiving-tab-unshipped', label: '應出貨未出貨' },
-              { id: 'overview-receiving-tab-outsource', label: '委外加工單狀況' },
-            ],
+            children: RECEIVING_TABS.map(t => ({ id: t.permId, label: t.label })),
           },
         ],
       },

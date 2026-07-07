@@ -7,6 +7,7 @@
  */
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
+import { RECEIVING_TABS, type ReceivingTabKey } from '../config/receivingConfig';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { useHorizontalDragScroll } from './useHorizontalDragScroll';
@@ -24,7 +25,7 @@ import type { CsvPrefillData } from './ShipmentDetailPage';
 
 // ── 型別 ─────────────────────────────────────────────────────────────────────
 
-type ReceivingTab = 'shipped-not-received' | 'should-ship-not-shipped' | 'outsource';
+type ReceivingTab = ReceivingTabKey;
 
 type RecvColKey =
   | 'company'
@@ -1918,11 +1919,7 @@ function TabItem({ label, isActive, onClick }: { label: string; isActive: boolea
 }
 
 // ── 主元件 ────────────────────────────────────────────────────────────────────
-const TABS: { key: ReceivingTab; label: string }[] = [
-  { key: 'shipped-not-received',    label: '已出貨未收料' },
-  { key: 'should-ship-not-shipped', label: '延遲到貨' },
-  { key: 'outsource',               label: '委外加工單狀況' },
-];
+const TABS = RECEIVING_TABS;
 
 export function ReceivingInquiryPage() {
   const [activeTab, setActiveTab] = useState<ReceivingTab>('shipped-not-received');
