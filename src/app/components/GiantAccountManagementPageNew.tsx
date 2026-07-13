@@ -4,11 +4,13 @@ import { EmployeeAccountSettingPage } from './EmployeeAccountSettingPage';
 import type { PageType } from './MainLayout';
 import { ResponsivePageLayout } from './ResponsivePageLayout';
 import svgPaths from '@/imports/svg-c0egreeez0';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { consumePendingNavUser } from '@/app/config/pendingNavigation';
 import { AdvancedGiantTable, getGiantAccountColumns } from './AdvancedGiantTable';
 import { ColumnSelector } from './ColumnSelector';
 import { FilterDialog, type FilterCondition } from './FilterDialog';
 import { TableToolbar } from './TableToolbar';
+import { getGiantRoles } from '@/app/config/roleStore';
 
 interface GiantAccountManagementPageProps {
   currentPage: PageType;
@@ -131,6 +133,28 @@ const mockGiantAccounts: GiantAccount[] = [
     status: 'active',
     email: 'g00113456@giant.com'
   },
+  {
+    id: '10',
+    account: 'wen011',
+    name: '劉雅雯',
+    role: '',
+    sapAccount: 'wen011',
+    purchaseOrg: '台灣巨大(TW10)',
+    purchaseGroup: '',
+    status: 'active',
+    email: 'wen011@giant.com'
+  },
+  {
+    id: '11',
+    account: 'cheng012',
+    name: '楊偉誠',
+    role: '',
+    sapAccount: 'cheng012',
+    purchaseOrg: '台灣巨大(TW10)',
+    purchaseGroup: '',
+    status: 'active',
+    email: 'cheng012@giant.com'
+  },
 ];
 
 export function GiantAccountManagementPageNew({ 
@@ -180,6 +204,21 @@ export function GiantAccountManagementPageNew({
     setShowEmployeeSetting(false);
     setSelectedEmployee(null);
   };
+
+  // 讀取 pendingNavigation，自動開啟對應員工明細
+  useEffect(() => {
+    const pending = consumePendingNavUser();
+    if (pending && pending.type === 'giant') {
+      const target = mockGiantAccounts.find(
+        a => a.account === pending.account
+          || a.name === pending.userName
+          || a.name.startsWith(pending.userName)
+          || a.name.includes(pending.userName)
+      );
+      if (target) handleAccountClick(target);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Column selector handlers
   const handleToggleColumn = (key: string) => {
@@ -231,7 +270,10 @@ export function GiantAccountManagementPageNew({
   }
 
   // Role / Org options
-  const roleOptions = [...new Set(mockGiantAccounts.map(a => a.role))].map(r => ({ value: r, label: r }));
+  const roleOptions = [
+    { value: '', label: 'All' },
+    ...getGiantRoles().map(r => ({ value: r.label, label: r.label }))
+  ];
   const orgOptions = [...new Set(mockGiantAccounts.map(a => a.purchaseOrg))].map(o => ({ value: o, label: o }));
 
   return (

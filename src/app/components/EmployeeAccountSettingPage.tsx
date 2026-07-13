@@ -6,6 +6,7 @@ import Select from 'react-select';
 import { Trash2, Plus } from 'lucide-react';
 import { MailSettingsTabContent } from './MailSettingsTabContent';
 import { ResponsivePageLayout } from './ResponsivePageLayout';
+import { getGiantRoles } from '@/app/config/roleStore';
 
 interface EmployeeAccountSettingPageProps {
   currentPage: PageType;
@@ -140,6 +141,14 @@ export function EmployeeAccountSettingPage({
   // 採購組織選取狀態
   const [selectedOrganizations, setSelectedOrganizations] = useState<string[]>([]);
 
+  // 巨大角色選取狀態
+  const [selectedGiantRoles, setSelectedGiantRoles] = useState<string[]>([]);
+  const toggleGiantRole = (roleLabel: string) => {
+    setSelectedGiantRoles(prev =>
+      prev.includes(roleLabel) ? prev.filter(r => r !== roleLabel) : [...prev, roleLabel]
+    );
+  };
+
   // 採購群組行
   const [purchaseGroupRows, setPurchaseGroupRows] = useState<PurchaseGroupRow[]>([
     { id: '1', companyCode: '', orgCode: '', groupCode: '' }
@@ -255,6 +264,38 @@ export function EmployeeAccountSettingPage({
                 <button className="bg-[#1c252e] flex gap-[8px] h-[36px] items-center justify-center min-w-[64px] px-[12px] rounded-[8px] w-[130px] hover:bg-[#2c3540] transition-colors cursor-pointer">
                   <p className="font-['Public_Sans:Bold','Noto_Sans_JP:Bold',sans-serif] font-bold leading-[24px] text-[14px] text-white">儲存</p>
                 </button>
+              </div>
+
+              {/* ===== 巨大角色區域 ===== */}
+              <div className="shrink-0">
+                <div className="flex gap-[8px] items-center mb-[16px]">
+                  <p className="font-semibold text-[18px] text-[#212b36]">巨大角色</p>
+                  <p className="text-[14px] text-[#637381]">({selectedGiantRoles.length})</p>
+                </div>
+                <div className="border border-[#919eab] border-solid rounded-[8px] p-[20px]">
+                  <div className="flex flex-wrap gap-[10px] items-center">
+                    {getGiantRoles().map((roleItem) => (
+                      <button
+                        key={roleItem.id}
+                        className={`flex gap-[8px] h-[36px] items-center justify-center min-w-[64px] px-[12px] rounded-[8px] shrink-0 cursor-pointer transition-colors relative ${
+                          selectedGiantRoles.includes(roleItem.label)
+                            ? 'bg-[#004680]'
+                            : 'hover:bg-[#f4f6f8]'
+                        }`}
+                        onClick={() => toggleGiantRole(roleItem.label)}
+                      >
+                        {!selectedGiantRoles.includes(roleItem.label) && (
+                          <div aria-hidden="true" className="absolute border border-[#637381] border-solid inset-0 pointer-events-none rounded-[8px]" />
+                        )}
+                        <p className={`font-bold text-[14px] ${
+                          selectedGiantRoles.includes(roleItem.label) ? 'text-white' : 'text-[#637381]'
+                        }`}>
+                          {roleItem.label}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               {/* ===== 採購組織區域 ===== */}

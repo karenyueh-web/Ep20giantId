@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import svgPaths from "@/imports/svg-d84x18jyny";
 import type { PageType } from './MainLayout';
+import { pageConfig } from '@/app/config/pageConfig';
 import imgImgAvatar25 from "figma:asset/267fe8c99db3e57af5fb08e1bedfbdb0788f011c.png";
 import Settings from "@/imports/Settings";
 import { mockVendorsSuccess, mockVendorsFail } from '@/imports/廠商帳號審核-4007-9767';
@@ -505,63 +506,64 @@ function NavItemMini({ icon, label, isActive, hasSubmenu, onClick }: NavItemMini
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ─── Mini Flyout data ────────────────────────────────────────────────────────
+// label 由 pageConfig.navLabel 提供，改名時只需修改 pageConfig.ts
 const MINI_SUBMENUS: Record<string, { label: string; page?: PageType }[]> = {
   order: [
-    { label: '一般訂單查詢',  page: 'order-list' },
-    { label: '換貨(J)單據查詢',  page: 'order-exchange' },
-    { label: '退貨單據查詢',  page: 'order-return' },
-    { label: '預測訂單查詢',  page: 'order-forecast' },
-    { label: '變更生管排程',  page: 'order-schedule-change' },
-    { label: '歷史訂單查詢',  page: 'order-history' },
+    { label: pageConfig['order-list'].navLabel,             page: 'order-list' },
+    { label: pageConfig['order-exchange'].navLabel,         page: 'order-exchange' },
+    { label: pageConfig['order-return'].navLabel,           page: 'order-return' },
+    { label: pageConfig['order-forecast'].navLabel,         page: 'order-forecast' },
+    { label: pageConfig['order-schedule-change'].navLabel,  page: 'order-schedule-change' },
+    { label: pageConfig['order-history'].navLabel,          page: 'order-history' },
   ],
   correction: [
-    { label: '建立修正單',    page: 'correction-create' },
-    { label: '修正單查詢',    page: 'correction-list' },
-    { label: '歷史修正單',    page: 'correction-history' },
+    { label: pageConfig['correction-create'].navLabel,  page: 'correction-create' },
+    { label: pageConfig['correction-list'].navLabel,    page: 'correction-list' },
+    { label: pageConfig['correction-history'].navLabel, page: 'correction-history' },
   ],
   shipping: [
-    { label: '建立出貨單',    page: 'shipping-create' },
-    { label: '出貨單查詢',    page: 'shipping-list' },
-    { label: '出貨/裝箱明細',page: 'shipping-packing' },
-    { label: '列印單據',      page: 'shipping-print' },
-    { label: '基本設定',      page: 'shipping-settings' },
+    { label: pageConfig['shipping-create'].navLabel,   page: 'shipping-create' },
+    { label: pageConfig['shipping-list'].navLabel,     page: 'shipping-list' },
+    { label: pageConfig['shipping-packing'].navLabel,  page: 'shipping-packing' },
+    { label: pageConfig['shipping-print'].navLabel,    page: 'shipping-print' },
+    { label: pageConfig['shipping-settings'].navLabel, page: 'shipping-settings' },
   ],
   invoice: [
-    { label: '開立發票',      page: 'invoice-create' },
-    { label: '發票查詢',      page: 'invoice-list' },
-    { label: '發票設定',      page: 'invoice-settings' },
+    { label: pageConfig['invoice-create'].navLabel,   page: 'invoice-create' },
+    { label: pageConfig['invoice-list'].navLabel,     page: 'invoice-list' },
+    { label: pageConfig['invoice-settings'].navLabel, page: 'invoice-settings' },
   ],
   parts: [
-    { label: '零件資訊',  page: 'parts-maintain' },
-    { label: '列印報價單',    page: 'parts-quote' },
-    { label: '索樣單',        page: 'parts-sample' },
+    { label: pageConfig['parts-maintain'].navLabel, page: 'parts-maintain' },
+    { label: pageConfig['parts-quote'].navLabel,    page: 'parts-quote' },
+    { label: pageConfig['parts-sample'].navLabel,   page: 'parts-sample' },
   ],
   quality: [
-    { label: '品質異常單',    page: 'quality-abnormal' },
-    { label: '檢驗/測試報告',page: 'quality-report' },
-    { label: '危害物質管理',  page: 'quality-hazard' },
-    { label: '其他設定',      page: 'quality-other' },
+    { label: pageConfig['quality-abnormal'].navLabel, page: 'quality-abnormal' },
+    { label: pageConfig['quality-report'].navLabel,   page: 'quality-report' },
+    { label: pageConfig['quality-hazard'].navLabel,   page: 'quality-hazard' },
+    { label: pageConfig['quality-other'].navLabel,    page: 'quality-other' },
   ],
   newparts: [
-    { label: '新零件專案維護',page: 'newparts-project' },
-    { label: '專案設定',      page: 'newparts-settings' },
+    { label: pageConfig['newparts-project'].navLabel,  page: 'newparts-project' },
+    { label: pageConfig['newparts-settings'].navLabel, page: 'newparts-settings' },
   ],
   esg: [
-    { label: '物料成分總檔',  page: 'esg-material' },
-    { label: '材料維護',      page: 'esg-maintain' },
+    { label: pageConfig['esg-material'].navLabel, page: 'esg-material' },
+    { label: pageConfig['esg-maintain'].navLabel, page: 'esg-maintain' },
   ],
   'shipment-tw': [
-    { label: '訂單查詢',      page: 'shipment-tw-order' },
-    { label: '出貨單查詢',    page: 'shipment-tw-shipping' },
-    { label: '列印外箱貼紙',  page: 'shipment-tw-print' },
+    { label: pageConfig['shipment-tw-order'].navLabel,    page: 'shipment-tw-order' },
+    { label: pageConfig['shipment-tw-shipping'].navLabel, page: 'shipment-tw-shipping' },
+    { label: pageConfig['shipment-tw-print'].navLabel,    page: 'shipment-tw-print' },
   ],
   account: [
-    { label: '廠商帳號管理',  page: 'vendor-account-management' },
-    { label: '巨大帳號管理',  page: 'giant-account-management' },
+    { label: pageConfig['vendor-account-management'].navLabel, page: 'vendor-account-management' },
+    { label: pageConfig['giant-account-management'].navLabel,  page: 'giant-account-management' },
   ],
   system: [
-    { label: '權限設定',      page: 'permission-settings' },
-    { label: '排程設定',      page: 'schedule-settings' },
+    { label: pageConfig['permission-settings'].navLabel, page: 'permission-settings' },
+    { label: pageConfig['schedule-settings'].navLabel,   page: 'schedule-settings' },
   ],
 };
 
@@ -1207,7 +1209,7 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
         {expandedMenus.includes('system') && (
           <div className="w-full">
             <SubMenuItem 
-              label="權限設定" 
+              label="角色權限設定" 
               isActive={currentPage === 'permission-settings'}
               onClick={() => onPageChange('permission-settings')}
               page="permission-settings"

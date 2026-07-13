@@ -5,6 +5,7 @@ import imgImage from "@/assets/login-bg.png";
 import img02GiantGroupLogoWhite2 from "@/assets/giant-logo-white.png";
 import { DropdownSelect } from './DropdownSelect';
 import { useLanguage } from './LanguageContext';
+import { getVendorRoles } from '@/app/config/roleStore';
 
 interface RegisterPageProps {
   onRegisterSuccess?: () => void;
@@ -385,7 +386,7 @@ function Auth({ onRegisterSuccess, onBackToLogin }: AuthProps) {
             onRolesChange={setSelectedRoles}
             error={errors.roles}
             roleLabel={t('register.roleLabel')}
-            roleNames={[t('register.role.sales'), t('register.role.qa'), t('register.role.dev'), t('register.role.subcontractor')]}
+            roleNames={getVendorRoles().map(r => r.label)}
           />
 
           <DropdownSelect

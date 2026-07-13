@@ -36,6 +36,7 @@ import { ForgotPasswordPage } from "@/app/components/ForgotPasswordPage";
 import type { PageType } from '@/app/components/MainLayout';
 import { useIdleTimer } from '@/app/hooks/useIdleTimer';
 import { useState } from 'react';
+import { pageConfig } from '@/app/config/pageConfig';
 import { SidebarProvider } from '@/app/components/SidebarContext';
 import { LanguageProvider } from '@/app/components/LanguageContext';
 import { OrderStoreProvider } from '@/app/components/OrderStoreContext';
@@ -149,8 +150,8 @@ export default function App() {
             onPageChange={handlePageChange}
             onLogout={handleLogout}
             userRole={userRole}
-            title="建立修正單"
-            breadcrumb="修正單管理 • 建立修正單"
+            title={pageConfig['correction-create'].title}
+            breadcrumb={pageConfig['correction-create'].breadcrumb}
           >
             <CorrectionCreatePage userRole={userRole} onNavigateToList={() => handlePageChange('correction-list')} />
           </ResponsivePageLayout>
@@ -162,8 +163,8 @@ export default function App() {
             onPageChange={handlePageChange}
             onLogout={handleLogout}
             userRole={userRole}
-            title="修正單查詢"
-            breadcrumb="修正單管理 • 修正單查詢"
+            title={pageConfig['correction-list'].title}
+            breadcrumb={pageConfig['correction-list'].breadcrumb}
           >
             <CorrectionListWithTabs userRole={userRole} />
           </ResponsivePageLayout>
@@ -175,8 +176,8 @@ export default function App() {
             onPageChange={handlePageChange}
             onLogout={handleLogout}
             userRole={userRole}
-            title="歷史修正單"
-            breadcrumb="修正單管理 • 歷史修正單"
+            title={pageConfig['correction-history'].title}
+            breadcrumb={pageConfig['correction-history'].breadcrumb}
           >
             <HistoryCorrectionListPage userRole={userRole} />
           </ResponsivePageLayout>
@@ -196,8 +197,8 @@ export default function App() {
             onPageChange={handlePageChange}
             onLogout={handleLogout}
             userRole={userRole}
-            title="收料查詢"
-            breadcrumb="Overview • 收料查詢"
+            title={pageConfig['receiving-inquiry'].title}
+            breadcrumb={pageConfig['receiving-inquiry'].breadcrumb}
           >
             <ReceivingInquiryPage />
           </ResponsivePageLayout>
@@ -209,8 +210,8 @@ export default function App() {
             onPageChange={handlePageChange}
             onLogout={handleLogout}
             userRole={userRole}
-            title="排程總表查詢"
-            breadcrumb=""
+            title={pageConfig['schedule-inquiry'].title}
+            breadcrumb={pageConfig['schedule-inquiry'].breadcrumb}
           >
             <OrderScheduleInquiryPage userRole={userRole} />
           </ResponsivePageLayout>
@@ -223,8 +224,8 @@ export default function App() {
             onPageChange={handlePageChange}
             onLogout={handleLogout}
             userRole={userRole}
-            title="建立出貨單"
-            breadcrumb="出貨單 • 建立出貨單"
+            title={pageConfig['shipping-create'].title}
+            breadcrumb={pageConfig['shipping-create'].breadcrumb}
           >
             <ShipmentCreatePage userRole={userRole} />
           </ResponsivePageLayout>
@@ -237,8 +238,8 @@ export default function App() {
             onPageChange={handlePageChange}
             onLogout={handleLogout}
             userRole={userRole}
-            title="出貨單查詢"
-            breadcrumb="出貨單 • 出貨單查詢"
+            title={pageConfig['shipping-list'].title}
+            breadcrumb={pageConfig['shipping-list'].breadcrumb}
           >
             <ShipmentListPage />
           </ResponsivePageLayout>
@@ -251,8 +252,8 @@ export default function App() {
             onPageChange={handlePageChange}
             onLogout={handleLogout}
             userRole={userRole}
-            title="出貨/裝箱明細"
-            breadcrumb="出貨單 • 出貨/裝箱明細"
+            title={pageConfig['shipping-packing'].title}
+            breadcrumb={pageConfig['shipping-packing'].breadcrumb}
           >
             <ShipmentShippingInquiryPage />
           </ResponsivePageLayout>
@@ -265,8 +266,8 @@ export default function App() {
             onPageChange={handlePageChange}
             onLogout={handleLogout}
             userRole={userRole}
-            title="基本設定"
-            breadcrumb="出貨單 • 基本設定"
+            title={pageConfig['shipping-settings'].title}
+            breadcrumb={pageConfig['shipping-settings'].breadcrumb}
           >
             <ShippingBasicSettingsPage />
           </ResponsivePageLayout>
@@ -279,8 +280,8 @@ export default function App() {
             onPageChange={handlePageChange}
             onLogout={handleLogout}
             userRole={userRole}
-            title="列印單據"
-            breadcrumb="出貨單 • 列印單據"
+            title={pageConfig['shipping-print'].title}
+            breadcrumb={pageConfig['shipping-print'].breadcrumb}
           >
             <ShipmentPrintDocPage />
           </ResponsivePageLayout>
@@ -292,8 +293,8 @@ export default function App() {
             onPageChange={handlePageChange}
             onLogout={handleLogout}
             userRole={userRole}
-            title="發票設定"
-            breadcrumb="發票作業 • 發票設定"
+            title={pageConfig['invoice-settings'].title}
+            breadcrumb={pageConfig['invoice-settings'].breadcrumb}
           >
             <InvoiceSettingsPage />
           </ResponsivePageLayout>
@@ -306,8 +307,8 @@ export default function App() {
               onPageChange={handlePageChange}
               onLogout={handleLogout}
               userRole={userRole}
-              title="開立發票"
-              breadcrumb="發票作業 • 開立發票"
+              title={pageConfig['invoice-create'].title}
+              breadcrumb={pageConfig['invoice-create'].breadcrumb}
             >
               <InvoiceDetailPage
                 selectedRows={invoiceDetail.rows}
@@ -330,8 +331,8 @@ export default function App() {
             onPageChange={handlePageChange}
             onLogout={handleLogout}
             userRole={userRole}
-            title="開立發票"
-            breadcrumb="發票作業 • 開立發票"
+            title={pageConfig['invoice-create'].title}
+            breadcrumb={pageConfig['invoice-create'].breadcrumb}
           >
             <InvoiceCreatePage onOpenDetail={(rows, bondedType, currency) => setInvoiceDetail({ rows, bondedType, currency })} />
           </ResponsivePageLayout>
@@ -345,7 +346,7 @@ export default function App() {
               onLogout={handleLogout}
               userRole={userRole}
               title="發票明細"
-              breadcrumb="發票作業 • 發票查詢 • 發票明細"
+              breadcrumb={`${pageConfig['invoice-list'].breadcrumb} • 發票明細`}
             >
               <InvoiceDetailPage
                 selectedRows={[]}
@@ -371,8 +372,8 @@ export default function App() {
             onPageChange={handlePageChange}
             onLogout={handleLogout}
             userRole={userRole}
-            title="發票查詢"
-            breadcrumb="發票作業 • 發票查詢"
+            title={pageConfig['invoice-list'].title}
+            breadcrumb={pageConfig['invoice-list'].breadcrumb}
           >
             <InvoiceListPage onViewInvoice={(record) => setViewingInvoice(record)} />
           </ResponsivePageLayout>
@@ -402,8 +403,8 @@ export default function App() {
             onPageChange={handlePageChange}
             onLogout={handleLogout}
             userRole={userRole}
-            title="物料成分總檔"
-            breadcrumb="ESG • 物料成分總檔"
+            title={pageConfig['esg-material'].title}
+            breadcrumb={pageConfig['esg-material'].breadcrumb}
           >
             <EsgMaterialSummaryPage userRole={userRole} />
           </ResponsivePageLayout>
@@ -415,8 +416,8 @@ export default function App() {
             onPageChange={handlePageChange}
             onLogout={handleLogout}
             userRole={userRole}
-            title="材料維護"
-            breadcrumb="ESG • 材料維護"
+            title={pageConfig['esg-maintain'].title}
+            breadcrumb={pageConfig['esg-maintain'].breadcrumb}
           >
             <EsgMaterialPage userRole={userRole} />
           </ResponsivePageLayout>
@@ -428,8 +429,8 @@ export default function App() {
             onPageChange={handlePageChange}
             onLogout={handleLogout}
             userRole={userRole}
-            title="列印報價單"
-            breadcrumb="零件/索樣 • 列印報價單"
+            title={pageConfig['parts-quote'].title}
+            breadcrumb={pageConfig['parts-quote'].breadcrumb}
           >
             <QuotationPrintListPage userRole={userRole} />
           </ResponsivePageLayout>
@@ -441,8 +442,8 @@ export default function App() {
             onPageChange={handlePageChange}
             onLogout={handleLogout}
             userRole={userRole}
-            title="索樣單"
-            breadcrumb="零件/索樣 • 索樣單"
+            title={pageConfig['parts-sample'].title}
+            breadcrumb={pageConfig['parts-sample'].breadcrumb}
           >
             <SampleOrderListPage userRole={userRole} />
           </ResponsivePageLayout>
@@ -463,8 +464,8 @@ export default function App() {
             onPageChange={handlePageChange}
             onLogout={handleLogout}
             userRole={userRole}
-            title="廠商評價"
-            breadcrumb="廠商評價 • 交貨準時率"
+            title={pageConfig['vendor-evaluation'].title}
+            breadcrumb={pageConfig['vendor-evaluation'].breadcrumb}
           >
             <VendorEvaluationPage />
           </ResponsivePageLayout>

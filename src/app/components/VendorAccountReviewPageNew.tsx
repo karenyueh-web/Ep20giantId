@@ -1,5 +1,6 @@
 import AccountApplicationDetail from '@/imports/帳號申請明細';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { consumePendingNavUser } from '@/app/config/pendingNavigation';
 import type { PageType } from './MainLayout';
 import type { UserRole } from '@/app/App';
 import { VendorReviewTable } from './VendorReviewTable';
@@ -7,6 +8,7 @@ import { mockVendorsSuccess, mockVendorsFail } from '@/imports/廠商帳號審�
 import svgPaths from '@/imports/svg-2bvk7xkhar';
 import { DropdownSelect } from './DropdownSelect';
 import { ResponsivePageLayout } from './ResponsivePageLayout';
+import { getVendorRoles } from '@/app/config/roleStore';
 
 interface VendorAccountReviewPageProps {
   currentPage: PageType;
@@ -412,6 +414,20 @@ export function VendorAccountReviewPageNew({
     setShowOverlay(true);
   };
 
+  // 讀取 pendingNavigation，自動開啟對應廠商 Overlay
+  useEffect(() => {
+    const pending = consumePendingNavUser();
+    if (pending && pending.type === 'vendor') {
+      // 以 email(帳號) 或名稱匹配
+      const allVendors = [...mockVendorsSuccess, ...mockVendorsFail];
+      const target = allVendors.find(
+        v => v.email === pending.account || v.name === pending.userName
+      );
+      if (target) handleVendorClick(target.name);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleTabChange = (tab: 'success' | 'fail') => {
     setActiveTab(tab);
     setSelectedRole('');
@@ -510,10 +526,7 @@ export function VendorAccountReviewPageNew({
                   onChange={(value) => setSelectedRole(value)}
                   options={[
                     { value: '', label: 'All' },
-                    { value: '業務', label: '業務' },
-                    { value: '品保', label: '品保' },
-                    { value: '下包商', label: '下包商' },
-                    { value: '開發人員', label: '開發人員' }
+                    ...getVendorRoles().map(r => ({ value: r.label, label: r.label }))
                   ]}
                   placeholder=""
                   searchable={true}

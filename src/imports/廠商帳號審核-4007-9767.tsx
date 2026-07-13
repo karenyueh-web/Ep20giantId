@@ -8,6 +8,7 @@ export const mockVendorsSuccess = [
   { id: 3, name: '陳先生', status: 'SS', company: '愛爾蘭商速聯股份有限公司台灣分公司', epCode: '0001000460', axCode: '109010', role: '業務', email: 'mchao@sram.com', time: '2025/10/10 00:00' },
   { id: 6, name: '張品保', status: 'SS', company: '品質精工股份有限公司', epCode: '0001000789', axCode: '109012', role: '品保', email: 'zhang@example.com', time: '2025/10/09 00:00' },
   { id: 7, name: '李下包', status: 'SS', company: '下游製造股份有限公司', epCode: '0001000890', axCode: '', role: '下包商', email: 'li@example.com', time: '2025/10/08 00:00' },
+  { id: 8, name: 'David Kao', status: 'SS', company: 'ABC科技', epCode: '0001000999', axCode: '', role: '', email: 'david@abc.com', time: '2025/10/07 00:00' },
 ];
 
 export const mockVendorsFail = [

@@ -2,6 +2,7 @@ import svgPaths from "@/imports/svg-ktc85z3o0g";
 import { useState } from "react";
 import Select from 'react-select';
 import { Trash2, Plus } from 'lucide-react';
+import { getVendorRoles } from '@/app/config/roleStore';
 
 interface SalesAccountDetailOverlayProps {
   email: string;
@@ -45,7 +46,7 @@ interface PurchaseGroupRow {
 
 export function SalesAccountDetailOverlay({ email, name, code, vendorName, onClose, onSave, initialData }: SalesAccountDetailOverlayProps) {
   // 狀態管理：選中的角色和組織
-  const [selectedRoles, setSelectedRoles] = useState<string[]>(initialData?.roles || ['業務']);
+  const [selectedRoles, setSelectedRoles] = useState<string[]>(initialData?.roles ?? []);
   const [selectedOrganizations, setSelectedOrganizations] = useState<string[]>(initialData?.organizations || []);
   
   // 採購群組行數據 - 確保至少有一筆資料
@@ -265,23 +266,23 @@ export function SalesAccountDetailOverlay({ email, name, code, vendorName, onClo
             {/* 角色按鈕組 */}
             <div className="border border-[#919eab] border-solid rounded-[8px] p-[20px]">
               <div className="flex gap-[10px] items-center">
-                {['業務', '品保', '下包商', '業務人員'].map((role) => (
+                {getVendorRoles().map((roleItem) => (
                   <button
-                    key={role}
+                    key={roleItem.id}
                     className={`flex gap-[8px] h-[36px] items-center justify-center min-w-[64px] px-[12px] rounded-[8px] shrink-0 cursor-pointer transition-colors relative ${
-                      selectedRoles.includes(role)
+                      selectedRoles.includes(roleItem.label)
                         ? 'bg-[#004680]'
                         : 'hover:bg-[#f4f6f8]'
                     }`}
-                    onClick={() => toggleRole(role)}
+                    onClick={() => toggleRole(roleItem.label)}
                   >
-                    {!selectedRoles.includes(role) && (
+                    {!selectedRoles.includes(roleItem.label) && (
                       <div aria-hidden="true" className="absolute border border-[#637381] border-solid inset-0 pointer-events-none rounded-[8px]" />
                     )}
                     <p className={`font-['Public_Sans:Bold','Noto_Sans_JP:Bold',sans-serif] font-bold leading-[24px] text-[14px] ${
-                      selectedRoles.includes(role) ? 'text-white' : 'text-[#637381]'
+                      selectedRoles.includes(roleItem.label) ? 'text-white' : 'text-[#637381]'
                     }`}>
-                      {role}
+                      {roleItem.label}
                     </p>
                   </button>
                 ))}

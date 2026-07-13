@@ -1,10 +1,33 @@
 import { ResponsivePageLayout } from './ResponsivePageLayout';
 import type { PageType } from './MainLayout';
+import { pageConfig } from '@/app/config/pageConfig';
 import { CheckboxIcon } from './CheckboxIcon';
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { RECEIVING_TABS } from '../config/receivingConfig';
+import {
+  loadRoleSections as storeLoadRoleSections,
+  saveRoleSections,
+  addRole as storeAddRole,
+  roleExists,
+  checkGACRoleExists,
+  fetchGACRoles,
+  type RoleSection as StoreRoleSection,
+} from '@/app/config/roleStore';
+import {
+  getRoleUserCount,
+  getUsersByRole,
+  getUsersWithoutRole,
+  hasUsersWithoutRole,
+  clearRoleFromAllUsers,
+  loadSyncAlerts,
+  saveSyncAlerts,
+  clearSyncAlerts,
+  type UserRoleRecord,
+  type SyncAlert,
+} from '@/app/config/userRoleStore';
+import { setPendingNavUser } from '@/app/config/pendingNavigation';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -372,7 +395,7 @@ const FEATURE_TREE: FeatureNode[] = [
         id: 'mgmt-system',
         label: '系統設定',
         children: [
-          { id: 'mgmt-system-permission', label: '權限設定' },
+          { id: 'mgmt-system-permission', label: pageConfig['permission-settings'].navLabel },
           { id: 'mgmt-system-schedule', label: '排程設定' },
         ],
       },
@@ -382,43 +405,50 @@ const FEATURE_TREE: FeatureNode[] = [
 
 // ─── Role Data ───────────────────────────────────────────────────────────────
 
+// INITIAL_ROLE_SECTIONS 保留為 fallback，實際資料來自 roleStore
 const INITIAL_ROLE_SECTIONS: RoleSection[] = [
   {
     title: '巨大',
     dotColor: '#005eb8',
     roles: [
-      { id: 'giant-gtm-purchase', label: 'GTM採購' },
+      { id: 'giant-gtm-purchase',   label: 'GTM採購' },
       { id: 'giant-other-purchase', label: '其它區採購' },
       { id: 'giant-youth-purchase', label: '幼獅採購' },
-      { id: 'giant-gtm-warehouse', label: 'GTM倉儲' },
-      { id: 'giant-bulk-purchase', label: '整採' },
-      { id: 'giant-qa', label: '品保' },
-      { id: 'giant-developer', label: '開發人員' },
+      { id: 'giant-gtm-warehouse',  label: 'GTM倉儲' },
+      { id: 'giant-bulk-purchase',  label: '整採' },
+      { id: 'giant-qa',             label: '品保' },
+      { id: 'giant-developer',      label: '開發人員' },
       { id: 'giant-gtm-production', label: 'GTM生管' },
-      { id: 'giant-finance', label: '財務' },
-      { id: 'giant-it', label: 'IT' },
+      { id: 'giant-finance',        label: '財務' },
+      { id: 'giant-it',             label: 'IT' },
     ],
   },
   {
     title: '廠商',
     dotColor: '#22c55e',
     roles: [
-      { id: 'vendor-sales', label: '業務' },
-      { id: 'vendor-qa', label: '品保' },
+      { id: 'vendor-sales',         label: '業務' },
+      { id: 'vendor-qa',            label: '品保' },
       { id: 'vendor-subcontractor', label: '下包商' },
-      { id: 'vendor-developer', label: '開發人員' },
+      { id: 'vendor-developer',     label: '開發人員' },
     ],
   },
 ];
 
 const ROLE_ORDER_STORAGE_KEY = 'permission-role-order';
 
+/**
+ * 載入角色清單：優先從 roleStore（包含動態新增的角色），
+ * 再以 ROLE_ORDER_STORAGE_KEY 排序視同每個 section 的角色順序。
+ */
 function loadRoleSections(): RoleSection[] {
+  // 從 roleStore 取得完整角色序列（含動態新增）
+  const basesections = storeLoadRoleSections() as RoleSection[];
   try {
     const stored = localStorage.getItem(ROLE_ORDER_STORAGE_KEY);
     if (stored) {
       const orderMap = JSON.parse(stored) as Record<string, string[]>;
-      return INITIAL_ROLE_SECTIONS.map((section) => {
+      return basesections.map((section) => {
         const savedOrder = orderMap[section.title];
         if (!savedOrder) return section;
         const sorted = [...section.roles].sort((a, b) => {
@@ -433,7 +463,7 @@ function loadRoleSections(): RoleSection[] {
       });
     }
   } catch { /* ignore */ }
-  return INITIAL_ROLE_SECTIONS;
+  return basesections;
 }
 
 function saveRoleOrder(sections: RoleSection[]) {
@@ -716,6 +746,119 @@ export function PermissionSettingsPage({
     });
   }, []);
 
+  // ── 新增角色 Dialog state ──────────────────────────────────────────────────
+  const [showAddRoleDialog, setShowAddRoleDialog] = useState(false);
+  const [showAlertModal, setShowAlertModal] = useState(false);
+  const [addRoleStep, setAddRoleStep] = useState<1 | 2 | 3>(1); // 1=選類型 2=輸入名稱 3=二次確認
+  const [addRoleType, setAddRoleType] = useState<'巨大' | '廠商'>('巨大');
+  const [addRoleName, setAddRoleName] = useState('');
+  const [addRoleLoading, setAddRoleLoading] = useState(false);
+  const [addRoleError, setAddRoleError] = useState('');
+  const [addRoleGacError, setAddRoleGacError] = useState('');
+
+  const handleAddRoleOpen = () => {
+    setAddRoleStep(1);
+    setAddRoleType('巨大');
+    setAddRoleName('');
+    setAddRoleError('');
+    setAddRoleGacError('');
+    setShowAddRoleDialog(true);
+  };
+
+  const handleAddRoleNameChange = (val: string) => {
+    setAddRoleName(val);
+    setAddRoleError(roleExists(val, addRoleType) ? '此角色名稱在該分類中已存在' : '');
+  };
+
+  // 新流程：Step2 確認 → 檢查重複 → 查 GAC → 建立 or 警示
+  const handleStep2Confirm = async () => {
+    if (!addRoleName.trim() || addRoleError) return;
+    setAddRoleLoading(true);
+    setAddRoleGacError('');
+    // 2. 背景查 GAC
+    const ok = await checkGACRoleExists(addRoleName, addRoleType);
+    setAddRoleLoading(false);
+    if (ok) {
+      // 3. GAC 有此角色 → 建立並觸發同步
+      const newId = `${addRoleType === '巨大' ? 'giant' : 'vendor'}-${addRoleName}-${Date.now()}`;
+      storeAddRole(addRoleType, addRoleName, newId);
+      setRoleSections(loadRoleSections());
+      setSelectedRoleId(newId);
+      setShowAddRoleDialog(false);
+      setSaveMessage(`角色「${addRoleName}」已建立`);
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = setTimeout(() => setSaveMessage(''), 3000);
+      // 觸發同步
+      handleSyncGAC();
+    } else {
+      // 4. GAC 沒有 → 顯示警示頁
+      setAddRoleStep(3);
+    }
+  };
+
+
+  // ── 角色人數 Modal state ────────────────────────────────────────────────────
+  const [roleUserModal, setRoleUserModal] = useState<{ roleId: string; roleLabel: string } | null>(null);
+  const [roleModalTab, setRoleModalTab] = useState<'giant' | 'vendor'>('giant');
+  const roleModalUsers = roleUserModal ? getUsersByRole(roleUserModal.roleId) : [];
+
+
+  // ── GAC 同步 Banner state ───────────────────────────────────────────────────
+  const [syncAlerts, setSyncAlerts] = useState<SyncAlert[]>(() => loadSyncAlerts());
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState('');
+  const [noRoleUsersExpanded, setNoRoleUsersExpanded] = useState(false);
+  const noRoleUsers = getUsersWithoutRole();
+  const canCloseBanner = syncAlerts.length > 0 && !hasUsersWithoutRole();
+
+  const handleSyncGAC = async () => {
+    setIsSyncing(true);
+    setSyncMessage('');
+    const gacRoles = await fetchGACRoles();
+    const sections = loadRoleSections();
+    const newAlerts: SyncAlert[] = [];
+    sections.forEach(section => {
+      section.roles.forEach(role => {
+        const stillExists = gacRoles.some(
+          g => g.name === role.label && g.type === section.title
+        );
+        if (!stillExists) {
+          const affectedUsers = clearRoleFromAllUsers(role.id);
+          if (affectedUsers.length > 0) {
+            newAlerts.push({
+              roleLabel: role.label,
+              roleType: section.title,
+              affectedCount: affectedUsers.length,
+              affectedUsers: affectedUsers.map(u => ({
+                userId: u.userId, userName: u.userName,
+                account: u.account, type: u.type, companyName: u.companyName
+              }))
+            });
+          }
+        }
+      });
+    });
+    if (newAlerts.length > 0) {
+      saveSyncAlerts(newAlerts);
+      setSyncAlerts(newAlerts);
+      setShowAlertModal(true);
+    } else {
+      setSyncMessage('已同步，無差異');
+      setTimeout(() => setSyncMessage(''), 3000);
+    }
+    setIsSyncing(false);
+  };
+
+
+  const handleCloseBanner = () => {
+    if (!canCloseBanner) return;
+    clearSyncAlerts();
+    setSyncAlerts([]);
+    setNoRoleUsersExpanded(false);
+  };
+
+
+
   // Load permissions from localStorage when role changes
   useEffect(() => {
     const key = `permission-settings-${selectedRoleId}`;
@@ -803,34 +946,61 @@ export function PermissionSettingsPage({
       onPageChange={onPageChange}
       onLogout={onLogout}
       userRole={userRole}
-      title="權限設定"
-      breadcrumb="系統設定 • 權限設定"
+      title={pageConfig['permission-settings'].title}
+      breadcrumb={pageConfig['permission-settings'].breadcrumb}
     >
       {/* Wrapper to fill content area */}
       <div className="flex flex-col h-full" style={{ minHeight: 'calc(100vh - 180px)' }}>
+
       <DndProvider backend={HTML5Backend}>
       {/* Main card */}
       <div className="bg-white rounded-[16px] shadow-[0px_0px_2px_0px_rgba(145,158,171,0.2),0px_12px_24px_-4px_rgba(145,158,171,0.12)] flex flex-1 min-h-0 overflow-hidden">
-        {/* ── LEFT PANEL: Role Selector ── */}
-        <div className="w-[280px] shrink-0 flex flex-col border-r border-[rgba(145,158,171,0.12)]">
+        {/* ── LEFT PANEL: Role Selector (2-column layout) ── */}
+        <div className="w-[480px] shrink-0 flex flex-col border-r border-[rgba(145,158,171,0.12)]">
           {/* Header */}
-          <div className="shrink-0 h-[56px] flex items-center px-[20px] border-b border-[rgba(145,158,171,0.12)]">
-            <h3 className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[16px] leading-[24px] text-[#1c252e]">
-              角色選擇
-            </h3>
+          <div className="shrink-0 h-[56px] flex items-center justify-between px-[20px] border-b border-[rgba(145,158,171,0.12)]">
+            <div className="flex items-center gap-[8px]">
+              <h3 className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[16px] leading-[24px] text-[#1c252e]">
+                角色選擇
+              </h3>
+              {/* 警示 icon：有問題才顯示 */}
+              {(syncAlerts.length > 0 || noRoleUsers.length > 0) && (
+                <button
+                  onClick={() => setShowAlertModal(true)}
+                  className="relative w-[22px] h-[22px] flex items-center justify-center rounded-full bg-[#ff4842] hover:bg-[#d32f2f] transition-colors"
+                  title="查看角色警示">
+                  <svg width="10" height="14" viewBox="0 0 10 14" fill="none">
+                    <rect x="3.5" y="0" width="3" height="8.5" rx="1.5" fill="white"/>
+                    <rect x="3.5" y="11" width="3" height="3" rx="1.5" fill="white"/>
+                  </svg>
+                  {/* 閃爍動畫圈 */}
+                  <span className="absolute inset-0 rounded-full bg-[#ff4842] animate-ping opacity-40" />
+                </button>
+              )}
+            </div>
+            {/* 同步 GAC 按鈕 */}
+            <button
+              onClick={handleSyncGAC}
+              disabled={isSyncing}
+              className="text-[12px] text-[#004680] hover:text-[#002d5a] font-medium underline disabled:opacity-50"
+            >
+              {isSyncing ? '同步中…' : '同步 GAC'}
+            </button>
+
+
           </div>
 
-          {/* Role list */}
-          <div className="flex-1 overflow-y-auto custom-scrollbar">
+          {/* Two-column role list */}
+          <div className="flex flex-1 min-h-0 overflow-hidden">
             {roleSections.map((section, sIdx) => (
-              <div key={section.title}>
-                {/* Section divider (between sections) */}
-                {sIdx > 0 && (
-                  <div className="mx-[16px] border-t border-[rgba(145,158,171,0.12)]" />
-                )}
-
+              <div
+                key={section.title}
+                className={`flex flex-col flex-1 min-w-0 overflow-hidden ${
+                  sIdx > 0 ? 'border-l border-[rgba(145,158,171,0.12)]' : ''
+                }`}
+              >
                 {/* Section header */}
-                <div className="flex items-center gap-[8px] px-[20px] pt-[16px] pb-[8px]">
+                <div className="shrink-0 flex items-center gap-[8px] px-[16px] pt-[14px] pb-[10px]">
                   <div
                     className="w-[8px] h-[8px] rounded-full shrink-0"
                     style={{ backgroundColor: section.dotColor }}
@@ -840,22 +1010,55 @@ export function PermissionSettingsPage({
                   </span>
                 </div>
 
-                {/* Draggable Roles */}
-                {section.roles.map((role, rIdx) => (
-                  <DraggableRoleItem
-                    key={role.id}
-                    role={role}
-                    index={rIdx}
-                    sectionTitle={section.title}
-                    isSelected={role.id === selectedRoleId}
-                    onSelect={() => setSelectedRoleId(role.id)}
-                    onMoveRole={handleMoveRole}
-                  />
-                ))}
+                {/* Scrollable roles */}
+                <div className="flex-1 overflow-y-auto custom-scrollbar">
+                  {section.roles.map((role, rIdx) => {
+                    const count = getRoleUserCount(role.id);
+                    return (
+                      <div key={role.id} className="flex items-center pr-[8px]">
+                        <div className="flex-1 min-w-0">
+                          <DraggableRoleItem
+                            role={role}
+                            index={rIdx}
+                            sectionTitle={section.title}
+                            isSelected={role.id === selectedRoleId}
+                            onSelect={() => setSelectedRoleId(role.id)}
+                            onMoveRole={handleMoveRole}
+                          />
+                        </div>
+                        {count > 0 && (
+                          <button
+                            onClick={() => {
+                              const users = getUsersByRole(role.id);
+                              const hasGiant = users.some(u => u.type === 'giant');
+                              setRoleUserModal({ roleId: role.id, roleLabel: role.label });
+                              setRoleModalTab(hasGiant ? 'giant' : 'vendor');
+                            }}
+                            className="shrink-0 min-w-[32px] h-[24px] flex items-center justify-center text-[13px] font-semibold text-[#005eb8] hover:underline hover:bg-[#e8f4fd] rounded-[4px] px-[4px] transition-colors"
+                          >
+                            {count}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             ))}
           </div>
+
+          {/* + 新增角色 按鈕 */}
+          <div className="shrink-0 p-[12px] border-t border-[rgba(145,158,171,0.12)]">
+            <button
+              onClick={handleAddRoleOpen}
+              className="w-full flex items-center justify-center gap-[6px] py-[8px] rounded-[8px] text-[13px] font-medium text-[#004680] border border-[#004680] hover:bg-[#e8f4fd] transition-colors"
+            >
+              <span className="text-[16px] leading-none">+</span>
+              新增角色
+            </button>
+          </div>
         </div>
+
 
         {/* ── RIGHT PANEL: Permission Tree ── */}
         <div className="flex-1 flex flex-col min-w-0">
@@ -912,6 +1115,332 @@ export function PermissionSettingsPage({
       </div>
       </DndProvider>
       </div>
+
+      {/* ── 新增角色 Dialog ── */}
+      {showAddRoleDialog && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-[16px] shadow-2xl w-[420px] max-w-[calc(100vw-32px)] p-[32px]">
+            {/* Step 1：選擇角色類型 */}
+            {addRoleStep === 1 && (
+              <>
+                <h2 className="font-semibold text-[18px] text-[#1c252e] mb-[8px]">新增角色</h2>
+                <p className="text-[14px] text-[#637381] mb-[24px]">請選擇要新增的角色類型</p>
+                <div className="flex gap-[12px] mb-[24px]">
+                  {(['巨大', '廠商'] as const).map(t => (
+                    <button
+                      key={t}
+                      onClick={() => setAddRoleType(t)}
+                      className={`flex-1 py-[16px] rounded-[12px] border-2 font-semibold text-[15px] transition-colors ${
+                        addRoleType === t
+                          ? 'border-[#004680] bg-[#e8f4fd] text-[#004680]'
+                          : 'border-[#dfe3e8] text-[#637381] hover:bg-[#f4f6f8]'
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex gap-[12px] justify-end">
+                  <button onClick={() => setShowAddRoleDialog(false)} className="px-[20px] py-[8px] rounded-[8px] border border-[#dfe3e8] text-[#637381] text-[14px] hover:bg-[#f4f6f8]">取消</button>
+                  <button onClick={() => setAddRoleStep(2)} className="px-[20px] py-[8px] rounded-[8px] bg-[#004680] text-white text-[14px] hover:bg-[#002d5a]">下一步</button>
+                </div>
+              </>
+            )}
+
+            {/* Step 2：輸入角色名稱 */}
+            {addRoleStep === 2 && (
+              <>
+                <h2 className="font-semibold text-[18px] text-[#1c252e] mb-[4px]">新增{addRoleType}角色</h2>
+                <p className="text-[13px] text-[#637381] mb-[20px]">輸入角色名稱（同分類中不可重複）</p>
+                <div className="mb-[20px]">
+                  <label className="block text-[13px] font-medium text-[#1c252e] mb-[6px]">角色名稱</label>
+                  <input
+                    type="text"
+                    value={addRoleName}
+                    onChange={e => handleAddRoleNameChange(e.target.value)}
+                    placeholder="請輸入角色名稱"
+                    className={`w-full px-[12px] py-[10px] rounded-[8px] border text-[14px] outline-none transition-colors ${
+                      addRoleError ? 'border-[#ff4842] focus:border-[#ff4842]' : 'border-[#dfe3e8] focus:border-[#004680]'
+                    }`}
+                    autoFocus
+                  />
+                  {addRoleError && <p className="text-[12px] text-[#ff4842] mt-[4px]">{addRoleError}</p>}
+                  {addRoleGacError && <p className="text-[12px] text-[#ff4842] mt-[4px]">{addRoleGacError}</p>}
+                </div>
+                <div className="flex gap-[12px] justify-between">
+                  <button onClick={() => setAddRoleStep(1)} className="px-[16px] py-[8px] rounded-[8px] border border-[#dfe3e8] text-[#637381] text-[14px] hover:bg-[#f4f6f8]">上一步</button>
+                  <div className="flex gap-[8px]">
+                    <button onClick={() => setShowAddRoleDialog(false)} className="px-[16px] py-[8px] rounded-[8px] border border-[#dfe3e8] text-[#637381] text-[14px] hover:bg-[#f4f6f8]">取消</button>
+                  <button
+                      onClick={handleStep2Confirm}
+                      disabled={!addRoleName.trim() || !!addRoleError || addRoleLoading}
+                      className="px-[20px] py-[8px] rounded-[8px] bg-[#004680] text-white text-[14px] hover:bg-[#002d5a] disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-[8px]"
+                    >
+                      {addRoleLoading && <span className="w-[14px] h-[14px] border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                      {addRoleLoading ? 'GAC 驗證中…' : '確認'}
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Step 3：GAC 沒有此角色 — 警示頁 */}
+            {addRoleStep === 3 && (
+              <>
+                <div className="flex items-center gap-[10px] mb-[16px]">
+                  <div className="w-[36px] h-[36px] flex items-center justify-center rounded-full bg-[#fff7ed] shrink-0">
+                    <span className="text-[20px]">⚠️</span>
+                  </div>
+                  <h2 className="font-semibold text-[18px] text-[#1c252e]">請至 GAC 增加角色 Attribute</h2>
+                </div>
+                <p className="text-[14px] text-[#637381] mb-[4px]">您想建立的角色：</p>
+                <p className="text-[16px] font-semibold text-[#004680] mb-[16px]">「{addRoleName}」（{addRoleType}）</p>
+                <div className="bg-[#fff7ed] border border-[#fed7aa] rounded-[10px] p-[16px] mb-[24px]">
+                  <p className="text-[13px] font-semibold text-[#9a3412] mb-[6px]">此角色尚未在 GAC 建立 Attribute</p>
+                  <p className="text-[13px] text-[#9a3412]">請至 <strong>GAC 系統</strong>建立「{addRoleName}」的 Attribute 後，再回來重新嘗試建立。</p>
+                </div>
+                <div className="flex gap-[12px] justify-between">
+                  <button onClick={() => setAddRoleStep(2)} className="px-[16px] py-[8px] rounded-[8px] border border-[#dfe3e8] text-[#637381] text-[14px] hover:bg-[#f4f6f8]">返回修改</button>
+                  <button onClick={() => setShowAddRoleDialog(false)} className="px-[20px] py-[8px] rounded-[8px] bg-[#1c252e] text-white text-[14px] hover:bg-[#2c3540]">了解</button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── 角色警示 Modal ── */}
+      {showAlertModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setShowAlertModal(false)}>
+          <div className="bg-white rounded-[16px] shadow-2xl w-[620px] max-w-[calc(100vw-32px)] max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between px-[24px] py-[18px] border-b border-[#f0f0f0]">
+              <div className="flex items-center gap-[8px]">
+                <div className="w-[22px] h-[22px] flex items-center justify-center rounded-full bg-[#ff4842] shrink-0">
+                  <svg width="10" height="14" viewBox="0 0 10 14" fill="none">
+                    <rect x="3.5" y="0" width="3" height="8.5" rx="1.5" fill="white"/>
+                    <rect x="3.5" y="11" width="3" height="3" rx="1.5" fill="white"/>
+                  </svg>
+                </div>
+                <h3 className="font-semibold text-[16px] text-[#1c252e]">人員角色提醒</h3>
+              </div>
+              <button onClick={() => setShowAlertModal(false)} className="w-[32px] h-[32px] flex items-center justify-center rounded-full hover:bg-[#f4f6f8] text-[#637381]">✕</button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-[24px] py-[20px] flex flex-col gap-[20px]">
+
+              {/* Section 1: GAC 角色異動 */}
+              {syncAlerts.length > 0 && (() => {
+                // 從 syncAlerts 彙整所有受影響使用者（去重）
+                const allAffected = new Map<string, { userId: string; userName: string; account: string; type: 'giant' | 'vendor'; companyName?: string }>();
+                syncAlerts.forEach(alert => {
+                  (alert.affectedUsers ?? []).forEach(u => { allAffected.set(u.userId, u); });
+                });
+                const giantAffected = [...allAffected.values()].filter(u => u.type === 'giant');
+                const vendorAffected = [...allAffected.values()].filter(u => u.type === 'vendor');
+                // 若舊格式資料沒有 affectedUsers，不顯示空白區塊
+                if (allAffected.size === 0) return null;
+                return (
+                  <div>
+                    <p className="text-[13px] font-semibold text-[#1c252e] mb-[4px] whitespace-nowrap">以下角色已在 GAC 移除，受影響使用者的角色已自動清空，請確認角色身分</p>
+                    <div className="bg-[#fff7ed] border border-[#fed7aa] rounded-[10px] p-[16px] flex flex-col gap-[12px]">
+                      {/* 受影響人數摘要（與連結數一致） */}
+                      <p className="text-[12px] font-semibold text-[#9a3412]">
+                        {giantAffected.length > 0 && `巨大受影響人數：${giantAffected.length}人`}
+                        {giantAffected.length > 0 && vendorAffected.length > 0 && '、'}
+                        {vendorAffected.length > 0 && `廠商受影響人數：${vendorAffected.length}人`}
+                      </p>
+                      {giantAffected.length > 0 && (
+                        <div className="text-[13px] text-[#9a3412] flex flex-wrap gap-x-[4px] items-baseline">
+                          <span className="font-medium shrink-0">巨大：</span>
+                          {giantAffected.map((u, i) => (
+                            <span key={u.userId}>
+                              <button
+                                onClick={() => {
+                                  setPendingNavUser({ userName: u.userName, account: u.account, type: 'giant' });
+                                  setShowAlertModal(false);
+                                  onPageChange('giant-account-management');
+                                }}
+                                className="text-[#005eb8] underline hover:text-[#002d5a] font-medium"
+                              >{u.userName}</button>
+                              {i < giantAffected.length - 1 && <span className="text-[#9a3412]">、</span>}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {vendorAffected.length > 0 && (
+                        <div className="text-[13px] text-[#9a3412] flex flex-wrap gap-x-[4px] items-baseline">
+                          <span className="font-medium shrink-0">廠商：</span>
+                          {vendorAffected.map((u, i) => (
+                            <span key={u.userId}>
+                              <button
+                                onClick={() => {
+                                  setPendingNavUser({ userName: u.userName, account: u.account, type: 'vendor', companyName: u.companyName });
+                                  setShowAlertModal(false);
+                                  onPageChange('vendor-account-review');
+                                }}
+                                className="text-[#005eb8] underline hover:text-[#002d5a] font-medium"
+                              >{u.userName}{u.companyName ? ` (${u.companyName})` : ''}</button>
+                              {i < vendorAffected.length - 1 && <span className="text-[#9a3412]">、</span>}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                );
+              })()}
+
+              {/* Section 2: 未設定角色 */}
+              {noRoleUsers.length > 0 && (() => {
+                const giantNoRole = noRoleUsers.filter(u => u.type === 'giant');
+                const vendorNoRole = noRoleUsers.filter(u => u.type === 'vendor');
+                return (
+                  <div>
+                    <p className="text-[13px] font-semibold text-[#1c252e] mb-[4px]">尚未設定角色的人員帳號</p>
+                    <div className="bg-[#fff1f2] border border-[#fecaca] rounded-[10px] p-[16px] flex flex-col gap-[8px]">
+                      {giantNoRole.length > 0 && (
+                        <div className="text-[13px] text-[#991b1b] flex flex-wrap gap-x-[4px] items-baseline">
+                          <span className="font-medium shrink-0">巨大：</span>
+                          {giantNoRole.map((u, i) => (
+                            <span key={u.userId}>
+                              <button
+                                onClick={() => {
+                                  setPendingNavUser({ userName: u.userName, account: u.account, type: 'giant' });
+                                  setShowAlertModal(false);
+                                  onPageChange('giant-account-management');
+                                }}
+                                className="text-[#005eb8] underline hover:text-[#002d5a] font-medium"
+                              >{u.userName}</button>
+                              {i < giantNoRole.length - 1 && <span className="text-[#991b1b]">、</span>}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {vendorNoRole.length > 0 && (
+                        <div className="text-[13px] text-[#991b1b] flex flex-wrap gap-x-[4px] items-baseline">
+                          <span className="font-medium shrink-0">廠商：</span>
+                          {vendorNoRole.map((u, i) => (
+                            <span key={u.userId}>
+                              <button
+                                onClick={() => {
+                                  setPendingNavUser({ userName: u.userName, account: u.account, type: 'vendor', companyName: u.companyName });
+                                  setShowAlertModal(false);
+                                  onPageChange('vendor-account-review');
+                                }}
+                                className="text-[#005eb8] underline hover:text-[#002d5a] font-medium"
+                              >{u.userName}{u.companyName ? ` (${u.companyName})` : ''}</button>
+                              {i < vendorNoRole.length - 1 && <span className="text-[#991b1b]">、</span>}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+
+            </div>
+
+            {/* Footer */}
+            <div className="shrink-0 px-[24px] py-[16px] border-t border-[#f0f0f0] flex justify-end">
+              <button onClick={() => setShowAlertModal(false)} className="px-[16px] py-[7px] rounded-[8px] bg-[#1c252e] text-white text-[13px] hover:bg-[#2c3540]">確認</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+      {/* ── 角色人數 Modal ── */}
+      {roleUserModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setRoleUserModal(null)}>
+          <div className="bg-white rounded-[16px] shadow-2xl w-[560px] max-w-[calc(100vw-32px)] max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between px-[24px] py-[20px] border-b border-[#f0f0f0]">
+              <div>
+                <h3 className="font-semibold text-[16px] text-[#1c252e]">{roleUserModal.roleLabel} 角色使用者</h3>
+                <p className="text-[13px] text-[#637381]">共 {roleModalUsers.length} 人</p>
+              </div>
+              <button onClick={() => setRoleUserModal(null)} className="w-[32px] h-[32px] flex items-center justify-center rounded-full hover:bg-[#f4f6f8] text-[#637381]">✕</button>
+            </div>
+            {/* Type Tabs */}
+            {(() => {
+              const [activeTab, setActiveTab] = [roleModalTab, setRoleModalTab];
+              const giantUsers = roleModalUsers.filter(u => u.type === 'giant');
+              const vendorUsers = roleModalUsers.filter(u => u.type === 'vendor');
+              const tabs: { key: 'giant' | 'vendor'; label: string; count: number }[] = [
+                { key: 'giant',  label: '巨大',  count: giantUsers.length },
+                { key: 'vendor', label: '廠商',  count: vendorUsers.length },
+              ];
+              const displayUsers = activeTab === 'giant' ? giantUsers : vendorUsers;
+              return (
+                <>
+                  {/* Tab 切換列 */}
+                  <div className="flex border-b border-[#f0f0f0] px-[16px]">
+                    {tabs.map(tab => (
+                      <button
+                        key={tab.key}
+                        onClick={() => setActiveTab(tab.key)}
+                        className={`flex items-center gap-[6px] px-[16px] py-[12px] text-[13px] font-medium border-b-2 transition-colors ${
+                          activeTab === tab.key
+                            ? 'border-[#004680] text-[#004680]'
+                            : 'border-transparent text-[#637381] hover:text-[#1c252e]'
+                        }`}
+                      >
+                        {tab.label}
+                        <span className={`text-[11px] px-[6px] py-[1px] rounded-full ${
+                          activeTab === tab.key ? 'bg-[#e8f4fd] text-[#004680]' : 'bg-[#f4f6f8] text-[#919eab]'
+                        }`}>
+                          {tab.count}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                  {/* User list */}
+                  <div className="flex-1 overflow-y-auto p-[16px]">
+                    {displayUsers.length === 0 ? (
+                      <p className="text-center text-[14px] text-[#919eab] py-[32px]">此分類目前無使用者</p>
+                    ) : (
+                      <table className="w-full text-[13px]">
+                        <thead>
+                          <tr className="border-b border-[#f0f0f0]">
+                            <th className="text-left py-[8px] px-[12px] text-[#637381] font-medium">姓名</th>
+                            <th className="text-left py-[8px] px-[12px] text-[#637381] font-medium">帳號</th>
+                            {activeTab !== 'giant' && <th className="text-left py-[8px] px-[12px] text-[#637381] font-medium">類型</th>}
+                            <th className="text-left py-[8px] px-[12px] text-[#637381] font-medium">狀態</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {displayUsers.map(u => (
+                            <tr key={u.userId} className="border-b border-[#f9f9f9] hover:bg-[#f8fafc]">
+                              <td className="py-[10px] px-[12px] font-medium text-[#1c252e]">{u.userName}</td>
+                              <td className="py-[10px] px-[12px] text-[#637381]">{u.account}</td>
+                              {activeTab !== 'giant' && (
+                                <td className="py-[10px] px-[12px] text-[#637381]">
+                                  {u.type === 'giant' ? '巨大' : `廠商 / ${u.companyName ?? ''}`}
+                                </td>
+                              )}
+                              <td className="py-[10px] px-[12px]">
+                                <span className={`inline-flex items-center px-[8px] py-[2px] rounded-full text-[11px] font-medium ${
+                                  u.status === 'active' ? 'bg-[#e9fcd4] text-[#229a16]' : 'bg-[#f4f6f8] text-[#919eab]'
+                                }`}>
+                                  {u.status === 'active' ? '啟用' : '停用'}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
     </ResponsivePageLayout>
   );
 }
