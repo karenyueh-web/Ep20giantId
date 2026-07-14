@@ -708,6 +708,8 @@ export function PermissionSettingsPage({
   const [selectedRoleId, setSelectedRoleId] = useState<string>(
     () => loadRoleSections()[0].roles[0].id
   );
+  // Tab 切換：目前顯示哪個分類的角色
+  const [activeSection, setActiveSection] = useState<string>(() => loadRoleSections()[0].title);
 
   // Permission state: leaf node IDs that are checked
   const [checkedSet, setCheckedSet] = useState<Set<string>>(new Set());
@@ -955,10 +957,10 @@ export function PermissionSettingsPage({
       <DndProvider backend={HTML5Backend}>
       {/* Main card */}
       <div className="bg-white rounded-[16px] shadow-[0px_0px_2px_0px_rgba(145,158,171,0.2),0px_12px_24px_-4px_rgba(145,158,171,0.12)] flex flex-1 min-h-0 overflow-hidden">
-        {/* ── LEFT PANEL: Role Selector (2-column layout) ── */}
-        <div className="w-[480px] shrink-0 flex flex-col border-r border-[rgba(145,158,171,0.12)]">
+        {/* ── LEFT PANEL: Role Selector (Tab layout) ── */}
+        <div className="w-[320px] shrink-0 flex flex-col border-r border-[rgba(145,158,171,0.12)]">
           {/* Header */}
-          <div className="shrink-0 h-[56px] flex items-center justify-between px-[20px] border-b border-[rgba(145,158,171,0.12)]">
+          <div className="shrink-0 flex flex-col gap-[4px] justify-center px-[20px] py-[10px] min-h-[56px] border-b border-[rgba(145,158,171,0.12)]">
             <div className="flex items-center gap-[8px]">
               <h3 className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[16px] leading-[24px] text-[#1c252e]">
                 角色選擇
@@ -978,73 +980,74 @@ export function PermissionSettingsPage({
                 </button>
               )}
             </div>
-            {/* 同步 GAC 按鈕 */}
+            {/* 模擬 GAC 按鈕 - 放在標題下方 */}
             <button
               onClick={handleSyncGAC}
               disabled={isSyncing}
-              className="text-[12px] text-[#004680] hover:text-[#002d5a] font-medium underline disabled:opacity-50"
+              className="text-[11px] text-[#004680] hover:text-[#002d5a] font-medium underline disabled:opacity-50 self-start leading-[16px]"
             >
-              {isSyncing ? '同步中…' : '同步 GAC'}
+              {isSyncing ? '同步中…' : '模擬GAC更改了角色名稱後'}
             </button>
-
-
           </div>
 
-          {/* Two-column role list */}
-          <div className="flex flex-1 min-h-0 overflow-hidden">
-            {roleSections.map((section, sIdx) => (
-              <div
+          {/* Tab 切換列 */}
+          <div className="shrink-0 flex gap-[8px] px-[14px] py-[10px] border-b border-[rgba(145,158,171,0.08)]">
+            {roleSections.map(section => (
+              <button
                 key={section.title}
-                className={`flex flex-col flex-1 min-w-0 overflow-hidden ${
-                  sIdx > 0 ? 'border-l border-[rgba(145,158,171,0.12)]' : ''
+                onClick={() => setActiveSection(section.title)}
+                className={`flex items-center gap-[6px] px-[12px] py-[5px] rounded-full text-[13px] font-medium transition-colors ${
+                  activeSection === section.title
+                    ? 'bg-[#1c252e] text-white'
+                    : 'text-[#637381] hover:bg-[rgba(145,158,171,0.08)]'
                 }`}
               >
-                {/* Section header */}
-                <div className="shrink-0 flex items-center gap-[8px] px-[16px] pt-[14px] pb-[10px]">
-                  <div
-                    className="w-[8px] h-[8px] rounded-full shrink-0"
-                    style={{ backgroundColor: section.dotColor }}
-                  />
-                  <span className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[13px] leading-[20px] text-[#919eab] uppercase tracking-[0.5px]">
-                    {section.title}
-                  </span>
-                </div>
-
-                {/* Scrollable roles */}
-                <div className="flex-1 overflow-y-auto custom-scrollbar">
-                  {section.roles.map((role, rIdx) => {
-                    const count = getRoleUserCount(role.id);
-                    return (
-                      <div key={role.id} className="flex items-center pr-[8px]">
-                        <div className="flex-1 min-w-0">
-                          <DraggableRoleItem
-                            role={role}
-                            index={rIdx}
-                            sectionTitle={section.title}
-                            isSelected={role.id === selectedRoleId}
-                            onSelect={() => setSelectedRoleId(role.id)}
-                            onMoveRole={handleMoveRole}
-                          />
-                        </div>
-                        {count > 0 && (
-                          <button
-                            onClick={() => {
-                              const users = getUsersByRole(role.id);
-                              const hasGiant = users.some(u => u.type === 'giant');
-                              setRoleUserModal({ roleId: role.id, roleLabel: role.label });
-                              setRoleModalTab(hasGiant ? 'giant' : 'vendor');
-                            }}
-                            className="shrink-0 min-w-[32px] h-[24px] flex items-center justify-center text-[13px] font-semibold text-[#005eb8] hover:underline hover:bg-[#e8f4fd] rounded-[4px] px-[4px] transition-colors"
-                          >
-                            {count}
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+                <span
+                  className="w-[7px] h-[7px] rounded-full shrink-0"
+                  style={{ backgroundColor: activeSection === section.title ? 'rgba(255,255,255,0.6)' : section.dotColor }}
+                />
+                {section.title}
+              </button>
             ))}
+          </div>
+
+          {/* Single-column role list for active section */}
+          <div className="flex-1 overflow-y-auto custom-scrollbar">
+            {roleSections
+              .filter(s => s.title === activeSection)
+              .map(section =>
+                section.roles.map((role, rIdx) => {
+                  const count = getRoleUserCount(role.id);
+                  return (
+                    <div key={role.id} className="flex items-center pr-[8px]">
+                      <div className="flex-1 min-w-0">
+                        <DraggableRoleItem
+                          role={role}
+                          index={rIdx}
+                          sectionTitle={section.title}
+                          isSelected={role.id === selectedRoleId}
+                          onSelect={() => setSelectedRoleId(role.id)}
+                          onMoveRole={handleMoveRole}
+                        />
+                      </div>
+                      {count > 0 && (
+                        <button
+                          onClick={() => {
+                            const users = getUsersByRole(role.id);
+                            const hasGiant = users.some(u => u.type === 'giant');
+                            setRoleUserModal({ roleId: role.id, roleLabel: role.label });
+                            setRoleModalTab(hasGiant ? 'giant' : 'vendor');
+                          }}
+                          className="shrink-0 min-w-[32px] h-[24px] flex items-center justify-center text-[13px] font-semibold text-[#005eb8] hover:underline hover:bg-[#e8f4fd] rounded-[4px] px-[4px] transition-colors"
+                        >
+                          {count}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })
+              )
+            }
           </div>
 
           {/* + 新增角色 按鈕 */}
@@ -1071,12 +1074,7 @@ export function PermissionSettingsPage({
               <span className="font-['Public_Sans:Medium','Noto_Sans_JP:Medium',sans-serif] font-medium text-[13px] text-[#919eab] shrink-0">
                 {checkedCount} / {totalCount}
               </span>
-              {/* Save feedback */}
-              {saveMessage && (
-                <span className="text-[13px] text-[#22c55e] font-medium animate-pulse shrink-0">
-                  {saveMessage}
-                </span>
-              )}
+              {/* Save feedback - 移至頁面頂端 Banner，不在 header 內顯示 */}
             </div>
 
             <div className="flex items-center gap-[8px] shrink-0">
@@ -1094,6 +1092,23 @@ export function PermissionSettingsPage({
               >
                 儲存
               </button>
+            </div>
+          </div>
+
+          {/* 儲存成功 Banner */}
+          <div
+            className={`overflow-hidden transition-all duration-500 ease-in-out ${
+              saveMessage ? 'max-h-[52px] opacity-100' : 'max-h-0 opacity-0'
+            }`}
+          >
+            <div className="flex items-center gap-[10px] bg-[#d1fae5] border-b border-[#6ee7b7] px-[24px] py-[14px]">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                <circle cx="9" cy="9" r="9" fill="#10b981"/>
+                <path d="M5.5 9L7.8 11.5L12.5 6.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              <p className="font-['Public_Sans:Medium',sans-serif] font-medium text-[14px] text-[#065f46]">
+                儲存成功！權限設定已更新。
+              </p>
             </div>
           </div>
 
@@ -1298,7 +1313,7 @@ export function PermissionSettingsPage({
                 const vendorNoRole = noRoleUsers.filter(u => u.type === 'vendor');
                 return (
                   <div>
-                    <p className="text-[13px] font-semibold text-[#1c252e] mb-[4px]">尚未設定角色的人員帳號</p>
+                    <p className="text-[13px] font-semibold text-[#1c252e] mb-[4px]">以下人員尚未設定任一角色</p>
                     <div className="bg-[#fff1f2] border border-[#fecaca] rounded-[10px] p-[16px] flex flex-col gap-[8px]">
                       {giantNoRole.length > 0 && (
                         <div className="text-[13px] text-[#991b1b] flex flex-wrap gap-x-[4px] items-baseline">
@@ -1327,7 +1342,7 @@ export function PermissionSettingsPage({
                                 onClick={() => {
                                   setPendingNavUser({ userName: u.userName, account: u.account, type: 'vendor', companyName: u.companyName });
                                   setShowAlertModal(false);
-                                  onPageChange('vendor-account-review');
+                                  onPageChange('vendor-account-management');
                                 }}
                                 className="text-[#005eb8] underline hover:text-[#002d5a] font-medium"
                               >{u.userName}{u.companyName ? ` (${u.companyName})` : ''}</button>

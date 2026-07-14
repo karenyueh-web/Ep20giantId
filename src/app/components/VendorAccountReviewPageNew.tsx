@@ -15,7 +15,7 @@ interface VendorAccountReviewPageProps {
   onPageChange: (page: PageType) => void;
   onLogout?: () => void;
   userRole?: UserRole;
-  onApproveVendor?: (vendorInfo: { name: string; email: string; company: string; epCode: string }) => void;
+  onApproveVendor?: (vendorInfo: { name: string; email: string; company: string; epCode: string; roles: string[] }) => void;
 }
 
 // Tab组件
@@ -402,7 +402,7 @@ export function VendorAccountReviewPageNew({
     return localStorage.getItem('currentUserEmail') || 'default';
   });
 
-  const handleApprove = (vendorInfo: { name: string; email: string; company: string; epCode: string }) => {
+  const handleApprove = (vendorInfo: { name: string; email: string; company: string; epCode: string; roles: string[] }) => {
     console.log('審核通過廠商:', vendorInfo);
     if (onApproveVendor) {
       onApproveVendor(vendorInfo);

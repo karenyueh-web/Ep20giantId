@@ -113,3 +113,35 @@ export function clearRoleFromAllUsers(roleId: string): UserRoleRecord[] {
   });
   return affected;
 }
+
+/**
+ * 更新或建立使用者的角色指派。
+ * - 若帳號已存在 → 覆蓋 roleIds
+ * - 若帳號不存在 → 新增一筆紀錄
+ * @param account   帳號（如 G94854）
+ * @param userName  姓名（如 李宜璇-Evelyn Lee）
+ * @param type      'giant' | 'vendor'
+ * @param roleIds   角色 id 陣列（如 ['giant-it', 'giant-finance']）
+ */
+export function updateOrCreateUserRoles(
+  account: string,
+  userName: string,
+  type: 'giant' | 'vendor',
+  roleIds: string[]
+): void {
+  const idx = MOCK_USERS.findIndex(u => u.account === account);
+  if (idx >= 0) {
+    // 已存在 → 更新 roleIds
+    MOCK_USERS = MOCK_USERS.map((u, i) =>
+      i === idx ? { ...u, roleIds, userName } : u
+    );
+  } else {
+    // 不存在 → 新增
+    const newId = `${type === 'giant' ? 'g' : 'v'}${Date.now()}`;
+    MOCK_USERS = [
+      ...MOCK_USERS,
+      { userId: newId, userName, account, type, roleIds, status: 'active' }
+    ];
+  }
+}
+

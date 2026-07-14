@@ -3,12 +3,13 @@ import svgPaths from "@/imports/svg-c0egreeez0";
 import type { PageType } from './MainLayout';
 import { VendorDetailPage } from './VendorDetailPage';
 import type { UserRole } from '../App';
-import { VendorManagementTable } from './VendorManagementTable';
+import { VendorManagementTable, MOCK_VENDORS } from './VendorManagementTable';
 import type { VendorData } from './VendorManagementTable';
 import { ColumnSelector } from './ColumnSelector';
 import { FilterDialog, type FilterCondition } from './FilterDialog';
 import { TableToolbar } from './TableToolbar';
 import { ResponsivePageLayout } from './ResponsivePageLayout';
+import { consumePendingNavUser } from '@/app/config/pendingNavigation';
 
 interface VendorAccountManagementPageProps {
   currentPage: PageType;
@@ -20,6 +21,7 @@ interface VendorAccountManagementPageProps {
     email: string;
     company: string;
     epCode: string;
+    roles: string[];
   } | null;
   onClearPendingApproval?: () => void;
 }
@@ -88,6 +90,7 @@ export default function VendorAccountManagementPageNew({
   const [filters, setFilters] = useState<FilterCondition[]>([]);
   const [appliedFilters, setAppliedFilters] = useState<FilterCondition[]>([]);
   const [selectedVendor, setSelectedVendor] = useState<VendorData | null>(null);
+  const [autoOpenUserName, setAutoOpenUserName] = useState<string | undefined>(undefined);
 
   // 獲取當前登入用戶的email
   const [currentUserEmail] = useState<string>(() => {
@@ -102,13 +105,31 @@ export default function VendorAccountManagementPageNew({
     }
   }, [pendingVendorApproval]);
 
+  // 從「人員角色提醒」跳過來時，根據 companyName 自動找廠商並開啟業務帳號 tab，且自動開啟該人員明細
+  useEffect(() => {
+    const pending = consumePendingNavUser();
+    if (pending && pending.type === 'vendor' && pending.companyName) {
+      const target = MOCK_VENDORS.find(
+        v => v.fullName.includes(pending.companyName!) || v.name.includes(pending.companyName!)
+      );
+      if (target) {
+        setSelectedVendor(target);
+        setDetailPageTab('sales');
+        setAutoOpenUserName(pending.userName); // 記住要自動開啟的人員名稱
+        setShowDetailPage(true);
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleVendorClick = (vendor: VendorData) => {
     setSelectedVendor(vendor);
     setDetailPageTab('vendor');
     setShowDetailPage(true);
   };
 
-  const handleSalesClick = () => {
+  const handleSalesClick = (vendor: VendorData) => {
+    setSelectedVendor(vendor);
     setDetailPageTab('sales');
     setShowDetailPage(true);
   };
@@ -197,10 +218,12 @@ export default function VendorAccountManagementPageNew({
           }
         }}
         onLogout={onLogout}
-        onBack={() => setShowDetailPage(false)}
+        onBack={() => { setShowDetailPage(false); setAutoOpenUserName(undefined); }}
         userRole={userRole}
         defaultTab={detailPageTab}
         vendor={selectedVendor}
+        autoOpenUserName={autoOpenUserName}
+        onAutoOpenDone={() => setAutoOpenUserName(undefined)}
         pendingVendorApproval={pendingVendorApproval}
         onClearPendingApproval={onClearPendingApproval}
       />

@@ -56,6 +56,7 @@ export default function App() {
     email: string;
     company: string;
     epCode: string;
+    roles: string[];
   } | null>(null);
   // ── 開立發票明細 state ──
   const [invoiceDetail, setInvoiceDetail] = useState<{ rows: any[]; bondedType: string; currency: string } | null>(null);
@@ -126,7 +127,7 @@ export default function App() {
     setCurrentPage('online-chat');
   };
 
-  const handleVendorApproval = (vendorInfo: { name: string; email: string; company: string; epCode: string }) => {
+  const handleVendorApproval = (vendorInfo: { name: string; email: string; company: string; epCode: string; roles: string[] }) => {
     console.log('處理廠商審核通過:', vendorInfo);
     setPendingVendorApproval(vendorInfo);
     setCurrentPage('vendor-account-management');

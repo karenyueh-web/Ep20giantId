@@ -23,11 +23,15 @@ interface SalesAccountFormProps {
   selectedAccount?: any;
   onCloseOverlay?: () => void;
   onAccountClick?: (account: SalesAccount) => void;
+  vendorSalesNames?: string[];  // 該廠商的業務人員名單，用於過濾
+  autoOpenUserName?: string;    // 負載後自動開啟該名稱人員的明細
+  onAutoOpenDone?: () => void;  // 自動開啟完成後清除
   pendingVendorApproval?: {
     name: string;
     email: string;
     company: string;
     epCode: string;
+    roles: string[];  // 審核時選定的廠商角色
   } | null;
   onClearPendingApproval?: () => void;
 }
@@ -114,6 +118,15 @@ const initialMockSalesAccounts: SalesAccount[] = [
     purchaseOrg: '台灣廠生產採購、總部GEM委購',
     purchaseGroup: '012、013',
     status: 'inactive'
+  },
+  {
+    id: '10',
+    email: 'david@abc.com',
+    name: 'David Kao',
+    role: '業務',
+    purchaseOrg: 'ABC科技廠商採購',
+    purchaseGroup: '099',
+    status: 'active'
   }
 ];
 
@@ -125,7 +138,7 @@ export function getActiveSalesAccountCount(): number {
   return accounts.filter((account: SalesAccount) => account.status === 'active').length;
 }
 
-export function SalesAccountForm({ selectedAccount, onCloseOverlay, onAccountClick, pendingVendorApproval, onClearPendingApproval }: SalesAccountFormProps) {
+export function SalesAccountForm({ selectedAccount, onCloseOverlay, onAccountClick, vendorSalesNames, autoOpenUserName, onAutoOpenDone, pendingVendorApproval, onClearPendingApproval }: SalesAccountFormProps) {
   const [searchName, setSearchName] = useState('');
   const [filterStatus, setFilterStatus] = useState('全部');
   const [currentPage, setCurrentPage] = useState(1);
@@ -144,7 +157,15 @@ export function SalesAccountForm({ selectedAccount, onCloseOverlay, onAccountCli
   // 使用 state 管理帳號列表，從 localStorage 初始化
   const [salesAccounts, setSalesAccounts] = useState<SalesAccount[]>(() => {
     const saved = localStorage.getItem('sales_accounts_list');
-    return saved ? JSON.parse(saved) : initialMockSalesAccounts;
+    const base: SalesAccount[] = saved ? JSON.parse(saved) : initialMockSalesAccounts;
+    // 確保 mock 新增資料一定存在（避免舊快取遷漏）
+    const merged = [...base];
+    initialMockSalesAccounts.forEach(mock => {
+      if (!merged.find(a => a.id === mock.id)) {
+        merged.push(mock);
+      }
+    });
+    return merged;
   });
 
   // 獲取當前登入用戶的email
@@ -182,12 +203,12 @@ export function SalesAccountForm({ selectedAccount, onCloseOverlay, onAccountCli
       // 生成新的業務帳號ID
       const newAccountId = `${Date.now()}`;
       
-      // 創建新的業務帳號
+      // 建立新的業務帳號，角色使用審核時選定的角色
       const newAccount: SalesAccount = {
         id: newAccountId,
         email: pendingVendorApproval.email,
         name: pendingVendorApproval.name,
-        role: '業務',
+        role: pendingVendorApproval.roles?.join('、') || '業務', // 用選定角色，預設業務
         purchaseOrg: '', // 待設定
         purchaseGroup: '', // 待設定
         status: 'active'
@@ -197,7 +218,8 @@ export function SalesAccountForm({ selectedAccount, onCloseOverlay, onAccountCli
       setSalesAccounts(prev => [newAccount, ...prev]);
       
       // 顯示提示訊息
-      alert('廠商審核通過！\n請繼續前往設定此業務人員的採購組織。');
+      const rolesText = pendingVendorApproval.roles?.join('、') || '業務';
+      alert(`廠商審核通過！\n角色：${rolesText}\n請繼續前往設定此業務人員的採購組織。`);
       
       // 自動打開帳號設定 overlay
       setTimeout(() => {
@@ -210,8 +232,29 @@ export function SalesAccountForm({ selectedAccount, onCloseOverlay, onAccountCli
     }
   }, [pendingVendorApproval, onAccountClick, onClearPendingApproval]);
 
+  // 從「人員角色提醒」導過來時，自動找到指定人員並開啟明細 overlay
+  useEffect(() => {
+    if (!autoOpenUserName || !onAccountClick) return;
+    // 短暫延遲確保帳號列表已渲染
+    const timer = setTimeout(() => {
+      const target = salesAccounts.find(a => a.name === autoOpenUserName);
+      if (target) {
+        onAccountClick(target);
+        if (onAutoOpenDone) onAutoOpenDone();
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoOpenUserName]);
+
+
   // 根据搜索条件过滤数据
   const filteredAccounts = salesAccounts.filter(account => {
+    // 若有廠商業務名單限制，只顯示該廠商的帳號
+    if (vendorSalesNames && vendorSalesNames.length > 0) {
+      if (!vendorSalesNames.includes(account.name)) return false;
+    }
+    
     // 按状态筛选
     if (filterStatus === '啟用' && account.status !== 'active') return false;
     if (filterStatus === '停用' && account.status !== 'inactive') return false;

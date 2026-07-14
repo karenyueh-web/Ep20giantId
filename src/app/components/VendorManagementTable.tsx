@@ -24,7 +24,7 @@ interface FilterCondition {
 
 interface VendorManagementTableProps {
   onVendorClick: (vendor: VendorData) => void;
-  onSalesClick: () => void;
+  onSalesClick: (vendor: VendorData) => void;
   vendorNameFilter: string;
   salesPersonFilter: string;
   userEmail?: string;
@@ -64,7 +64,9 @@ export const MOCK_VENDORS: VendorData[] = [
   { id: 16, code: '0001000012', name: '台灣製造',   fullName: '台灣製造工業股份有限公司',     phone: '+886-4-66666666', address: '台中市西屯區工業區一路100號',      salesCount: 1, mainProducts: '零件',                        salesNames: ['陳品保'] },
   { id: 17, code: '0001000046', name: '速聯國際',   fullName: '速聯國際股份有限公司',         phone: '+886-3-77777777', address: '桃園市龜山區文化二路29號',         salesCount: 1, mainProducts: '零件',                        salesNames: ['李四'] },
   { id: 18, code: '000100463',  name: '速聯',       fullName: '速聯(股)公司',                 phone: '+886-3-88888888', address: '桃園市龜山區工業三路99號',         salesCount: 1, mainProducts: '變速器/零件',                 salesNames: ['王小明'] },
+  { id: 19, code: '0001000099', name: 'ABC科技',    fullName: 'ABC科技股份有限公司',             phone: '+886-2-27001234', address: '台北市中山區南京東路三段168號',    salesCount: 1, mainProducts: '資訊軟體/系統整合/技術服務', salesNames: ['David Kao'] },
 ];
+
 
 
 
@@ -279,12 +281,14 @@ export function VendorManagementTable({
     }
     
     if (key === 'salesCount') {
+      // 用 salesNames.length 動態計算，確保與點進去的帳號數一致
+      const count = vendor.salesNames.length;
       return (
         <button 
           className="[text-decoration-skip-ink:none] decoration-solid font-['Public_Sans:Regular',sans-serif] font-normal leading-[22px] text-[#005eb8] text-[14px] underline cursor-pointer hover:opacity-70 transition-opacity"
-          onClick={onSalesClick}
+          onClick={() => onSalesClick(vendor)}
         >
-          {value}
+          {count}
         </button>
       );
     }

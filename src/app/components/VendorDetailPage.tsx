@@ -15,11 +15,14 @@ interface VendorDetailPageProps {
   onBack?: () => void;
   defaultTab?: TabType;
   userRole?: string;
+  autoOpenUserName?: string;    // 從人員角色提醒導來時，自動開啟該人員明細
+  onAutoOpenDone?: () => void;  // 自動開啟完成後清除
   pendingVendorApproval?: {
     name: string;
     email: string;
     company: string;
     epCode: string;
+    roles: string[];
   } | null;
   onClearPendingApproval?: () => void;
   vendor?: VendorData | null;
@@ -472,6 +475,8 @@ function ContentArea({
   onBack,
   onAccountClick,
   vendor,
+  autoOpenUserName,
+  onAutoOpenDone,
   pendingVendorApproval,
   onClearPendingApproval
 }: { 
@@ -480,11 +485,14 @@ function ContentArea({
   onBack: () => void;
   onAccountClick: (account: any) => void;
   vendor?: VendorData | null;
+  autoOpenUserName?: string;
+  onAutoOpenDone?: () => void;
   pendingVendorApproval?: {
     name: string;
     email: string;
     company: string;
     epCode: string;
+    roles: string[];
   } | null;
   onClearPendingApproval?: () => void;
 }) {
@@ -499,6 +507,9 @@ function ContentArea({
         {activeTab === 'sales' && (
           <SalesAccountForm 
             onAccountClick={onAccountClick} 
+            vendorSalesNames={vendor?.salesNames}
+            autoOpenUserName={autoOpenUserName}
+            onAutoOpenDone={onAutoOpenDone}
             pendingVendorApproval={pendingVendorApproval}
             onClearPendingApproval={onClearPendingApproval}
           />
@@ -509,10 +520,10 @@ function ContentArea({
   );
 }
 
-export function VendorDetailPage({ currentPage, onPageChange, onLogout, onBack, defaultTab, userRole, vendor, pendingVendorApproval, onClearPendingApproval }: VendorDetailPageProps) {
+export function VendorDetailPage({ currentPage, onPageChange, onLogout, onBack, defaultTab, userRole, vendor, autoOpenUserName, onAutoOpenDone, pendingVendorApproval, onClearPendingApproval }: VendorDetailPageProps) {
   const [activeTab, setActiveTab] = useState<TabType>(defaultTab || 'vendor');
   const [selectedAccount, setSelectedAccount] = useState<any>(null);
-  const vendorName = '久廣'; // 廠商簡稱
+  const vendorName = vendor?.name ?? '廠商'; // 使用實際廠商簡稱
   
   // 使用 localStorage 儲存每個帳號的設定
   const STORAGE_KEY = 'sales_account_settings';
@@ -551,6 +562,8 @@ export function VendorDetailPage({ currentPage, onPageChange, onLogout, onBack, 
         onBack={onBack} 
         onAccountClick={setSelectedAccount}
         vendor={vendor}
+        autoOpenUserName={autoOpenUserName}
+        onAutoOpenDone={onAutoOpenDone}
         pendingVendorApproval={pendingVendorApproval}
         onClearPendingApproval={onClearPendingApproval}
       />

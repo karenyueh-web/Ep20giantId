@@ -7,6 +7,7 @@ import { Trash2, Plus } from 'lucide-react';
 import { MailSettingsTabContent } from './MailSettingsTabContent';
 import { ResponsivePageLayout } from './ResponsivePageLayout';
 import { getGiantRoles } from '@/app/config/roleStore';
+import { updateOrCreateUserRoles, getUsersByRole } from '@/app/config/userRoleStore';
 
 interface EmployeeAccountSettingPageProps {
   currentPage: PageType;
@@ -141,12 +142,33 @@ export function EmployeeAccountSettingPage({
   // 採購組織選取狀態
   const [selectedOrganizations, setSelectedOrganizations] = useState<string[]>([]);
 
-  // 巨大角色選取狀態
-  const [selectedGiantRoles, setSelectedGiantRoles] = useState<string[]>([]);
+  // 巨大角色選取狀態 - 從 userRoleStore 預載已有角色
+  const [selectedGiantRoles, setSelectedGiantRoles] = useState<string[]>(() => {
+    const allGiantRoles = getGiantRoles();
+    // 找出所有巨大角色中此帳號已擁有的，轉成 label 清單
+    const ownedLabels = allGiantRoles
+      .filter(role => getUsersByRole(role.id).some(u => u.account === employeeAccount))
+      .map(role => role.label);
+    return ownedLabels;
+  });
+
+  const [saveSuccess, setSaveSuccess] = useState(false);
   const toggleGiantRole = (roleLabel: string) => {
     setSelectedGiantRoles(prev =>
       prev.includes(roleLabel) ? prev.filter(r => r !== roleLabel) : [...prev, roleLabel]
     );
+  };
+
+  // 儲存角色到 userRoleStore
+  const handleSave = () => {
+    // 將選取的角色 label 轉成 roleId
+    const allGiantRoles = getGiantRoles();
+    const roleIds = selectedGiantRoles
+      .map(label => allGiantRoles.find(r => r.label === label)?.id)
+      .filter((id): id is string => !!id);
+    updateOrCreateUserRoles(employeeAccount, employeeName, 'giant', roleIds);
+    setSaveSuccess(true);
+    setTimeout(() => setSaveSuccess(false), 2000);
   };
 
   // 採購群組行
@@ -251,6 +273,23 @@ export function EmployeeAccountSettingPage({
           <div className="absolute bg-[rgba(145,158,171,0.08)] bottom-0 h-[2px] left-0 right-0" />
         </div>
 
+        {/* 儲存成功 Banner */}
+        <div
+          className={`overflow-hidden transition-all duration-500 ease-in-out ${
+            saveSuccess ? 'max-h-[52px] opacity-100' : 'max-h-0 opacity-0'
+          }`}
+        >
+          <div className="flex items-center gap-[10px] bg-[#d1fae5] border-b border-[#6ee7b7] px-[24px] py-[14px]">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <circle cx="9" cy="9" r="9" fill="#10b981"/>
+              <path d="M5.5 9L7.8 11.5L12.5 6.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            <p className="font-['Public_Sans:Medium',sans-serif] font-medium text-[14px] text-[#065f46]">
+              儲存成功！角色設定已更新。
+            </p>
+          </div>
+        </div>
+
         {/* 內容區 */}
         <div className="flex-1 min-h-0 overflow-hidden">
           {activeTab === 'org' ? (
@@ -261,9 +300,13 @@ export function EmployeeAccountSettingPage({
                 <p className="font-['Public_Sans:Medium','Noto_Sans_JP:Medium',sans-serif] font-medium leading-[18px] text-[#1c252e] text-[13px]">
                   {employeeName}({employeeAccount})
                 </p>
-                <button className="bg-[#1c252e] flex gap-[8px] h-[36px] items-center justify-center min-w-[64px] px-[12px] rounded-[8px] w-[130px] hover:bg-[#2c3540] transition-colors cursor-pointer">
-                  <p className="font-['Public_Sans:Bold','Noto_Sans_JP:Bold',sans-serif] font-bold leading-[24px] text-[14px] text-white">儲存</p>
-                </button>
+                <div className="flex items-center gap-[12px]">
+                  <button
+                    onClick={handleSave}
+                    className="bg-[#1c252e] flex gap-[8px] h-[36px] items-center justify-center min-w-[64px] px-[12px] rounded-[8px] w-[130px] hover:bg-[#2c3540] transition-colors cursor-pointer">
+                    <p className="font-['Public_Sans:Bold','Noto_Sans_JP:Bold',sans-serif] font-bold leading-[24px] text-[14px] text-white">儲存</p>
+                  </button>
+                </div>
               </div>
 
               {/* ===== 巨大角色區域 ===== */}

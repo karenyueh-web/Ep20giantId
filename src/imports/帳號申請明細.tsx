@@ -2,6 +2,7 @@ import svgPaths from "./svg-2bvk7xkhar";
 import svgReturn from "./svg-cj340dtu48";
 import svgClose from "./svg-db5hp8ke5l";
 import { useState } from 'react';
+import { getVendorRoles } from '@/app/config/roleStore';
 
 // 廠商列表資料
 const vendorList = [
@@ -18,7 +19,7 @@ export default function Component({ onClose, vendorData, isSuccessTab = false, o
   onClose: () => void; 
   vendorData?: any; 
   isSuccessTab?: boolean;
-  onApprove?: (vendorInfo: { name: string; email: string; company: string; epCode: string }) => void;
+  onApprove?: (vendorInfo: { name: string; email: string; company: string; epCode: string; roles: string[] }) => void;
 }) {
   const [showCompanySelector, setShowCompanySelector] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState(vendorData?.company || (isSuccessTab ? '愛爾蘭商速聯股份有限公司台灣分公司' : '鈞封國際有限公司'));
@@ -56,15 +57,15 @@ export default function Component({ onClose, vendorData, isSuccessTab = false, o
   
   // 處理核准
   const handleApprove = () => {
-    console.log('核准廠商:', vendorName);
+    console.log('核准廠商:', vendorName, '角色:', selectedRoles);
     
-    // 如果有 onApprove 回調，傳遞廠商資訊
     if (onApprove) {
       onApprove({
         name: vendorName,
         email: email,
         company: selectedCompany,
-        epCode: epCode
+        epCode: epCode,
+        roles: selectedRoles,   // 將選定的廠商角色一並傳出
       });
     }
     
@@ -203,86 +204,29 @@ export default function Component({ onClose, vendorData, isSuccessTab = false, o
           <div className="content-stretch flex items-center relative shrink-0 w-[85px]">
             <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] relative shrink-0 text-[#637381] text-[14px]">申請角色</p>
           </div>
-          {/* 業務 */}
-          <div 
-            className="bg-white content-stretch flex flex-[1_0_0] flex-col items-start min-h-px min-w-px relative cursor-pointer"
-            onClick={() => {
-              if (selectedRoles.includes('業務')) {
-                setSelectedRoles(selectedRoles.filter(role => role !== '業務'));
-              } else {
-                setSelectedRoles([...selectedRoles, '業務']);
-              }
-            }}
-          >
-            <div className={`h-[40px] relative rounded-[8px] shrink-0 w-full transition-colors ${selectedRoles.includes('業務') ? 'bg-[#00559c]' : 'bg-white'}`}>
-              {!selectedRoles.includes('業務') && <div aria-hidden="true" className="absolute border border-[rgba(145,158,171,0.2)] border-solid inset-0 pointer-events-none rounded-[8px]" />}
-              <div className="flex flex-row items-center justify-center size-full">
-                <div className="content-stretch flex items-center justify-center px-[14px] relative size-full">
-                  <p className={`flex-[1_0_0] font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] min-h-px min-w-px relative text-[14px] text-center whitespace-pre-wrap ${selectedRoles.includes('業務') ? 'text-white' : 'text-[#919eab]'}`}>業務</p>
+          {/* 動態角色按鈕 - 從 roleStore 讀取廠商角色，與「角色權限設定」同步 */}
+          {getVendorRoles().map(role => (
+            <div
+              key={role.id}
+              className="content-stretch flex flex-[1_0_0] flex-col items-start min-h-px min-w-px relative cursor-pointer"
+              onClick={() => {
+                if (selectedRoles.includes(role.label)) {
+                  setSelectedRoles(selectedRoles.filter(r => r !== role.label));
+                } else {
+                  setSelectedRoles([...selectedRoles, role.label]);
+                }
+              }}
+            >
+              <div className={`h-[40px] relative rounded-[8px] shrink-0 w-full transition-colors ${selectedRoles.includes(role.label) ? 'bg-[#00559c]' : 'bg-white'}`}>
+                {!selectedRoles.includes(role.label) && <div aria-hidden="true" className="absolute border border-[rgba(145,158,171,0.2)] border-solid inset-0 pointer-events-none rounded-[8px]" />}
+                <div className="flex flex-row items-center justify-center size-full">
+                  <div className="content-stretch flex items-center justify-center px-[14px] relative size-full">
+                    <p className={`flex-[1_0_0] font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] min-h-px min-w-px relative text-[14px] text-center whitespace-pre-wrap ${selectedRoles.includes(role.label) ? 'text-white' : 'text-[#919eab]'}`}>{role.label}</p>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-          {/* 品保 */}
-          <div 
-            className="content-stretch flex flex-[1_0_0] flex-col items-start min-h-px min-w-px relative cursor-pointer"
-            onClick={() => {
-              if (selectedRoles.includes('品保')) {
-                setSelectedRoles(selectedRoles.filter(role => role !== '品保'));
-              } else {
-                setSelectedRoles([...selectedRoles, '品保']);
-              }
-            }}
-          >
-            <div className={`h-[40px] relative rounded-[8px] shrink-0 w-full transition-colors ${selectedRoles.includes('品保') ? 'bg-[#00559c]' : 'bg-white'}`}>
-              {!selectedRoles.includes('品保') && <div aria-hidden="true" className="absolute border border-[rgba(145,158,171,0.2)] border-solid inset-0 pointer-events-none rounded-[8px]" />}
-              <div className="flex flex-row items-center size-full">
-                <div className="content-stretch flex items-center px-[14px] relative size-full">
-                  <p className={`flex-[1_0_0] font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] min-h-px min-w-px relative text-[14px] text-center whitespace-pre-wrap ${selectedRoles.includes('品保') ? 'text-white' : 'text-[#919eab]'}`}>品保</p>
-                </div>
-              </div>
-            </div>
-          </div>
-          {/* 下包商 */}
-          <div 
-            className="content-stretch flex flex-[1_0_0] flex-col items-start min-h-px min-w-px relative cursor-pointer"
-            onClick={() => {
-              if (selectedRoles.includes('下包商')) {
-                setSelectedRoles(selectedRoles.filter(role => role !== '下包商'));
-              } else {
-                setSelectedRoles([...selectedRoles, '下包商']);
-              }
-            }}
-          >
-            <div className={`h-[40px] relative rounded-[8px] shrink-0 w-full transition-colors ${selectedRoles.includes('下包商') ? 'bg-[#00559c]' : 'bg-white'}`}>
-              {!selectedRoles.includes('下包商') && <div aria-hidden="true" className="absolute border border-[rgba(145,158,171,0.2)] border-solid inset-0 pointer-events-none rounded-[8px]" />}
-              <div className="flex flex-row items-center size-full">
-                <div className="content-stretch flex items-center px-[14px] relative size-full">
-                  <p className={`flex-[1_0_0] font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] min-h-px min-w-px relative text-[14px] text-center whitespace-pre-wrap ${selectedRoles.includes('下包商') ? 'text-white' : 'text-[#919eab]'}`}>下包商</p>
-                </div>
-              </div>
-            </div>
-          </div>
-          {/* 開發人員 */}
-          <div 
-            className="content-stretch flex flex-[1_0_0] flex-col items-start min-h-px min-w-px relative cursor-pointer"
-            onClick={() => {
-              if (selectedRoles.includes('開發人員')) {
-                setSelectedRoles(selectedRoles.filter(role => role !== '開發人員'));
-              } else {
-                setSelectedRoles([...selectedRoles, '開發人員']);
-              }
-            }}
-          >
-            <div className={`h-[40px] relative rounded-[8px] shrink-0 w-full transition-colors ${selectedRoles.includes('開發人員') ? 'bg-[#00559c]' : 'bg-white'}`}>
-              {!selectedRoles.includes('開發人員') && <div aria-hidden="true" className="absolute border border-[rgba(145,158,171,0.2)] border-solid inset-0 pointer-events-none rounded-[8px]" />}
-              <div className="flex flex-row items-center size-full">
-                <div className="content-stretch flex items-center px-[14px] relative size-full">
-                  <p className={`flex-[1_0_0] font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] min-h-px min-w-px relative text-[14px] text-center whitespace-pre-wrap ${selectedRoles.includes('開發人員') ? 'text-white' : 'text-[#919eab]'}`}>開發人員</p>
-                </div>
-              </div>
-            </div>
-          </div>
+          ))}
         </div>
 
         {/* 確認通過 & 退回廠商 */}
