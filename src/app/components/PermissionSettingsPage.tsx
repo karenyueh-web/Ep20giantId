@@ -960,7 +960,7 @@ export function PermissionSettingsPage({
         {/* ── LEFT PANEL: Role Selector (Tab layout) ── */}
         <div className="w-[320px] shrink-0 flex flex-col border-r border-[rgba(145,158,171,0.12)]">
           {/* Header */}
-          <div className="shrink-0 flex flex-col gap-[4px] justify-center px-[20px] py-[10px] min-h-[56px] border-b border-[rgba(145,158,171,0.12)]">
+          <div className="shrink-0 h-[56px] flex items-center justify-between px-[20px] border-b border-[rgba(145,158,171,0.12)]">
             <div className="flex items-center gap-[8px]">
               <h3 className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[16px] leading-[24px] text-[#1c252e]">
                 角色選擇
@@ -980,14 +980,6 @@ export function PermissionSettingsPage({
                 </button>
               )}
             </div>
-            {/* 模擬 GAC 按鈕 - 放在標題下方 */}
-            <button
-              onClick={handleSyncGAC}
-              disabled={isSyncing}
-              className="text-[11px] text-[#004680] hover:text-[#002d5a] font-medium underline disabled:opacity-50 self-start leading-[16px]"
-            >
-              {isSyncing ? '同步中…' : '模擬GAC更改了角色名稱後'}
-            </button>
           </div>
 
           {/* Tab 切換列 */}
@@ -1050,14 +1042,22 @@ export function PermissionSettingsPage({
             }
           </div>
 
-          {/* + 新增角色 按鈕 */}
-          <div className="shrink-0 p-[12px] border-t border-[rgba(145,158,171,0.12)]">
+          {/* + 新增角色 按鈕 + 模擬 GAC */}
+          <div className="shrink-0 p-[12px] border-t border-[rgba(145,158,171,0.12)] flex flex-col gap-[8px]">
             <button
               onClick={handleAddRoleOpen}
               className="w-full flex items-center justify-center gap-[6px] py-[8px] rounded-[8px] text-[13px] font-medium text-[#004680] border border-[#004680] hover:bg-[#e8f4fd] transition-colors"
             >
               <span className="text-[16px] leading-none">+</span>
               新增角色
+            </button>
+            {/* 模擬 GAC 按鈕 */}
+            <button
+              onClick={handleSyncGAC}
+              disabled={isSyncing}
+              className="text-[11px] text-[#637381] hover:text-[#004680] font-medium underline disabled:opacity-50 self-center leading-[16px] transition-colors"
+            >
+              {isSyncing ? '同步中…' : '模擬GAC更改了角色名稱後'}
             </button>
           </div>
         </div>
@@ -1066,7 +1066,7 @@ export function PermissionSettingsPage({
         {/* ── RIGHT PANEL: Permission Tree ── */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* Header bar */}
-          <div className="shrink-0 h-[56px] flex items-center justify-between px-[24px] border-b border-[rgba(145,158,171,0.12)]">
+          <div className="shrink-0 min-h-[56px] flex items-center justify-between px-[24px] border-b border-[rgba(145,158,171,0.12)]">
             <div className="flex items-center gap-[12px] min-w-0">
               <h3 className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[16px] leading-[24px] text-[#1c252e] truncate">
                 {selectedRoleLabel} 權限設定
