@@ -21,6 +21,8 @@ interface DropdownSelectProps {
   className?: string;
   searchable?: boolean;
   disabled?: boolean;
+  /** 寬度自適應（移除內部 w-full，由外部控制） */
+  widthFit?: boolean;
   /** 提供 key 時啟用「最近使用」排序（寫入 localStorage） */
   storageKey?: string;
 }
@@ -35,6 +37,7 @@ export function DropdownSelect({
   className = '',
   searchable = false,
   disabled = false,
+  widthFit = false,
   storageKey,
 }: DropdownSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -154,11 +157,11 @@ export function DropdownSelect({
   const displayText = selectedOption?.label || placeholder;
 
   return (
-    <div className={`relative w-full ${className}`} ref={dropdownRef}>
+    <div className={`relative ${widthFit ? '' : 'w-full'} ${className}`} ref={dropdownRef}>
       {/* 下拉選單按鈕 */}
       <div
         ref={buttonRef}
-        className={`h-[54px] relative rounded-[8px] shrink-0 w-full ${disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+        className={`h-[54px] relative rounded-[8px] shrink-0 ${widthFit ? '' : 'w-full'} ${disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
         onClick={handleToggle}
       >
         <div

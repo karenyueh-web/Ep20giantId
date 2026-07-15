@@ -65,14 +65,10 @@ interface ScheduleForm {
   category: string;
   months: string[];
   scheduleType: 'weekday' | 'date';
-  everyDay: boolean;
   weekdays: string[];
   dateDays: string[];
-  timeMode: 'interval' | 'specific';
-  interval: string;
-  specificTimes: string[];
-  fixedIntervalMinutes: string;   // 日期模式：間隔分鐘數
-  fixedStartDatetime: string;     // 日期模式：起始時間
+  startTime: string;       // 幾點開始 (HH:mm)
+  intervalMinutes: string; // 幾分執行一次
   mailTypes: string[];
 }
 
@@ -96,20 +92,32 @@ const CATEGORY_OPTIONS = ['信件通知', '觸發程式'];
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const WEEKDAYS = ['一','二','三','四','五','六','日'];
 const DATE_DAYS = ['5','10','15','20','25','30'];
+const MONTH_MAX_DAYS: Record<string, number> = {
+  'Jan':31,'Feb':28,'Mar':31,'Apr':30,'May':31,'Jun':30,
+  'Jul':31,'Aug':31,'Sep':30,'Oct':31,'Nov':30,'Dec':31,
+};
 const MAIL_TYPE_OPTIONS = ['訂單通知信','修正單通知信','出貨通知信','帳款通知信'];
 const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
   const h = Math.floor(i / 2).toString().padStart(2, '0');
   const m = i % 2 === 0 ? '00' : '30';
   return `${h}:${m}`;
 });
-const INTERVAL_OPTIONS = ['10 min','15 min','30 min','60 min','90 min','120 min','180 min','240 min'];
+const INTERVAL_MIN_OPTIONS = [
+  { value: '10',  label: '10 分' },
+  { value: '15',  label: '15 分' },
+  { value: '30',  label: '30 分' },
+  { value: '60',  label: '60 分' },
+  { value: '90',  label: '90 分' },
+  { value: '120', label: '120 分' },
+  { value: '180', label: '180 分' },
+  { value: '240', label: '240 分' },
+];
 
 const INITIAL_FORM: ScheduleForm = {
   name: '', url: '', category: '信件通知',
-  months: [], scheduleType: 'weekday', everyDay: true,
+  months: [], scheduleType: 'weekday',
   weekdays: ['一','二','三','四','五','六','日'], dateDays: [],
-  timeMode: 'specific', interval: '30 min', specificTimes: ['00:00'],
-  fixedIntervalMinutes: '60', fixedStartDatetime: '',
+  startTime: '08:00', intervalMinutes: '60',
   mailTypes: [],
 };
 
@@ -149,14 +157,16 @@ const INITIAL_DATA: ScheduleRow[] = [
 // ─────────────────────────────────────────────────────────────────────────────
 function buildDays(form: ScheduleForm): string {
   if (form.scheduleType === 'weekday') {
-    if (form.everyDay) return '每天';
+    if (form.weekdays.length === WEEKDAYS.length) return '每天';
     return form.weekdays.join('、');
   }
   return form.dateDays.join('、');
 }
 function buildTimes(form: ScheduleForm): string {
-  if (form.timeMode === 'interval') return form.interval;
-  return form.specificTimes.join('、');
+  const parts: string[] = [];
+  if (form.startTime) parts.push(form.startTime);
+  if (form.intervalMinutes) parts.push('每' + form.intervalMinutes + '分執行一次');
+  return parts.join('，') || '-';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -362,6 +372,95 @@ function SchedCheckbox({ checked, onChange, label }: { checked: boolean; onChang
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// DateDayInput — 日期模式數字輸入 + Tag 顯示
+// ─────────────────────────────────────────────────────────────────────────────
+function DateDayInput({
+  value, onChange, maxDay, bgColor = '#EFF6FF',
+}: {
+  value: string[]; onChange: (v: string[]) => void; maxDay: number; bgColor?: string;
+}) {
+  const [input, setInput] = useState('');
+  const [error, setError] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const add = () => {
+    const raw = input.trim();
+    if (!raw) return;
+    const n = parseInt(raw, 10);
+    if (isNaN(n) || n < 1 || n > maxDay) {
+      setError(`請輸入 1 – ${maxDay} 的日期`);
+      return;
+    }
+    const str = String(n);
+    if (value.includes(str)) { setError('此日期已新增'); return; }
+    onChange([...value, str].sort((a, b) => parseInt(a) - parseInt(b)));
+    setInput('');
+    setError('');
+    inputRef.current?.focus();
+  };
+
+  const remove = (d: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    onChange(value.filter(v => v !== d));
+  };
+
+  return (
+    <div className="flex flex-col gap-[4px]">
+      <div
+        className="relative min-h-[54px] rounded-[8px] border border-solid border-[rgba(145,158,171,0.2)] px-[12px] pt-[20px] pb-[8px] flex flex-wrap gap-[4px] items-center cursor-text"
+        style={{ backgroundColor: bgColor }}
+        onClick={() => inputRef.current?.focus()}
+      >
+        {/* floating label */}
+        <div className="absolute flex items-center left-[14px] px-[2px] top-[-5px] z-10 pointer-events-none">
+          <div className="absolute h-[2px] left-0 right-0 top-[5px]" style={{ backgroundColor: bgColor }} />
+          <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[14px] relative shrink-0 text-[#637381] text-[12px]">指定日期</p>
+        </div>
+
+        {/* 已選 tags */}
+        {value.map(d => (
+          <span key={d} className="flex items-center gap-[4px] bg-[#e8f4fd] text-[#005eb8] text-[12px] font-medium px-[8px] py-[2px] rounded-full leading-[20px]">
+            {d}號
+            <button type="button" onClick={e => remove(d, e)}
+              className="text-[#637381] hover:text-[#1c252e] leading-none text-[14px] w-[14px] h-[14px] flex items-center justify-center">
+              ×
+            </button>
+          </span>
+        ))}
+
+        {/* 輸入框 */}
+        <div className="flex items-center gap-[6px]">
+          <input
+            ref={inputRef}
+            type="number"
+            min="1"
+            max={maxDay}
+            className="outline-none bg-transparent text-[14px] text-[#1c252e] w-[52px] leading-[22px]"
+            value={input}
+            onChange={e => { setInput(e.target.value); setError(''); }}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); add(); } }}
+            placeholder="幾號"
+          />
+          <button
+            type="button"
+            onClick={add}
+            className="w-[24px] h-[24px] rounded-full bg-[#1890ff] text-white flex items-center justify-center hover:bg-[#096dd9] transition-colors shrink-0"
+          >
+            <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="white" strokeWidth="2" strokeLinecap="round" /></svg>
+          </button>
+        </div>
+      </div>
+
+      {/* 錯誤 / 提示 */}
+      {error
+        ? <p className="text-[12px] text-[#ff5630] pl-[2px]">{error}</p>
+        : maxDay < 31 && <p className="text-[12px] text-[#637381] pl-[2px]">依選擇月份，日期上限為 {maxDay} 號</p>
+      }
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // ScheduleModal — 新增 / 編輯排程設定
 // ─────────────────────────────────────────────────────────────────────────────
 function ScheduleModal({
@@ -386,15 +485,58 @@ function ScheduleModal({
     onSave(form);
   };
 
-  const addTime = () => upd('specificTimes', [...form.specificTimes, '00:00']);
-  const removeTime = (i: number) => upd('specificTimes', form.specificTimes.filter((_, j) => j !== i));
-  const updateTime = (i: number, v: string) => {
-    const next = [...form.specificTimes]; next[i] = v; upd('specificTimes', next);
-  };
   const toggleWeekday = (d: string) =>
     upd('weekdays', form.weekdays.includes(d) ? form.weekdays.filter(w => w !== d) : [...form.weekdays, d]);
   const toggleDateDay = (d: string) =>
     upd('dateDays', form.dateDays.includes(d) ? form.dateDays.filter(w => w !== d) : [...form.dateDays, d]);
+
+  // 日期上限
+  const maxDay = useMemo(() => {
+    if (form.months.length === 0) return 31;
+    return Math.min(...form.months.map(m => MONTH_MAX_DAYS[m] ?? 31));
+  }, [form.months]);
+
+  // 月份變更時，自動移除超出上限的日期
+  useEffect(() => {
+    if (form.scheduleType === 'date') {
+      const filtered = form.dateDays.filter(d => parseInt(d) <= maxDay);
+      if (filtered.length !== form.dateDays.length) upd('dateDays', filtered);
+    }
+  }, [maxDay, form.scheduleType]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 即時排程摘要文字
+  const scheduleSummary = useMemo(() => {
+    const segs: string[] = [];
+
+    // 月份
+    if (form.months.length > 0) segs.push('月份 ' + form.months.join('、'));
+
+    // 星期 / 日期
+    if (form.scheduleType === 'weekday') {
+      const allDays = form.weekdays.length === WEEKDAYS.length;
+      if (allDays) {
+        segs.push('每天');
+      } else if (form.weekdays.length > 0) {
+        segs.push('週' + form.weekdays.join('、'));
+      }
+    } else {
+      if (form.dateDays.length > 0) segs.push('每月 ' + form.dateDays.join('、') + '號');
+    }
+
+    // 時間
+    if (form.startTime) {
+      const lastIdx = segs.length - 1;
+      if (lastIdx >= 0) {
+        segs[lastIdx] = segs[lastIdx] + '的 ' + form.startTime;
+      } else {
+        segs.push(form.startTime);
+      }
+    }
+    if (form.intervalMinutes) segs.push('每 ' + form.intervalMinutes + ' 分執行一次');
+
+    return segs.join('　');
+  }, [form.months, form.scheduleType, form.weekdays, form.dateDays,
+      form.startTime, form.intervalMinutes]);
 
   return (
     <BaseOverlay onClose={onClose} maxWidth="760px" autoHeight>
@@ -431,7 +573,7 @@ function ScheduleModal({
             </div>
 
             {/* Right: 執行頻率 */}
-            <div className="w-[360px] shrink-0">
+            <div className="w-[400px] shrink-0 flex flex-col gap-[8px]">
 
           {/* 執行頻率區塊 */}
           <div className="rounded-[12px] overflow-hidden" style={{ border: '1px solid #bfdbfe' }}>
@@ -454,140 +596,76 @@ function ScheduleModal({
             <div className="h-[1px] bg-[rgba(145,158,171,0.16)]" />
 
             {/* 星期 / 日期 */}
-            <div className="flex flex-col gap-[10px]">
-              <div className="flex items-center gap-[10px]">
-                <span className="text-[13px] font-semibold text-[#ff5630] shrink-0">*</span>
-                <div className="w-[120px]">
-                  <DropdownSelect
-                    label=""
-                    value={form.scheduleType}
-                    onChange={v => upd('scheduleType', v as 'weekday' | 'date')}
-                    options={[{ value: 'weekday', label: '星期' }, { value: 'date', label: '日期' }]}
-                  />
-                </div>
-                {/* 每天 checkbox 只在星期模式顯示 */}
-                {form.scheduleType === 'weekday' && (
-                  <SchedCheckbox checked={form.everyDay} onChange={() => upd('everyDay', !form.everyDay)} label="每天" />
-                )}
+            <div className="flex flex-col gap-[8px]">
+              {/* Row 1: 排程類型 dropdown（最適欄寬） */}
+              <div className="w-fit">
+                <DropdownSelect
+                  widthFit
+                  label="*排程類型"
+                  value={form.scheduleType}
+                  onChange={v => upd('scheduleType', v as 'weekday' | 'date')}
+                  options={[{ value: 'weekday', label: '星期' }, { value: 'date', label: '指定日期' }]}
+                  className="min-w-[140px]"
+                />
               </div>
 
-              {/* 星期模式：weekday checkboxes */}
+              {/* Row 2: 每天（星期模式） */}
               {form.scheduleType === 'weekday' && (
-                <div className="flex flex-wrap gap-[10px] pl-[22px]">
+                <SchedCheckbox
+                  checked={form.weekdays.length === WEEKDAYS.length}
+                  onChange={() => {
+                    if (form.weekdays.length === WEEKDAYS.length) {
+                      upd('weekdays', []);
+                    } else {
+                      upd('weekdays', [...WEEKDAYS]);
+                    }
+                  }}
+                  label="每天"
+                />
+              )}
+
+              {/* Row 3: 星期 checkboxes */}
+              {form.scheduleType === 'weekday' && (
+                <div className="flex flex-nowrap gap-[8px]">
                   {WEEKDAYS.map(d => (
                     <SchedCheckbox key={d} checked={form.weekdays.includes(d)} onChange={() => toggleWeekday(d)} label={d} />
                   ))}
                 </div>
               )}
 
-              {/* 日期模式：chip 多選 */}
+              {/* 日期模式：數字輸入 */}
               {form.scheduleType === 'date' && (
-                <div className="pl-[0px]">
-                  <MultiChipSelect
-                    options={DATE_DAYS}
-                    value={form.dateDays}
-                    onChange={v => upd('dateDays', v)}
-                    placeholder="選擇日期（幾號）"
-                    bgColor="#EFF6FF"
-                  />
-                </div>
+                <DateDayInput
+                  value={form.dateDays}
+                  onChange={v => upd('dateDays', v)}
+                  maxDay={maxDay}
+                  bgColor="#EFF6FF"
+                />
               )}
             </div>
 
             <div className="h-[1px] bg-[rgba(145,158,171,0.16)]" />
 
-            {/* 時段 — 星期模式 */}
-            {form.scheduleType === 'weekday' && (
-              <div className="flex flex-col gap-[10px]">
-                <div className="flex items-center gap-[10px]">
-                  <span className="text-[13px] font-semibold text-[#ff5630] shrink-0">*</span>
-                  <div className="w-[140px]">
-                    <DropdownSelect
-                      label=""
-                      value={form.timeMode}
-                      onChange={v => upd('timeMode', v as 'interval' | 'specific')}
-                      options={[{ value: 'specific', label: '指定時段' }, { value: 'interval', label: '間隔時間' }]}
-                    />
-                  </div>
-                </div>
-
-                {form.timeMode === 'specific' && (
-                  <div className="flex flex-col gap-[8px] pl-[22px] max-h-[230px] overflow-y-auto custom-scrollbar">
-                    {form.specificTimes.map((t, i) => (
-                      <div key={i} className="flex items-center gap-[8px]">
-                        <span className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#637381] w-[14px] text-right shrink-0">{i + 1}</span>
-                        <div className="w-[130px]">
-                          <DropdownSelect
-                            label=""
-                            value={t}
-                            onChange={v => updateTime(i, v as string)}
-                            options={TIME_OPTIONS.map(o => ({ value: o, label: o }))}
-                            zIndex={120}
-                          />
-                        </div>
-                        <button type="button" onClick={addTime}
-                          className="w-[28px] h-[28px] rounded-full bg-[#1890ff] text-white flex items-center justify-center hover:bg-[#096dd9] transition-colors shrink-0">
-                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="white" strokeWidth="2" strokeLinecap="round" /></svg>
-                        </button>
-                        {form.specificTimes.length > 1 && (
-                          <button type="button" onClick={() => removeTime(i)}
-                            className="w-[28px] h-[28px] rounded-full bg-[#ff5630] text-white flex items-center justify-center hover:bg-[#d4380d] transition-colors shrink-0">
-                            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                              <path d="M2 5h12M6 5V3h4v2M7 8v4M9 8v4M3 5l1 9h8l1-9" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {form.timeMode === 'interval' && (
-                  <div className="pl-[22px]">
-                    <div className="w-[160px]">
-                      <DropdownSelect
-                        label=""
-                        value={form.interval}
-                        onChange={v => upd('interval', v as string)}
-                        options={INTERVAL_OPTIONS.map(o => ({ value: o, label: o }))}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* 時段 — 日期模式（固定時間 行內配置） */}
-            {form.scheduleType === 'date' && (
-              <div className="flex items-center gap-[8px] flex-wrap">
-                <span className="text-[13px] font-semibold text-[#ff5630]">*</span>
-                <div className="w-[140px]">
-                  <DropdownSelect
-                    label=""
-                    value="fixed"
-                    onChange={() => {}}
-                    options={[{ value: 'fixed', label: '固定時間' }]}
-                  />
-                </div>
-                <input
-                  type="number"
-                  min="1"
-                  className="h-[34px] w-[70px] border border-[rgba(145,158,171,0.3)] rounded-[8px] px-[8px] text-[13px] text-[#1c252e] bg-white focus:outline-none focus:border-[#1890ff] text-center"
-                  value={form.fixedIntervalMinutes}
-                  onChange={e => upd('fixedIntervalMinutes', e.target.value)}
-                  placeholder="60"
+            {/* 時間設定：幾點開始 + 幾分一次 */}
+            <div className="flex gap-[10px]">
+              <div className="flex-1">
+                <DropdownSelect
+                  label="幾點開始"
+                  value={form.startTime}
+                  onChange={v => upd('startTime', v as string)}
+                  options={TIME_OPTIONS.map(o => ({ value: o, label: o }))}
+                  zIndex={120}
                 />
-                <span className="text-[13px] text-[#637381] whitespace-nowrap">min/次 (上限)</span>
-                <input
-                  type="text"
-                  className="h-[34px] flex-1 min-w-[160px] border border-[rgba(145,158,171,0.3)] rounded-[8px] px-[8px] text-[13px] text-[#1c252e] bg-white focus:outline-none focus:border-[#1890ff]"
-                  value={form.fixedStartDatetime}
-                  onChange={e => upd('fixedStartDatetime', e.target.value)}
-                  placeholder="yyyy/MM/dd hhss"
-                />
-                <span className="text-[13px] text-[#637381]">start</span>
               </div>
-            )}
+              <div className="flex-1">
+                <DropdownSelect
+                  label="幾分執行一次"
+                  value={form.intervalMinutes}
+                  onChange={v => upd('intervalMinutes', v as string)}
+                  options={INTERVAL_MIN_OPTIONS}
+                />
+              </div>
+            </div>
 
             {/* 連動信件類別：僅「信件通知」分類顯示（含上方分隔線） */}
             {form.category === '信件通知' && (<>
@@ -603,6 +681,19 @@ function ScheduleModal({
             </>)}
             </div>{/* end 內容 div */}
           </div>{/* end 執行頻率 card */}
+
+              {/* 即時摘要文字 */}
+              {scheduleSummary && (
+                <div className="flex items-center gap-[6px] pt-[4px]">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#637381" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                  </svg>
+                  <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] text-[13px] leading-[22px] text-[#1c252e]">
+                    {scheduleSummary}
+                  </p>
+                </div>
+              )}
             </div>{/* end right column */}
           </div>{/* end 左右並排 */}
 
@@ -768,25 +859,24 @@ export function ScheduleSettingsPage() {
   const openEdit = useCallback((row: ScheduleRow) => setModal({ mode: 'edit', row }), []);
 
   const rowToForm = (row: ScheduleRow): ScheduleForm => {
-    const isInterval = row.timesArr.length === 1 && row.timesArr[0].includes('min');
     return {
       name: row.name, url: row.url, category: row.category, months: [],
       scheduleType: row.scheduleType,
-      everyDay: row.days === '每天',
       weekdays: row.scheduleType === 'weekday' && row.days !== '每天'
         ? row.days.split('、') : ['一','二','三','四','五','六','日'],
-      dateDays: row.scheduleType === 'date' ? row.days.split('、') : [],
-      timeMode: isInterval ? 'interval' : 'specific',
-      interval: isInterval ? row.timesArr[0] : '30 min',
-      specificTimes: isInterval ? ['00:00'] : row.timesArr,
+      dateDays: row.scheduleType === 'date' ? row.days.split('、').map(d => d.replace('號','')) : [],
+      startTime: row.timesArr.length > 0 && !row.timesArr[0].includes('min')
+        ? row.timesArr[0] : '08:00',
+      intervalMinutes: row.timesArr.length === 1 && row.timesArr[0].includes('min')
+        ? row.timesArr[0].replace(' min', '') : '60',
       mailTypes: [...row.mailTypesArr],
     };
   };
 
   const handleSave = (form: ScheduleForm) => {
     const days  = buildDays(form);
+    const timesArr = [form.startTime];
     const timesDisplay = buildTimes(form);
-    const timesArr = form.timeMode === 'interval' ? [form.interval] : form.specificTimes;
     const now = new Date().toLocaleDateString('zh-TW', { year:'numeric', month:'2-digit', day:'2-digit' })
               + ' ' + new Date().toLocaleTimeString('zh-TW', { hour:'2-digit', minute:'2-digit' });
 
