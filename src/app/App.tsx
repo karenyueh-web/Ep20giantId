@@ -27,6 +27,7 @@ import QuotationPrintListPage from "@/app/components/QuotationPrintListPage";
 import EsgMaterialPage from "@/app/components/EsgMaterialPage";
 import EsgMaterialSummaryPage from "@/app/components/EsgMaterialSummaryPage";
 import { VendorEvaluationPage } from "@/app/components/VendorEvaluationPage";
+import { ScheduleSettingsPage } from "@/app/components/ScheduleSettingsPage";
 import SampleOrderListPage from "@/app/components/SampleOrderListPage";
 import { ResponsivePageLayout } from "@/app/components/ResponsivePageLayout";
 import { LoginPage } from "@/app/components/LoginPage";
@@ -452,6 +453,18 @@ export default function App() {
       case 'permission-settings':
         return <PermissionSettingsPage currentPage={currentPage} onPageChange={handlePageChange} onLogout={handleLogout} userRole={userRole} />;
       case 'schedule-settings':
+        return (
+          <ResponsivePageLayout
+            currentPage={currentPage}
+            onPageChange={handlePageChange}
+            onLogout={handleLogout}
+            userRole={userRole}
+            title={pageConfig['schedule-settings'].title}
+            breadcrumb={pageConfig['schedule-settings'].breadcrumb}
+          >
+            <ScheduleSettingsPage />
+          </ResponsivePageLayout>
+        );
       case 'quality-report':
       case 'quality-hazard':
       case 'quality-other':

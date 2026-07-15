@@ -1203,7 +1203,115 @@ return (
 > ⚠️ **所有 checkbox cell container 必須加 `data-is-checkbox="true"`**，讓 `useHorizontalDragScroll` 排除這個區域，否則整個 checkbox 欄只有 SVG 本身可以點擊（外圈空白會被 drag scroll 攔截）。
 
 
-### ✅ 應該做
+### 8. ⭐ ToggleSwitch 在表格 Cell 中的正確用法
+
+> 表格列中放置啟用/停用 Toggle 時，必須加 `stopPropagation` 包裹，避免 Toggle 點擊事件冒泡到列的 `onRowClick` 或 drag scroll 機制。
+
+#### ✅ 正確寫法
+
+```tsx
+// renderCell 或 inline cell JSX
+case 'enabled':
+  return (
+    <div onClick={e => e.stopPropagation()}>
+      <ToggleSwitch
+        checked={row.enabled}
+        onChange={() => handleToggle(row.id)}
+      />
+    </div>
+  );
+```
+
+#### ❌ 錯誤寫法
+
+```tsx
+// ❌ 沒有 stopPropagation wrapper → 點 Toggle 會觸發 row click / drag scroll
+<ToggleSwitch checked={row.enabled} onChange={() => handleToggle(row.id)} />
+```
+
+| 規則 | 說明 |
+|------|------|
+| wrapper div | `onClick={e => e.stopPropagation()}` 必填 |
+| 啟用色 | `#22c55e`（綠），停用色 `#919EAB`（灰），由 `ToggleSwitch` 內建，禁止外部覆寫 |
+| 欄寬 | `width: 72, minWidth: 72` |
+| 參考來源 | `ScheduleSettingsPage.tsx` `renderCell` `enabled` case |
+
+---
+
+### 9. ⭐ 設定類列表頁規範（Settings List Page）
+
+> 管理「系統設定項目」的列表頁（如排程設定、權限設定、發票設定等），需遵循以下固定結構。
+
+#### 頁面結構
+
+```
+白色 card wrapper（rounded-[16px] shadow）
+  ├── A. 搜尋列（flex-1 min-w-0 等寬欄位）
+  ├── B. TableToolbar（含「新增」actionButton）
+  ├── C. 表格（DnD + 欄寬 + 橫向拖拉）
+  │     ├── 表頭：DraggableColumnHeader × n + flex-1 fill + sticky-right 操作欄
+  │     └── 資料列：badge cell + link cell + ToggleSwitch cell + sticky-right EditButton
+  └── D. PaginationControls
+```
+
+#### 「新增」按鈕放在 TableToolbar actionButton
+
+```tsx
+<TableToolbar
+  ...
+  actionButton={
+    <button
+      onClick={openAdd}
+      className="flex items-center h-[36px] px-[16px] rounded-[8px] bg-[#1c252e] hover:bg-[#2c3540] text-white font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] transition-colors"
+    >
+      新增
+    </button>
+  }
+/>
+```
+
+#### Sticky-right 操作欄（表頭 + 資料列）
+
+```tsx
+{/* 表頭 sticky-right */}
+<div
+  className="bg-[#f4f6f8] flex items-center justify-center shrink-0"
+  style={{ width: 64, height: 56, position: 'sticky', right: 0, zIndex: 21, boxShadow: '-2px 0 4px -2px rgba(145,158,171,0.2)' }}
+/>
+
+{/* 資料列 sticky-right */}
+<div
+  className="flex items-center justify-center px-[8px] shrink-0 bg-white group-hover:bg-[#f5f6f7]"
+  style={{ width: 64, minWidth: 64, position: 'sticky', right: 0, zIndex: 4, boxShadow: '-2px 0 4px -2px rgba(145,158,171,0.2)' }}
+>
+  <EditButton onClick={() => openEdit(row)} />
+</div>
+```
+
+#### 分類 Badge（category badge in table cell）
+
+```tsx
+<span className={`inline-flex items-center h-[22px] px-[8px] rounded-[6px] text-[12px] font-semibold leading-none whitespace-nowrap ${
+  category === '信件通知'
+    ? 'bg-[rgba(0,94,184,0.12)] text-[#005eb8]'
+    : 'bg-[rgba(183,110,0,0.12)] text-[#b76e00]'
+}`}>
+  {category}
+</span>
+```
+
+| 規則 | 說明 |
+|------|------|
+| 操作欄欄寬 | `width: 64, minWidth: 64` |
+| 操作欄 zIndex（表頭）| `zIndex: 21` |
+| 操作欄 zIndex（資料列）| `zIndex: 4` |
+| 操作欄 boxShadow | `-2px 0 4px -2px rgba(145,158,171,0.2)` |
+| 分類 badge 圓角 | `rounded-[6px]`（非 rounded-full）|
+| 排程名稱連結 | 點擊開啟 Edit Modal（非 `text-[#1677ff] underline`，用 `text-[#005eb8] hover:underline`）|
+| 參考來源 | `ScheduleSettingsPage.tsx` |
+
+---
+
 
 ```tsx
 // ✅ 使用 shadcn/ui Button
