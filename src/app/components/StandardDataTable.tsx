@@ -86,6 +86,13 @@ export interface StandardDataTableProps<T extends { id: number }> {
   className?: string;
   /** 資料更新時間，傳入後顯示在右下角 pagination 列 */
   updateTime?: string;
+  /**
+   * 嵌入模式（預設 false）
+   * - false：獨立卡片樣式，帶 shadow + rounded-[16px]（適合頁面頂層使用）
+   * - true ：嵌入父容器，自動移除 shadow / rounded，改為 flex-1 撐滿
+   *          適合已有外層卡片的頁面（如 Tab + 搜尋列 + 表格 的 Settings 頁）
+   */
+  embedded?: boolean;
 }
 
 
@@ -114,6 +121,7 @@ export function StandardDataTable<T extends { id: number }>({
   batchActions,
   className,
   updateTime,
+  embedded = false,
 }: StandardDataTableProps<T>) {
   const { scrollContainerRef, handleMouseDown, canDragScroll } = useHorizontalDragScroll();
 
@@ -319,7 +327,11 @@ export function StandardDataTable<T extends { id: number }>({
   };
 
   return (
-    <div className={`bg-white flex flex-col h-full relative rounded-[16px] shadow-[0px_0px_2px_0px_rgba(145,158,171,0.2),0px_12px_24px_-4px_rgba(145,158,171,0.12)] w-full overflow-hidden ${className ?? ''}`}>
+    <div className={`bg-white flex flex-col relative w-full overflow-hidden ${
+      embedded
+        ? 'rounded-none shadow-none flex-1 h-full'
+        : 'rounded-[16px] shadow-[0px_0px_2px_0px_rgba(145,158,171,0.2),0px_12px_24px_-4px_rgba(145,158,171,0.12)] h-full'
+    } ${className ?? ''}`}>
 
       {/* ── TableToolbar（Columns / Filters / Export）── */}
       <TableToolbar

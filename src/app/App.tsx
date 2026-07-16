@@ -29,6 +29,7 @@ import EsgMaterialSummaryPage from "@/app/components/EsgMaterialSummaryPage";
 import { VendorEvaluationPage } from "@/app/components/VendorEvaluationPage";
 import { ScheduleSettingsPage } from "@/app/components/ScheduleSettingsPage";
 import SampleOrderListPage from "@/app/components/SampleOrderListPage";
+import { QualityOtherSettingsPage } from "@/app/components/QualityOtherSettingsPage";
 import { ResponsivePageLayout } from "@/app/components/ResponsivePageLayout";
 import { LoginPage } from "@/app/components/LoginPage";
 import { RegisterPage } from "@/app/components/RegisterPage";
@@ -483,7 +484,20 @@ export default function App() {
         );
       case 'quality-report':
       case 'quality-hazard':
+        return <UnderConstructionPage currentPage={currentPage} onPageChange={handlePageChange} onLogout={handleLogout} userRole={userRole} />;
       case 'quality-other':
+        return (
+          <ResponsivePageLayout
+            currentPage={currentPage}
+            onPageChange={handlePageChange}
+            onLogout={handleLogout}
+            userRole={userRole}
+            title={pageConfig['quality-other'].title}
+            breadcrumb={pageConfig['quality-other'].breadcrumb}
+          >
+            <QualityOtherSettingsPage />
+          </ResponsivePageLayout>
+        );
       case 'shipment-tw-order':
       case 'shipment-tw-shipping':
       case 'shipment-tw-print':

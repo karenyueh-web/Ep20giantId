@@ -519,6 +519,21 @@ const COLUMNS: StandardColumn<MyRow>[] = [
 />
 ```
 
+> ⚠️ **`embedded` prop 說明（嵌入模式）**
+>
+> | 情境 | 用法 |
+> |------|------|
+> | 頁面最外層，表格本身就是卡片 | 預設，不傳（帶 shadow + rounded） |
+> | 已有外層卡片（如 Tab + 搜尋列 + 表格 的 Settings 頁） | 傳 `embedded`，自動去掉 shadow / rounded，以 flex-1 撐滿 |
+>
+> ```tsx
+> {/* ❌ 錯誤：在有父卡片的頁面不傳 embedded → 搜尋列下方會出現 shadow 邊緣 */}
+> <StandardDataTable storageKey="..." columns={...} data={...} />
+>
+> {/* ✅ 正確：Settings / Tab 類頁面加 embedded */}
+> <StandardDataTable storageKey="..." columns={...} data={...} embedded />
+> ```
+
 **方式 B：手動組裝（當需要 sticky 欄、自訂列高等特殊需求）**
 
 參考 `HistoryOrderListWithTabs.tsx`（標準模板），包含：
