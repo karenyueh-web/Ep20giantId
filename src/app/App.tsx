@@ -465,9 +465,6 @@ export default function App() {
             <ScheduleSettingsPage />
           </ResponsivePageLayout>
         );
-      case 'quality-report':
-      case 'quality-hazard':
-      case 'quality-other':
       case 'insurance-maintain':
       case 'newparts-project':
       case 'newparts-settings':
@@ -484,6 +481,9 @@ export default function App() {
             <VendorEvaluationPage />
           </ResponsivePageLayout>
         );
+      case 'quality-report':
+      case 'quality-hazard':
+      case 'quality-other':
       case 'shipment-tw-order':
       case 'shipment-tw-shipping':
       case 'shipment-tw-print':
