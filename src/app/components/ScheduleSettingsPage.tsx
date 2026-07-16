@@ -34,7 +34,7 @@ import { CheckboxIcon } from './CheckboxIcon';
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
-type SchedColKey = 'category' | 'name' | 'enabled' | 'days' | 'times' | 'url' | 'mailTypes' | 'updatedAt';
+type SchedColKey = 'frequency' | 'name' | 'enabled' | 'url' | 'mailTypes' | 'updatedAt';
 
 interface SchedCol {
   key: SchedColKey;
@@ -50,11 +50,11 @@ interface ScheduleRow {
   name: string;
   enabled: boolean;
   scheduleType: 'weekday' | 'date';
-  days: string;          // 顯示用：每天 / 一、二、... / 10號、20號
-  times: string;         // 顯示用：16:00、20:00 / 30 min
-  timesArr: string[];    // 實際時間陣列（form 使用）
+  days: string;             // 顯示用：每天 / 一、二、... / 10號、20號
+  startTime: string;        // 幾點開始 (HH:mm)
+  intervalMinutes: string;  // 執行間隔（分鐘）
   url: string;
-  mailTypes: string;     // 顯示用：訂單通知信
+  mailTypes: string;        // 顯示用：訂單通知信
   mailTypesArr: string[];
   updatedAt: string;
 }
@@ -75,14 +75,12 @@ interface ScheduleForm {
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
 // ─────────────────────────────────────────────────────────────────────────────
-const STORAGE_KEY = 'schedule-settings-v1-cols';
+const STORAGE_KEY = 'schedule-settings-v2-cols';
 
 const DEFAULT_COLS: SchedCol[] = [
-  { key: 'category',   label: '分類',        width: 100, minWidth: 80  },
   { key: 'name',       label: '排程名稱',    width: 200, minWidth: 140 },
   { key: 'enabled',    label: '啟用',        width: 88,  minWidth: 72  },
-  { key: 'days',       label: '星期/日期',   width: 170, minWidth: 120 },
-  { key: 'times',      label: '時段/時間',   width: 140, minWidth: 100 },
+  { key: 'frequency',  label: '執行頻率',    width: 300, minWidth: 200 },
   { key: 'url',        label: 'URL',         width: 230, minWidth: 130 },
   { key: 'mailTypes',  label: '連動信件類別', width: 140, minWidth: 110 },
   { key: 'updatedAt',  label: '最近更新時間', width: 160, minWidth: 120 },
@@ -103,14 +101,19 @@ const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
   return `${h}:${m}`;
 });
 const INTERVAL_MIN_OPTIONS = [
-  { value: '10',  label: '10 分' },
-  { value: '15',  label: '15 分' },
-  { value: '30',  label: '30 分' },
-  { value: '60',  label: '60 分' },
-  { value: '90',  label: '90 分' },
-  { value: '120', label: '120 分' },
-  { value: '180', label: '180 分' },
-  { value: '240', label: '240 分' },
+  { value: '5',    label: '5 分' },
+  { value: '10',   label: '10 分' },
+  { value: '15',   label: '15 分' },
+  { value: '30',   label: '30 分' },
+  { value: '60',   label: '1 小時' },
+  { value: '90',   label: '1.5 小時' },
+  { value: '120',  label: '2 小時' },
+  { value: '180',  label: '3 小時' },
+  { value: '240',  label: '4 小時' },
+  { value: '360',  label: '6 小時' },
+  { value: '480',  label: '8 小時' },
+  { value: '720',  label: '12 小時' },
+  { value: '1440', label: '24 小時' },
 ];
 
 const INITIAL_FORM: ScheduleForm = {
@@ -125,31 +128,31 @@ const INITIAL_FORM: ScheduleForm = {
 // Mock Data
 // ─────────────────────────────────────────────────────────────────────────────
 const INITIAL_DATA: ScheduleRow[] = [
-  { id:1,  category:'信件通知', name:'Creat PO 錯誤',         enabled:true,  scheduleType:'weekday', days:'一、二、三、四、五、六', times:'120 min',      timesArr:['120 min'],       url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22abc%22%7D', mailTypes:'',            mailTypesArr:[],              updatedAt:'2025/10/10 08:00' },
-  { id:2,  category:'觸發程式', name:'出貨單資訊回中台',       enabled:true,  scheduleType:'weekday', days:'每天',                  times:'30 min',       timesArr:['30 min'],        url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22def%22%7D', mailTypes:'',            mailTypesArr:[],              updatedAt:'2025/10/10 08:00' },
-  { id:3,  category:'信件通知', name:'SA訂單資訊無到EP通知',   enabled:true,  scheduleType:'weekday', days:'每天',                  times:'16:00、20:00',  timesArr:['16:00','20:00'], url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22oArW%22%7D', mailTypes:'訂單通知信',   mailTypesArr:['訂單通知信'],  updatedAt:'2025/10/10 08:00' },
-  { id:4,  category:'信件通知', name:'訂單不同意通知',         enabled:true,  scheduleType:'date',    days:'10號、20號、30號',      times:'00:00',        timesArr:['00:00'],         url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22ghi%22%7D',  mailTypes:'訂單通知信',   mailTypesArr:['訂單通知信'],  updatedAt:'2025/10/10 08:00' },
-  { id:5,  category:'信件通知', name:'修正單通知',             enabled:true,  scheduleType:'weekday', days:'一、二、三、四、五、六', times:'00:00',        timesArr:['00:00'],         url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22jkl%22%7D',  mailTypes:'修正單通知信', mailTypesArr:['修正單通知信'],updatedAt:'2025/10/10 08:00' },
-  { id:6,  category:'信件通知', name:'修正單不同意通知',       enabled:true,  scheduleType:'weekday', days:'一、二、三、四、五、六', times:'16:00、20:00',  timesArr:['16:00','20:00'], url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22mno%22%7D',  mailTypes:'修正單通知信', mailTypesArr:['修正單通知信'],updatedAt:'2025/10/10 08:00' },
-  { id:7,  category:'信件通知', name:'廠商交期提醒',           enabled:false, scheduleType:'weekday', days:'一、二、三、四、五',     times:'09:00',        timesArr:['09:00'],         url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22pqr%22%7D',  mailTypes:'訂單通知信',   mailTypesArr:['訂單通知信'],  updatedAt:'2025/10/10 08:00' },
-  { id:8,  category:'觸發程式', name:'庫存同步作業',           enabled:true,  scheduleType:'weekday', days:'每天',                  times:'60 min',       timesArr:['60 min'],        url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22stu%22%7D',  mailTypes:'',            mailTypesArr:[],              updatedAt:'2025/10/10 08:00' },
-  { id:9,  category:'信件通知', name:'訂單逾期通知',           enabled:true,  scheduleType:'weekday', days:'一、二、三、四、五',     times:'08:00',        timesArr:['08:00'],         url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22vwx%22%7D',  mailTypes:'訂單通知信',   mailTypesArr:['訂單通知信'],  updatedAt:'2025/10/10 08:00' },
-  { id:10, category:'信件通知', name:'出貨單發送通知',         enabled:true,  scheduleType:'weekday', days:'每天',                  times:'10:00、14:00',  timesArr:['10:00','14:00'], url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22yza%22%7D',  mailTypes:'出貨通知信',   mailTypesArr:['出貨通知信'],  updatedAt:'2025/10/10 08:00' },
-  { id:11, category:'觸發程式', name:'訂單狀態更新',           enabled:true,  scheduleType:'weekday', days:'每天',                  times:'15 min',       timesArr:['15 min'],        url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22bcd%22%7D',  mailTypes:'',            mailTypesArr:[],              updatedAt:'2025/10/10 08:00' },
-  { id:12, category:'信件通知', name:'帳款逾期提醒',           enabled:false, scheduleType:'date',    days:'5號、20號',             times:'09:00',        timesArr:['09:00'],         url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22efg%22%7D',  mailTypes:'帳款通知信',   mailTypesArr:['帳款通知信'],  updatedAt:'2025/10/10 08:00' },
-  { id:13, category:'信件通知', name:'新訂單確認通知',         enabled:true,  scheduleType:'weekday', days:'一、二、三、四、五',     times:'08:30',        timesArr:['08:30'],         url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22hij%22%7D',  mailTypes:'訂單通知信',   mailTypesArr:['訂單通知信'],  updatedAt:'2025/10/10 08:00' },
-  { id:14, category:'觸發程式', name:'SAP資料同步',            enabled:true,  scheduleType:'weekday', days:'每天',                  times:'30 min',       timesArr:['30 min'],        url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22klm%22%7D',  mailTypes:'',            mailTypesArr:[],              updatedAt:'2025/10/10 08:00' },
-  { id:15, category:'信件通知', name:'廠商評分發送',           enabled:true,  scheduleType:'date',    days:'1號',                   times:'09:00',        timesArr:['09:00'],         url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22nop%22%7D',  mailTypes:'訂單通知信',   mailTypesArr:['訂單通知信'],  updatedAt:'2025/10/10 08:00' },
-  { id:16, category:'信件通知', name:'延誤預警通知',           enabled:true,  scheduleType:'weekday', days:'一、三、五',            times:'14:00',        timesArr:['14:00'],         url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22qrs%22%7D',  mailTypes:'訂單通知信',   mailTypesArr:['訂單通知信'],  updatedAt:'2025/10/10 08:00' },
-  { id:17, category:'觸發程式', name:'郵件佇列清理',           enabled:true,  scheduleType:'weekday', days:'每天',                  times:'240 min',      timesArr:['240 min'],       url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22tuv%22%7D',  mailTypes:'',            mailTypesArr:[],              updatedAt:'2025/10/10 08:00' },
-  { id:18, category:'信件通知', name:'催貨通知',               enabled:false, scheduleType:'weekday', days:'一、二、三、四、五',     times:'11:00',        timesArr:['11:00'],         url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22wxy%22%7D',  mailTypes:'訂單通知信',   mailTypesArr:['訂單通知信'],  updatedAt:'2025/10/10 08:00' },
-  { id:19, category:'信件通知', name:'訂單取消確認',           enabled:true,  scheduleType:'weekday', days:'每天',                  times:'16:00',        timesArr:['16:00'],         url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22zab%22%7D',  mailTypes:'修正單通知信', mailTypesArr:['修正單通知信'],updatedAt:'2025/10/10 08:00' },
-  { id:20, category:'觸發程式', name:'收貨資料回傳',           enabled:true,  scheduleType:'weekday', days:'每天',                  times:'60 min',       timesArr:['60 min'],        url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22cde%22%7D',  mailTypes:'',            mailTypesArr:[],              updatedAt:'2025/10/10 08:00' },
-  { id:21, category:'信件通知', name:'異常訂單警示',           enabled:true,  scheduleType:'weekday', days:'一、二、三、四、五、六', times:'08:00、17:00',  timesArr:['08:00','17:00'], url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22fgh%22%7D',  mailTypes:'訂單通知信',   mailTypesArr:['訂單通知信'],  updatedAt:'2025/10/10 08:00' },
-  { id:22, category:'信件通知', name:'廠商聯絡資訊更新提醒',  enabled:false, scheduleType:'date',    days:'15號',                  times:'09:00',        timesArr:['09:00'],         url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22ijk%22%7D',  mailTypes:'訂單通知信',   mailTypesArr:['訂單通知信'],  updatedAt:'2025/10/10 08:00' },
-  { id:23, category:'觸發程式', name:'價格異動偵測',           enabled:true,  scheduleType:'weekday', days:'每天',                  times:'30 min',       timesArr:['30 min'],        url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22lmn%22%7D',  mailTypes:'',            mailTypesArr:[],              updatedAt:'2025/10/10 08:00' },
-  { id:24, category:'信件通知', name:'月結報表發送',           enabled:true,  scheduleType:'date',    days:'1號',                   times:'08:00',        timesArr:['08:00'],         url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22opq%22%7D',  mailTypes:'帳款通知信',   mailTypesArr:['帳款通知信'],  updatedAt:'2025/10/10 08:00' },
-  { id:25, category:'信件通知', name:'年度廠商評鑑通知',       enabled:false, scheduleType:'date',    days:'1號',                   times:'09:00',        timesArr:['09:00'],         url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22rst%22%7D',  mailTypes:'訂單通知信',   mailTypesArr:['訂單通知信'],  updatedAt:'2025/10/10 08:00' },
+  { id:1,  category:'信件通知', name:'Creat PO 錯誤',         enabled:true,  scheduleType:'weekday', days:'一、二、三、四、五、六', startTime:'08:00', intervalMinutes:'120', url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22abc%22%7D', mailTypes:'',            mailTypesArr:[],              updatedAt:'2025/10/10 08:00' },
+  { id:2,  category:'觸發程式', name:'出貨單資訊回中台',       enabled:true,  scheduleType:'weekday', days:'每天',                  startTime:'08:00', intervalMinutes:'30',  url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22def%22%7D', mailTypes:'',            mailTypesArr:[],              updatedAt:'2025/10/10 08:00' },
+  { id:3,  category:'信件通知', name:'SA訂單資訊無到EP通知',   enabled:true,  scheduleType:'weekday', days:'每天',                  startTime:'16:00', intervalMinutes:'60',  url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22oArW%22%7D', mailTypes:'訂單通知信',   mailTypesArr:['訂單通知信'],  updatedAt:'2025/10/10 08:00' },
+  { id:4,  category:'信件通知', name:'訂單不同意通知',         enabled:true,  scheduleType:'date',    days:'10號、20號、30號',      startTime:'00:00', intervalMinutes:'60',  url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22ghi%22%7D',  mailTypes:'訂單通知信',   mailTypesArr:['訂單通知信'],  updatedAt:'2025/10/10 08:00' },
+  { id:5,  category:'信件通知', name:'修正單通知',             enabled:true,  scheduleType:'weekday', days:'一、二、三、四、五、六', startTime:'00:00', intervalMinutes:'60',  url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22jkl%22%7D',  mailTypes:'修正單通知信', mailTypesArr:['修正單通知信'],updatedAt:'2025/10/10 08:00' },
+  { id:6,  category:'信件通知', name:'修正單不同意通知',       enabled:true,  scheduleType:'weekday', days:'一、二、三、四、五、六', startTime:'16:00', intervalMinutes:'60',  url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22mno%22%7D',  mailTypes:'修正單通知信', mailTypesArr:['修正單通知信'],updatedAt:'2025/10/10 08:00' },
+  { id:7,  category:'信件通知', name:'廠商交期提醒',           enabled:false, scheduleType:'weekday', days:'一、二、三、四、五',     startTime:'09:00', intervalMinutes:'60',  url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22pqr%22%7D',  mailTypes:'訂單通知信',   mailTypesArr:['訂單通知信'],  updatedAt:'2025/10/10 08:00' },
+  { id:8,  category:'觸發程式', name:'庫存同步作業',           enabled:true,  scheduleType:'weekday', days:'每天',                  startTime:'08:00', intervalMinutes:'60',  url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22stu%22%7D',  mailTypes:'',            mailTypesArr:[],              updatedAt:'2025/10/10 08:00' },
+  { id:9,  category:'信件通知', name:'訂單逾期通知',           enabled:true,  scheduleType:'weekday', days:'一、二、三、四、五',     startTime:'08:00', intervalMinutes:'60',  url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22vwx%22%7D',  mailTypes:'訂單通知信',   mailTypesArr:['訂單通知信'],  updatedAt:'2025/10/10 08:00' },
+  { id:10, category:'信件通知', name:'出貨單發送通知',         enabled:true,  scheduleType:'weekday', days:'每天',                  startTime:'10:00', intervalMinutes:'240', url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22yza%22%7D',  mailTypes:'出貨通知信',   mailTypesArr:['出貨通知信'],  updatedAt:'2025/10/10 08:00' },
+  { id:11, category:'觸發程式', name:'訂單狀態更新',           enabled:true,  scheduleType:'weekday', days:'每天',                  startTime:'08:00', intervalMinutes:'15',  url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22bcd%22%7D',  mailTypes:'',            mailTypesArr:[],              updatedAt:'2025/10/10 08:00' },
+  { id:12, category:'信件通知', name:'帳款逾期提醒',           enabled:false, scheduleType:'date',    days:'5號、20號',             startTime:'09:00', intervalMinutes:'60',  url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22efg%22%7D',  mailTypes:'帳款通知信',   mailTypesArr:['帳款通知信'],  updatedAt:'2025/10/10 08:00' },
+  { id:13, category:'信件通知', name:'新訂單確認通知',         enabled:true,  scheduleType:'weekday', days:'一、二、三、四、五',     startTime:'08:30', intervalMinutes:'60',  url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22hij%22%7D',  mailTypes:'訂單通知信',   mailTypesArr:['訂單通知信'],  updatedAt:'2025/10/10 08:00' },
+  { id:14, category:'觸發程式', name:'SAP資料同步',            enabled:true,  scheduleType:'weekday', days:'每天',                  startTime:'08:00', intervalMinutes:'30',  url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22klm%22%7D',  mailTypes:'',            mailTypesArr:[],              updatedAt:'2025/10/10 08:00' },
+  { id:15, category:'信件通知', name:'廠商評分發送',           enabled:true,  scheduleType:'date',    days:'1號',                   startTime:'09:00', intervalMinutes:'60',  url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22nop%22%7D',  mailTypes:'訂單通知信',   mailTypesArr:['訂單通知信'],  updatedAt:'2025/10/10 08:00' },
+  { id:16, category:'信件通知', name:'延誤預警通知',           enabled:true,  scheduleType:'weekday', days:'一、三、五',             startTime:'14:00', intervalMinutes:'60',  url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22qrs%22%7D',  mailTypes:'訂單通知信',   mailTypesArr:['訂單通知信'],  updatedAt:'2025/10/10 08:00' },
+  { id:17, category:'觸發程式', name:'郵件佇列清理',           enabled:true,  scheduleType:'weekday', days:'每天',                  startTime:'08:00', intervalMinutes:'240', url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22tuv%22%7D',  mailTypes:'',            mailTypesArr:[],              updatedAt:'2025/10/10 08:00' },
+  { id:18, category:'信件通知', name:'催貨通知',               enabled:false, scheduleType:'weekday', days:'一、二、三、四、五',     startTime:'11:00', intervalMinutes:'60',  url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22wxy%22%7D',  mailTypes:'訂單通知信',   mailTypesArr:['訂單通知信'],  updatedAt:'2025/10/10 08:00' },
+  { id:19, category:'信件通知', name:'訂單取消確認',           enabled:true,  scheduleType:'weekday', days:'每天',                  startTime:'16:00', intervalMinutes:'60',  url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22zab%22%7D',  mailTypes:'修正單通知信', mailTypesArr:['修正單通知信'],updatedAt:'2025/10/10 08:00' },
+  { id:20, category:'觸發程式', name:'收貨資料回傳',           enabled:true,  scheduleType:'weekday', days:'每天',                  startTime:'08:00', intervalMinutes:'60',  url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22cde%22%7D',  mailTypes:'',            mailTypesArr:[],              updatedAt:'2025/10/10 08:00' },
+  { id:21, category:'信件通知', name:'異常訂單警示',           enabled:true,  scheduleType:'weekday', days:'一、二、三、四、五、六', startTime:'08:00', intervalMinutes:'60',  url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22fgh%22%7D',  mailTypes:'訂單通知信',   mailTypesArr:['訂單通知信'],  updatedAt:'2025/10/10 08:00' },
+  { id:22, category:'信件通知', name:'廠商聯絡資訊更新提醒',  enabled:false, scheduleType:'date',    days:'15號',                  startTime:'09:00', intervalMinutes:'60',  url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22ijk%22%7D',  mailTypes:'訂單通知信',   mailTypesArr:['訂單通知信'],  updatedAt:'2025/10/10 08:00' },
+  { id:23, category:'觸發程式', name:'價格異動偵測',           enabled:true,  scheduleType:'weekday', days:'每天',                  startTime:'08:00', intervalMinutes:'30',  url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22lmn%22%7D',  mailTypes:'',            mailTypesArr:[],              updatedAt:'2025/10/10 08:00' },
+  { id:24, category:'信件通知', name:'月結報表發送',           enabled:true,  scheduleType:'date',    days:'1號',                   startTime:'08:00', intervalMinutes:'60',  url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22opq%22%7D',  mailTypes:'帳款通知信',   mailTypesArr:['帳款通知信'],  updatedAt:'2025/10/10 08:00' },
+  { id:25, category:'信件通知', name:'年度廠商評鑑通知',       enabled:false, scheduleType:'date',    days:'1號',                   startTime:'09:00', intervalMinutes:'60',  url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22rst%22%7D',  mailTypes:'訂單通知信',   mailTypesArr:['訂單通知信'],  updatedAt:'2025/10/10 08:00' },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -162,11 +165,20 @@ function buildDays(form: ScheduleForm): string {
   }
   return form.dateDays.join('、');
 }
-function buildTimes(form: ScheduleForm): string {
-  const parts: string[] = [];
-  if (form.startTime) parts.push(form.startTime);
-  if (form.intervalMinutes) parts.push('每' + form.intervalMinutes + '分執行一次');
-  return parts.join('，') || '-';
+// 將分鐘數轉為友善顯示文字
+function formatInterval(minutes: string): string {
+  const m = parseInt(minutes);
+  if (isNaN(m)) return minutes;
+  if (m < 60) return `${m} 分`;
+  const h = m / 60;
+  return h % 1 === 0 ? `${h} 小時` : `${h} 小時`;
+}
+// 從 ScheduleRow 組出執行頻率摘要（列表欄位顯示用）
+function buildRowSummary(row: ScheduleRow): string {
+  const segs: string[] = [row.days];
+  if (row.startTime) segs.push(row.startTime);
+  if (row.intervalMinutes) segs.push('每 ' + formatInterval(row.intervalMinutes) + ' 執行一次');
+  return segs.filter(Boolean).join('\u3000');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -532,7 +544,7 @@ function ScheduleModal({
         segs.push(form.startTime);
       }
     }
-    if (form.intervalMinutes) segs.push('每 ' + form.intervalMinutes + ' 分執行一次');
+    if (form.intervalMinutes) segs.push('每 ' + formatInterval(form.intervalMinutes) + ' 執行一次');
 
     return segs.join('　');
   }, [form.months, form.scheduleType, form.weekdays, form.dateDays,
@@ -564,12 +576,6 @@ function ScheduleModal({
             <div className="flex flex-col gap-[16px] flex-1 min-w-0">
               <FloatingInput label="*排程名稱" value={form.name} onChange={v => { upd('name', v); setErrors(e => ({ ...e, name: undefined })); }} showError={errors.name} />
               <FloatingInput label="*URL" value={form.url} onChange={v => { upd('url', v); setErrors(e => ({ ...e, url: undefined })); }} multiline showError={errors.url} />
-              <DropdownSelect
-                label="*分類"
-                value={form.category}
-                onChange={v => upd('category', v as string)}
-                options={CATEGORY_OPTIONS.map(c => ({ value: c, label: c }))}
-              />
             </div>
 
             {/* Right: 執行頻率 */}
@@ -659,7 +665,7 @@ function ScheduleModal({
               </div>
               <div className="flex-1">
                 <DropdownSelect
-                  label="幾分執行一次"
+                  label="多久執行一次"
                   value={form.intervalMinutes}
                   onChange={v => upd('intervalMinutes', v as string)}
                   options={INTERVAL_MIN_OPTIONS}
@@ -731,10 +737,10 @@ export function ScheduleSettingsPage() {
   const [data, setData] = useState<ScheduleRow[]>(INITIAL_DATA);
   const [modal, setModal] = useState<{ mode: 'add' | 'edit'; row?: ScheduleRow } | null>(null);
 
-  // ── 搜尋 ──────────────────────────────────────────────────────────────────
-  const [searchName, setSearchName]     = useState('');
-  const [filterCategory, setFilterCategory] = useState('');
-  const [filterEnabled, setFilterEnabled]   = useState('');
+  // ── 搜尋 / TAB ────────────────────────────────────────────────────────────
+  const [activeTab, setActiveTab]   = useState<'觸發程式' | '信件通知'>('觸發程式');
+  const [searchName, setSearchName] = useState('');
+  const [filterEnabled, setFilterEnabled] = useState('');
 
   // ── 欄位狀態 ──────────────────────────────────────────────────────────────
   const loadCols = (): SchedCol[] => {
@@ -804,12 +810,12 @@ export function ScheduleSettingsPage() {
 
   // ── 篩選 ──────────────────────────────────────────────────────────────────
   const baseFiltered = useMemo(() => data.filter(r => {
-    if (searchName && !r.name.includes(searchName) && !r.category.includes(searchName)) return false;
-    if (filterCategory && r.category !== filterCategory) return false;
+    if (r.category !== activeTab) return false;
+    if (searchName && !r.name.includes(searchName)) return false;
     if (filterEnabled === 'true'  && !r.enabled) return false;
     if (filterEnabled === 'false' &&  r.enabled) return false;
     return true;
-  }), [data, searchName, filterCategory, filterEnabled]);
+  }), [data, activeTab, searchName, filterEnabled]);
 
   const filteredData = useMemo(() => {
     if (appliedFilters.length === 0) return baseFiltered;
@@ -855,7 +861,7 @@ export function ScheduleSettingsPage() {
   }, []);
 
   // ── Modal ─────────────────────────────────────────────────────────────────
-  const openAdd  = () => setModal({ mode: 'add' });
+  const openAdd  = () => setModal({ mode: 'add', row: { id: 0, category: activeTab, name: '', enabled: true, scheduleType: 'weekday', days: '', startTime: '08:00', intervalMinutes: '60', url: '', mailTypes: '', mailTypesArr: [], updatedAt: '' } as ScheduleRow });
   const openEdit = useCallback((row: ScheduleRow) => setModal({ mode: 'edit', row }), []);
 
   const rowToForm = (row: ScheduleRow): ScheduleForm => {
@@ -865,19 +871,15 @@ export function ScheduleSettingsPage() {
       weekdays: row.scheduleType === 'weekday' && row.days !== '每天'
         ? row.days.split('、') : ['一','二','三','四','五','六','日'],
       dateDays: row.scheduleType === 'date' ? row.days.split('、').map(d => d.replace('號','')) : [],
-      startTime: row.timesArr.length > 0 && !row.timesArr[0].includes('min')
-        ? row.timesArr[0] : '08:00',
-      intervalMinutes: row.timesArr.length === 1 && row.timesArr[0].includes('min')
-        ? row.timesArr[0].replace(' min', '') : '60',
+      startTime: row.startTime || '08:00',
+      intervalMinutes: row.intervalMinutes || '60',
       mailTypes: [...row.mailTypesArr],
     };
   };
 
   const handleSave = (form: ScheduleForm) => {
-    const days  = buildDays(form);
-    const timesArr = [form.startTime];
-    const timesDisplay = buildTimes(form);
-    const now = new Date().toLocaleDateString('zh-TW', { year:'numeric', month:'2-digit', day:'2-digit' })
+    const days = buildDays(form);
+    const now  = new Date().toLocaleDateString('zh-TW', { year:'numeric', month:'2-digit', day:'2-digit' })
               + ' ' + new Date().toLocaleTimeString('zh-TW', { hour:'2-digit', minute:'2-digit' });
 
     if (modal?.mode === 'add') {
@@ -885,7 +887,7 @@ export function ScheduleSettingsPage() {
         id: Date.now(),
         category: form.category, name: form.name, enabled: true,
         scheduleType: form.scheduleType, days,
-        times: timesDisplay, timesArr,
+        startTime: form.startTime, intervalMinutes: form.intervalMinutes,
         url: form.url,
         mailTypes: form.mailTypes.join('、'), mailTypesArr: form.mailTypes,
         updatedAt: now,
@@ -896,7 +898,7 @@ export function ScheduleSettingsPage() {
         ...r,
         category: form.category, name: form.name,
         scheduleType: form.scheduleType, days,
-        times: timesDisplay, timesArr,
+        startTime: form.startTime, intervalMinutes: form.intervalMinutes,
         url: form.url,
         mailTypes: form.mailTypes.join('、'), mailTypesArr: form.mailTypes,
         updatedAt: now,
@@ -908,10 +910,10 @@ export function ScheduleSettingsPage() {
   // ── 渲染 Cell ─────────────────────────────────────────────────────────────
   const renderCell = (col: SchedCol, row: ScheduleRow): ReactNode => {
     switch (col.key) {
-      case 'category':
+      case 'frequency':
         return (
-          <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] truncate text-[#1c252e]">
-            {row.category}
+          <p title={buildRowSummary(row)} className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] truncate text-[#1c252e]">
+            {buildRowSummary(row)}
           </p>
         );
       case 'name':
@@ -950,6 +952,23 @@ export function ScheduleSettingsPage() {
   return (
     <div className="bg-white flex flex-col h-full relative rounded-[16px] shadow-[0px_0px_2px_0px_rgba(145,158,171,0.2),0px_12px_24px_-4px_rgba(145,158,171,0.12)] w-full overflow-hidden">
 
+      {/* ── TAB 列 ── */}
+      <div className="shrink-0 flex border-b border-[rgba(145,158,171,0.16)] px-[20px]">
+        {(['觸發程式', '信件通知'] as const).map(tab => (
+          <button
+            key={tab}
+            onClick={() => { setActiveTab(tab); setPage(1); }}
+            className={`px-[16px] py-[12px] text-[14px] font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold transition-colors border-b-2 -mb-[1px] ${
+              activeTab === tab
+                ? 'text-[#1677ff] border-[#1677ff]'
+                : 'text-[#637381] border-transparent hover:text-[#1c252e]'
+            }`}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
+
       {/* ── A. 搜尋列 ── */}
       <div className="shrink-0 flex gap-[16px] items-center px-[20px] py-[20px]">
         <div className="flex-1 min-w-0">
@@ -958,14 +977,6 @@ export function ScheduleSettingsPage() {
             value={searchName}
             onChange={v => { setSearchName(v); setPage(1); }}
             type="search"
-          />
-        </div>
-        <div className="flex-1 min-w-0">
-          <DropdownSelect
-            label="類別"
-            value={filterCategory}
-            onChange={v => { setFilterCategory(v as string); setPage(1); }}
-            options={[{ value: '', label: '全部' }, ...CATEGORY_OPTIONS.map(c => ({ value: c, label: c }))]}
           />
         </div>
         <div className="flex-1 min-w-0">
