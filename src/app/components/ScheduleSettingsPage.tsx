@@ -82,7 +82,7 @@ const DEFAULT_COLS: SchedCol[] = [
   { key: 'enabled',    label: '啟用',        width: 88,  minWidth: 72  },
   { key: 'frequency',  label: '執行頻率',    width: 300, minWidth: 200 },
   { key: 'url',        label: 'URL',         width: 230, minWidth: 130 },
-  { key: 'mailTypes',  label: '連動信件類別', width: 140, minWidth: 110 },
+  { key: 'mailTypes',  label: '信件類別', width: 140, minWidth: 110 },
   { key: 'updatedAt',  label: '最近更新時間', width: 160, minWidth: 120 },
 ];
 
@@ -94,7 +94,7 @@ const MONTH_MAX_DAYS: Record<string, number> = {
   'Jan':31,'Feb':28,'Mar':31,'Apr':30,'May':31,'Jun':30,
   'Jul':31,'Aug':31,'Sep':30,'Oct':31,'Nov':30,'Dec':31,
 };
-const MAIL_TYPE_OPTIONS = ['訂單通知信','修正單通知信','出貨通知信','帳款通知信'];
+const MAIL_TYPE_OPTIONS = ['小平台','新訂單','修正單通知','紙本發票','出貨通知','單價異常','零件維護','寄樣單'];
 const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
   const h = Math.floor(i / 2).toString().padStart(2, '0');
   const m = i % 2 === 0 ? '00' : '30';
@@ -128,31 +128,40 @@ const INITIAL_FORM: ScheduleForm = {
 // Mock Data
 // ─────────────────────────────────────────────────────────────────────────────
 const INITIAL_DATA: ScheduleRow[] = [
-  { id:1,  category:'信件通知', name:'Creat PO 錯誤',         enabled:true,  scheduleType:'weekday', days:'一、二、三、四、五、六', startTime:'08:00', intervalMinutes:'120', url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22abc%22%7D', mailTypes:'',            mailTypesArr:[],              updatedAt:'2025/10/10 08:00' },
-  { id:2,  category:'觸發程式', name:'出貨單資訊回中台',       enabled:true,  scheduleType:'weekday', days:'每天',                  startTime:'08:00', intervalMinutes:'30',  url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22def%22%7D', mailTypes:'',            mailTypesArr:[],              updatedAt:'2025/10/10 08:00' },
-  { id:3,  category:'信件通知', name:'SA訂單資訊無到EP通知',   enabled:true,  scheduleType:'weekday', days:'每天',                  startTime:'16:00', intervalMinutes:'60',  url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22oArW%22%7D', mailTypes:'訂單通知信',   mailTypesArr:['訂單通知信'],  updatedAt:'2025/10/10 08:00' },
-  { id:4,  category:'信件通知', name:'訂單不同意通知',         enabled:true,  scheduleType:'date',    days:'10號、20號、30號',      startTime:'00:00', intervalMinutes:'60',  url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22ghi%22%7D',  mailTypes:'訂單通知信',   mailTypesArr:['訂單通知信'],  updatedAt:'2025/10/10 08:00' },
-  { id:5,  category:'信件通知', name:'修正單通知',             enabled:true,  scheduleType:'weekday', days:'一、二、三、四、五、六', startTime:'00:00', intervalMinutes:'60',  url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22jkl%22%7D',  mailTypes:'修正單通知信', mailTypesArr:['修正單通知信'],updatedAt:'2025/10/10 08:00' },
-  { id:6,  category:'信件通知', name:'修正單不同意通知',       enabled:true,  scheduleType:'weekday', days:'一、二、三、四、五、六', startTime:'16:00', intervalMinutes:'60',  url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22mno%22%7D',  mailTypes:'修正單通知信', mailTypesArr:['修正單通知信'],updatedAt:'2025/10/10 08:00' },
-  { id:7,  category:'信件通知', name:'廠商交期提醒',           enabled:false, scheduleType:'weekday', days:'一、二、三、四、五',     startTime:'09:00', intervalMinutes:'60',  url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22pqr%22%7D',  mailTypes:'訂單通知信',   mailTypesArr:['訂單通知信'],  updatedAt:'2025/10/10 08:00' },
-  { id:8,  category:'觸發程式', name:'庫存同步作業',           enabled:true,  scheduleType:'weekday', days:'每天',                  startTime:'08:00', intervalMinutes:'60',  url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22stu%22%7D',  mailTypes:'',            mailTypesArr:[],              updatedAt:'2025/10/10 08:00' },
-  { id:9,  category:'信件通知', name:'訂單逾期通知',           enabled:true,  scheduleType:'weekday', days:'一、二、三、四、五',     startTime:'08:00', intervalMinutes:'60',  url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22vwx%22%7D',  mailTypes:'訂單通知信',   mailTypesArr:['訂單通知信'],  updatedAt:'2025/10/10 08:00' },
-  { id:10, category:'信件通知', name:'出貨單發送通知',         enabled:true,  scheduleType:'weekday', days:'每天',                  startTime:'10:00', intervalMinutes:'240', url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22yza%22%7D',  mailTypes:'出貨通知信',   mailTypesArr:['出貨通知信'],  updatedAt:'2025/10/10 08:00' },
-  { id:11, category:'觸發程式', name:'訂單狀態更新',           enabled:true,  scheduleType:'weekday', days:'每天',                  startTime:'08:00', intervalMinutes:'15',  url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22bcd%22%7D',  mailTypes:'',            mailTypesArr:[],              updatedAt:'2025/10/10 08:00' },
-  { id:12, category:'信件通知', name:'帳款逾期提醒',           enabled:false, scheduleType:'date',    days:'5號、20號',             startTime:'09:00', intervalMinutes:'60',  url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22efg%22%7D',  mailTypes:'帳款通知信',   mailTypesArr:['帳款通知信'],  updatedAt:'2025/10/10 08:00' },
-  { id:13, category:'信件通知', name:'新訂單確認通知',         enabled:true,  scheduleType:'weekday', days:'一、二、三、四、五',     startTime:'08:30', intervalMinutes:'60',  url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22hij%22%7D',  mailTypes:'訂單通知信',   mailTypesArr:['訂單通知信'],  updatedAt:'2025/10/10 08:00' },
-  { id:14, category:'觸發程式', name:'SAP資料同步',            enabled:true,  scheduleType:'weekday', days:'每天',                  startTime:'08:00', intervalMinutes:'30',  url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22klm%22%7D',  mailTypes:'',            mailTypesArr:[],              updatedAt:'2025/10/10 08:00' },
-  { id:15, category:'信件通知', name:'廠商評分發送',           enabled:true,  scheduleType:'date',    days:'1號',                   startTime:'09:00', intervalMinutes:'60',  url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22nop%22%7D',  mailTypes:'訂單通知信',   mailTypesArr:['訂單通知信'],  updatedAt:'2025/10/10 08:00' },
-  { id:16, category:'信件通知', name:'延誤預警通知',           enabled:true,  scheduleType:'weekday', days:'一、三、五',             startTime:'14:00', intervalMinutes:'60',  url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22qrs%22%7D',  mailTypes:'訂單通知信',   mailTypesArr:['訂單通知信'],  updatedAt:'2025/10/10 08:00' },
-  { id:17, category:'觸發程式', name:'郵件佇列清理',           enabled:true,  scheduleType:'weekday', days:'每天',                  startTime:'08:00', intervalMinutes:'240', url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22tuv%22%7D',  mailTypes:'',            mailTypesArr:[],              updatedAt:'2025/10/10 08:00' },
-  { id:18, category:'信件通知', name:'催貨通知',               enabled:false, scheduleType:'weekday', days:'一、二、三、四、五',     startTime:'11:00', intervalMinutes:'60',  url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22wxy%22%7D',  mailTypes:'訂單通知信',   mailTypesArr:['訂單通知信'],  updatedAt:'2025/10/10 08:00' },
-  { id:19, category:'信件通知', name:'訂單取消確認',           enabled:true,  scheduleType:'weekday', days:'每天',                  startTime:'16:00', intervalMinutes:'60',  url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22zab%22%7D',  mailTypes:'修正單通知信', mailTypesArr:['修正單通知信'],updatedAt:'2025/10/10 08:00' },
-  { id:20, category:'觸發程式', name:'收貨資料回傳',           enabled:true,  scheduleType:'weekday', days:'每天',                  startTime:'08:00', intervalMinutes:'60',  url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22cde%22%7D',  mailTypes:'',            mailTypesArr:[],              updatedAt:'2025/10/10 08:00' },
-  { id:21, category:'信件通知', name:'異常訂單警示',           enabled:true,  scheduleType:'weekday', days:'一、二、三、四、五、六', startTime:'08:00', intervalMinutes:'60',  url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22fgh%22%7D',  mailTypes:'訂單通知信',   mailTypesArr:['訂單通知信'],  updatedAt:'2025/10/10 08:00' },
-  { id:22, category:'信件通知', name:'廠商聯絡資訊更新提醒',  enabled:false, scheduleType:'date',    days:'15號',                  startTime:'09:00', intervalMinutes:'60',  url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22ijk%22%7D',  mailTypes:'訂單通知信',   mailTypesArr:['訂單通知信'],  updatedAt:'2025/10/10 08:00' },
-  { id:23, category:'觸發程式', name:'價格異動偵測',           enabled:true,  scheduleType:'weekday', days:'每天',                  startTime:'08:00', intervalMinutes:'30',  url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22lmn%22%7D',  mailTypes:'',            mailTypesArr:[],              updatedAt:'2025/10/10 08:00' },
-  { id:24, category:'信件通知', name:'月結報表發送',           enabled:true,  scheduleType:'date',    days:'1號',                   startTime:'08:00', intervalMinutes:'60',  url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22opq%22%7D',  mailTypes:'帳款通知信',   mailTypesArr:['帳款通知信'],  updatedAt:'2025/10/10 08:00' },
-  { id:25, category:'信件通知', name:'年度廠商評鑑通知',       enabled:false, scheduleType:'date',    days:'1號',                   startTime:'09:00', intervalMinutes:'60',  url:'Lflowchat.drawio.html#%7B%22pageId%22%3A%22rst%22%7D',  mailTypes:'訂單通知信',   mailTypesArr:['訂單通知信'],  updatedAt:'2025/10/10 08:00' },
+  // ── 信件通知 ──
+  { id:1,  category:'信件通知', name:'creat po錯誤',                                        enabled:true,  scheduleType:'weekday', days:'一、二、三、四、五、六', startTime:'08:00', intervalMinutes:'120', url:'', mailTypes:'',                    mailTypesArr:[],                        updatedAt:'2025/10/10 08:00' },
+  { id:2,  category:'信件通知', name:'EP 訂單單價不一致通知',                               enabled:true,  scheduleType:'weekday', days:'每天',                  startTime:'08:00', intervalMinutes:'30',  url:'', mailTypes:'單價異常',              mailTypesArr:['單價異常'],              updatedAt:'2025/10/10 08:00' },
+  { id:3,  category:'信件通知', name:'SAP訂單資訊無抵到EP通知',                             enabled:true,  scheduleType:'weekday', days:'每天',                  startTime:'07:00', intervalMinutes:'60',  url:'', mailTypes:'',                    mailTypesArr:[],                        updatedAt:'2025/10/10 08:00' },
+  { id:4,  category:'信件通知', name:'訂單不同意通知',                                      enabled:true,  scheduleType:'weekday', days:'一、二、三、四、五、六', startTime:'00:00', intervalMinutes:'60',  url:'', mailTypes:'新訂單',                mailTypesArr:['新訂單'],                updatedAt:'2025/10/10 08:00' },
+  { id:5,  category:'信件通知', name:'訂單品名或規格同步變更通知',                          enabled:true,  scheduleType:'weekday', days:'每天',                  startTime:'08:00', intervalMinutes:'30',  url:'', mailTypes:'',                    mailTypesArr:[],                        updatedAt:'2025/10/10 08:00' },
+  { id:6,  category:'信件通知', name:'訂單逾期稽催通知',                                    enabled:true,  scheduleType:'weekday', days:'每天',                  startTime:'08:00', intervalMinutes:'30',  url:'', mailTypes:'',                    mailTypesArr:[],                        updatedAt:'2025/10/10 08:00' },
+  { id:7,  category:'信件通知', name:'接貨單通知',                                          enabled:true,  scheduleType:'weekday', days:'一、二、三、四、五、六', startTime:'08:00', intervalMinutes:'120', url:'', mailTypes:'',                    mailTypesArr:[],                        updatedAt:'2025/10/10 08:00' },
+  { id:8,  category:'信件通知', name:'新訂單通知',                                          enabled:true,  scheduleType:'weekday', days:'一、二、三、四、五、六', startTime:'08:00', intervalMinutes:'120', url:'', mailTypes:'新訂單',                mailTypesArr:['新訂單'],                updatedAt:'2025/10/10 08:00' },
+  { id:9,  category:'信件通知', name:'新預測訂單通知',                                      enabled:true,  scheduleType:'weekday', days:'一、二、三、四、五、六', startTime:'00:00', intervalMinutes:'60',  url:'', mailTypes:'',                    mailTypesArr:[],                        updatedAt:'2025/10/10 08:00' },
+  { id:10, category:'信件通知', name:'修正單不同意通知',                                    enabled:true,  scheduleType:'weekday', days:'一、二、三、四、五、六', startTime:'00:00', intervalMinutes:'60',  url:'', mailTypes:'修正單通知',            mailTypesArr:['修正單通知'],            updatedAt:'2025/10/10 08:00' },
+  { id:11, category:'信件通知', name:'修正單通知',                                          enabled:true,  scheduleType:'weekday', days:'一、二、三、四、五、六', startTime:'16:00', intervalMinutes:'300', url:'', mailTypes:'修正單通知',            mailTypesArr:['修正單通知'],            updatedAt:'2025/10/10 08:00' },
+  { id:12, category:'信件通知', name:'SAP採購單項次的定價日期控制變成不是【5收貨日期】',    enabled:true,  scheduleType:'weekday', days:'每天',                  startTime:'07:00', intervalMinutes:'60',  url:'', mailTypes:'',                    mailTypesArr:[],                        updatedAt:'2025/10/10 08:00' },
+  { id:13, category:'信件通知', name:'刪除出貨項次通知',                                    enabled:true,  scheduleType:'weekday', days:'一、二、三、四、五、六', startTime:'00:00', intervalMinutes:'60',  url:'', mailTypes:'出貨通知',              mailTypesArr:['出貨通知'],              updatedAt:'2025/10/10 08:00' },
+  { id:14, category:'信件通知', name:'物料狀態不合規定通知',                                enabled:true,  scheduleType:'weekday', days:'每天',                  startTime:'08:00', intervalMinutes:'30',  url:'', mailTypes:'',                    mailTypesArr:[],                        updatedAt:'2025/10/10 08:00' },
+  { id:15, category:'信件通知', name:'出貨比對單價不一致通知',                              enabled:true,  scheduleType:'weekday', days:'每天',                  startTime:'08:00', intervalMinutes:'30',  url:'', mailTypes:'單價異常',              mailTypesArr:['單價異常'],              updatedAt:'2025/10/10 08:00' },
+  { id:16, category:'信件通知', name:'出貨單(IBDN)未同步SAP通知',                           enabled:true,  scheduleType:'weekday', days:'每天',                  startTime:'08:00', intervalMinutes:'120', url:'', mailTypes:'出貨通知',              mailTypesArr:['出貨通知'],              updatedAt:'2025/10/10 08:00' },
+  { id:17, category:'信件通知', name:'建立發票失敗',                                        enabled:true,  scheduleType:'weekday', days:'一、二、三、四、五',     startTime:'07:30', intervalMinutes:'60',  url:'', mailTypes:'紙本發票、小平台',       mailTypesArr:['紙本發票','小平台'],     updatedAt:'2025/10/10 08:00' },
+  { id:18, category:'信件通知', name:'發票價差通知',                                        enabled:true,  scheduleType:'weekday', days:'一、二、三、四、五',     startTime:'07:30', intervalMinutes:'60',  url:'', mailTypes:'紙本發票、小平台',       mailTypesArr:['紙本發票','小平台'],     updatedAt:'2025/10/10 08:00' },
+  { id:19, category:'信件通知', name:'發票於處理中狀態超過一天',                            enabled:true,  scheduleType:'weekday', days:'每天',                  startTime:'07:00', intervalMinutes:'60',  url:'', mailTypes:'紙本發票、小平台',       mailTypesArr:['紙本發票','小平台'],     updatedAt:'2025/10/10 08:00' },
+  { id:20, category:'信件通知', name:'索樣單通知',                                          enabled:true,  scheduleType:'weekday', days:'每天',                  startTime:'08:00', intervalMinutes:'60',  url:'', mailTypes:'寄樣單',                mailTypesArr:['寄樣單'],                updatedAt:'2025/10/10 08:00' },
+  { id:21, category:'信件通知', name:'零件資訊維護通知',                                    enabled:true,  scheduleType:'weekday', days:'每天',                  startTime:'08:00', intervalMinutes:'60',  url:'', mailTypes:'',                    mailTypesArr:[],                        updatedAt:'2025/10/10 08:00' },
+  { id:22, category:'信件通知', name:'廠商已維護零件資訊通知',                              enabled:true,  scheduleType:'weekday', days:'一、二、三、四、五、六', startTime:'00:00', intervalMinutes:'60',  url:'', mailTypes:'零件維護',              mailTypesArr:['零件維護'],              updatedAt:'2025/10/10 08:00' },
+  { id:23, category:'信件通知', name:'請上傳檢驗或測試報告',                                enabled:true,  scheduleType:'weekday', days:'每天',                  startTime:'23:00', intervalMinutes:'60',  url:'', mailTypes:'',                    mailTypesArr:[],                        updatedAt:'2025/10/10 08:00' },
+  { id:24, category:'信件通知', name:'請繳交危害物質檢測報告',                              enabled:true,  scheduleType:'weekday', days:'每天',                  startTime:'07:00', intervalMinutes:'60',  url:'', mailTypes:'',                    mailTypesArr:[],                        updatedAt:'2025/10/10 08:00' },
+  { id:25, category:'信件通知', name:'請上傳產品保險',                                      enabled:true,  scheduleType:'weekday', days:'每天',                  startTime:'08:00', intervalMinutes:'60',  url:'', mailTypes:'',                    mailTypesArr:[],                        updatedAt:'2025/10/10 08:00' },
+  // ── 觸發程式 ──
+  { id:26, category:'觸發程式', name:'出貨單資訊回中台',                                    enabled:true,  scheduleType:'weekday', days:'每天',                  startTime:'08:00', intervalMinutes:'30',  url:'', mailTypes:'', mailTypesArr:[], updatedAt:'2025/10/10 08:00' },
+  { id:27, category:'觸發程式', name:'庫存同步作業',                                        enabled:true,  scheduleType:'weekday', days:'每天',                  startTime:'08:00', intervalMinutes:'60',  url:'', mailTypes:'', mailTypesArr:[], updatedAt:'2025/10/10 08:00' },
+  { id:28, category:'觸發程式', name:'訂單狀態更新',                                        enabled:true,  scheduleType:'weekday', days:'每天',                  startTime:'08:00', intervalMinutes:'15',  url:'', mailTypes:'', mailTypesArr:[], updatedAt:'2025/10/10 08:00' },
+  { id:29, category:'觸發程式', name:'SAP資料同步',                                         enabled:true,  scheduleType:'weekday', days:'每天',                  startTime:'08:00', intervalMinutes:'30',  url:'', mailTypes:'', mailTypesArr:[], updatedAt:'2025/10/10 08:00' },
+  { id:30, category:'觸發程式', name:'郵件佇列清理',                                        enabled:true,  scheduleType:'weekday', days:'每天',                  startTime:'08:00', intervalMinutes:'240', url:'', mailTypes:'', mailTypesArr:[], updatedAt:'2025/10/10 08:00' },
+  { id:31, category:'觸發程式', name:'收貨資料回傳',                                        enabled:true,  scheduleType:'weekday', days:'每天',                  startTime:'08:00', intervalMinutes:'60',  url:'', mailTypes:'', mailTypesArr:[], updatedAt:'2025/10/10 08:00' },
+  { id:32, category:'觸發程式', name:'價格異動偵測',                                        enabled:true,  scheduleType:'weekday', days:'每天',                  startTime:'08:00', intervalMinutes:'30',  url:'', mailTypes:'', mailTypesArr:[], updatedAt:'2025/10/10 08:00' },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -223,13 +232,15 @@ function FloatingInput({
 // MultiChipSelect — 月份 / 連動信件類別 multi-select
 // ─────────────────────────────────────────────────────────────────────────────
 function MultiChipSelect({
-  label, options, value, onChange, placeholder = '請選擇', bgColor = 'white',
+  label, options, value, onChange, placeholder = '請選擇', bgColor = 'white', error = false,
 }: {
   label?: string; options: string[]; value: string[];
-  onChange: (v: string[]) => void; placeholder?: string; bgColor?: string;
+  onChange: (v: string[]) => void; placeholder?: string; bgColor?: string; error?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [dropPos, setDropPos] = useState({ top: 0, left: 0, width: 0 });
   const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -239,6 +250,14 @@ function MultiChipSelect({
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
+
+  const openDropdown = () => {
+    if (triggerRef.current) {
+      const r = triggerRef.current.getBoundingClientRect();
+      setDropPos({ top: r.bottom + 4, left: r.left, width: r.width });
+    }
+    setOpen(o => !o);
+  };
 
   const toggle = (opt: string) =>
     onChange(value.includes(opt) ? value.filter(v => v !== opt) : [...value, opt]);
@@ -251,14 +270,14 @@ function MultiChipSelect({
     <div className="relative" ref={ref}>
       {label && (
         <div className="absolute flex items-center left-[14px] px-[2px] top-[-5px] z-10 pointer-events-none">
-          <div className="absolute h-[2px] left-0 right-0 top-[5px]" style={{ backgroundColor: bgColor }} />
-          <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[14px] relative shrink-0 text-[#637381] text-[12px]">{label}</p>
+          <div className="absolute h-[2px] left-0 right-0 top-[5px] bg-white" />
+          <p className={`font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[14px] relative shrink-0 text-[12px] ${error ? 'text-[#ff5630]' : 'text-[#637381]'}`}>{label}</p>
         </div>
       )}
       <div
-        className="relative min-h-[54px] rounded-[8px] border border-solid border-[rgba(145,158,171,0.2)] px-[12px] pt-[20px] pb-[8px] flex flex-wrap gap-[4px] cursor-pointer pr-[36px]"
-        style={{ backgroundColor: bgColor }}
-        onClick={() => setOpen(o => !o)}
+        ref={triggerRef}
+        className={`relative min-h-[54px] rounded-[8px] border border-solid px-[12px] pt-[20px] pb-[8px] flex flex-wrap gap-[4px] cursor-pointer pr-[36px] bg-white ${error ? 'border-[#ff5630]' : 'border-[rgba(145,158,171,0.2)]'}`}
+        onClick={openDropdown}
       >
         {value.length === 0 && (
           <span className="font-['Public_Sans:Regular',sans-serif] text-[14px] text-[#919eab] leading-[22px]">
@@ -280,16 +299,22 @@ function MultiChipSelect({
         </svg>
       </div>
       {open && (
-        <div className="absolute left-0 right-0 top-[calc(100%+4px)] bg-white rounded-[8px] shadow-[0px_8px_24px_-4px_rgba(145,158,171,0.24),0px_0px_2px_0px_rgba(145,158,171,0.2)] border border-[rgba(145,158,171,0.12)] z-50 overflow-hidden">
+        <div
+          className="bg-white rounded-[8px] shadow-[0px_8px_24px_-4px_rgba(145,158,171,0.24),0px_0px_2px_0px_rgba(145,158,171,0.2)] border border-[rgba(145,158,171,0.12)] overflow-y-auto"
+          style={{ position: 'fixed', top: dropPos.top, left: dropPos.left, width: dropPos.width, zIndex: 9999, maxHeight: 240 }}
+        >
           {options.map(opt => (
-            <label key={opt} className="flex items-center gap-[10px] px-[14px] py-[10px] cursor-pointer hover:bg-[rgba(145,158,171,0.08)]">
+            <div
+              key={opt}
+              className="flex items-center gap-[10px] px-[14px] py-[10px] cursor-pointer hover:bg-[rgba(145,158,171,0.08)]"
+              onMouseDown={e => { e.preventDefault(); toggle(opt); }}
+            >
               <div
                 className="w-[16px] h-[16px] rounded-[4px] border border-solid flex items-center justify-center shrink-0 transition-colors"
                 style={{
                   backgroundColor: value.includes(opt) ? '#1890ff' : 'white',
                   borderColor: value.includes(opt) ? '#1890ff' : 'rgba(145,158,171,0.4)',
                 }}
-                onClick={() => toggle(opt)}
               >
                 {value.includes(opt) && (
                   <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
@@ -297,8 +322,8 @@ function MultiChipSelect({
                   </svg>
                 )}
               </div>
-              <span className="font-['Public_Sans:Regular',sans-serif] text-[14px] text-[#1c252e]" onClick={() => toggle(opt)}>{opt}</span>
-            </label>
+              <span className="font-['Public_Sans:Regular',sans-serif] text-[14px] text-[#1c252e]">{opt}</span>
+            </div>
           ))}
         </div>
       )}
@@ -419,13 +444,12 @@ function DateDayInput({
   return (
     <div className="flex flex-col gap-[4px]">
       <div
-        className="relative min-h-[54px] rounded-[8px] border border-solid border-[rgba(145,158,171,0.2)] px-[12px] pt-[20px] pb-[8px] flex flex-wrap gap-[4px] items-center cursor-text"
-        style={{ backgroundColor: bgColor }}
+        className="relative min-h-[54px] rounded-[8px] border border-solid border-[rgba(145,158,171,0.2)] px-[12px] pt-[20px] pb-[8px] flex flex-wrap gap-[4px] items-center cursor-text bg-white"
         onClick={() => inputRef.current?.focus()}
       >
         {/* floating label */}
         <div className="absolute flex items-center left-[14px] px-[2px] top-[-5px] z-10 pointer-events-none">
-          <div className="absolute h-[2px] left-0 right-0 top-[5px]" style={{ backgroundColor: bgColor }} />
+          <div className="absolute h-[2px] left-0 right-0 top-[5px] bg-white" />
           <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[14px] relative shrink-0 text-[#637381] text-[12px]">指定日期</p>
         </div>
 
@@ -484,7 +508,7 @@ function ScheduleModal({
   onClose: () => void;
 }) {
   const [form, setForm] = useState<ScheduleForm>(initialData);
-  const [errors, setErrors] = useState<{ name?: string; url?: string }>({});
+  const [errors, setErrors] = useState<{ name?: string; url?: string; mailTypes?: string }>({});
 
   const upd = <K extends keyof ScheduleForm>(k: K, v: ScheduleForm[K]) =>
     setForm(p => ({ ...p, [k]: v }));
@@ -493,6 +517,7 @@ function ScheduleModal({
     const e: typeof errors = {};
     if (!form.name.trim()) e.name = '必填欄位';
     if (!form.url.trim())  e.url  = '必填欄位';
+    if (form.category === '信件通知' && form.mailTypes.length === 0) e.mailTypes = '必填欄位';
     if (Object.keys(e).length) { setErrors(e); return; }
     onSave(form);
   };
@@ -565,9 +590,27 @@ function ScheduleModal({
 
         {/* 內容 */}
         <div className="flex flex-col px-[32px] pt-[56px] pb-[32px] gap-[20px]">
-          <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[28px] text-[#1c252e] text-[18px]">
-            {mode === 'add' ? '新增排程設定' : '編輯排程設定'}
-          </p>
+          {/* 標題 + 排程類型 TAG */}
+          <div className="flex items-center gap-[10px]">
+            <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[28px] text-[#1c252e] text-[18px]">
+              {mode === 'add' ? '新增排程設定' : '編輯排程設定'}
+            </p>
+            {/* 排程類型 TAG */}
+            <div
+              className="relative flex items-center justify-center px-[10px] h-[24px] rounded-[6px] shrink-0"
+              style={{
+                backgroundColor: form.category === '信件通知' ? '#e8f4ff' : '#f4f6f8',
+                border: `1px solid ${form.category === '信件通知' ? '#91c8f6' : '#c4cdd5'}`,
+              }}
+            >
+              <p
+                className="font-['Public_Sans:Medium','Noto_Sans_JP:Medium',sans-serif] font-medium text-[12px] leading-none whitespace-nowrap"
+                style={{ color: form.category === '信件通知' ? '#0065b3' : '#454f5b' }}
+              >
+                {form.category}
+              </p>
+            </div>
+          </div>
 
           {/* 左右並排區域 */}
           <div className="flex gap-[20px] items-start">
@@ -576,6 +619,17 @@ function ScheduleModal({
             <div className="flex flex-col gap-[16px] flex-1 min-w-0">
               <FloatingInput label="*排程名稱" value={form.name} onChange={v => { upd('name', v); setErrors(e => ({ ...e, name: undefined })); }} showError={errors.name} />
               <FloatingInput label="*URL" value={form.url} onChange={v => { upd('url', v); setErrors(e => ({ ...e, url: undefined })); }} multiline showError={errors.url} />
+              {/* 信件類別：僅「信件通知」顯示 */}
+              {form.category === '信件通知' && (
+                <MultiChipSelect
+                  label="*信件類別"
+                  options={MAIL_TYPE_OPTIONS}
+                  value={form.mailTypes}
+                  onChange={v => { upd('mailTypes', v); setErrors(e => ({ ...e, mailTypes: undefined })); }}
+                  placeholder="請選擇信件類別"
+                  error={!!errors.mailTypes}
+                />
+              )}
             </div>
 
             {/* Right: 執行頻率 */}
@@ -603,17 +657,13 @@ function ScheduleModal({
 
             {/* 星期 / 日期 */}
             <div className="flex flex-col gap-[8px]">
-              {/* Row 1: 排程類型 dropdown（最適欄寬） */}
-              <div className="w-fit">
-                <DropdownSelect
-                  widthFit
-                  label="*排程類型"
-                  value={form.scheduleType}
-                  onChange={v => upd('scheduleType', v as 'weekday' | 'date')}
-                  options={[{ value: 'weekday', label: '星期' }, { value: 'date', label: '指定日期' }]}
-                  className="min-w-[140px]"
-                />
-              </div>
+              {/* Row 1: 排程類型 dropdown */}
+              <DropdownSelect
+                label="*排程類型"
+                value={form.scheduleType}
+                onChange={v => upd('scheduleType', v as 'weekday' | 'date')}
+                options={[{ value: 'weekday', label: '星期' }, { value: 'date', label: '指定日期' }]}
+              />
 
               {/* Row 2: 每天（星期模式） */}
               {form.scheduleType === 'weekday' && (
@@ -673,18 +723,6 @@ function ScheduleModal({
               </div>
             </div>
 
-            {/* 連動信件類別：僅「信件通知」分類顯示（含上方分隔線） */}
-            {form.category === '信件通知' && (<>
-              <div className="h-[1px] bg-[rgba(145,158,171,0.16)]" />
-              <MultiChipSelect
-                label="連動信件類別"
-                options={MAIL_TYPE_OPTIONS}
-                value={form.mailTypes}
-                onChange={v => upd('mailTypes', v)}
-                placeholder="請選擇連動信件類別"
-                bgColor="#EFF6FF"
-              />
-            </>)}
             </div>{/* end 內容 div */}
           </div>{/* end 執行頻率 card */}
 
@@ -805,7 +843,10 @@ export function ScheduleSettingsPage() {
   const handleSort = (key: string) =>
     setSortConfig(s => ({ key, dir: s.key === key && s.dir === 'asc' ? 'desc' : 'asc' }));
 
-  const visibleColumns = columns.filter(c => c.visible !== false);
+  const visibleColumns = columns.filter(c =>
+    c.visible !== false &&
+    !(activeTab === '觸發程式' && c.key === 'mailTypes')
+  );
   const totalWidth = visibleColumns.reduce((s, c) => s + c.width, 0);
 
   // ── 篩選 ──────────────────────────────────────────────────────────────────
@@ -868,9 +909,10 @@ export function ScheduleSettingsPage() {
     return {
       name: row.name, url: row.url, category: row.category, months: [],
       scheduleType: row.scheduleType,
-      weekdays: row.scheduleType === 'weekday' && row.days !== '每天'
+      weekdays: row.scheduleType === 'weekday' && row.days && row.days !== '每天'
         ? row.days.split('、') : ['一','二','三','四','五','六','日'],
-      dateDays: row.scheduleType === 'date' ? row.days.split('、').map(d => d.replace('號','')) : [],
+      dateDays: row.scheduleType === 'date' && row.days
+        ? row.days.split('、').map(d => d.replace('號','')) : [],
       startTime: row.startTime || '08:00',
       intervalMinutes: row.intervalMinutes || '60',
       mailTypes: [...row.mailTypesArr],
@@ -933,8 +975,8 @@ export function ScheduleSettingsPage() {
         );
       case 'url':
         return (
-          <p title={row.url} className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[12px] truncate text-[#637381]">
-            {row.url}
+          <p title={row.url} className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] truncate text-[#1c252e]">
+            {row.url || '—'}
           </p>
         );
       default: {
@@ -953,20 +995,26 @@ export function ScheduleSettingsPage() {
     <div className="bg-white flex flex-col h-full relative rounded-[16px] shadow-[0px_0px_2px_0px_rgba(145,158,171,0.2),0px_12px_24px_-4px_rgba(145,158,171,0.12)] w-full overflow-hidden">
 
       {/* ── TAB 列 ── */}
-      <div className="shrink-0 flex border-b border-[rgba(145,158,171,0.16)] px-[20px]">
+      <div className="content-stretch flex gap-[40px] h-[48px] items-center px-[20px] relative shrink-0 w-full">
         {(['觸發程式', '信件通知'] as const).map(tab => (
-          <button
+          <div
             key={tab}
             onClick={() => { setActiveTab(tab); setPage(1); }}
-            className={`px-[16px] py-[12px] text-[14px] font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold transition-colors border-b-2 -mb-[1px] ${
-              activeTab === tab
-                ? 'text-[#1677ff] border-[#1677ff]'
-                : 'text-[#637381] border-transparent hover:text-[#1c252e]'
-            }`}
+            className="content-stretch flex gap-[8px] h-[48px] items-center justify-center min-h-[48px] min-w-[48px] relative shrink-0 cursor-pointer"
           >
-            {tab}
-          </button>
+            {/* Active 底線：absolute border-b-2 蓋滿整個 tab 高度 */}
+            {activeTab === tab && (
+              <div aria-hidden="true" className="absolute border-[#1c252e] border-b-2 border-solid inset-0 pointer-events-none" />
+            )}
+            <p className={`font-['Public_Sans:Medium','Noto_Sans_JP:Medium',sans-serif] font-medium leading-[22px] relative shrink-0 text-[14px] ${
+              activeTab === tab ? 'text-[#1c252e]' : 'text-[#637381]'
+            }`}>
+              {tab}
+            </p>
+          </div>
         ))}
+        {/* 底部統一灰色底線（所有 TAB 共用，absolute） */}
+        <div className="absolute bg-[rgba(145,158,171,0.08)] bottom-0 h-[2px] left-0 right-0" />
       </div>
 
       {/* ── A. 搜尋列 ── */}

@@ -161,7 +161,7 @@ export function DropdownSelect({
       {/* 下拉選單按鈕 */}
       <div
         ref={buttonRef}
-        className={`h-[54px] relative rounded-[8px] shrink-0 ${widthFit ? '' : 'w-full'} ${disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+        className={`h-[54px] relative rounded-[8px] shrink-0 bg-white ${widthFit ? '' : 'w-full'} ${disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
         onClick={handleToggle}
       >
         <div
