@@ -215,6 +215,7 @@ export default function SampleOrderListPage({ userRole: _userRole }: SampleOrder
     const selected = orders.filter((o) => ids.includes(o.id));
     if (selected.length === 0) return;
     setPrintOrders(selected);
+    setSelectedIds(new Set());
     setPrintMode(true);
   }, [selectedIds, orders]);
 

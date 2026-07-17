@@ -9,18 +9,19 @@
  * 使用標準表格系統（StandardDataTable）
  */
 
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { QUALITY_OTHER_TABS, type QualityOtherTabKey } from '@/app/config/qualityOtherConfig';
 import { StandardDataTable, type StandardColumn } from './StandardDataTable';
 import { SearchField } from './SearchField';
 import { DropdownSelect } from './DropdownSelect';
-import { Button } from '@/app/components/ui/button';
 import { DeleteButton } from './ActionButtons';
+import { PaginationControls } from './PaginationControls';
 
 import { BaseOverlay } from './BaseOverlay';
 import { ToggleSwitch } from './ToggleSwitch';
 import { OrderHistory } from './OrderHistory';
 import type { HistoryEntry } from './OrderStoreContext';
+
 
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -67,6 +68,14 @@ interface MaterialGroupReportRow {
   descEn: string;            // 物料群組說明2
   needInspReport: boolean;   // 需繳交檢驗報告
   needFuncReport: boolean;   // 需繳交功能測試報告
+}
+
+/** Tab2 排除料號 */
+interface ExcludedPartRow {
+  id: number;
+  factory: string;           // 工廠
+  partNo: string;            // 料號
+  updatedInfo: string;       // 最後修改資訊
 }
 
 /** Tab3：危害物質法規維護 */
@@ -156,6 +165,25 @@ export const INSPECTION_PART_SET: ReadonlySet<string> = new Set(
 
 
 
+// ── 排除料號 Mock 資料 ────────────────────────────────────────────────────────
+const EXCLUDED_PARTS_MOCK: ExcludedPartRow[] = [
+  { id: 1,  factory: 'GTM1', partNo: '1129-CSL0075-L01',   updatedInfo: 'Jessica Lin 林月荔-2023/01/12' },
+  { id: 2,  factory: 'GTM1', partNo: '1129-CSL0075-L002',  updatedInfo: 'Jessica Lin 林月荔-2023/01/12' },
+  { id: 3,  factory: 'GTM1', partNo: '1129-CSL0075-L003',  updatedInfo: 'Jessica Lin 林月荔-2023/01/12' },
+  { id: 4,  factory: 'GTM1', partNo: '1129-CSL0075-L006',  updatedInfo: 'Jessica Lin 林月荔-2023/01/12' },
+  { id: 5,  factory: 'GTM1', partNo: '1129-CSL0075-0001',  updatedInfo: 'Jessica Lin 林月荔-2023/01/12' },
+  { id: 6,  factory: 'GTM1', partNo: '1129-CSL0075-L0006', updatedInfo: 'Jessica Lin 林月荔-2023/01/12' },
+  { id: 7,  factory: 'GVM1', partNo: '1450-5111SR-001',    updatedInfo: 'Paul Sun 孫杰坪-2023/03/15' },
+  { id: 8,  factory: 'GVM1', partNo: '1450-5111SR-002',    updatedInfo: 'Paul Sun 孫杰坪-2023/03/15' },
+  { id: 9,  factory: 'GVM1', partNo: '1321-CONNEC-033',    updatedInfo: 'Paul Sun 孫杰坪-2023/05/01' },
+  { id: 10, factory: 'GVM1', partNo: '1321-CONNEC-034',    updatedInfo: 'Paul Sun 孫杰坪-2023/05/01' },
+  { id: 11, factory: 'GEM1', partNo: 'DL-6800-GS',         updatedInfo: 'Jessica Lin 林月荔-2023/06/20' },
+  { id: 12, factory: 'GEM1', partNo: 'FD-SRAM-AXS-01',    updatedInfo: 'Jessica Lin 林月荔-2023/06/20' },
+  { id: 13, factory: 'GTM1', partNo: '2201-FRM0641-A01',   updatedInfo: 'System-2024/01/01' },
+  { id: 14, factory: 'GVM1', partNo: '1111-XCE280-001',    updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  { id: 15, factory: 'GVM1', partNo: '1111-XCE280-002',    updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+];
+
 // Mock 選項資料（將來串 API）
 const FACTORY_OPTIONS = [
   { value: 'GVM1', label: 'GVM1' },
@@ -241,12 +269,20 @@ function TabItem({ label, isActive, onClick }: { label: string; isActive: boolea
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Checkbox 圖示（Tab2 用）
+// Checkbox 圖示（Tab2 用，可互動）
 // ─────────────────────────────────────────────────────────────────────────────
-function CheckboxDisplay({ checked }: { checked: boolean }) {
+function CheckboxDisplay({ checked, onToggle }: { checked: boolean; onToggle?: () => void }) {
+  const base = 'inline-flex items-center justify-center w-[20px] h-[20px] rounded-[4px] transition-colors cursor-pointer select-none';
   if (checked) {
     return (
-      <span className="inline-flex items-center justify-center w-[20px] h-[20px] rounded-[4px] bg-[#00559c]">
+      <span
+        className={`${base} bg-[#005EB8] hover:bg-[#004ca3]`}
+        onClick={e => { e.stopPropagation(); onToggle?.(); }}
+        role="checkbox"
+        aria-checked="true"
+        tabIndex={0}
+        onKeyDown={e => e.key === ' ' && onToggle?.()}
+      >
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
           <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
@@ -254,7 +290,14 @@ function CheckboxDisplay({ checked }: { checked: boolean }) {
     );
   }
   return (
-    <span className="inline-flex items-center justify-center w-[20px] h-[20px] rounded-[4px] border border-[rgba(145,158,171,0.4)]" />
+    <span
+      className={`${base} border border-[rgba(145,158,171,0.4)] hover:border-[#005EB8]`}
+      onClick={e => { e.stopPropagation(); onToggle?.(); }}
+      role="checkbox"
+      aria-checked="false"
+      tabIndex={0}
+      onKeyDown={e => e.key === ' ' && onToggle?.()}
+    />
   );
 }
 
@@ -488,32 +531,362 @@ function Tab1IncomingInspection() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// ExcludePartsOverlay — 排除料號彈窗
+// ─────────────────────────────────────────────────────────────────────────────
+
+const EXCLUDE_CHECKBOX_W = 44;
+
+/** 下載 Excel 範本（CSV 模擬） */
+function downloadExcludeTemplate() {
+  const csv = '\uFEFF工廠,料號\nGTM1,1129-CSL0075-L01\nGVM1,1450-5111SR-001';
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '排除料號匯入範本.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+interface ExcludePartsOverlayProps {
+  onClose: () => void;
+}
+
+function ExcludePartsOverlay({ onClose }: ExcludePartsOverlayProps) {
+  const [rows, setRows] = useState<ExcludedPartRow[]>(EXCLUDED_PARTS_MOCK);
+  const [factorySearch, setFactorySearch] = useState('');
+  const [partSearch, setPartSearch]       = useState('');
+  const [selectedIds, setSelectedIds]     = useState<Set<number>>(new Set());
+  const [page, setPage]       = useState(1);
+  const [perPage, setPerPage] = useState(50);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 篩選
+  const filtered = useMemo(() => {
+    return rows.filter(r => {
+      const mF = !factorySearch || r.factory.toLowerCase().includes(factorySearch.toLowerCase());
+      const mP = !partSearch   || r.partNo.toLowerCase().includes(partSearch.toLowerCase());
+      return mF && mP;
+    });
+  }, [rows, factorySearch, partSearch]);
+
+  // 分頁
+  const totalPages   = Math.max(1, Math.ceil(filtered.length / perPage));
+  const safePageNum  = Math.min(page, totalPages);
+  const paginated    = filtered.slice((safePageNum - 1) * perPage, safePageNum * perPage);
+
+  // 全選邏輯
+  const pageIds        = paginated.map(r => r.id);
+  const isAllSelected  = pageIds.length > 0 && pageIds.every(id => selectedIds.has(id));
+  const isSomeSelected = selectedIds.size > 0 && !isAllSelected;
+
+  const handleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedIds(prev => { const s = new Set(prev); pageIds.forEach(id => s.delete(id)); return s; });
+    } else {
+      setSelectedIds(prev => { const s = new Set(prev); pageIds.forEach(id => s.add(id)); return s; });
+    }
+  };
+
+  const handleToggleRow = (id: number) => {
+    setSelectedIds(prev => {
+      const s = new Set(prev);
+      s.has(id) ? s.delete(id) : s.add(id);
+      return s;
+    });
+  };
+
+  // 刪除選取
+  const handleDeleteSelected = () => {
+    setRows(prev => prev.filter(r => !selectedIds.has(r.id)));
+    setSelectedIds(new Set());
+  };
+
+  // 匯入 Excel/CSV（模擬解析，實際串 API 時替換）
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      const lines = text.split('\n').slice(1); // 跳過 header
+      const now = new Date().toLocaleDateString('zh-TW').replace(/\//g, '/');
+      const newRows: ExcludedPartRow[] = lines
+        .map((line, i) => {
+          const cols = line.replace(/\r/g, '').split(',');
+          const factory = (cols[0] ?? '').trim();
+          const partNo  = (cols[1] ?? '').trim();
+          if (!factory || !partNo) return null;
+          return { id: Date.now() + i, factory, partNo, updatedInfo: `System-${now}` };
+        })
+        .filter(Boolean) as ExcludedPartRow[];
+      if (newRows.length > 0) {
+        setRows(prev => [
+          ...prev,
+          ...newRows.filter(nr => !prev.some(r => r.factory === nr.factory && r.partNo === nr.partNo)),
+        ]);
+      }
+    };
+    reader.readAsText(file, 'UTF-8');
+    e.target.value = ''; // reset
+  };
+
+  return (
+    <BaseOverlay onClose={onClose} maxWidth="760px" maxHeight="85vh">
+      <div className="relative w-full flex flex-col h-full">
+        {/* 關閉按鈕 */}
+        <button
+          className="absolute left-[20px] top-[20px] z-10 cursor-pointer hover:opacity-70 transition-opacity"
+          onClick={onClose}
+        >
+          <svg width="24" height="24" viewBox="0 0 20 20" fill="none">
+            <path clipRule="evenodd"
+              d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+              fill="#637381" fillRule="evenodd"
+            />
+          </svg>
+        </button>
+
+        {/* ── 標題列 ── */}
+        <div className="shrink-0 flex items-center justify-between px-[20px] pt-[52px] pb-[4px]">
+          <div className="flex items-center gap-[16px]">
+            <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[18px] leading-[28px] text-[#1c252e]">
+              免交任何報告的料號
+            </p>
+            {/* 匯入按鈕 */}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-[#005eb8] hover:text-[#004680] transition-colors cursor-pointer"
+            >
+              匯入
+            </button>
+            <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleImport} />
+            {/* 下載範本 */}
+            <button
+              onClick={downloadExcludeTemplate}
+              className="flex items-center gap-[4px] font-['Public_Sans:Regular',sans-serif] font-normal text-[13px] text-[#637381] hover:text-[#1c252e] transition-colors cursor-pointer"
+              title="下載 Excel 匯入範本（工廠、料號 兩欄）"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              下載範本
+            </button>
+          </div>
+          {/* 搜尋欄 */}
+          <div className="flex gap-[12px]" style={{ width: 360 }}>
+            <div className="flex-1 min-w-0">
+              <SearchField label="工廠" value={factorySearch} onChange={v => { setFactorySearch(v); setPage(1); }} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <SearchField label="料號" value={partSearch} onChange={v => { setPartSearch(v); setPage(1); }} />
+            </div>
+          </div>
+        </div>
+
+        {/* results count */}
+        <div className="shrink-0 px-[20px] pb-[8px]">
+          <p className="font-['Public_Sans:Regular',sans-serif] font-normal text-[13px] text-[#637381]">
+            <span className="font-semibold text-[#1c252e]">{filtered.length.toLocaleString()}</span> results
+          </p>
+        </div>
+
+        {/* ── 表格區域（含 selection toolbar） ── */}
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden mx-[20px] mb-[4px] rounded-[12px] border border-[rgba(145,158,171,0.16)]">
+
+          {/* Selection Toolbar — 在表頭上方 */}
+          {selectedIds.size > 0 && (
+            <div className="shrink-0 flex items-center h-[48px] border-b border-[rgba(145,158,171,0.08)] bg-[#d9e8f5]">
+              <div
+                data-is-checkbox="true"
+                className="flex items-center justify-center shrink-0"
+                style={{ width: EXCLUDE_CHECKBOX_W }}
+              >
+                <ExcludeCheckIcon checked={isAllSelected} indeterminate={isSomeSelected} onChange={handleSelectAll} />
+              </div>
+              <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-[#1c252e] leading-[24px] mr-[4px] whitespace-nowrap">
+                {selectedIds.size} selected
+              </span>
+              <span
+                onClick={handleDeleteSelected}
+                className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] text-[#ff5630] leading-[24px] whitespace-nowrap cursor-pointer select-none px-[10px] py-[16px] hover:opacity-70 transition-opacity"
+              >
+                刪除料號
+              </span>
+            </div>
+          )}
+
+          {/* 表頭 */}
+          <div className="shrink-0 flex items-center bg-[#f4f6f8] border-b border-[rgba(145,158,171,0.16)]" style={{ height: 44 }}>
+            {/* 全選 checkbox — 有選取時隱藏（Selection Toolbar 已提供） */}
+            {selectedIds.size === 0 ? (
+              <div
+                data-is-checkbox="true"
+                className="flex items-center justify-center shrink-0"
+                style={{ width: EXCLUDE_CHECKBOX_W }}
+              >
+                <ExcludeCheckIcon checked={isAllSelected} indeterminate={isSomeSelected} onChange={handleSelectAll} />
+              </div>
+            ) : (
+              <div className="shrink-0" style={{ width: EXCLUDE_CHECKBOX_W }} />
+            )}
+            {[{ label: '工廠', flex: '0 0 100px' }, { label: '料號', flex: '1 1 0' }, { label: '最後修改資訊', flex: '0 0 220px' }].map(col => (
+              <div key={col.label} style={{ flex: col.flex }} className="px-[12px]">
+                <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#637381] uppercase tracking-wide whitespace-nowrap">{col.label}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* 資料列 */}
+          <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+            {paginated.length === 0 ? (
+              <div className="flex items-center justify-center h-[120px]">
+                <p className="font-['Public_Sans:Regular',sans-serif] text-[14px] text-[#919eab]">沒有資料</p>
+              </div>
+            ) : paginated.map(row => (
+              <div
+                key={row.id}
+                className="flex items-center border-b border-[rgba(145,158,171,0.08)] hover:bg-[#f9fafb] transition-colors"
+                style={{ minHeight: 48 }}
+              >
+                <div
+                  data-is-checkbox="true"
+                  className="flex items-center justify-center shrink-0"
+                  style={{ width: EXCLUDE_CHECKBOX_W }}
+                >
+                  <ExcludeCheckIcon checked={selectedIds.has(row.id)} onChange={() => handleToggleRow(row.id)} />
+                </div>
+                <div style={{ flex: '0 0 100px' }} className="px-[12px] py-[10px]">
+                  <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[14px] text-[#1c252e]">{row.factory}</p>
+                </div>
+                <div style={{ flex: '1 1 0' }} className="px-[12px] py-[10px]">
+                  <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[14px] text-[#1c252e]">{row.partNo}</p>
+                </div>
+                <div style={{ flex: '0 0 220px' }} className="px-[12px] py-[10px]">
+                  <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[14px] text-[#637381]">{row.updatedInfo}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 分頁 */}
+        <div className="shrink-0 px-[20px] pb-[12px]">
+          <PaginationControls
+            page={safePageNum}
+            perPage={perPage}
+            total={filtered.length}
+            onPageChange={setPage}
+            onPerPageChange={p => { setPerPage(p); setPage(1); }}
+          />
+        </div>
+      </div>
+    </BaseOverlay>
+  );
+}
+
+/** 排除料號 Overlay 用的簡易 Checkbox icon */
+function ExcludeCheckIcon({ checked, indeterminate, onChange }: { checked: boolean; indeterminate?: boolean; onChange?: () => void }) {
+  const handleClick = (e: React.MouseEvent) => { e.stopPropagation(); onChange?.(); };
+  if (indeterminate) {
+    return (
+      <span
+        onClick={handleClick}
+        className="inline-flex items-center justify-center w-[18px] h-[18px] rounded-[3px] bg-[#005EB8] cursor-pointer"
+        role="checkbox" aria-checked="mixed"
+      >
+        <svg width="10" height="2" viewBox="0 0 10 2" fill="none"><rect width="10" height="2" rx="1" fill="white"/></svg>
+      </span>
+    );
+  }
+  if (checked) {
+    return (
+      <span
+        onClick={handleClick}
+        className="inline-flex items-center justify-center w-[18px] h-[18px] rounded-[3px] bg-[#005EB8] cursor-pointer"
+        role="checkbox" aria-checked="true"
+      >
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+          <path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </span>
+    );
+  }
+  return (
+    <span
+      onClick={handleClick}
+      className="inline-flex items-center justify-center w-[18px] h-[18px] rounded-[3px] border border-[rgba(145,158,171,0.4)] cursor-pointer hover:border-[#005EB8] transition-colors"
+      role="checkbox" aria-checked="false"
+    />
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Tab2：需付檢測報告的物料群組
 // ─────────────────────────────────────────────────────────────────────────────
 
 function Tab2MaterialGroupReport() {
-  const [groupSearch,    setGroupSearch]    = useState('');
-  const [inspRepFilter,  setInspRepFilter]  = useState('');
-  const [funcRepFilter,  setFuncRepFilter]  = useState('');
+  const [rows, setRows]               = useState<MaterialGroupReportRow[]>(MATERIAL_GROUP_REPORT_DATA);
+  const [factoryFilter, setFactoryFilter] = useState('');
+  const [groupSearch,   setGroupSearch]   = useState('');
+  const [inspRepFilter, setInspRepFilter] = useState('');
+  const [funcRepFilter, setFuncRepFilter] = useState('');
+  const [showExclude,   setShowExclude]   = useState(false);
+  // 主表格選取狀態
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+
+  // 切換物料群組的報告需求
+  const handleToggle = (id: number, field: 'needInspReport' | 'needFuncReport') => {
+    setRows(prev => prev.map(r => r.id === id ? { ...r, [field]: !r[field] } : r));
+  };
+
+  // Selection handlers
+  const handleToggleRow = (id: number) => {
+    setSelectedIds(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
+  };
+  const handleToggleAll = (ids: number[]) => {
+    const allSelected = ids.every(id => selectedIds.has(id));
+    if (allSelected) {
+      setSelectedIds(prev => { const s = new Set(prev); ids.forEach(id => s.delete(id)); return s; });
+    } else {
+      setSelectedIds(prev => { const s = new Set(prev); ids.forEach(id => s.add(id)); return s; });
+    }
+  };
+  // Batch 操作
+  const batchSetInsp = () => {
+    setRows(prev => prev.map(r => selectedIds.has(r.id) ? { ...r, needInspReport: true } : r));
+    setSelectedIds(new Set());
+  };
+  const batchSetFunc = () => {
+    setRows(prev => prev.map(r => selectedIds.has(r.id) ? { ...r, needFuncReport: true } : r));
+    setSelectedIds(new Set());
+  };
+  const batchClearAll = () => {
+    setRows(prev => prev.map(r => selectedIds.has(r.id) ? { ...r, needInspReport: false, needFuncReport: false } : r));
+    setSelectedIds(new Set());
+  };
 
   const filtered = useMemo(() => {
-    return MATERIAL_GROUP_REPORT_DATA.filter(row => {
-      const matchGroup    = !groupSearch   || row.materialGroup.includes(groupSearch) || row.descZh.includes(groupSearch);
+    return rows.filter(row => {
+      const matchFactory  = !factoryFilter || row.factory === factoryFilter;
+      const matchGroup    = !groupSearch   || row.materialGroup.includes(groupSearch) || row.descZh.includes(groupSearch) || row.descEn.toLowerCase().includes(groupSearch.toLowerCase());
       const matchInspRep  = !inspRepFilter
         || (inspRepFilter === 'yes' && row.needInspReport)
         || (inspRepFilter === 'no'  && !row.needInspReport);
       const matchFuncRep  = !funcRepFilter
         || (funcRepFilter === 'yes' && row.needFuncReport)
         || (funcRepFilter === 'no'  && !row.needFuncReport);
-      return matchGroup && matchInspRep && matchFuncRep;
+      return matchFactory && matchGroup && matchInspRep && matchFuncRep;
     });
-  }, [groupSearch, inspRepFilter, funcRepFilter]);
+  }, [rows, factoryFilter, groupSearch, inspRepFilter, funcRepFilter]);
 
   const columns: StandardColumn<MaterialGroupReportRow>[] = [
     { key: 'factory',       label: '工廠',           width: 90,  minWidth: 72  },
     { key: 'materialGroup', label: '物料群組',        width: 110, minWidth: 90  },
-    { key: 'descZh',        label: '物料群組說明',    width: 180, minWidth: 120 },
-    { key: 'descEn',        label: '物料群組說明2',   width: 180, minWidth: 120 },
+    { key: 'descZh',        label: '物料群組說明',    width: 200, minWidth: 120 },
+    { key: 'descEn',        label: '物料群組說明(En)', width: 200, minWidth: 120 },
     {
       key: 'needInspReport',
       label: '需繳交檢驗報告',
@@ -521,18 +894,24 @@ function Tab2MaterialGroupReport() {
       minWidth: 110,
       renderCell: (_val, row) => (
         <div className="flex items-center justify-center">
-          <CheckboxDisplay checked={row.needInspReport} />
+          <CheckboxDisplay
+            checked={row.needInspReport}
+            onToggle={() => handleToggle(row.id, 'needInspReport')}
+          />
         </div>
       ),
     },
     {
       key: 'needFuncReport',
-      label: '需繳交功能測試報告',
-      width: 175,
-      minWidth: 130,
+      label: '需繳交功性能測試報告',
+      width: 185,
+      minWidth: 140,
       renderCell: (_val, row) => (
         <div className="flex items-center justify-center">
-          <CheckboxDisplay checked={row.needFuncReport} />
+          <CheckboxDisplay
+            checked={row.needFuncReport}
+            onToggle={() => handleToggle(row.id, 'needFuncReport')}
+          />
         </div>
       ),
     },
@@ -542,16 +921,24 @@ function Tab2MaterialGroupReport() {
     <div className="flex flex-col flex-1 min-h-0">
       {/* 搜尋列 */}
       <div className="shrink-0 flex gap-[16px] items-center px-[20px] py-[16px]">
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
+          <DropdownSelect
+            label="工廠"
+            value={factoryFilter}
+            onChange={setFactoryFilter}
+            options={[{ value: '', label: '全部' }, ...FACTORY_OPTIONS]}
+          />
+        </div>
+        <div className="flex-1 min-w-0">
           <SearchField
             label="物料群組"
             value={groupSearch}
             onChange={setGroupSearch}
           />
         </div>
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <DropdownSelect
-            label="是否繳交檢驗報告"
+            label="需繳交檢驗報告"
             value={inspRepFilter}
             onChange={setInspRepFilter}
             options={[
@@ -561,9 +948,9 @@ function Tab2MaterialGroupReport() {
             ]}
           />
         </div>
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <DropdownSelect
-            label="是否繳交功性能報告"
+            label="需繳交功性能測試報告"
             value={funcRepFilter}
             onChange={setFuncRepFilter}
             options={[
@@ -579,28 +966,64 @@ function Tab2MaterialGroupReport() {
       <StandardDataTable
         columns={columns}
         data={filtered}
-        storageKey="quality-other-tab2-v1"
+        storageKey="quality-other-tab2-v2"
         showCheckbox={true}
+        selectedIds={selectedIds}
+        onToggleRow={handleToggleRow}
+        onToggleAll={handleToggleAll}
         updateTime="2025/05/05 12:30"
         embedded
         onExportCsv={() => exportRowsToCsv(filtered, '需付檢測報告的物料群組.csv', [
-          { key: 'factory',       label: '工廠' },
-          { key: 'materialGroup', label: '物料群組' },
-          { key: 'descZh',        label: '物料群組說明' },
-          { key: 'descEn',        label: '物料群組說明2' },
+          { key: 'factory',        label: '工廠' },
+          { key: 'materialGroup',  label: '物料群組' },
+          { key: 'descZh',         label: '物料群組說明' },
+          { key: 'descEn',         label: '物料群組說明(En)' },
           { key: 'needInspReport', label: '需繳交檢驗報告' },
-          { key: 'needFuncReport', label: '需繳交功能測試報告' },
+          { key: 'needFuncReport', label: '需繳交功性能測試報告' },
         ])}
+        batchActions={
+          (() => {
+            const SEP = <span className="text-[rgba(145,158,171,0.4)] select-none">|</span>;
+            const CTA_INSP = (
+              <span
+                onClick={batchSetInsp}
+                className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] text-[#004680] leading-[24px] whitespace-nowrap cursor-pointer select-none px-[10px] py-[16px] hover:opacity-70 transition-opacity"
+              >
+                需繳交檢驗報告
+              </span>
+            );
+            const CTA_FUNC = (
+              <span
+                onClick={batchSetFunc}
+                className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] text-[#004680] leading-[24px] whitespace-nowrap cursor-pointer select-none px-[10px] py-[16px] hover:opacity-70 transition-opacity"
+              >
+                需繳交功性能測試報告
+              </span>
+            );
+            const CTA_CLEAR = (
+              <span
+                onClick={batchClearAll}
+                className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] text-[#ff5630] leading-[24px] whitespace-nowrap cursor-pointer select-none px-[10px] py-[16px] hover:opacity-70 transition-opacity"
+              >
+                全部不須繳交
+              </span>
+            );
+            return <>{CTA_INSP}{SEP}{CTA_FUNC}{SEP}{CTA_CLEAR}</>;
+          })()
+        }
         actionButton={
-          <Button
+          <button
             id="q-other-tab2-exclude-btn"
-            className="h-[36px] px-[16px] rounded-[8px] text-[14px] font-semibold"
-            style={{ backgroundColor: '#1c252e' }}
+            onClick={() => setShowExclude(true)}
+            className="flex items-center h-[36px] px-[16px] rounded-[8px] bg-[#1c252e] hover:bg-[#2c3540] text-white font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] transition-colors whitespace-nowrap"
           >
             排除料號
-          </Button>
+          </button>
         }
       />
+
+      {/* 排除料號 Overlay */}
+      {showExclude && <ExcludePartsOverlay onClose={() => setShowExclude(false)} />}
     </div>
   );
 }

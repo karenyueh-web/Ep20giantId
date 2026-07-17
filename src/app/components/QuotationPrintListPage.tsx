@@ -173,6 +173,7 @@ export default function QuotationPrintListPage({ userRole: _userRole }: Quotatio
     const brandIds = new Set(selectedRows.map((r) => r._brandId));
     setPrintParts(parts);
     setPrintSelectedBrandIds(brandIds);
+    setSelectedIds(new Set());
     setPrintMode(true);
   }, [allFlatRows, selectedIds]);
 
