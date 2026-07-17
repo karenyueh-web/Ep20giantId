@@ -30,6 +30,8 @@ import { VendorEvaluationPage } from "@/app/components/VendorEvaluationPage";
 import { ScheduleSettingsPage } from "@/app/components/ScheduleSettingsPage";
 import SampleOrderListPage from "@/app/components/SampleOrderListPage";
 import { QualityOtherSettingsPage } from "@/app/components/QualityOtherSettingsPage";
+import { QualityReportPage } from "@/app/components/QualityReportPage";
+import { QualityHazardPage } from "@/app/components/QualityHazardPage";
 import { ResponsivePageLayout } from "@/app/components/ResponsivePageLayout";
 import { LoginPage } from "@/app/components/LoginPage";
 import { RegisterPage } from "@/app/components/RegisterPage";
@@ -483,8 +485,31 @@ export default function App() {
           </ResponsivePageLayout>
         );
       case 'quality-report':
+        return (
+          <ResponsivePageLayout
+            currentPage={currentPage}
+            onPageChange={handlePageChange}
+            onLogout={handleLogout}
+            userRole={userRole}
+            title={pageConfig['quality-report'].title}
+            breadcrumb={pageConfig['quality-report'].breadcrumb}
+          >
+            <QualityReportPage />
+          </ResponsivePageLayout>
+        );
       case 'quality-hazard':
-        return <UnderConstructionPage currentPage={currentPage} onPageChange={handlePageChange} onLogout={handleLogout} userRole={userRole} />;
+        return (
+          <ResponsivePageLayout
+            currentPage={currentPage}
+            onPageChange={handlePageChange}
+            onLogout={handleLogout}
+            userRole={userRole}
+            title={pageConfig['quality-hazard'].title}
+            breadcrumb={pageConfig['quality-hazard'].breadcrumb}
+          >
+            <QualityHazardPage />
+          </ResponsivePageLayout>
+        );
       case 'quality-other':
         return (
           <ResponsivePageLayout

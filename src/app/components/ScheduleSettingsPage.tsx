@@ -101,6 +101,7 @@ const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
   return `${h}:${m}`;
 });
 const INTERVAL_MIN_OPTIONS = [
+  { value: 'once', label: '僅此一次' },
   { value: '5',    label: '5 分' },
   { value: '10',   label: '10 分' },
   { value: '15',   label: '15 分' },
@@ -162,6 +163,7 @@ const INITIAL_DATA: ScheduleRow[] = [
   { id:30, category:'觸發程式', name:'郵件佇列清理',                                        enabled:true,  scheduleType:'weekday', days:'每天',                  startTime:'08:00', intervalMinutes:'240', url:'', mailTypes:'', mailTypesArr:[], updatedAt:'2025/10/10 08:00' },
   { id:31, category:'觸發程式', name:'收貨資料回傳',                                        enabled:true,  scheduleType:'weekday', days:'每天',                  startTime:'08:00', intervalMinutes:'60',  url:'', mailTypes:'', mailTypesArr:[], updatedAt:'2025/10/10 08:00' },
   { id:32, category:'觸發程式', name:'價格異動偵測',                                        enabled:true,  scheduleType:'weekday', days:'每天',                  startTime:'08:00', intervalMinutes:'30',  url:'', mailTypes:'', mailTypesArr:[], updatedAt:'2025/10/10 08:00' },
+  { id:33, category:'觸發程式', name:'初次危害物質報告繳交通知',                              enabled:true,  scheduleType:'date',    days:'7月31號',              startTime:'08:00', intervalMinutes:'once', url:'/api/quality/hazard/annual-init', mailTypes:'', mailTypesArr:[], updatedAt:'2026/07/17 08:00' },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -176,6 +178,7 @@ function buildDays(form: ScheduleForm): string {
 }
 // 將分鐘數轉為友善顯示文字
 function formatInterval(minutes: string): string {
+  if (minutes === 'once') return '僅此一次';
   const m = parseInt(minutes);
   if (isNaN(m)) return minutes;
   if (m < 60) return `${m} 分`;
