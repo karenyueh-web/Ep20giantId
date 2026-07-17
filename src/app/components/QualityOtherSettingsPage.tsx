@@ -16,7 +16,12 @@ import { SearchField } from './SearchField';
 import { DropdownSelect } from './DropdownSelect';
 import { Button } from '@/app/components/ui/button';
 import { DeleteButton } from './ActionButtons';
+
 import { BaseOverlay } from './BaseOverlay';
+import { ToggleSwitch } from './ToggleSwitch';
+import { OrderHistory } from './OrderHistory';
+import type { HistoryEntry } from './OrderStoreContext';
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 共用 CSV 匯出工具
@@ -73,8 +78,10 @@ interface HazardRegRow {
   descEn: string;            // 法規說明(En)
   regMaker: string;          // 法規制定者
   regScope: string;          // 法規管理範圍
+  remark: string;            // 備註
   createdInfo: string;       // 建檔資訊
 }
+
 
 type ActiveTab = QualityOtherTabKey;
 
@@ -196,13 +203,17 @@ const MATERIAL_GROUP_REPORT_DATA: MaterialGroupReportRow[] = [
 ];
 
 const HAZARD_REG_DATA: HazardRegRow[] = [
-  { id: 1, regCode: 'RoHS',  enabled: true,  descZh: '限制電子電氣設備中某些有害物質使用指令',   descEn: 'Restriction of Hazardous Substances Directive',        regMaker: '歐盟（EU）',            regScope: '限制在電子與電氣設備中使用有害物質', createdInfo: 'Paul Sun 孫杰坪-2024/03/20' },
-  { id: 2, regCode: 'POPs',  enabled: true,  descZh: '持久性有機污染物規範',                     descEn: 'Persistent Organic Pollutants Regulation',             regMaker: '歐盟（根據斯德哥爾摩公約）', regScope: '限制或禁止使用具持久性有機污染物', createdInfo: 'Paul Sun 孫杰坪-2024/03/20' },
-  { id: 3, regCode: 'TSCA',  enabled: true,  descZh: '有毒物質控制法',                           descEn: 'Toxic Substances Control Act',                          regMaker: '美國',                  regScope: '授權美國環保署（EPA）管制化學物質', createdInfo: 'Paul Sun 孫杰坪-2024/03/20' },
-  { id: 4, regCode: 'CPSIA', enabled: true,  descZh: '消費品安全改進法案',                       descEn: 'Consumer Product Safety Improvement Act',               regMaker: '美國',                  regScope: '主要針對兒童產品的安全標準', createdInfo: 'Paul Sun 孫杰坪-2024/03/20' },
-  { id: 5, regCode: 'REACH', enabled: false, descZh: '化學品注冊、評估、授權和限制法規',         descEn: 'Registration, Evaluation, Authorisation and Restriction', regMaker: '歐盟（EU）',            regScope: '管制化學物質及其安全使用', createdInfo: 'Paul Sun 孫杰坪-2024/03/20' },
-  { id: 6, regCode: 'SVHC',  enabled: true,  descZh: '高關注物質清單',                           descEn: 'Substances of Very High Concern',                       regMaker: '歐盟（EU）',            regScope: '要求申報REACH法規下的高關注物質', createdInfo: 'Paul Sun 孫杰坪-2024/03/20' },
+  { id: 1, regCode: 'REACH',     enabled: true, descZh: '化學品品註冊、評估、授權及限制法規',               descEn: 'Registration, Evaluation, Authorisation and Restriction of Chemicals', regMaker: '歐盟（EU）',               regScope: '管制所有在歐盟市場流通的化學物質，要求廠商申報 SVHC 高關注物質',       remark: '', createdInfo: 'Paul Sun 孫杰坪-2025/06/02' },
+  { id: 2, regCode: 'RoHS',      enabled: true, descZh: '限制電子電氣設備中某些有害物質使用指令',            descEn: 'Restriction of Hazardous Substances Directive',                         regMaker: '歐盟（EU）',               regScope: '限制在電子與電氣設備中使用鉛、汞、鎘、六價鉻等有害物質',              remark: '', createdInfo: 'Paul Sun 孫杰坪-2025/06/02' },
+  { id: 3, regCode: 'CP 65',     enabled: true, descZh: '加州第65號提案（及安全飲水暨毒害化學物質施行法）',  descEn: 'California Proposition 65',                                              regMaker: '美國加州',                 regScope: '要求企業告知消費者產品含有可能致癌或影響生殖的有害化學物質',          remark: '', createdInfo: 'Paul Sun 孫杰坪-2025/06/02' },
+  { id: 4, regCode: 'POPs',      enabled: true, descZh: '持久性有機污染物規範',                            descEn: 'Persistent Organic Pollutants Regulation',                              regMaker: '歐盟（根據斯德哥爾摩公約）',  regScope: '限制或禁止使用具持久性、生物積累性和毒性的有機污染物',                remark: '', createdInfo: 'Paul Sun 孫杰坪-2025/06/02' },
+  { id: 5, regCode: 'TSCA',      enabled: true, descZh: '有毒物質控制法',                                  descEn: 'Toxic Substances Control Act',                                           regMaker: '美國',                     regScope: '授權美國環保署（EPA）評估和管制化學物質對人體健康和環境的風險',        remark: '', createdInfo: 'Paul Sun 孫杰坪-2025/06/02' },
+  { id: 6, regCode: 'CPSIA',     enabled: true, descZh: '消費品安全改進法案',                              descEn: 'Consumer Product Safety Improvement Act',                               regMaker: '美國',                     regScope: '規範兒童產品鉛含量上限及鄰苯二甲酸酯限制，保護兒童健康安全',          remark: '', createdInfo: 'Paul Sun 孫杰坪-2025/06/02' },
+  { id: 7, regCode: 'EN 71-3',   enabled: true, descZh: '玩具安全標準第3部：特定元素遷移',                 descEn: 'European Standard EN 71-3',                                              regMaker: '歐盟',                     regScope: '規範玩具材料中特定重金屬元素（鉛、鎘、鉻等）的遷移量上限',            remark: '', createdInfo: 'Paul Sun 孫杰坪-2025/06/02' },
+  { id: 8, regCode: 'ASTM F963', enabled: true, descZh: 'ASTM F963玩具安全消費者標準規範',                 descEn: 'ASTM F963 Standard Consumer Safety Specification for Toy Safety',        regMaker: '美國玩具協議協會（ASTM）',  regScope: '規範玩具的化學、機械和電氣安全，適用於進入美國市場的玩具產品',        remark: '', createdInfo: 'Paul Sun 孫杰坪-2025/06/02' },
+  { id: 9, regCode: 'GB 3565',   enabled: true, descZh: '自行車安全要求',                                  descEn: "National Standard of the People's Republic of China GB 3565",            regMaker: '中國',                     regScope: '規範自行車結構、材料、性能等安全要求，適用於進入中國大陸市場的自行車', remark: '', createdInfo: 'Jessica Lin 林芳宜-2025/07/15' },
 ];
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Tab Item
@@ -588,6 +599,196 @@ function Tab2MaterialGroupReport() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// HazardRegOverlay — 新增 / 編輯法規彈窗
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface HazardRegOverlayProps {
+  mode: 'add' | 'edit';
+  initial?: HazardRegRow;
+  /** 外部傳入歷程（供顯示），同時接受新增歷程的 callback */
+  history?: HistoryEntry[];
+  onClose: () => void;
+  onSave: (row: Omit<HazardRegRow, 'id' | 'createdInfo'>, historyEntry: HistoryEntry) => void;
+}
+
+function HazardRegOverlay({ mode, initial, history = [], onClose, onSave }: HazardRegOverlayProps) {
+  const [regCode,  setRegCode]  = useState(initial?.regCode  ?? '');
+  const [descZh,   setDescZh]   = useState(initial?.descZh   ?? '');
+  const [descEn,   setDescEn]   = useState(initial?.descEn   ?? '');
+  const [regMaker, setRegMaker] = useState(initial?.regMaker ?? '');
+  const [regScope, setRegScope] = useState(initial?.regScope ?? '');
+  const [remark,   setRemark]   = useState(initial?.remark   ?? '');
+  const [enabled,  setEnabled]  = useState(initial?.enabled  ?? true);
+  const [submitted, setSubmitted] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+
+  const isAdd = mode === 'add';
+
+  /** 比對修改前後，產生差異描述 */
+  const buildDiff = (): string => {
+    if (isAdd) return `新增法規：${regCode}`;
+    const lines: string[] = [];
+    const check = (label: string, oldVal: string | boolean, newVal: string | boolean) => {
+      if (String(oldVal) !== String(newVal)) lines.push(`${label}：「${oldVal}」→「${newVal}」`);
+    };
+    check('法規說明',    initial?.descZh   ?? '', descZh);
+    check('法規說明(EN)', initial?.descEn  ?? '', descEn);
+    check('法規制定者',  initial?.regMaker ?? '', regMaker);
+    check('法規管理範圍', initial?.regScope ?? '', regScope);
+    check('備註',        initial?.remark   ?? '', remark);
+    return lines.length > 0 ? lines.join('；') : '無異動';
+  };
+
+  const handleSubmit = () => {
+    setSubmitted(true);
+    if (!regCode || !descZh) return;
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const dateStr = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    const entry: HistoryEntry = {
+      date: dateStr,
+      event: isAdd ? '新增法規' : '編輯法規',
+      operator: 'System',
+      remark: buildDiff(),
+    };
+    onSave({ regCode, descZh, descEn, regMaker, regScope, remark, enabled }, entry);
+    onClose();
+  };
+
+  const inputCls = (invalid?: boolean) =>
+    `w-full h-[44px] px-[14px] text-[14px] text-[#1c252e] bg-white rounded-[8px] outline-none transition-colors border ${invalid ? 'border-[#ff5630]' : 'border-[rgba(145,158,171,0.3)]'} focus:border-[#2196F3] disabled:bg-[#f4f6f8] disabled:cursor-not-allowed disabled:opacity-60`;
+
+  // 可調式 textarea 樣式
+  const textareaCls = (invalid?: boolean) =>
+    `w-full min-h-[44px] px-[14px] py-[10px] text-[14px] text-[#1c252e] bg-white rounded-[8px] outline-none resize-y transition-colors border ${invalid ? 'border-[#ff5630]' : 'border-[rgba(145,158,171,0.3)]'} focus:border-[#2196F3]`;
+
+  const labelCls = 'w-[108px] shrink-0 text-[14px] font-medium text-[#1c252e] pt-[12px]';
+
+
+  return (
+    <BaseOverlay onClose={onClose} maxWidth="680px" maxHeight="90vh">
+      <div className="relative w-full flex flex-col" style={{ minHeight: 480 }}>
+        {/* 關閉按鈕 */}
+        <button
+          className="absolute left-[20px] top-[20px] z-10 cursor-pointer hover:opacity-70 transition-opacity"
+          onClick={onClose}
+        >
+          <svg width="24" height="24" viewBox="0 0 20 20" fill="none">
+            <path clipRule="evenodd"
+              d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+              fill="#637381" fillRule="evenodd"
+            />
+          </svg>
+        </button>
+
+        {/* 標題列 */}
+        <div className="flex items-start justify-between px-[50px] pt-[56px] pb-[20px]">
+          <div>
+            <p className="font-semibold text-[18px] leading-[28px] text-[#1c252e]">
+              {isAdd ? '新增法規' : '編輯法規'}
+            </p>
+            {isAdd && (
+              <p className="mt-[4px] text-[12px] text-[#ff5630] leading-[18px]">
+                ＊新增法規後，僅可編輯或停用，無提供刪除法規。
+              </p>
+            )}
+          </div>
+          {/* 歷程：對齊全站標準樣式 */}
+          <p
+            className="[text-decoration-skip-ink:none] decoration-solid font-['Roboto:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[32px] text-[#005eb8] text-[16px] underline cursor-pointer hover:opacity-70 shrink-0"
+            style={{ fontVariationSettings: "'wdth' 100" }}
+            onClick={() => setShowHistory(true)}
+          >
+            歷程
+          </p>
+        </div>
+
+        {/* OrderHistory 彈窗 */}
+        {showHistory && (
+          <OrderHistory
+            titleLabel="法規歷程"
+            entries={[...history].reverse()}
+            onClose={() => setShowHistory(false)}
+          />
+        )}
+
+
+        {/* 表單 */}
+        <div className="flex-1 px-[50px] pb-[32px] flex flex-col gap-[16px] overflow-y-auto">
+          {/* 法規代號：新增時可輸入，編輯時唯讀 */}
+          <div className="flex items-start gap-[16px]">
+            <span className={labelCls}>法規代號<span className="text-[#ff5630] ml-[2px]">*</span></span>
+            {isAdd ? (
+              <textarea
+                rows={1}
+                value={regCode} onChange={e => setRegCode(e.target.value)}
+                className={textareaCls(submitted && !regCode)}
+                placeholder="例：RoHS"
+              />
+            ) : (
+              <input
+                type="text" value={regCode} disabled
+                className={inputCls()}
+              />
+            )}
+          </div>
+          {submitted && !regCode && <p className="text-[12px] text-[#ff5630] ml-[124px] -mt-[8px]">請填寫法規代號</p>}
+
+          <div className="flex items-start gap-[16px]">
+            <span className={labelCls}>法規說明<span className="text-[#ff5630] ml-[2px]">*</span></span>
+            <textarea
+              rows={1}
+              value={descZh} onChange={e => setDescZh(e.target.value)}
+              className={textareaCls(submitted && !descZh)}
+              placeholder="中文說明"
+            />
+          </div>
+          {submitted && !descZh && <p className="text-[12px] text-[#ff5630] ml-[124px] -mt-[8px]">請填寫法規說明</p>}
+
+          <div className="flex items-start gap-[16px]">
+            <span className={labelCls}>法規說明(EN)</span>
+            <textarea rows={1} value={descEn} onChange={e => setDescEn(e.target.value)}
+              className={textareaCls()} placeholder="English description" />
+          </div>
+
+          <div className="flex items-start gap-[16px]">
+            <span className={labelCls}>法規制定者</span>
+            <textarea rows={1} value={regMaker} onChange={e => setRegMaker(e.target.value)}
+              className={textareaCls()} placeholder="例：歐盟（EU）" />
+          </div>
+
+          <div className="flex items-start gap-[16px]">
+            <span className={labelCls}>法規管理範圍</span>
+            <textarea rows={3} value={regScope} onChange={e => setRegScope(e.target.value)}
+              className={textareaCls()} placeholder="管轄範圍描述" />
+          </div>
+
+          <div className="flex items-start gap-[16px]">
+            <span className={labelCls}>備註</span>
+            <textarea rows={1} value={remark} onChange={e => setRemark(e.target.value)}
+              className={textareaCls()} placeholder="選填" />
+          </div>
+        </div>
+
+
+        {/* 送出 */}
+        <div className="px-[50px] pb-[32px] shrink-0">
+          <button
+            onClick={handleSubmit}
+            className="w-full h-[42px] rounded-[8px] flex items-center justify-center hover:bg-[#004680] transition-colors"
+            style={{ backgroundColor: '#00559c' }}
+          >
+            <p className="font-bold leading-[24px] text-white text-[14px]">
+              {isAdd ? '新增' : '儲存'}
+            </p>
+          </button>
+        </div>
+      </div>
+    </BaseOverlay>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Tab3：危害物質法規維護
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -595,10 +796,32 @@ function Tab3HazardReg() {
   const [rows, setRows] = useState<HazardRegRow[]>(HAZARD_REG_DATA);
   const [regCodeSearch, setRegCodeSearch] = useState('');
   const [enabledFilter, setEnabledFilter] = useState('');
+  const [showAddOverlay, setShowAddOverlay] = useState(false);
+  const [editTarget, setEditTarget] = useState<HazardRegRow | null>(null);
+  /** 每筆法規的歷程（key = row.id） */
+  const [historyMap, setHistoryMap] = useState<Record<number, HistoryEntry[]>>({});
 
   const handleToggleEnabled = (id: number) => {
     setRows(prev => prev.map(r => r.id === id ? { ...r, enabled: !r.enabled } : r));
   };
+
+  const handleAdd = (data: Omit<HazardRegRow, 'id' | 'createdInfo'>, entry: HistoryEntry) => {
+    const newId = Date.now();
+    setRows(prev => [...prev, {
+      id: newId,
+      ...data,
+      createdInfo: 'System-' + new Date().toLocaleDateString('zh-TW'),
+    }]);
+    setHistoryMap(prev => ({ ...prev, [newId]: [entry] }));
+  };
+
+  const handleEdit = (data: Omit<HazardRegRow, 'id' | 'createdInfo'>, entry: HistoryEntry) => {
+    if (!editTarget) return;
+    const id = editTarget.id;
+    setRows(prev => prev.map(r => r.id === id ? { ...r, ...data } : r));
+    setHistoryMap(prev => ({ ...prev, [id]: [...(prev[id] ?? []), entry] }));
+  };
+
 
   const filtered = useMemo(() => {
     return rows.filter(row => {
@@ -611,14 +834,19 @@ function Tab3HazardReg() {
   }, [rows, regCodeSearch, enabledFilter]);
 
   const columns: StandardColumn<HazardRegRow>[] = [
-    { key: 'id',          label: '#',          width: 56,  minWidth: 48  },
+    { key: 'id',          label: '#',           width: 56,  minWidth: 48  },
     {
       key: 'regCode',
       label: '法規代號',
       width: 120,
       minWidth: 90,
-      renderCell: (val) => (
-        <span className="text-[#1890FF] cursor-pointer hover:underline font-medium">{String(val)}</span>
+      renderCell: (val, row) => (
+        <span
+          className="text-[#1890FF] cursor-pointer hover:underline font-medium"
+          onClick={e => { e.stopPropagation(); setEditTarget(row); }}
+        >
+          {String(val)}
+        </span>
       ),
     },
     {
@@ -627,38 +855,36 @@ function Tab3HazardReg() {
       width: 90,
       minWidth: 72,
       renderCell: (_val, row) => (
-        <div className="flex items-center">
+        <div onClick={e => e.stopPropagation()}>
           <ToggleSwitch checked={row.enabled} onChange={() => handleToggleEnabled(row.id)} />
         </div>
       ),
     },
-    { key: 'descZh',       label: '法規說明',       width: 220, minWidth: 140 },
-    { key: 'descEn',       label: '法規說明(En)',    width: 220, minWidth: 140 },
-    { key: 'regMaker',     label: '法規制定者',      width: 160, minWidth: 110 },
-    { key: 'regScope',     label: '法規管理範圍',    width: 220, minWidth: 140 },
-    { key: 'createdInfo',  label: '建檔資訊',        width: 220, minWidth: 160 },
+    { key: 'descZh',      label: '法規說明',     width: 220, minWidth: 140 },
+    { key: 'descEn',      label: '法規說明(En)',  width: 220, minWidth: 140 },
+    { key: 'regMaker',    label: '法規制定者',    width: 160, minWidth: 110 },
+    { key: 'regScope',    label: '法規管理範圍',  width: 240, minWidth: 140 },
+    { key: 'remark',      label: '備註',          width: 140, minWidth: 80  },
+    { key: 'createdInfo', label: '建檔資訊',      width: 220, minWidth: 160 },
   ];
+
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
       {/* 搜尋列 */}
       <div className="shrink-0 flex gap-[16px] items-center px-[20px] py-[16px]">
-        <div className="flex-1">
-          <SearchField
-            label="法規代號"
-            value={regCodeSearch}
-            onChange={setRegCodeSearch}
-          />
+        <div className="flex-1 min-w-0">
+          <SearchField label="法規代號" value={regCodeSearch} onChange={setRegCodeSearch} />
         </div>
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <DropdownSelect
-            label="啟用/未啟用"
+            label="啟用狀態"
             value={enabledFilter}
             onChange={setEnabledFilter}
             options={[
-              { value: '',         label: '全部'   },
-              { value: 'enabled',  label: '啟用'   },
-              { value: 'disabled', label: '未啟用'  },
+              { value: '',         label: '全部'  },
+              { value: 'enabled',  label: '啟用'  },
+              { value: 'disabled', label: '未啟用' },
             ]}
           />
         </div>
@@ -668,30 +894,45 @@ function Tab3HazardReg() {
       <StandardDataTable
         columns={columns}
         data={filtered}
-        storageKey="quality-other-tab3-v1"
+        storageKey="quality-other-tab3-v2"
+        showCheckbox={false}
         embedded
         onExportCsv={() => exportRowsToCsv(filtered, '危害物質法規維護.csv', [
           { key: 'regCode',     label: '法規代號' },
-          { key: 'enabled',     label: '啟用' },
           { key: 'descZh',      label: '法規說明' },
           { key: 'descEn',      label: '法規說明(En)' },
           { key: 'regMaker',    label: '法規制定者' },
           { key: 'regScope',    label: '法規管理範圍' },
+          { key: 'remark',      label: '備註' },
           { key: 'createdInfo', label: '建檔資訊' },
         ])}
         actionButton={
-          <Button
+          <button
             id="q-other-tab3-add-btn"
-            className="h-[36px] px-[16px] rounded-[8px] text-[14px] font-semibold"
-            style={{ backgroundColor: '#1c252e' }}
+            onClick={() => setShowAddOverlay(true)}
+            className="flex items-center h-[36px] px-[16px] rounded-[8px] bg-[#1c252e] hover:bg-[#2c3540] text-white font-semibold text-[13px] transition-colors"
           >
             新增
-          </Button>
+          </button>
         }
       />
+
+      {showAddOverlay && (
+        <HazardRegOverlay mode="add" onClose={() => setShowAddOverlay(false)} onSave={handleAdd} history={[]} />
+      )}
+      {editTarget && (
+        <HazardRegOverlay
+          mode="edit"
+          initial={editTarget}
+          history={historyMap[editTarget.id] ?? []}
+          onClose={() => setEditTarget(null)}
+          onSave={handleEdit}
+        />
+      )}
     </div>
   );
 }
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 主元件

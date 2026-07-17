@@ -17,3 +17,7 @@
 ### StandardDataTable 使用規則
 - 嵌入已有外層卡片的頁面（Tab + 搜尋列 + 表格 的 Settings 類頁面），**必須傳入 `embedded` prop**，否則搜尋列下方會出現多餘的 shadow 邊緣
 - 搜尋列容器 **禁止加 `border-b`**，`TableToolbar` 本身已有分隔效果
+
+### 搜尋列欄寬規則
+- 搜尋列中每個欄位（SearchField / DropdownSelect）的容器**一律加 `flex-1 min-w-0`**，讓所有欄位自動平均分配寬度
+- **禁止放空的佔位 `<div />`** 來維持特定欄數對齊；有幾個搜尋欄就放幾欄，寬度自動平均
