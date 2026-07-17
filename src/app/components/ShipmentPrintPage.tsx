@@ -12,6 +12,7 @@ import IconsSolidIcSolarMultipleForwardLeftBroken from '@/imports/IconsSolidIcSo
 import type { ShipmentRow, ShipmentDetailItem } from './ShipmentListPage';
 import type { BoxLineRow } from './ShipmentShippingInquiryPage';
 import { MOCK_VENDORS } from './VendorManagementTable';
+import { INSPECTION_PART_SET } from './QualityOtherSettingsPage';
 
 // ── TAB 定義 ─────────────────────────────────────────────────────────────────
 export type PrintTab = 'zh-shipment' | 'zh-sticker' | 'en-shipment' | 'en-sticker';
@@ -765,7 +766,7 @@ function EnStickerDoc({ boxRows }: { boxRows: BoxLineRow[] }) {
             }}>
               {cells.map((row, idx) => (
                 <div key={idx} style={{
-                  width: '100%', height: '100%', overflow: 'hidden',
+                  width: '100%', height: '100%',
                   display: 'flex', alignItems: 'stretch', justifyContent: 'stretch',
                 }}>
                   {row ? <SingleEnSticker row={row} /> : <div style={{ width: '100%', height: '100%' }} />}
@@ -812,7 +813,10 @@ function SingleEnSticker({ row }: { row: BoxLineRow }) {
   const labelStyle: React.CSSProperties = { ...cellBase, fontWeight: 'normal', whiteSpace: 'nowrap', color: '#333', width: '26%' };
   const valueStyle: React.CSSProperties = { ...cellBase, fontWeight: 'normal' };
 
-  return (
+  /** 此料號是否在「入廠需檢驗」清單中 → 顯示雙框線 */
+  const needsInspection = INSPECTION_PART_SET.has(row.materialNo);
+
+  const tableEl = (
     <table style={{
       width: '100%', height: '100%', borderCollapse: 'collapse',
       tableLayout: 'fixed', border: '2px solid #000',
@@ -914,6 +918,18 @@ function SingleEnSticker({ row }: { row: BoxLineRow }) {
       </tbody>
     </table>
   );
+
+  if (!needsInspection) return tableEl;
+
+  return (
+    <div style={{
+      width: '100%', height: '100%', boxSizing: 'border-box',
+      border: '2px solid #000', padding: '3px',
+      display: 'flex', alignItems: 'stretch',
+    }}>
+      {tableEl}
+    </div>
+  );
 }
 
 // ── 原產國家 → Made in XX 轉換 ────────────────────────────────────────────────
@@ -979,7 +995,7 @@ function ZhStickerDoc({ boxRows }: { boxRows: BoxLineRow[] }) {
             }}>
               {cells.map((row, idx) => (
                 <div key={idx} style={{
-                  width: '100%', height: '100%', overflow: 'hidden',
+                  width: '100%', height: '100%',
                   display: 'flex', alignItems: 'stretch', justifyContent: 'stretch',
                 }}>
                   {row ? <SingleSticker row={row} /> : <div style={{ width: '100%', height: '100%' }} />}
@@ -1020,6 +1036,7 @@ function SingleSticker({ row }: { row: BoxLineRow }) {
   const stickerOrderNo = `${row.orderNo}-${String(row.orderSeq).padStart(6, '0')}`;
   const madeIn = getMadeIn(row.countryOfOrigin);
 
+  // 基礎樣式
   const border = '1px solid #000';
   const cellBase: React.CSSProperties = {
     border, padding: '1px 4px', fontSize: '11px', verticalAlign: 'middle',
@@ -1028,7 +1045,10 @@ function SingleSticker({ row }: { row: BoxLineRow }) {
   const labelStyle: React.CSSProperties = { ...cellBase, fontWeight: 'normal', whiteSpace: 'nowrap', color: '#333', width: '26%' };
   const valueStyle: React.CSSProperties = { ...cellBase, fontWeight: 'normal' };
 
-  return (
+  /** 此料號是否在「入廠需檢驗」清單中 → 顯示雙框線 */
+  const needsInspection = INSPECTION_PART_SET.has(row.materialNo);
+
+  const tableEl = (
     <table style={{
       width: '100%', height: '100%', borderCollapse: 'collapse',
       tableLayout: 'fixed', border: '2px solid #000',
@@ -1130,8 +1150,20 @@ function SingleSticker({ row }: { row: BoxLineRow }) {
       </tbody>
     </table>
   );
-}
 
+  if (!needsInspection) return tableEl;
+
+  // 雙框線：外層 div (border 2px) + padding 3px 白色間距 + 內層 table (border 2px) = 明顯雙框
+  return (
+    <div style={{
+      width: '100%', height: '100%', boxSizing: 'border-box',
+      border: '2px solid #000', padding: '3px',
+      display: 'flex', alignItems: 'stretch',
+    }}>
+      {tableEl}
+    </div>
+  );
+}
 
 // ── 保留原有骨架元件（其他 TAB 用） ──────────────────────────────────────────
 function StickerSkeleton() {

@@ -89,7 +89,7 @@ type ActiveTab = QualityOtherTabKey;
 // Mock 資料
 // ─────────────────────────────────────────────────────────────────────────────
 
-const INCOMING_INSPECTION_DATA: IncomingInspectionRow[] = [
+export const INCOMING_INSPECTION_DATA: IncomingInspectionRow[] = [
   // ── 協立 0001003621 ─────────────────────────────────────────────────────────
   { id:  1, factory: 'GVM1', vendor: '協立(0001003621)', partNo: '1111-XCE280-001', longSpec: 'XCE26 SOFT COIL 27.5" 90 1.125 265 AL PM 9 100 W/O RMT AL OOD CROWN&LEG: YS 727 MATTE W/ TRANSAR T TA-2509 MATTE DECAL MY21', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
   { id:  2, factory: 'GVM1', vendor: '協立(0001003621)', partNo: '1111-XCE280-002', longSpec: 'XCE26 SOFT COIL 27.5" 90 1.125 265 AL PM 9 100 W/O RMT A/L OOD CROWN&LEG: YS 727 MATTE W/ TRANSAR T TA-2509 MATTE DECAL MY21', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
@@ -145,7 +145,14 @@ const INCOMING_INSPECTION_DATA: IncomingInspectionRow[] = [
   { id: 48, factory: 'GTM1', vendor: '台灣威菱(0001005861)', partNo: '10T1475ANM002', longSpec: 'T1475A 700C 56 134 1/42 CARBO 鉻鉬管 齒 1475U0022', updatedInfo: 'Paul Sun 孫杰坪-2023/04/05' },
   // ── 環宇 0001000259 ──────────────────────────────────────────────────────────
   { id: 49, factory: 'AIP1', vendor: '環宇(0001000259)', partNo: '4442-GLOB6-005', longSpec: 'POWER Global 6.2 A 149 W 24 V L', updatedInfo: 'SOY-2023/08/11' },
+  // ── 巨大機械（驗證用：對應出貨/裝箱明細 mock 料號）───────────────────────────
+  { id: 50, factory: 'GTM1', vendor: '巨大機械(0001000001)', partNo: '2201-FRM0641-A01', longSpec: 'ROAD FRAME ALLOY 700C SIZE M MATTE BLACK', updatedInfo: 'System-2024/01/01' },
 ];
+
+/** 入廠需檢驗的料號集合（供列印貼紙判斷雙框線用） */
+export const INSPECTION_PART_SET: ReadonlySet<string> = new Set(
+  INCOMING_INSPECTION_DATA.map(r => r.partNo)
+);
 
 
 
