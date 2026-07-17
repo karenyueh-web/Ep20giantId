@@ -6,6 +6,7 @@ import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { RECEIVING_TABS } from '../config/receivingConfig';
+import { QUALITY_OTHER_TABS } from '../config/qualityOtherConfig';
 import {
   loadRoleSections as storeLoadRoleSections,
   saveRoleSections,
@@ -320,7 +321,11 @@ const FEATURE_TREE: FeatureNode[] = [
           },
           { id: 'mgmt-quality-report', label: '檢驗/測試報告' },
           { id: 'mgmt-quality-hazard', label: '危害物質管理' },
-          { id: 'mgmt-quality-other', label: '其他設定' },
+          {
+            id: 'mgmt-quality-other',
+            label: '其他設定',
+            children: QUALITY_OTHER_TABS.map(t => ({ id: t.permId, label: t.label })),
+          },
         ],
       },
       {

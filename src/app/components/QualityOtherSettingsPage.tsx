@@ -10,11 +10,13 @@
  */
 
 import { useState, useMemo } from 'react';
+import { QUALITY_OTHER_TABS, type QualityOtherTabKey } from '@/app/config/qualityOtherConfig';
 import { StandardDataTable, type StandardColumn } from './StandardDataTable';
 import { SearchField } from './SearchField';
 import { DropdownSelect } from './DropdownSelect';
 import { Button } from '@/app/components/ui/button';
-import { ToggleSwitch } from './ToggleSwitch';
+import { DeleteButton } from './ActionButtons';
+import { BaseOverlay } from './BaseOverlay';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 共用 CSV 匯出工具
@@ -46,9 +48,9 @@ interface IncomingInspectionRow {
   factory: string;           // 工廠
   vendor: string;            // 廠商
   partNo: string;            // 料號
-  inspect: boolean;          // 是否檢驗
   longSpec: string;          // 長規格描述
   updatedInfo: string;       // 最後修改資訊
+  _action?: never;           // 虛擬欄，供刪除按鈕欄位使用
 }
 
 /** Tab2：需付檢測報告的物料群組 */
@@ -74,23 +76,112 @@ interface HazardRegRow {
   createdInfo: string;       // 建檔資訊
 }
 
-type ActiveTab = 'incoming-inspection' | 'material-group-report' | 'hazard-reg';
+type ActiveTab = QualityOtherTabKey;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Mock 資料
 // ─────────────────────────────────────────────────────────────────────────────
 
 const INCOMING_INSPECTION_DATA: IncomingInspectionRow[] = [
-  { id: 1,  factory: 'GVM1', vendor: '信友(0001005224)', partNo: '1321-CONNEC-033', inspect: true,  longSpec: 'CONNECT(ATB) TCHL XC RISE 320BT', updatedInfo: 'Paul Sun 孫杰坪-2024/03/20' },
-  { id: 2,  factory: 'GVM1', vendor: '信友(0001005224)', partNo: '1321-CONNEC-033', inspect: true,  longSpec: 'CONNECT(ATB) TCHL XC RISE 320BT', updatedInfo: 'Paul Sun 孫杰坪-2024/03/20' },
-  { id: 3,  factory: 'GVM1', vendor: '信友(0001005224)', partNo: '1321-CONNEC-033', inspect: true,  longSpec: 'CONNECT(ATB) TCHL XC RISE 320BT', updatedInfo: 'Paul Sun 孫杰坪-2024/03/20' },
-  { id: 4,  factory: 'GVM1', vendor: '信友(0001005224)', partNo: '1321-CONNEC-033', inspect: true,  longSpec: 'CONNECT(ATB) TCHL XC RISE 320BT', updatedInfo: 'Paul Sun 孫杰坪-2024/03/20' },
-  { id: 5,  factory: 'GVM1', vendor: '信友(0001005224)', partNo: '1321-CONNEC-033', inspect: false, longSpec: 'CONNECT(ATB) TCHL XC RISE 320BT', updatedInfo: 'Paul Sun 孫杰坪-2024/03/20' },
-  { id: 6,  factory: 'GVM1', vendor: '信友(0001005224)', partNo: '1321-CONNEC-034', inspect: true,  longSpec: 'CONNECT(ATB) TCHL XC RISE 320BT', updatedInfo: 'Paul Sun 孫杰坪-2024/03/20' },
-  { id: 7,  factory: 'GVM1', vendor: '台灣松下(0001009900)', partNo: 'BA-2048-M12-01', inspect: true,  longSpec: 'BATTERY 48V 12AH BLK PANASONIC', updatedInfo: 'Paul Sun 孫杰坪-2024/03/21' },
-  { id: 8,  factory: 'GVM1', vendor: '台灣松下(0001009900)', partNo: 'BA-2048-M12-02', inspect: false, longSpec: 'BATTERY 48V 12AH WHT PANASONIC', updatedInfo: 'Paul Sun 孫杰坪-2024/03/21' },
-  { id: 9,  factory: 'GTM1', vendor: '億光(0002001100)', partNo: 'LT-F001-LED-01',  inspect: true,  longSpec: 'FRONT LIGHT LED 80 LUX USB-C BLK', updatedInfo: 'Allen Zou 鄧芳筆-2024/02/15' },
+  // ── 協立 0001003621 ─────────────────────────────────────────────────────────
+  { id:  1, factory: 'GVM1', vendor: '協立(0001003621)', partNo: '1111-XCE280-001', longSpec: 'XCE26 SOFT COIL 27.5" 90 1.125 265 AL PM 9 100 W/O RMT AL OOD CROWN&LEG: YS 727 MATTE W/ TRANSAR T TA-2509 MATTE DECAL MY21', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  { id:  2, factory: 'GVM1', vendor: '協立(0001003621)', partNo: '1111-XCE280-002', longSpec: 'XCE26 SOFT COIL 27.5" 90 1.125 265 AL PM 9 100 W/O RMT A/L OOD CROWN&LEG: YS 727 MATTE W/ TRANSAR T TA-2509 MATTE DECAL MY21', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  { id:  3, factory: 'GVM1', vendor: '協立(0001003621)', partNo: '1111-XCE280-003', longSpec: 'XCE26 SOFT COIL 29" 100 1.125 265 PM 9 100 W/O RMT A/L OOD CROWN&LEG: YS 727 MATTE W/ TRANSAR T TA-2509 MATTE DECAL MY21', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  { id:  4, factory: 'GVM1', vendor: '協立(0001003621)', partNo: '1111-XCE280-004', longSpec: 'XCE26 SOFT COIL 29" 100 1.125 265 PM 9 100 W/O RMT W/ TRANSAR T TA-2509 MATTE DECAL MY21', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  { id:  5, factory: 'GVM1', vendor: '協立(0001003621)', partNo: '1111-XCE280-005', longSpec: 'XCE26 SOFT COIL 27.5" 90 1.125 265 PM 9 100 W/O RMT AL OOD CROWN&LEG: YS 727 MATTE W/ YS 728 GLOSS& YS 727 MATTE DECAL', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  { id:  6, factory: 'GVM1', vendor: '協立(0001003621)', partNo: '1111-XCE280-006', longSpec: 'XCE26 STD COIL 27.5" 90 1.125 265 PM 9 100 W/O RMT AL OOD CROWN&LEG: YS 727 MATTE W/ YS 728 GLOSS& YS 727 MATTE DECAL', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  { id:  7, factory: 'GVM1', vendor: '協立(0001003621)', partNo: '1111-XCE280-007', longSpec: 'XCE26 STD COIL 27.5" 100 1.125 265 PM 9 100 W/O RMT AL OOD CROWN&LEG: YS 727 MATTE W/ YS 728 GLOSS& YS 727 MATTE DECAL', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  { id:  8, factory: 'GVM1', vendor: '協立(0001003621)', partNo: '1111-XCE280-008', longSpec: 'XCE26 STD COIL 29" 100 1.125 260 PM 9 100 W/O RMT AL OOD CROWN&LEG: YS 727 MATTE W/ YS 728 GLOSS& YS 727 MATTE DECAL', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  { id:  9, factory: 'GVM1', vendor: '協立(0001003621)', partNo: '1111-XCMHD80-009', longSpec: 'XCM HARD COIL 29" 100 1.125 265 POST MOUNT 9 100 WITHOUT REMOTE ALLOY OOD CROWN&LEG: YS 727 MATTE W/YS 728', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  { id: 10, factory: 'GVM1', vendor: '協立(0001003621)', partNo: '1111-XCMSD0-001', longSpec: 'XCM DS COIL HARD 29" 100 1.125 265 STEEL 46 PM 160 9 100 W/O RMT W/O LOCKOUT AL STD OOD BLK M BLK DECAL MY21', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  { id: 11, factory: 'GVM1', vendor: '協立(0001003621)', partNo: '1111-XCMSD0-002', longSpec: 'XCM DS COIL STD 29" 100 1.125 265 STEEL 46 PM 160 9 100 W/O RMT W/O LOCKOUT AL STD M BLK M BLK DECAL MY21 TALON 3-GE', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  { id: 12, factory: 'GVM1', vendor: '協立(0001003621)', partNo: '1111-XCMSD0-003', longSpec: 'SF20 XCM DS COIL SOFT 27.5" 060 80 1.125 265 STEEL 42 PM 160 9 100 W/O RMT W/O LOCKOUT AL C: YS727 MATTE BLACKIF: YS727', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  { id: 13, factory: 'GVM1', vendor: '協立(0001003621)', partNo: '1111-XCMTS0-004', longSpec: 'SF20 XCM DS COIL SOFT 29" 080 100 1.125 265 STEEL 51 PM 160 9 100 W/O RMT W/O LOCKOUT AL C: YS727 MATTE BLACKIF: YS727 M', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  { id: 14, factory: 'GVM1', vendor: '協立(0001003621)', partNo: '1111-XCMTS0-005', longSpec: 'SF20 XCM DS COIL SOFT 27.5" 060 80 1.125 265 STEEL 51 PM 160 9 100 W/O RMT W/O LOCKOUT AL C: YS727 MATTE BLACKIF: YS727 M', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  { id: 15, factory: 'GVM1', vendor: '協立(0001003621)', partNo: '1111-XCMTS0-006', longSpec: 'SF20 XCM DS COIL HARD 27.5" 080 90 1.125 265MM PM OD0 9 100 W/O RMT W/OMMMQR W/O REMOTE W/O LOCKOUT ALLOY G/F: YS 727 BLK MATTE W/TA 2', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  // ── 帝盟 0001003650 ─────────────────────────────────────────────────────────
+  { id: 16, factory: 'GVM1', vendor: '帝盟(0001003650)', partNo: '1710-DDKGP2-0001', longSpec: 'DDK GP2000 TEM99 BLACK STEEL BLACK WITH BUMPER BLACK BA417541A PRO ACTIVE', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  // ── 信友 0001005224 ─────────────────────────────────────────────────────────
+  { id: 17, factory: 'GVM1', vendor: '信友(0001005224)', partNo: '1321-CONNEC-033', longSpec: 'CONNECT(ATB) TCHL XC RISE 320BTFOV 31.8X640 R20 6D/3D SSABK W/MY20 DECAL', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  { id: 18, factory: 'GVM1', vendor: '信友(0001005224)', partNo: '1321-CONNEC-034', longSpec: 'CONNECT(ATB) TCHL XC RISE 320BTFOV 31.8X670 R20 6D/3D SSABK W/MY20 DECAL', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  { id: 19, factory: 'GVM1', vendor: '信友(0001005224)', partNo: '1321-CONNEC-035', longSpec: 'CONNECT(ATB) TCHL TR RISER 320BTFOV 31.8X720 R20 6D/3D SSABK W/MY20 DECAL', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  { id: 20, factory: 'GVM1', vendor: '信友(0001005224)', partNo: '1321-CONNEC-036', longSpec: 'CONNECT(ATB) TCHL TR RISER 320BTFOV 31.8X730-320 6D/3D SSABK W/MY20 DECAL W/ WARNING DECAL', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  { id: 21, factory: 'GVM1', vendor: '信友(0001005224)', partNo: '1321-CONNEC-037', longSpec: 'CONNECT(ATB) TCHL TR RISER 320BTFOV 31.8X750 R20 6D/3D SSABK W/MY20 DECAL W/ WARNING DECAL', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  { id: 22, factory: 'GVM1', vendor: '信友(0001005224)', partNo: '1330-TDSD50-002', longSpec: 'TDS-D507G-6FOV(ATB) 28.6X(31.8) H=41 7D S.A BK W/BK BOLT W/O LOGO', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  { id: 23, factory: 'GVM1', vendor: '信友(0001005224)', partNo: '1330-TDS250-002', longSpec: 'TDS-D507G-6FOV(ATB) 28.6X(31.8) H=41 7D S.A BK W/BK BOLT W/O LOGO', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  { id: 24, factory: 'GVM1', vendor: '信友(0001005224)', partNo: '1330-TDS500-003', longSpec: 'TDS-D507G-6FOV(ATB) 28.6X(31.8) H=41 7D S.A BK W/BK BOLT W/O LOGO', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  { id: 25, factory: 'GVM1', vendor: '信友(0001005224)', partNo: '1330-TDS500-004', longSpec: 'TDS-D507G-6FOV(ATB) 28.6X(31.8) H=41 7D S.A BK W/BK BOLT W/O LG', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  { id: 26, factory: 'GVM1', vendor: '信友(0001005224)', partNo: '1330-TDS500-005', longSpec: 'TDS-D507G-6FOV(ATB) 28.6X(31.8) H=41 7D S.A BK W/BK BOLT W/O LG', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  { id: 27, factory: 'GVM1', vendor: '信友(0001005224)', partNo: '1721-SPC217-001', longSpec: 'SP-R217/ROAD A) 30.9X300 AL SAUK BK W/BK HEAD W2/PC BK BOLT W/O LG W/LASER 1&2 REPEAT 8-9N M', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  { id: 28, factory: 'GVM1', vendor: '信友(0001005224)', partNo: '1721-SPC217-002', longSpec: 'SP 217/ROAD A) 30.9X375 AL SAUK BK W/BK HEAD W2/PC BK BOLT W/O LG W/LASER 1&2 REPEAT 8.9N.M', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  { id: 29, factory: 'GVM1', vendor: '信友(0001005224)', partNo: '1721-SPC217-003', longSpec: 'SP 217/ROAD A) 30.9X395 AL SAUK BK W/BK HEAD W2/PC BK BOLT W/O LG W/LASER 1&2 REPEAT 8.9N.M', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  // ── 百勝 0001005285 ─────────────────────────────────────────────────────────
+  { id: 30, factory: 'GVM1', vendor: '百勝(0001005285)', partNo: '1450-5111SR-001', longSpec: 'CPH-5 1350DX1800 C1 BLK RGA-1.5 7X6 W/OBC-5111SR-NT', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  { id: 31, factory: 'GVM1', vendor: '百勝(0001005285)', partNo: '1450-5111SR-002', longSpec: 'CPH-5 1390DX1600 C1 BLK RGA-1.5 7X6 W/OBC-5111SR-NT', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  { id: 32, factory: 'GVM1', vendor: '百勝(0001005285)', partNo: '1450-5111SR-003', longSpec: 'CPH-5 1420DX1000 C1 BLK RGA-1.5 7X6 W/OBC-5111SR-NT', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  { id: 33, factory: 'GVM1', vendor: '百勝(0001005285)', partNo: '1450-5111SR-004', longSpec: 'CPH-5 1450DX1000 C1 BLK RGA-1.5 7X6 W/OBC-5111SR-NT', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  { id: 34, factory: 'GVM1', vendor: '百勝(0001005285)', partNo: '1450-5111SR-005', longSpec: 'CPH-5 1550DX2000 C1 BLK RGA-1.5 7X6 W/OBC-5111SR-NT', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  { id: 35, factory: 'GVM1', vendor: '百勝(0001005285)', partNo: '1450-5111SR-006', longSpec: 'CPH-5 1650DX2000 C1 BLK RGA-1.5 7X6 W/OBC-5111SR-NT', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  { id: 36, factory: 'GVM1', vendor: '百勝(0001005285)', partNo: '1450-5111SR-016', longSpec: 'CPH-5 750DX1000 C1 BLK RGA-1.5 7X6 W/OBC-5111SR-NT', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  { id: 37, factory: 'GVM1', vendor: '百勝(0001005285)', partNo: '1450-5111SR-018', longSpec: 'CPH-5 820DX1200 C1 BLK RGA-1.5 7X6 W/OBC-5111SR-NT', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  { id: 38, factory: 'GVM1', vendor: '百勝(0001005285)', partNo: '1450-5111SR-022', longSpec: 'CPH-5 8200DX1200 C1 BLK RGA-1.5 7X6 W/OBC-5111SR-NT', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  { id: 39, factory: 'GVM1', vendor: '百勝(0001005285)', partNo: '1450-5111SR-025', longSpec: 'CPH-1 5820DX1200 C1 BLK RGA-1.5 7X6 W/OBC-5111SR-NT', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  { id: 40, factory: 'GVM1', vendor: '百勝(0001005285)', partNo: '1450-5111SR-026', longSpec: 'CPH-5 8200DX1200 C1 BLK RGA-1.5 7X6 W/OBC-5111SR-NT', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  { id: 41, factory: 'GVM1', vendor: '百勝(0001005285)', partNo: '1450-5111SR-027', longSpec: 'CPH-5 8200DX1200 C1 BLK RGA-1.5 7X6 W/OBC-5111SR-NT', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  { id: 42, factory: 'GVM1', vendor: '百勝(0001005285)', partNo: '1450-5111SR-028', longSpec: 'CPH-5 8500DX1100 C1 BLK RGA-1.5 7X6 W/OBC-5111SR-NT', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  { id: 43, factory: 'GVM1', vendor: '百勝(0001005285)', partNo: '1450-5111SR-030', longSpec: 'CPH-5 14800DX2000 C1 BLK RGA-1.5 7X6 W/OBC-5111SR-NT', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  { id: 44, factory: 'GVM1', vendor: '百勝(0001005285)', partNo: '1450-5111SR-031', longSpec: 'CPH-5 15000DX2000 C1 BLK RGA-1.5 7X6 W/OBC-5111SR-NT', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  { id: 45, factory: 'GVM1', vendor: '百勝(0001005285)', partNo: '1450-5111SR-032', longSpec: 'CPH-5 720DX2000 C1 BLK RGA-1.5 7X6 W/OBC-5111SR-NT', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  { id: 46, factory: 'GVM1', vendor: '百勝(0001005285)', partNo: '1450-5111SR-033', longSpec: 'CPH-5 7700C 60 211.5 142 C1 BLK RGA-1.5 7X6 W/OBC-5111SR-NT', updatedInfo: 'Paul Sun 孫杰坪-2022/10/07' },
+  // ── 台灣威菱 0001005861 ──────────────────────────────────────────────────────
+  { id: 47, factory: 'GVM1', vendor: '台灣威菱(0001005861)', partNo: '10T1475ANM001', longSpec: 'T1475A 700C 56 134 1/42 CARBO 鉻鉬管 齒 1475U0022', updatedInfo: 'Paul Sun 孫杰坪-2023/12/05' },
+  { id: 48, factory: 'GTM1', vendor: '台灣威菱(0001005861)', partNo: '10T1475ANM002', longSpec: 'T1475A 700C 56 134 1/42 CARBO 鉻鉬管 齒 1475U0022', updatedInfo: 'Paul Sun 孫杰坪-2023/04/05' },
+  // ── 環宇 0001000259 ──────────────────────────────────────────────────────────
+  { id: 49, factory: 'AIP1', vendor: '環宇(0001000259)', partNo: '4442-GLOB6-005', longSpec: 'POWER Global 6.2 A 149 W 24 V L', updatedInfo: 'SOY-2023/08/11' },
 ];
+
+
+
+// Mock 選項資料（將來串 API）
+const FACTORY_OPTIONS = [
+  { value: 'GVM1', label: 'GVM1' },
+  { value: 'GTM1', label: 'GTM1' },
+  { value: 'GEM1', label: 'GEM1' },
+  { value: 'GPM1', label: 'GPM1' },
+];
+
+const VENDOR_OPTIONS = [
+  { value: '0001005224', label: '信友 (0001005224)' },
+  { value: '0001009900', label: '台灣松下 (0001009900)' },
+  { value: '0002001100', label: '億光 (0002001100)' },
+  { value: '0003000512', label: '禧瑪諾 (0003000512)' },
+  { value: '0004001872', label: '速聯 (0004001872)' },
+];
+
+// 料號選項（廠商選定後才有效，模擬中台物料阻擋 API）
+const PART_NO_BY_VENDOR: Record<string, { value: string; label: string; longSpec: string }[]> = {
+  '0001005224': [
+    { value: '1321-CONNEC-033', label: '1321-CONNEC-033', longSpec: 'CONNECT(ATB) TCHL XC RISE 320BT' },
+    { value: '1321-CONNEC-034', label: '1321-CONNEC-034', longSpec: 'CONNECT(ATB) TCHL XC RISE 400BT' },
+    { value: '1321-CONNEC-035', label: '1321-CONNEC-035', longSpec: 'CONNECT(ATB) TCHL XC RISE 500BT' },
+  ],
+  '0001009900': [
+    { value: 'BA-2048-M12-01', label: 'BA-2048-M12-01', longSpec: 'BATTERY 48V 12AH BLK PANASONIC' },
+    { value: 'BA-2048-M12-02', label: 'BA-2048-M12-02', longSpec: 'BATTERY 48V 12AH WHT PANASONIC' },
+    { value: 'BA-3648-M12-01', label: 'BA-3648-M12-01', longSpec: 'BATTERY 48V 12AH BLK PANASONIC XL' },
+  ],
+  '0002001100': [
+    { value: 'LT-F001-LED-01', label: 'LT-F001-LED-01', longSpec: 'FRONT LIGHT LED 80 LUX USB-C BLK' },
+    { value: 'LT-F002-LED-01', label: 'LT-F002-LED-01', longSpec: 'FRONT LIGHT LED 120 LUX USB-C BLK' },
+  ],
+  '0003000512': [
+    { value: 'DL-6800-GS', label: 'DL-6800-GS', longSpec: 'DERAILL REAR SHIMANO DEORE XT M8100' },
+  ],
+  '0004001872': [
+    { value: 'FD-SRAM-AXS-01', label: 'FD-SRAM-AXS-01', longSpec: 'DERAILLEUR FRONT SRAM AXS 2X 12SPD' },
+  ],
+};
+
 
 const MATERIAL_GROUP_REPORT_DATA: MaterialGroupReportRow[] = [
   { id: 1,  factory: 'GEM1', materialGroup: '100',  descZh: 'BICYCLE',       descEn: 'BICYCLE',         needInspReport: true,  needFuncReport: true  },
@@ -150,98 +241,230 @@ function CheckboxDisplay({ checked }: { checked: boolean }) {
 }
 
 
+// ─────────────────────────────────────────────────────────────────────────────
+// AddInspectionOverlay — 新增檢驗料號彈窗
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface AddInspectionOverlayProps {
+  onClose: () => void;
+  onAdd: (row: Omit<IncomingInspectionRow, 'id'>) => void;
+}
+
+function AddInspectionOverlay({ onClose, onAdd }: AddInspectionOverlayProps) {
+  const [factory, setFactory] = useState('');
+  const [vendorId, setVendorId] = useState('');
+  const [partNo, setPartNo]   = useState('');
+  const [submitted, setSubmitted] = useState(false);
+
+  const partOptions = vendorId ? (PART_NO_BY_VENDOR[vendorId] ?? []) : [];
+  const selectedPart = partOptions.find(p => p.value === partNo);
+  const vendorLabel = VENDOR_OPTIONS.find(v => v.value === vendorId)?.label ?? '';
+
+  // 選廠商切換時清空料號
+  const handleVendorChange = (v: string) => {
+    setVendorId(v);
+    setPartNo('');
+  };
+
+  const handleSubmit = () => {
+    setSubmitted(true);
+    if (!factory || !vendorId || !partNo) return;
+    onAdd({
+      factory,
+      vendor: vendorLabel,
+      partNo,
+      longSpec: selectedPart?.longSpec ?? '',
+      updatedInfo: 'System-' + new Date().toLocaleDateString('zh-TW'),
+    });
+    onClose();
+  };
+
+  return (
+    <BaseOverlay onClose={onClose} maxWidth="520px" maxHeight="460px">
+      <div className="relative w-full h-full">
+        {/* 關閉按鈕 */}
+        <button
+          className="absolute left-[20px] top-[20px] z-10 cursor-pointer hover:opacity-70 transition-opacity"
+          onClick={onClose}
+        >
+          <svg width="24" height="24" viewBox="0 0 20 20" fill="none">
+            <path
+              clipRule="evenodd"
+              d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+              fill="#637381"
+              fillRule="evenodd"
+            />
+          </svg>
+        </button>
+
+        {/* 內容區 */}
+        <div className="flex flex-col h-full px-[50px] pt-[58px] pb-[40px] gap-[24px]">
+          <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[28px] text-[#1c252e] text-[18px]">
+            新增檢驗料號
+          </p>
+
+          <div className="flex flex-col gap-[20px] flex-1">
+            {/* 工廠 */}
+            <DropdownSelect
+              label="工廠"
+              value={factory}
+              onChange={setFactory}
+              options={FACTORY_OPTIONS}
+              placeholder="請選擇工廠"
+              searchable
+              error={submitted && !factory}
+            />
+
+            {/* 廠商 */}
+            <DropdownSelect
+              label="廠商"
+              value={vendorId}
+              onChange={handleVendorChange}
+              options={VENDOR_OPTIONS}
+              placeholder="請選擇廠商"
+              searchable
+              error={submitted && !vendorId}
+            />
+
+            {/* 料號（廠商未選時 disabled） */}
+            <div>
+              <DropdownSelect
+                label="料號"
+                value={partNo}
+                onChange={setPartNo}
+                options={partOptions}
+                placeholder={vendorId ? '請選擇料號' : '請先選擇廠商'}
+                searchable
+                disabled={!vendorId}
+                error={submitted && !partNo}
+              />
+              {/* 長規格描述預覽 */}
+              {selectedPart && (
+                <p className="mt-[8px] text-[12px] text-[#637381] leading-[18px] pl-[2px]">
+                  {selectedPart.longSpec}
+                </p>
+              )}
+              {submitted && !partNo && (
+                <p className="mt-[4px] text-[12px] text-[#ff5630]">請選擇料號</p>
+              )}
+            </div>
+          </div>
+
+          {/* 新增按鈕 */}
+          <button
+            onClick={handleSubmit}
+            className="w-full h-[36px] rounded-[8px] flex items-center justify-center hover:bg-[#004680] transition-colors"
+            style={{ backgroundColor: '#00559c' }}
+          >
+            <p className="font-['Public_Sans:Bold',sans-serif] font-bold leading-[24px] text-white text-[14px]">新增</p>
+          </button>
+        </div>
+      </div>
+    </BaseOverlay>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Tab1：入廠需檢驗的物料
+// ─────────────────────────────────────────────────────────────────────────────
+
 function Tab1IncomingInspection() {
+  const [rows, setRows] = useState<IncomingInspectionRow[]>(INCOMING_INSPECTION_DATA);
   const [vendorSearch, setVendorSearch] = useState('');
   const [partSearch, setPartSearch]     = useState('');
-  const [inspectFilter, setInspectFilter] = useState('');
+  const [showAddOverlay, setShowAddOverlay] = useState(false);
+
+  const handleDelete = (id: number) => {
+    setRows(prev => prev.filter(r => r.id !== id));
+  };
+
+  const handleAdd = (row: Omit<IncomingInspectionRow, 'id'>) => {
+    setRows(prev => [...prev, { id: Date.now(), ...row }]);
+  };
 
   const filtered = useMemo(() => {
-    return INCOMING_INSPECTION_DATA.filter(row => {
-      const matchVendor  = !vendorSearch || row.vendor.includes(vendorSearch);
-      const matchPart    = !partSearch   || row.partNo.toLowerCase().includes(partSearch.toLowerCase());
-      const matchInspect = !inspectFilter
-        || (inspectFilter === 'yes' && row.inspect)
-        || (inspectFilter === 'no'  && !row.inspect);
-      return matchVendor && matchPart && matchInspect;
+    return rows.filter(row => {
+      const matchVendor = !vendorSearch || row.vendor.includes(vendorSearch);
+      const matchPart   = !partSearch   || row.partNo.toLowerCase().includes(partSearch.toLowerCase());
+      return matchVendor && matchPart;
     });
-  }, [vendorSearch, partSearch, inspectFilter]);
+  }, [rows, vendorSearch, partSearch]);
 
   const columns: StandardColumn<IncomingInspectionRow>[] = [
     { key: 'id',          label: '#',          width: 56,  minWidth: 48  },
     { key: 'factory',     label: '工廠',        width: 90,  minWidth: 72  },
     { key: 'vendor',      label: '廠商',        width: 200, minWidth: 140 },
     { key: 'partNo',      label: '料號',        width: 180, minWidth: 120 },
+    { key: 'longSpec',    label: '長規格描述',  width: 280, minWidth: 160 },
+    { key: 'updatedInfo', label: '最後修改資訊', width: 220, minWidth: 160 },
     {
-      key: 'inspect',
-      label: '是否檢驗',
-      width: 110,
-      minWidth: 90,
+      key: '_action',
+      label: '',
+      width: 64,
+      minWidth: 64,
+      required: true,
       renderCell: (_val, row) => (
-        <div className="flex items-center">
-          <ToggleSwitch checked={row.inspect} onChange={() => {}} />
+        <div onClick={e => e.stopPropagation()}>
+          <DeleteButton onClick={() => handleDelete(row.id)} title="移除此料號" />
         </div>
       ),
     },
-    { key: 'longSpec',    label: '長規格描述',  width: 280, minWidth: 160 },
-    { key: 'updatedInfo', label: '最後修改資訊', width: 220, minWidth: 160 },
   ];
+
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
       {/* 搜尋列 */}
       <div className="shrink-0 flex gap-[16px] items-center px-[20px] py-[16px]">
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <SearchField
             label="廠商"
             value={vendorSearch}
             onChange={setVendorSearch}
           />
         </div>
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <SearchField
             label="料號"
             value={partSearch}
             onChange={setPartSearch}
           />
         </div>
-        <div className="flex-1">
-          <DropdownSelect
-            label="是否檢驗"
-            value={inspectFilter}
-            onChange={setInspectFilter}
-            options={[
-              { value: '', label: '全部' },
-              { value: 'yes', label: 'Yes' },
-              { value: 'no',  label: 'No'  },
-            ]}
-          />
-        </div>
       </div>
+
 
       {/* 表格 */}
       <StandardDataTable
         columns={columns}
         data={filtered}
-        storageKey="quality-other-tab1-v1"
+        storageKey="quality-other-tab1-v2"
+        showCheckbox={false}
         embedded
         onExportCsv={() => exportRowsToCsv(filtered, '入廠需檢驗的物料.csv', [
           { key: 'factory',     label: '工廠' },
           { key: 'vendor',      label: '廠商' },
           { key: 'partNo',      label: '料號' },
-          { key: 'inspect',     label: '是否檢驗' },
           { key: 'longSpec',    label: '長規格描述' },
           { key: 'updatedInfo', label: '最後修改資訊' },
         ])}
         actionButton={
-          <Button
+          <button
             id="q-other-tab1-add-btn"
-            className="h-[36px] px-[16px] rounded-[8px] text-[14px] font-semibold"
-            style={{ backgroundColor: '#1c252e' }}
+            onClick={() => setShowAddOverlay(true)}
+            className="flex items-center h-[36px] px-[16px] rounded-[8px] bg-[#1c252e] hover:bg-[#2c3540] text-white font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] transition-colors"
           >
             新增
-          </Button>
+          </button>
         }
       />
+
+      {/* 新增彈窗 */}
+      {showAddOverlay && (
+        <AddInspectionOverlay
+          onClose={() => setShowAddOverlay(false)}
+          onAdd={handleAdd}
+        />
+      )}
     </div>
   );
 }
@@ -369,18 +592,23 @@ function Tab2MaterialGroupReport() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function Tab3HazardReg() {
+  const [rows, setRows] = useState<HazardRegRow[]>(HAZARD_REG_DATA);
   const [regCodeSearch, setRegCodeSearch] = useState('');
   const [enabledFilter, setEnabledFilter] = useState('');
 
+  const handleToggleEnabled = (id: number) => {
+    setRows(prev => prev.map(r => r.id === id ? { ...r, enabled: !r.enabled } : r));
+  };
+
   const filtered = useMemo(() => {
-    return HAZARD_REG_DATA.filter(row => {
+    return rows.filter(row => {
       const matchCode    = !regCodeSearch || row.regCode.toLowerCase().includes(regCodeSearch.toLowerCase());
       const matchEnabled = !enabledFilter
         || (enabledFilter === 'enabled'  && row.enabled)
         || (enabledFilter === 'disabled' && !row.enabled);
       return matchCode && matchEnabled;
     });
-  }, [regCodeSearch, enabledFilter]);
+  }, [rows, regCodeSearch, enabledFilter]);
 
   const columns: StandardColumn<HazardRegRow>[] = [
     { key: 'id',          label: '#',          width: 56,  minWidth: 48  },
@@ -400,7 +628,7 @@ function Tab3HazardReg() {
       minWidth: 72,
       renderCell: (_val, row) => (
         <div className="flex items-center">
-          <ToggleSwitch checked={row.enabled} onChange={() => {}} />
+          <ToggleSwitch checked={row.enabled} onChange={() => handleToggleEnabled(row.id)} />
         </div>
       ),
     },
@@ -472,11 +700,7 @@ function Tab3HazardReg() {
 export function QualityOtherSettingsPage() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('incoming-inspection');
 
-  const tabs: { key: ActiveTab; label: string }[] = [
-    { key: 'incoming-inspection',  label: '入廠需檢驗的物料' },
-    { key: 'material-group-report', label: '需付檢測報告的物料群組' },
-    { key: 'hazard-reg',           label: '危害物質法規維護' },
-  ];
+  const tabs = QUALITY_OTHER_TABS;
 
   return (
     <div className="bg-white flex flex-col h-full relative rounded-[16px] overflow-hidden border border-[rgba(145,158,171,0.12)]">
