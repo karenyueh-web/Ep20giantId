@@ -629,7 +629,38 @@ function measureTextWidth(text: string, font = '14px "Public Sans", "Noto Sans J
 }
 ```
 
+#### 1.5 Drag Icon 規範（⚠️ 對齊關鍵）
+
+> **禁止**將 drag icon 放在 flex flow 中（即禁止 `shrink-0` 佔位方式），否則表頭文字的起始位置會與資料格錯位，造成整列「歪斜」。
+
+**正確做法**：drag icon 必須用 `absolute` 定位，不佔 flex 空間：
+
+```tsx
+{/* ❌ 錯誤：drag icon 在 flex flow 中，會推移表頭文字 */}
+<div className="flex items-center gap-[4px] px-[16px] ...">
+  <div className="opacity-0 group-hover:opacity-40 shrink-0">  {/* ← 此 div 佔空間 */}
+    <svg>...</svg>
+  </div>
+  <p className="flex-1">欄位名稱</p>
+</div>
+
+{/* ✅ 正確：drag icon 用 absolute，文字從 px-[16px] 起點直接開始 */}
+<div className="relative flex items-center px-[16px] ...">  {/* ← 無 gap */}
+  <div className="absolute left-[2px] top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-40 transition-opacity pointer-events-none">
+    <svg>...</svg>
+  </div>
+  <p className="flex-1">欄位名稱</p>
+</div>
+```
+
+| 屬性 | 規格 |
+|------|------|
+| 容器 | `relative flex items-center px-[16px]`（**無 `gap-[4px]`**） |
+| Drag icon wrapper | `absolute left-[2px] top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-40 transition-opacity pointer-events-none` |
+| Icon 尺寸 | 16×16 SVG，fill `#637381` |
+
 #### 2. Resize Handle 結構（每個欄位標頭右側）
+
 
 使用 `e.detail >= 2` 在 `mousedown` 中偵測雙擊（比 `onDoubleClick` 更可靠，避免 resize 時序衝突）：
 

@@ -9,53 +9,165 @@ import { useHorizontalDragScroll } from './useHorizontalDragScroll';
 import { CheckboxIcon } from './CheckboxIcon';
 import { DropdownSelect } from './DropdownSelect';
 import { SearchField } from './SearchField';
-import { HazardFileUploadOverlay, type HazardFileOverlayProps } from './HazardFileUploadOverlay';
+import { HazardFileUploadOverlay, type HazardFileOverlayProps, type HazardFile } from './HazardFileUploadOverlay';
 import { HazardTemplateOverlay } from './HazardTemplateOverlay';
+import type { HistoryEntry } from './OrderStoreContext';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type TabKey = 'All' | '廠商確認中(V)' | '巨大確認中(G)' | '關閉結案(CL)';
 
-type FileStatus = '待上傳' | '不需繳交' | string; // string = link text (filename)
-
 interface HazardRow {
   id: string;
-  year: number;             // 年度
-  vendor: string;           // 廠商(編號)
-  regulationCode: string;   // 法規代號
-  submittedStatus: string;  // 繳交狀態
-  regulationDesc: string;   // 法規說明
-  thirdPartyFile: FileStatus; // 第三方檢測
-  selfDeclFile: FileStatus;   // 自我宣告書
-  vendorReplyDate: string;   // 廠商回覆日期
+  year: number;
+  vendor: string;
+  regulationCode: string;
+  submittedStatus: string;
+  regulationDesc: string;
+  // 檔案欄位（多檔）
+  thirdPartyFiles: HazardFile[];
+  selfDeclFiles: HazardFile[];
+  thirdPartyNotRequired: boolean;
+  selfDeclNotRequired: boolean;
+  // 日期
+  vendorReplyDate: string;
+  dataUpdateDate: string;
+  // 狀態
   status: 'V' | 'G' | 'CL';
+  lastEditor?: string;
+  lastEditTime?: string;
+  // 巨大確認結案
+  thirdPartyConfirmed?: boolean;
+  selfDeclConfirmed?: boolean;
+  // 歷程
+  thirdPartyHistory?: HistoryEntry[];
+  selfDeclHistory?: HistoryEntry[];
 }
 
-type ColKey = keyof Omit<HazardRow, 'id' | 'status'>;
+// 顯示欄位 key（補正：表格 key 與 HazardRow 欄位名路由分離）
+type DisplayColKey = 'year' | 'vendor' | 'regulationCode' | 'submittedStatus' | 'regulationDesc'
+  | 'thirdPartyFile' | 'selfDeclFile' | 'vendorReplyDate';
 
 interface ColDef {
-  key: ColKey;
+  key: DisplayColKey;
   label: string;
   width: number;
   minWidth: number;
   visible?: boolean;
 }
 
+// ─── 輔助函數 ─────────────────────────────────────────────────────────────
+
+// 轉涵 HazardFile
+const makeFile = (name: string, at: string, by?: string): HazardFile => ({ name, uploadedAt: at, uploadedBy: by });
+
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 
 const mockData: HazardRow[] = [
-  { id: '1',  year: 2025, vendor: '速聯(000100463)', regulationCode: 'REACH',  submittedStatus: 'V', regulationDesc: '化學品註冊、評估與授權限制法規', thirdPartyFile: '2025危害物質報告_REACH.pdf', selfDeclFile: '待上傳',  vendorReplyDate: '2025/02/01', status: 'V' },
-  { id: '2',  year: 2025, vendor: '速聯(000100463)', regulationCode: 'RoHS',   submittedStatus: 'V', regulationDesc: '限制電子電氣設備中某些有害物質',   thirdPartyFile: 'xxxxxxxxxx.pdf',             selfDeclFile: '待上傳',  vendorReplyDate: '2025/02/01', status: 'V' },
-  { id: '3',  year: 2025, vendor: '速聯(000100463)', regulationCode: 'CP 65',  submittedStatus: 'V', regulationDesc: '加州第65號提案（安全飲用水與有毒物質）', thirdPartyFile: '不需繳交',              selfDeclFile: '不需繳交', vendorReplyDate: '2025/02/01', status: 'V' },
-  { id: '4',  year: 2025, vendor: '速聯(000100463)', regulationCode: 'POPs',   submittedStatus: 'V', regulationDesc: '持久性有機污染物規範',              thirdPartyFile: '不需繳交',              selfDeclFile: '不需繳交', vendorReplyDate: '2025/02/01', status: 'V' },
-  { id: '5',  year: 2025, vendor: '邁達(000200112)', regulationCode: 'REACH',  submittedStatus: 'V', regulationDesc: '化學品註冊、評估與授權限制法規', thirdPartyFile: '已上傳',                     selfDeclFile: '已上傳',   vendorReplyDate: '2025/02/15', status: 'V' },
-  { id: '6',  year: 2025, vendor: '邁達(000200112)', regulationCode: 'RoHS',   submittedStatus: 'G', regulationDesc: '限制電子電氣設備中某些有害物質',   thirdPartyFile: '待上傳',                     selfDeclFile: '待上傳',  vendorReplyDate: '',           status: 'G' },
-  { id: '7',  year: 2025, vendor: '邁達(000200112)', regulationCode: 'PFAS',   submittedStatus: 'G', regulationDesc: '全氟和多氟烷基物質限制規範',         thirdPartyFile: '待上傳',                     selfDeclFile: '不需繳交', vendorReplyDate: '',           status: 'G' },
-  { id: '8',  year: 2025, vendor: '新興(000300078)', regulationCode: 'REACH',  submittedStatus: 'V', regulationDesc: '化學品註冊、評估與授權限制法規', thirdPartyFile: '已上傳',                     selfDeclFile: '已上傳',   vendorReplyDate: '2025/03/01', status: 'V' },
-  { id: '9',  year: 2025, vendor: '新興(000300078)', regulationCode: 'RoHS',   submittedStatus: 'V', regulationDesc: '限制電子電氣設備中某些有害物質',   thirdPartyFile: '已上傳',                     selfDeclFile: '待上傳',  vendorReplyDate: '2025/03/05', status: 'V' },
-  { id: '10', year: 2025, vendor: '鉅德(000400055)', regulationCode: 'REACH',  submittedStatus: 'CL', regulationDesc: '化學品註冊、評估與授權限制法規', thirdPartyFile: '已上傳',                    selfDeclFile: '已上傳',   vendorReplyDate: '2025/03/10', status: 'CL' },
-  { id: '11', year: 2025, vendor: '鉅德(000400055)', regulationCode: 'RoHS',   submittedStatus: 'CL', regulationDesc: '限制電子電氣設備中某些有害物質',  thirdPartyFile: '已上傳',                    selfDeclFile: '已上傳',   vendorReplyDate: '2025/03/15', status: 'CL' },
-  { id: '12', year: 2024, vendor: '速聯(000100463)', regulationCode: 'REACH',  submittedStatus: 'CL', regulationDesc: '化學品註冊、評估與授權限制法規', thirdPartyFile: '已上傳',                    selfDeclFile: '已上傳',   vendorReplyDate: '2024/02/28', status: 'CL' },
+  // ─ 速聯 ─
+  { id: '1',  year: 2026, vendor: '速聯(000100463)', regulationCode: 'REACH', submittedStatus: 'V', regulationDesc: '化學品註冊、評估與授權限制法規',
+    thirdPartyFiles: [makeFile('2026危害物質報告_REACH.pdf', '2026/01/15 09:30', '張OO')], thirdPartyNotRequired: false,
+    selfDeclFiles: [], selfDeclNotRequired: false,
+    vendorReplyDate: '', dataUpdateDate: '2026/01/15 09:30', status: 'V', lastEditor: '張OO', lastEditTime: '2026/01/15 09:30',
+    thirdPartyHistory: [{ date: '2026/01/15 09:30', event: '上傳檔案', operator: '廠商-張OO', remark: '2026危害物質報告_REACH.pdf' }],
+    selfDeclHistory: [],
+  },
+  { id: '2',  year: 2026, vendor: '速聯(000100463)', regulationCode: 'RoHS',  submittedStatus: 'V', regulationDesc: '限制電子電氣設備中某些有害物質',
+    thirdPartyFiles: [makeFile('xxxxxxxxxx.pdf', '2026/01/20 14:05', '李 OO')], thirdPartyNotRequired: false,
+    selfDeclFiles: [], selfDeclNotRequired: false,
+    vendorReplyDate: '', dataUpdateDate: '2026/01/20 14:05', status: 'V', lastEditor: '李 OO', lastEditTime: '2026/01/20 14:05',
+    thirdPartyHistory: [{ date: '2026/01/20 14:05', event: '上傳檔案', operator: '廠商-李 OO', remark: 'xxxxxxxxxx.pdf' }],
+    selfDeclHistory: [],
+  },
+  { id: '3',  year: 2026, vendor: '速聯(000100463)', regulationCode: 'CP 65', submittedStatus: 'G', regulationDesc: '加州第65號提案（安全飲用水與有毒物質）',
+    thirdPartyFiles: [], thirdPartyNotRequired: true,
+    selfDeclFiles:   [], selfDeclNotRequired: true,
+    vendorReplyDate: '2026/02/01 10:00', dataUpdateDate: '2026/01/28 09:00', status: 'G', lastEditor: '王 OO', lastEditTime: '2026/02/01 10:00',
+    thirdPartyHistory: [{ date: '2026/01/28 08:50', event: '設定不需繳交', operator: '廠商-王 OO', remark: '' }],
+    selfDeclHistory:   [{ date: '2026/01/28 08:55', event: '設定不需繳交', operator: '廠商-王 OO', remark: '' }],
+  },
+  { id: '4',  year: 2026, vendor: '速聯(000100463)', regulationCode: 'POPs',  submittedStatus: 'G', regulationDesc: '持久性有機污染物規範',
+    thirdPartyFiles: [], thirdPartyNotRequired: true,
+    selfDeclFiles:   [], selfDeclNotRequired: true,
+    vendorReplyDate: '2026/02/01 10:15', dataUpdateDate: '2026/01/28 09:00', status: 'G', lastEditor: '王 OO', lastEditTime: '2026/02/01 10:15',
+    thirdPartyHistory: [{ date: '2026/01/28 09:00', event: '設定不需繳交', operator: '廠商-王 OO', remark: '' }],
+    selfDeclHistory:   [{ date: '2026/01/28 09:05', event: '設定不需繳交', operator: '廠商-王 OO', remark: '' }],
+  },
+  // ─ 邁達 ─
+  { id: '5',  year: 2026, vendor: '邁達(000200112)', regulationCode: 'REACH', submittedStatus: 'G', regulationDesc: '化學品註冊、評估與授權限制法規',
+    thirdPartyFiles: [makeFile('邁達_REACH報告.pdf', '2026/02/05 10:00', '陳 OO')], thirdPartyNotRequired: false,
+    selfDeclFiles:   [makeFile('邁達_REACH宣告書.pdf', '2026/02/05 10:30', '陳 OO')], selfDeclNotRequired: false,
+    vendorReplyDate: '2026/02/10 16:45', dataUpdateDate: '2026/02/05 10:00', status: 'G', lastEditor: '陳 OO', lastEditTime: '2026/02/10 16:45',
+    thirdPartyHistory: [{ date: '2026/02/05 10:00', event: '轉交巨大', operator: '廠商-陳 OO', remark: '邁達_REACH報告.pdf' }],
+    selfDeclHistory:   [{ date: '2026/02/05 10:30', event: '轉交巨大', operator: '廠商-陳 OO', remark: '邁達_REACH宣告書.pdf' }],
+  },
+  { id: '6',  year: 2026, vendor: '邁達(000200112)', regulationCode: 'RoHS',  submittedStatus: 'V', regulationDesc: '限制電子電氣設備中某些有害物質',
+    thirdPartyFiles: [], thirdPartyNotRequired: false,
+    selfDeclFiles:   [], selfDeclNotRequired: false,
+    vendorReplyDate: '', dataUpdateDate: '2026/02/01 08:00', status: 'V',
+    thirdPartyHistory: [], selfDeclHistory: [],
+  },
+  { id: '7',  year: 2026, vendor: '邁達(000200112)', regulationCode: 'PFAS',  submittedStatus: 'V', regulationDesc: '全氟和多氟烷基物質限制規範',
+    thirdPartyFiles: [], thirdPartyNotRequired: false,
+    selfDeclFiles:   [], selfDeclNotRequired: true,
+    vendorReplyDate: '', dataUpdateDate: '2026/03/01 11:20', status: 'V', lastEditor: '張OO', lastEditTime: '2026/03/01 11:20',
+    thirdPartyHistory: [], selfDeclHistory: [{ date: '2026/03/01 11:20', event: '設定不需繳交', operator: '廠商-張OO', remark: '' }],
+  },
+  // ─ 新興 ─
+  { id: '8',  year: 2026, vendor: '新興(000300078)', regulationCode: 'REACH', submittedStatus: 'G', regulationDesc: '化學品註冊、評估與授權限制法規',
+    thirdPartyFiles: [makeFile('新興_REACH報告.pdf', '2026/02/20 10:00', '小田OO'), makeFile('新興_REACH補件.pdf', '2026/02/22 09:00', '小田OO')], thirdPartyNotRequired: false,
+    selfDeclFiles:   [makeFile('新興_REACH宣告.pdf', '2026/02/20 10:30', '小田OO')], selfDeclNotRequired: false,
+    vendorReplyDate: '2026/02/28 08:55', dataUpdateDate: '2026/02/20 10:00', status: 'G', lastEditor: '小田OO', lastEditTime: '2026/02/28 08:55',
+    thirdPartyHistory: [
+      { date: '2026/02/22 09:00', event: '上傳檔案', operator: '廠商-小田OO', remark: '新興_REACH補件.pdf' },
+      { date: '2026/02/20 10:00', event: '轉交巨大', operator: '廠商-小田OO', remark: '新興_REACH報告.pdf' },
+    ],
+    selfDeclHistory: [{ date: '2026/02/20 10:30', event: '轉交巨大', operator: '廠商-小田OO', remark: '新興_REACH宣告.pdf' }],
+  },
+  { id: '9',  year: 2026, vendor: '新興(000300078)', regulationCode: 'RoHS',  submittedStatus: 'V', regulationDesc: '限制電子電氣設備中某些有害物質',
+    thirdPartyFiles: [makeFile('新興_RoHS報告.pdf', '2026/03/05 13:30', '小田OO')], thirdPartyNotRequired: false,
+    selfDeclFiles:   [], selfDeclNotRequired: false,
+    vendorReplyDate: '', dataUpdateDate: '2026/03/05 13:30', status: 'V', lastEditor: '小田OO', lastEditTime: '2026/03/05 13:30',
+    thirdPartyHistory: [{ date: '2026/03/05 13:30', event: '上傳檔案', operator: '廠商-小田OO', remark: '新興_RoHS報告.pdf' }],
+    selfDeclHistory: [],
+  },
+  // ─ 鉅德 ─
+  { id: '10', year: 2026, vendor: '鉅德(000400055)', regulationCode: 'REACH', submittedStatus: 'CL', regulationDesc: '化學品註冊、評估與授權限制法規',
+    thirdPartyFiles: [makeFile('鉅德_REACH報告.pdf', '2026/03/08 10:00', '吴OO')], thirdPartyNotRequired: false,
+    selfDeclFiles:   [makeFile('鉅德_REACH宣告.pdf', '2026/03/08 10:30', '吴OO')], selfDeclNotRequired: false,
+    vendorReplyDate: '2026/03/10 17:00', dataUpdateDate: '2026/03/12 09:00', status: 'CL',
+    lastEditor: '吴OO', lastEditTime: '2026/03/12 09:00', thirdPartyConfirmed: true, selfDeclConfirmed: true,
+    thirdPartyHistory: [
+      { date: '2026/03/12 09:00', event: '確認結案', operator: '巨大-吴OO', remark: '' },
+      { date: '2026/03/08 10:00', event: '轉交巨大', operator: '廠商-吴OO', remark: '鉅德_REACH報告.pdf' },
+    ],
+    selfDeclHistory: [
+      { date: '2026/03/12 09:00', event: '確認結案', operator: '巨大-吴OO', remark: '' },
+      { date: '2026/03/08 10:30', event: '轉交巨大', operator: '廠商-吴OO', remark: '鉅德_REACH宣告.pdf' },
+    ],
+  },
+  { id: '11', year: 2026, vendor: '鉅德(000400055)', regulationCode: 'RoHS',  submittedStatus: 'CL', regulationDesc: '限制電子電氣設備中某些有害物質',
+    thirdPartyFiles: [makeFile('鉅德_RoHS報告.pdf', '2026/03/13 09:00', '吴OO')], thirdPartyNotRequired: false,
+    selfDeclFiles:   [makeFile('鉅德_RoHS宣告.pdf', '2026/03/13 09:30', '吴OO')], selfDeclNotRequired: false,
+    vendorReplyDate: '2026/03/15 09:10', dataUpdateDate: '2026/03/16 10:00', status: 'CL',
+    lastEditor: '吴OO', lastEditTime: '2026/03/16 10:00', thirdPartyConfirmed: true, selfDeclConfirmed: true,
+    thirdPartyHistory: [
+      { date: '2026/03/16 10:00', event: '確認結案', operator: '巨大-吴OO', remark: '' },
+      { date: '2026/03/13 09:00', event: '轉交巨大', operator: '廠商-吴OO', remark: '鉅德_RoHS報告.pdf' },
+    ],
+    selfDeclHistory: [
+      { date: '2026/03/16 10:00', event: '確認結案', operator: '巨大-吴OO', remark: '' },
+      { date: '2026/03/13 09:30', event: '轉交巨大', operator: '廠商-吴OO', remark: '鉅德_RoHS宣告.pdf' },
+    ],
+  },
+  { id: '12', year: 2025, vendor: '速聯(000100463)', regulationCode: 'REACH', submittedStatus: 'CL', regulationDesc: '化學品註冊、評估與授權限制法規',
+    thirdPartyFiles: [makeFile('2025危害物質報告_REACH.pdf', '2025/02/25 10:00', '張OO')], thirdPartyNotRequired: false,
+    selfDeclFiles:   [makeFile('2025_REACH宣告書.pdf', '2025/02/25 10:30', '張OO')], selfDeclNotRequired: false,
+    vendorReplyDate: '2025/02/28 15:00', dataUpdateDate: '2025/03/01 10:00', status: 'CL',
+    lastEditor: '張OO', lastEditTime: '2025/03/01 10:00', thirdPartyConfirmed: true, selfDeclConfirmed: true,
+    thirdPartyHistory: [{ date: '2025/03/01 10:00', event: '確認結案', operator: '巨大-張OO', remark: '' }],
+    selfDeclHistory:   [{ date: '2025/03/01 10:00', event: '確認結案', operator: '巨大-張OO', remark: '' }],
+  },
 ];
 
 const DEFAULT_COLUMNS: ColDef[] = [
@@ -65,8 +177,8 @@ const DEFAULT_COLUMNS: ColDef[] = [
   { key: 'submittedStatus', label: '繳交狀態',      width: 100, minWidth: 80  },
   { key: 'regulationDesc',  label: '法規說明',      width: 240, minWidth: 160 },
   { key: 'thirdPartyFile',  label: '第三方檢測',    width: 180, minWidth: 140 },
-  { key: 'selfDeclFile',    label: '自我宣告書',    width: 130, minWidth: 110 },
-  { key: 'vendorReplyDate', label: '廠商回覆日期',  width: 130, minWidth: 110 },
+  { key: 'selfDeclFile',    label: '自我宣告書',    width: 150, minWidth: 120 },
+  { key: 'vendorReplyDate', label: '更新日期',      width: 165, minWidth: 130 },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -143,25 +255,13 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 // ─── File Cell ────────────────────────────────────────────────────────────────
-// 狀態規則：
-//   待上傳（未上傳）→ 紅色底線，點擊觸發上傳
-//   有檔名（已上傳）→ 藍色底線，顯示檔案名稱（含回紋針圖示）
-//   不需繳交        → 淺灰底線，點擊有動作（待補功能）
-
-function FileCell({ value, onClick }: { value: FileStatus; onClick?: () => void }) {
-  // 未上傳：紅色底線
-  if (value === '待上傳') {
-    return (
-      <span
-        onClick={onClick}
-        className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] text-[#ff5630] underline hover:text-[#cc3d1a] transition-colors cursor-pointer"
-      >
-        待上傳
-      </span>
-    );
-  }
-  // 不需繳交：淺灰底線
-  if (value === '不需繳交') {
+function FileCell({ files, notRequired, confirmed, onClick }: {
+  files: HazardFile[];
+  notRequired: boolean;
+  confirmed?: boolean; // 保留 prop 供外層 cell 判斷，FileCell 本身不再自行 highlight
+  onClick?: () => void;
+}) {
+  if (notRequired) {
     return (
       <span
         onClick={onClick}
@@ -171,18 +271,44 @@ function FileCell({ value, onClick }: { value: FileStatus; onClick?: () => void 
       </span>
     );
   }
-  // 已上傳（有檔名）：藍色底線 + 回紋針圖示
+  if (files.length === 0) {
+    return (
+      <span
+        onClick={onClick}
+        className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] text-[#ff5630] underline hover:text-[#cc3d1a] transition-colors cursor-pointer"
+      >
+        待上傳
+      </span>
+    );
+  }
+  if (files.length === 1) {
+    return (
+      <div className="flex items-center gap-[6px] min-w-0 cursor-pointer" onClick={onClick}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="shrink-0">
+          <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"
+            stroke="#1677ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+        <span
+          className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] text-[#1677ff] underline hover:text-[#0958d9] transition-colors truncate"
+          title={files[0].name}
+        >
+          {files[0].name}
+        </span>
+      </div>
+    );
+  }
+  // 多檔
   return (
-    <div className="flex items-center gap-[6px] min-w-0 cursor-pointer" onClick={onClick}>
+    <div className="flex items-center gap-[6px]">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="shrink-0">
         <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"
           stroke="#1677ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
       </svg>
       <span
-        className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] text-[#1677ff] underline hover:text-[#0958d9] transition-colors truncate"
-        title={value}
+        onClick={onClick}
+        className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] text-[#1677ff] underline hover:text-[#0958d9] transition-colors cursor-pointer"
       >
-        {value}
+        {files.length} 份文件
       </span>
     </div>
   );
@@ -196,11 +322,11 @@ const CHECKBOX_W = 52;
 
 function DraggableColHeader({ col, index, isLast, sortKey, sortDir, onSort, onMoveCol, onResizeStart, onAutoFit }: {
   col: ColDef; index: number; isLast: boolean;
-  sortKey: ColKey | null; sortDir: 'asc' | 'desc';
-  onSort: (key: ColKey) => void;
+  sortKey: DisplayColKey | null; sortDir: 'asc' | 'desc';
+  onSort: (key: DisplayColKey) => void;
   onMoveCol: (from: number, to: number) => void;
-  onResizeStart: (key: ColKey, startX: number, startW: number) => void;
-  onAutoFit: (key: ColKey) => void;
+  onResizeStart: (key: DisplayColKey, startX: number, startW: number) => void;
+  onAutoFit: (key: DisplayColKey) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [{ isDragging }, drag] = useDrag({ type: COL_TYPE, item: { index }, collect: m => ({ isDragging: m.isDragging() }) });
@@ -215,11 +341,12 @@ function DraggableColHeader({ col, index, isLast, sortKey, sortDir, onSort, onMo
   return (
     <div
       ref={ref}
-      className={`relative flex items-center gap-[4px] px-[16px] h-[56px] shrink-0 bg-[#f4f6f8] border-b border-[rgba(145,158,171,0.12)] select-none cursor-pointer group ${isDragging ? 'opacity-40' : ''} ${isOver ? 'bg-[#e8f4ff]' : ''}`}
+      className={`relative flex items-center px-[16px] h-[56px] shrink-0 bg-[#f4f6f8] border-b border-[rgba(145,158,171,0.12)] select-none cursor-pointer group ${isDragging ? 'opacity-40' : ''} ${isOver ? 'bg-[#e8f4ff]' : ''}`}
       style={{ width: col.width, minWidth: col.minWidth }}
       onClick={() => onSort(col.key)}
     >
-      <div className="opacity-0 group-hover:opacity-40 transition-opacity shrink-0">
+      {/* drag icon：absolute 定位，不佔文字空間 */}
+      <div className="absolute left-[2px] top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-40 transition-opacity pointer-events-none">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="#637381">
           <circle cx="9" cy="5" r="1.5"/><circle cx="15" cy="5" r="1.5"/>
           <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
@@ -254,10 +381,10 @@ export function QualityHazardPage() {
   const [data, setData] = useState<HazardRow[]>(mockData);
 
   // Search
-  const [yearFilter, setYearFilter]               = useState('2025');
+  const [yearFilter, setYearFilter]               = useState(String(new Date().getFullYear()));
   const [regulationFilter, setRegulationFilter]   = useState('');
-  const [thirdPartyFilter, setThirdPartyFilter]   = useState('已繳');
-  const [selfDeclFilter, setSelfDeclFilter]       = useState('未繳');
+  const [thirdPartyFilter, setThirdPartyFilter]   = useState('');
+  const [selfDeclFilter, setSelfDeclFilter]       = useState('');
 
   // Selection
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -273,11 +400,11 @@ export function QualityHazardPage() {
   const [appliedFilters, setAppliedFilters] = useState<FilterCondition[]>([]);
 
   // Sort
-  const [sortKey, setSortKey]   = useState<ColKey | null>(null);
-  const [sortDir, setSortDir]   = useState<'asc' | 'desc'>('asc');
+  const [sortKey, setSortKey]   = useState<DisplayColKey | null>('vendorReplyDate');
+  const [sortDir, setSortDir]   = useState<'asc' | 'desc'>('desc');
 
   // Resize
-  const resizingKey  = useRef<ColKey | null>(null);
+  const resizingKey  = useRef<DisplayColKey | null>(null);
   const resizeStartX = useRef(0);
   const resizeStartW = useRef(0);
 
@@ -305,10 +432,10 @@ export function QualityHazardPage() {
     }
     if (yearFilter && String(row.year) !== yearFilter) return false;
     if (regulationFilter && !row.regulationCode.toLowerCase().includes(regulationFilter.toLowerCase()) && !row.regulationDesc.toLowerCase().includes(regulationFilter.toLowerCase())) return false;
-    if (thirdPartyFilter === '已繳' && row.thirdPartyFile === '待上傳') return false;
-    if (thirdPartyFilter === '未繳' && row.thirdPartyFile !== '待上傳') return false;
-    if (selfDeclFilter === '已繳' && row.selfDeclFile === '待上傳') return false;
-    if (selfDeclFilter === '未繳' && row.selfDeclFile !== '待上傳') return false;
+    if (thirdPartyFilter === '已繳' && row.thirdPartyFiles.length === 0 && !row.thirdPartyNotRequired) return false;
+    if (thirdPartyFilter === '未繳' && (row.thirdPartyFiles.length > 0 || row.thirdPartyNotRequired)) return false;
+    if (selfDeclFilter === '已繳' && row.selfDeclFiles.length === 0 && !row.selfDeclNotRequired) return false;
+    if (selfDeclFilter === '未繳' && (row.selfDeclFiles.length > 0 || row.selfDeclNotRequired)) return false;
     if (appliedFilters.length > 0) {
       return appliedFilters.every(f => {
         const val = String((row as any)[f.column] ?? '');
@@ -327,11 +454,13 @@ export function QualityHazardPage() {
     return true;
   });
 
-  // ── Sort ────────────────────────────────────────────────────────────────────
+  const getRowDisplayDate = (row: HazardRow) =>
+    row.status === 'G' ? row.vendorReplyDate : row.dataUpdateDate;
+
   const sortedData = [...filteredData].sort((a, b) => {
     if (!sortKey) return 0;
-    const av = String((a as any)[sortKey] ?? '');
-    const bv = String((b as any)[sortKey] ?? '');
+    const av = sortKey === 'vendorReplyDate' ? getRowDisplayDate(a) : String((a as any)[sortKey] ?? '');
+    const bv = sortKey === 'vendorReplyDate' ? getRowDisplayDate(b) : String((b as any)[sortKey] ?? '');
     return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
   });
 
@@ -356,7 +485,7 @@ export function QualityHazardPage() {
   };
 
   // ── Handlers ────────────────────────────────────────────────────────────────
-  const handleSort = (key: ColKey) => {
+  const handleSort = (key: DisplayColKey) => {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
     else { setSortKey(key); setSortDir('asc'); }
   };
@@ -372,7 +501,7 @@ export function QualityHazardPage() {
     });
   };
 
-  const handleResizeStart = (key: ColKey, startX: number, startW: number) => {
+  const handleResizeStart = (key: DisplayColKey, startX: number, startW: number) => {
     resizingKey.current  = key;
     resizeStartX.current = startX;
     resizeStartW.current = startW;
@@ -392,7 +521,7 @@ export function QualityHazardPage() {
     window.addEventListener('mouseup', onUp);
   };
 
-  const autoFitWidth = useCallback((key: ColKey) => {
+  const autoFitWidth = useCallback((key: DisplayColKey) => {
     const col = columns.find(c => c.key === key);
     if (!col) return;
     const hw = measureTextWidth(col.label, '600 14px "Public Sans","Noto Sans JP",sans-serif') + 48 + 16;
@@ -436,11 +565,14 @@ export function QualityHazardPage() {
     const baseClass = "font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] text-[#1c252e] truncate w-full";
 
     const openUploadOverlay = (field: 'thirdParty' | 'selfDecl') => {
-      const fileVal = field === 'thirdParty' ? row.thirdPartyFile : row.selfDeclFile;
+      const fileArr    = field === 'thirdParty' ? row.thirdPartyFiles    : row.selfDeclFiles;
+      const notReq     = field === 'thirdParty' ? row.thirdPartyNotRequired : row.selfDeclNotRequired;
       const fileStatus: HazardFileOverlayProps['fileStatus'] =
-        fileVal === '待上傳' ? 'pending'
-        : fileVal === '不需繳交' ? 'notRequired'
-        : 'uploaded';
+        notReq ? 'notRequired' : fileArr.length > 0 ? 'uploaded' : 'pending';
+      const history    = field === 'thirdParty' ? (row.thirdPartyHistory ?? []) : (row.selfDeclHistory ?? []);
+      // 取最新一筆退回原因（廠商視角才顯示）
+      const latestReturn = history.find(h => h.event === '退回廠商');
+      const returnReason = row.status === 'V' && latestReturn ? latestReturn.remark : undefined;
       setUploadOverlay({
         year: row.year,
         vendor: row.vendor,
@@ -448,19 +580,27 @@ export function QualityHazardPage() {
         regulationDesc: row.regulationDesc,
         field,
         fileStatus,
-        fileName: fileStatus === 'uploaded' ? fileVal : undefined,
+        files: fileArr,
+        notRequired: notReq,
+        history,
+        returnReason,
         rowStatus: row.status,
-        isGiant: false, // TODO: 接真實角色
+        isGiant: row.status !== 'V',
       });
     };
 
+    // 日期欄顯示：G 狀態顯示廠商回覆日期；V/CL 顯示資料更新日期
+    const displayDate = row.status === 'G' ? row.vendorReplyDate : row.dataUpdateDate;
+
     switch (col.key) {
       case 'submittedStatus':
-        return <StatusBadge status={row.submittedStatus} />;
+        return <StatusBadge status={row.status} />;
       case 'thirdPartyFile':
-        return <FileCell value={row.thirdPartyFile} onClick={() => openUploadOverlay('thirdParty')} />;
+        return <FileCell files={row.thirdPartyFiles} notRequired={row.thirdPartyNotRequired} confirmed={row.thirdPartyConfirmed} onClick={() => openUploadOverlay('thirdParty')} />;
       case 'selfDeclFile':
-        return <FileCell value={row.selfDeclFile} onClick={() => openUploadOverlay('selfDecl')} />;
+        return <FileCell files={row.selfDeclFiles} notRequired={row.selfDeclNotRequired} confirmed={row.selfDeclConfirmed} onClick={() => openUploadOverlay('selfDecl')} />;
+      case 'vendorReplyDate':
+        return <p className={baseClass}>{displayDate || ''}</p>;
       default:
         return <p className={baseClass}>{String((row as any)[col.key] ?? '')}</p>;
     }
@@ -569,31 +709,59 @@ export function QualityHazardPage() {
           <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-[#1c252e] leading-[24px] mr-[4px] whitespace-nowrap">
             {selectedIds.size} selected
           </span>
-          {/* 設定不繳交第三方檢測 */}
-          <span
-            onClick={() => {
-              setData(prev => prev.map(r =>
-                selectedIds.has(r.id) ? { ...r, thirdPartyFile: '不需繳交' } : r
-              ));
-              setSelectedIds(new Set());
-            }}
-            className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] text-[#004680] leading-[24px] whitespace-nowrap cursor-pointer select-none px-[10px] py-[16px] hover:opacity-70 transition-opacity"
-          >
-            設定不繳交第三方檢測
-          </span>
-          <span className="text-[rgba(145,158,171,0.4)] select-none">|</span>
-          {/* 設定不繳交自我宣告書 */}
-          <span
-            onClick={() => {
-              setData(prev => prev.map(r =>
-                selectedIds.has(r.id) ? { ...r, selfDeclFile: '不需繳交' } : r
-              ));
-              setSelectedIds(new Set());
-            }}
-            className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] text-[#004680] leading-[24px] whitespace-nowrap cursor-pointer select-none px-[10px] py-[16px] hover:opacity-70 transition-opacity"
-          >
-            設定不繳交自我宣告書
-          </span>
+          {activeTab === '巨大確認中(G)' ? (
+            /* G 狀態：僅提供批次已確認 */
+            <span
+              onClick={() => {
+                setData(prev => prev.map(r => {
+                  if (!selectedIds.has(r.id)) return r;
+                  const nowStr = (() => {
+                    const now = new Date();
+                    const p = (n: number) => String(n).padStart(2, '0');
+                    return `${now.getFullYear()}/${p(now.getMonth()+1)}/${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}`;
+                  })();
+                  const updated = { ...r, thirdPartyConfirmed: true, selfDeclConfirmed: true };
+                  if (updated.thirdPartyConfirmed && updated.selfDeclConfirmed) {
+                    updated.status = 'CL';
+                    updated.submittedStatus = 'CL';
+                    updated.dataUpdateDate = nowStr;
+                  }
+                  return updated;
+                }));
+                setSelectedIds(new Set());
+              }}
+              className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] text-[#004680] leading-[24px] whitespace-nowrap cursor-pointer select-none px-[10px] py-[16px] hover:opacity-70 transition-opacity"
+            >
+              已確認
+            </span>
+          ) : (
+            /* V/CL 狀態：設定不繳交 */
+            <>
+              <span
+                onClick={() => {
+                  setData(prev => prev.map(r =>
+                    selectedIds.has(r.id) ? { ...r, thirdPartyNotRequired: true, thirdPartyFiles: [] } : r
+                  ));
+                  setSelectedIds(new Set());
+                }}
+                className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] text-[#004680] leading-[24px] whitespace-nowrap cursor-pointer select-none px-[10px] py-[16px] hover:opacity-70 transition-opacity"
+              >
+                設定不繳交第三方檢測
+              </span>
+              <span className="text-[rgba(145,158,171,0.4)] select-none">|</span>
+              <span
+                onClick={() => {
+                  setData(prev => prev.map(r =>
+                    selectedIds.has(r.id) ? { ...r, selfDeclNotRequired: true, selfDeclFiles: [] } : r
+                  ));
+                  setSelectedIds(new Set());
+                }}
+                className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] text-[#004680] leading-[24px] whitespace-nowrap cursor-pointer select-none px-[10px] py-[16px] hover:opacity-70 transition-opacity"
+              >
+                設定不繳交自我宣告書
+              </span>
+            </>
+          )}
         </div>
       )}
 
@@ -655,17 +823,22 @@ export function QualityHazardPage() {
                     onChange={() => handleToggleRow(row.id)}
                   />
                 </div>
-                {visibleCols.map((col, i) => (
-                  <div
-                    key={col.key}
-                    className="flex items-center px-[16px] h-[52px] shrink-0 overflow-hidden"
-                    style={i === visibleCols.length - 1
-                      ? { minWidth: col.width, flex: 1 }
-                      : { width: col.width, minWidth: col.minWidth }}
-                  >
-                    {renderCell(col, row)}
-                  </div>
-                ))}
+                {visibleCols.map((col, i) => {
+                  const isConfirmed =
+                    (col.key === 'thirdPartyFile' && row.thirdPartyConfirmed) ||
+                    (col.key === 'selfDeclFile'   && row.selfDeclConfirmed);
+                  return (
+                    <div
+                      key={col.key}
+                      className={`flex items-center px-[16px] h-[52px] shrink-0 overflow-hidden${isConfirmed ? ' bg-[rgba(34,197,94,0.1)]' : ''}`}
+                      style={i === visibleCols.length - 1
+                        ? { minWidth: col.width, flex: 1 }
+                        : { width: col.width, minWidth: col.minWidth }}
+                    >
+                      {renderCell(col, row)}
+                    </div>
+                  );
+                })}
               </div>
             ))}
           </div>
@@ -686,20 +859,129 @@ export function QualityHazardPage() {
         <HazardFileUploadOverlay
           {...uploadOverlay}
           onClose={() => setUploadOverlay(null)}
-          onSubmit={({ action, vendorNote: vn, giantNote: gn }) => {
+          onSubmit={({ files: newFiles = [], action, returnReason }) => {
             if (!uploadOverlay) return;
-            // 更新對應 row 的檔案狀態
+            const nowStr = (() => {
+              const now = new Date();
+              const p = (n: number) => String(n).padStart(2, '0');
+              return `${now.getFullYear()}/${p(now.getMonth()+1)}/${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}`;
+            })();
+
             setData(prev => prev.map(r => {
               const isTarget = r.year === uploadOverlay.year
                 && r.vendor === uploadOverlay.vendor
                 && r.regulationCode === uploadOverlay.regulationCode;
               if (!isTarget) return r;
-              const fileKey = uploadOverlay.field === 'thirdParty' ? 'thirdPartyFile' : 'selfDeclFile';
-              let newVal = r[fileKey];
-              if (action === 'notRequired') newVal = '不需繳交';
-              else if (action === 'reopen')   newVal = '待上傳';
-              else if (action === 'submitToGiant' || action === 'upload') newVal = '已上傳';
-              return { ...r, [fileKey]: newVal };
+
+              const isThird    = uploadOverlay.field === 'thirdParty';
+              const filesKey   = isThird ? 'thirdPartyFiles'   : 'selfDeclFiles';
+              const notReqKey  = isThird ? 'thirdPartyNotRequired' : 'selfDeclNotRequired';
+              const confirmKey = isThird ? 'thirdPartyConfirmed' : 'selfDeclConfirmed';
+              const histKey    = isThird ? 'thirdPartyHistory'  : 'selfDeclHistory';
+
+              // 輔助：建立歷程記錄
+              const addHistory = (event: string, remark = ''): HistoryEntry => ({
+                date: nowStr, event, operator: '操作人員-OO', remark,
+              });
+
+              // ── 巨大：退回廠商（G → V）──
+              if (action === 'returnToVendor') {
+                const newEntry = addHistory('退回廠商', returnReason ?? '');
+                return {
+                  ...r,
+                  [filesKey]: [],
+                  [notReqKey]: false,
+                  status: 'V', submittedStatus: 'V',
+                  thirdPartyConfirmed: false, selfDeclConfirmed: false,
+                  dataUpdateDate: nowStr,
+                  [histKey]: [newEntry, ...(r[histKey] ?? [])],
+                };
+              }
+
+              // ── 巨大：確認結案（標記此欄）──
+              if (action === 'confirmClose') {
+                const newEntry = addHistory('確認結案');
+                const updated: HazardRow = {
+                  ...r,
+                  [confirmKey]: true,
+                  [histKey]: [newEntry, ...(r[histKey] ?? [])],
+                };
+                if (updated.thirdPartyConfirmed && updated.selfDeclConfirmed) {
+                  updated.status = 'CL';
+                  updated.submittedStatus = 'CL';
+                  updated.dataUpdateDate = nowStr;
+                }
+                return updated;
+              }
+
+              // ── CL 重新開啟（CL → V）：重置此欄，整筆轉 V ──
+              if (action === 'reopen' && r.status === 'CL') {
+                const newEntry = addHistory('重新開啟');
+                return {
+                  ...r,
+                  [filesKey]: [],
+                  [notReqKey]: false,
+                  [confirmKey]: false,
+                  status: 'V',
+                  submittedStatus: 'V',
+                  dataUpdateDate: nowStr,
+                  [histKey]: [newEntry, ...(r[histKey] ?? [])],
+                };
+              }
+
+              // ── 一般設定 ──
+              let updatedFiles  = r[filesKey] as HazardFile[];
+              let updatedNotReq = r[notReqKey] as boolean;
+              const newHistEntries: HistoryEntry[] = [];
+
+              if (action === 'notRequired') {
+                updatedNotReq = true;
+                updatedFiles  = [];
+                newHistEntries.push(addHistory('設定不需繳交'));
+              } else if (action === 'reopen') {
+                updatedNotReq = false;
+                updatedFiles  = [];
+                newHistEntries.push(addHistory('重新開啟上傳'));
+              } else if (action === 'submitToGiant' || action === 'upload') {
+                // 新增多檔
+                const appended: HazardFile[] = newFiles.map(f => ({
+                  name: f.name,
+                  uploadedAt: nowStr,
+                  uploadedBy: '操作人員',
+                }));
+                updatedFiles = [...updatedFiles, ...appended];
+                appended.forEach(af => newHistEntries.push(addHistory(
+                  action === 'submitToGiant' ? '轉交巨大' : '上傳檔案',
+                  af.name,
+                )));
+              }
+
+              const updated: HazardRow = {
+                ...r,
+                [filesKey]:  updatedFiles,
+                [notReqKey]: updatedNotReq,
+                [histKey]:   [...newHistEntries, ...(r[histKey] ?? [])],
+              };
+
+              // 自動重新計算 status（CL 不動）
+              if (updated.status !== 'CL') {
+                const isComplete = (files: HazardFile[], notReq: boolean) => notReq || files.length > 0;
+                const bothDone = isComplete(updated.thirdPartyFiles, updated.thirdPartyNotRequired)
+                              && isComplete(updated.selfDeclFiles, updated.selfDeclNotRequired);
+                const newStatus = bothDone ? 'G' : 'V';
+                if (updated.status === 'V' && newStatus === 'G') {
+                  updated.vendorReplyDate = nowStr;
+                }
+                if (updated.status === 'G' && newStatus === 'V') {
+                  updated.dataUpdateDate = nowStr;
+                  updated.thirdPartyConfirmed = false;
+                  updated.selfDeclConfirmed   = false;
+                }
+                updated.status = newStatus;
+                updated.submittedStatus = newStatus;
+              }
+
+              return updated;
             }));
             setUploadOverlay(null);
           }}

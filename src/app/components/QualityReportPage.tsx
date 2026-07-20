@@ -194,12 +194,12 @@ function DraggableColHeader({ col, index, isLast, sortKey, sortDir, onSort, onMo
   return (
     <div
       ref={ref}
-      className={`relative flex items-center gap-[4px] px-[16px] h-[56px] shrink-0 bg-[#f4f6f8] border-b border-[rgba(145,158,171,0.12)] select-none cursor-pointer group ${isDragging ? 'opacity-40' : ''} ${isOver ? 'bg-[#e8f4ff]' : ''}`}
+      className={`relative flex items-center px-[16px] h-[56px] shrink-0 bg-[#f4f6f8] border-b border-[rgba(145,158,171,0.12)] select-none cursor-pointer group ${isDragging ? 'opacity-40' : ''} ${isOver ? 'bg-[#e8f4ff]' : ''}`}
       style={{ width: col.width, minWidth: col.minWidth }}
       onClick={() => onSort(col.key)}
     >
-      {/* drag icon */}
-      <div className="opacity-0 group-hover:opacity-40 transition-opacity shrink-0">
+      {/* drag icon：absolute 定位，不佔文字空間 */}
+      <div className="absolute left-[2px] top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-40 transition-opacity pointer-events-none">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="#637381">
           <circle cx="9" cy="5" r="1.5"/><circle cx="15" cy="5" r="1.5"/>
           <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
