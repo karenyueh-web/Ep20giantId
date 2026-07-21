@@ -377,7 +377,7 @@ export function HazardFileUploadOverlay({
                     onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#004680'; }}
                     onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#00559c'; }}
                   >
-                    確認結案
+                    已確認
                   </button>
                 </>
               ) : (

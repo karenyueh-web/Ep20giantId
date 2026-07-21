@@ -138,11 +138,11 @@ const mockData: HazardRow[] = [
     vendorReplyDate: '2026/03/10 17:00', dataUpdateDate: '2026/03/12 09:00', status: 'CL',
     lastEditor: '吴OO', lastEditTime: '2026/03/12 09:00', thirdPartyConfirmed: true, selfDeclConfirmed: true,
     thirdPartyHistory: [
-      { date: '2026/03/12 09:00', event: '確認結案', operator: '巨大-吴OO', remark: '' },
+      { date: '2026/03/12 09:00', event: '已確認', operator: '巨大-吴OO', remark: '' },
       { date: '2026/03/08 10:00', event: '轉交巨大', operator: '廠商-吴OO', remark: '鉅德_REACH報告.pdf' },
     ],
     selfDeclHistory: [
-      { date: '2026/03/12 09:00', event: '確認結案', operator: '巨大-吴OO', remark: '' },
+      { date: '2026/03/12 09:00', event: '已確認', operator: '巨大-吴OO', remark: '' },
       { date: '2026/03/08 10:30', event: '轉交巨大', operator: '廠商-吴OO', remark: '鉅德_REACH宣告.pdf' },
     ],
   },
@@ -152,11 +152,11 @@ const mockData: HazardRow[] = [
     vendorReplyDate: '2026/03/15 09:10', dataUpdateDate: '2026/03/16 10:00', status: 'CL',
     lastEditor: '吴OO', lastEditTime: '2026/03/16 10:00', thirdPartyConfirmed: true, selfDeclConfirmed: true,
     thirdPartyHistory: [
-      { date: '2026/03/16 10:00', event: '確認結案', operator: '巨大-吴OO', remark: '' },
+      { date: '2026/03/16 10:00', event: '已確認', operator: '巨大-吴OO', remark: '' },
       { date: '2026/03/13 09:00', event: '轉交巨大', operator: '廠商-吴OO', remark: '鉅德_RoHS報告.pdf' },
     ],
     selfDeclHistory: [
-      { date: '2026/03/16 10:00', event: '確認結案', operator: '巨大-吴OO', remark: '' },
+      { date: '2026/03/16 10:00', event: '已確認', operator: '巨大-吴OO', remark: '' },
       { date: '2026/03/13 09:30', event: '轉交巨大', operator: '廠商-吴OO', remark: '鉅德_RoHS宣告.pdf' },
     ],
   },
@@ -165,8 +165,8 @@ const mockData: HazardRow[] = [
     selfDeclFiles:   [makeFile('2025_REACH宣告書.pdf', '2025/02/25 10:30', '張OO')], selfDeclNotRequired: false,
     vendorReplyDate: '2025/02/28 15:00', dataUpdateDate: '2025/03/01 10:00', status: 'CL',
     lastEditor: '張OO', lastEditTime: '2025/03/01 10:00', thirdPartyConfirmed: true, selfDeclConfirmed: true,
-    thirdPartyHistory: [{ date: '2025/03/01 10:00', event: '確認結案', operator: '巨大-張OO', remark: '' }],
-    selfDeclHistory:   [{ date: '2025/03/01 10:00', event: '確認結案', operator: '巨大-張OO', remark: '' }],
+    thirdPartyHistory: [{ date: '2025/03/01 10:00', event: '已確認', operator: '巨大-張OO', remark: '' }],
+    selfDeclHistory:   [{ date: '2025/03/01 10:00', event: '已確認', operator: '巨大-張OO', remark: '' }],
   },
 ];
 
@@ -671,12 +671,14 @@ export function QualityHazardPage() {
         onFiltersClick={() => setShowFilterDialog(s => !s)}
         onExportCsv={handleExportCsv}
         actionButton={
-          <button
-            onClick={() => setShowTemplateOverlay(true)}
-            className="flex items-center h-[36px] px-[16px] rounded-[8px] text-[#1677ff] border border-[#1677ff] hover:bg-[rgba(22,119,255,0.06)] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] transition-colors"
-          >
-            宣告書範本
-          </button>
+          activeTab === '廠商確認中(V)' ? (
+            <button
+              onClick={() => setShowTemplateOverlay(true)}
+              className="flex items-center h-[36px] px-[16px] rounded-[8px] text-[#1677ff] border border-[#1677ff] hover:bg-[rgba(22,119,255,0.06)] font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] transition-colors"
+            >
+              宣告書範本
+            </button>
+          ) : undefined
         }
         columnsButton={
           <ColumnSelector
@@ -739,9 +741,17 @@ export function QualityHazardPage() {
             <>
               <span
                 onClick={() => {
-                  setData(prev => prev.map(r =>
-                    selectedIds.has(r.id) ? { ...r, thirdPartyNotRequired: true, thirdPartyFiles: [] } : r
-                  ));
+                setData(prev => prev.map(r => {
+                    if (!selectedIds.has(r.id)) return r;
+                    const updated = { ...r, thirdPartyNotRequired: true, thirdPartyFiles: [] };
+                    if (updated.status === 'V') {
+                      const isComplete = (files: HazardFile[], notReq: boolean) => notReq || files.length > 0;
+                      const bothDone = isComplete(updated.thirdPartyFiles, updated.thirdPartyNotRequired)
+                                    && isComplete(updated.selfDeclFiles, updated.selfDeclNotRequired);
+                      if (bothDone) { updated.status = 'G'; updated.submittedStatus = 'G'; }
+                    }
+                    return updated;
+                  }));
                   setSelectedIds(new Set());
                 }}
                 className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] text-[#004680] leading-[24px] whitespace-nowrap cursor-pointer select-none px-[10px] py-[16px] hover:opacity-70 transition-opacity"
@@ -751,9 +761,17 @@ export function QualityHazardPage() {
               <span className="text-[rgba(145,158,171,0.4)] select-none">|</span>
               <span
                 onClick={() => {
-                  setData(prev => prev.map(r =>
-                    selectedIds.has(r.id) ? { ...r, selfDeclNotRequired: true, selfDeclFiles: [] } : r
-                  ));
+                setData(prev => prev.map(r => {
+                    if (!selectedIds.has(r.id)) return r;
+                    const updated = { ...r, selfDeclNotRequired: true, selfDeclFiles: [] };
+                    if (updated.status === 'V') {
+                      const isComplete = (files: HazardFile[], notReq: boolean) => notReq || files.length > 0;
+                      const bothDone = isComplete(updated.thirdPartyFiles, updated.thirdPartyNotRequired)
+                                    && isComplete(updated.selfDeclFiles, updated.selfDeclNotRequired);
+                      if (bothDone) { updated.status = 'G'; updated.submittedStatus = 'G'; }
+                    }
+                    return updated;
+                  }));
                   setSelectedIds(new Set());
                 }}
                 className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] text-[#004680] leading-[24px] whitespace-nowrap cursor-pointer select-none px-[10px] py-[16px] hover:opacity-70 transition-opacity"
@@ -780,9 +798,11 @@ export function QualityHazardPage() {
                 className="bg-[#f4f6f8] flex items-center justify-center shrink-0 border-b border-[rgba(145,158,171,0.12)]"
                 style={{ width: CHECKBOX_W, height: 56, position: 'sticky', left: 0, zIndex: 20 }}
               >
-                <button onClick={handleSelectAll} className="flex items-center justify-center w-[36px] h-[36px] rounded-full hover:bg-[rgba(0,85,156,0.12)] transition-colors">
-                  <CheckboxIcon checked={isAllSelected} indeterminate={isSomeSelected} />
-                </button>
+                {selectedIds.size === 0 && (
+                  <button onClick={handleSelectAll} className="flex items-center justify-center w-[36px] h-[36px] rounded-full hover:bg-[rgba(0,85,156,0.12)] transition-colors">
+                    <CheckboxIcon checked={isAllSelected} indeterminate={isSomeSelected} />
+                  </button>
+                )}
               </div>
               {visibleCols.map((col, i) => (
                 <DraggableColHeader
@@ -900,7 +920,7 @@ export function QualityHazardPage() {
 
               // ── 巨大：確認結案（標記此欄）──
               if (action === 'confirmClose') {
-                const newEntry = addHistory('確認結案');
+                const newEntry = addHistory('已確認');
                 const updated: HazardRow = {
                   ...r,
                   [confirmKey]: true,
@@ -992,7 +1012,7 @@ export function QualityHazardPage() {
       {showTemplateOverlay && (
         <HazardTemplateOverlay
           onClose={() => setShowTemplateOverlay(false)}
-          isGiant={false} // TODO: 接真實角色
+          isGiant={true} // 顯示新增/編輯功能
         />
       )}
     </div>

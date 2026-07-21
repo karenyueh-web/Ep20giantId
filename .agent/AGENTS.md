@@ -18,6 +18,13 @@
 - 嵌入已有外層卡片的頁面（Tab + 搜尋列 + 表格 的 Settings 類頁面），**必須傳入 `embedded` prop**，否則搜尋列下方會出現多餘的 shadow 邊緣
 - 搜尋列容器 **禁止加 `border-b`**，`TableToolbar` 本身已有分隔效果
 
+### 表格標題列 Checkbox 顯示規則
+- 表格有 Selection Bar（批次操作列）的頁面，標題列 checkbox 必須在有列被選取時隱藏
+  - 條件：`selectedIds.size > 0` 時，不渲染標題列的 checkbox 按鈕
+  - 原因：Selection Bar 上方已有相同的全選/取消功能，重複顯示造成 UI 冗餘
+  - ✅ 正確：`{selectedIds.size === 0 && <button onClick={handleSelectAll}>...</button>}`
+  - ❌ 錯誤：標題列 checkbox 永遠顯示，不管 selection bar 是否出現
+
 ### 搜尋列欄寬規則
 - 搜尋列中每個欄位（SearchField / DropdownSelect）的容器**一律加 `flex-1 min-w-0`**，讓所有欄位自動平均分配寬度
 - **禁止放空的佔位 `<div />`** 來維持特定欄數對齊；有幾個搜尋欄就放幾欄，寬度自動平均
