@@ -255,10 +255,11 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 // ─── File Cell ────────────────────────────────────────────────────────────────
-function FileCell({ files, notRequired, confirmed, onClick }: {
+function FileCell({ files, notRequired, isReturned, confirmed, onClick }: {
   files: HazardFile[];
   notRequired: boolean;
-  confirmed?: boolean; // 保留 prop 供外層 cell 判斷，FileCell 本身不再自行 highlight
+  isReturned?: boolean;
+  confirmed?: boolean;
   onClick?: () => void;
 }) {
   if (notRequired) {
@@ -273,12 +274,21 @@ function FileCell({ files, notRequired, confirmed, onClick }: {
   }
   if (files.length === 0) {
     return (
-      <span
-        onClick={onClick}
-        className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] text-[#ff5630] underline hover:text-[#cc3d1a] transition-colors cursor-pointer"
-      >
-        待上傳
-      </span>
+      <div className="flex items-center gap-[6px]">
+        {isReturned && (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="shrink-0" title="已被退回">
+            <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="#B76E00" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <line x1="12" y1="9" x2="12" y2="13" stroke="#B76E00" strokeWidth="2" strokeLinecap="round"/>
+            <line x1="12" y1="17" x2="12.01" y2="17" stroke="#B76E00" strokeWidth="2.5" strokeLinecap="round"/>
+          </svg>
+        )}
+        <span
+          onClick={onClick}
+          className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] text-[#ff5630] underline hover:text-[#cc3d1a] transition-colors cursor-pointer"
+        >
+          待上傳
+        </span>
+      </div>
     );
   }
   if (files.length === 1) {
@@ -595,10 +605,16 @@ export function QualityHazardPage() {
     switch (col.key) {
       case 'submittedStatus':
         return <StatusBadge status={row.status} />;
-      case 'thirdPartyFile':
-        return <FileCell files={row.thirdPartyFiles} notRequired={row.thirdPartyNotRequired} confirmed={row.thirdPartyConfirmed} onClick={() => openUploadOverlay('thirdParty')} />;
-      case 'selfDeclFile':
-        return <FileCell files={row.selfDeclFiles} notRequired={row.selfDeclNotRequired} confirmed={row.selfDeclConfirmed} onClick={() => openUploadOverlay('selfDecl')} />;
+      case 'thirdPartyFile': {
+        const tpHistory = row.thirdPartyHistory ?? [];
+        const tpReturned = row.status === 'V' && tpHistory.some(h => h.event === '退回廠商');
+        return <FileCell files={row.thirdPartyFiles} notRequired={row.thirdPartyNotRequired} isReturned={tpReturned} confirmed={row.thirdPartyConfirmed} onClick={() => openUploadOverlay('thirdParty')} />;
+      }
+      case 'selfDeclFile': {
+        const sdHistory = row.selfDeclHistory ?? [];
+        const sdReturned = row.status === 'V' && sdHistory.some(h => h.event === '退回廠商');
+        return <FileCell files={row.selfDeclFiles} notRequired={row.selfDeclNotRequired} isReturned={sdReturned} confirmed={row.selfDeclConfirmed} onClick={() => openUploadOverlay('selfDecl')} />;
+      }
       case 'vendorReplyDate':
         return <p className={baseClass}>{displayDate || ''}</p>;
       default:
