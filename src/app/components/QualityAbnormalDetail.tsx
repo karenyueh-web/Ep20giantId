@@ -1321,28 +1321,27 @@ export function QualityAbnormalDetail({ abnormalNumber, status: initialStatus, r
 
   return (
     <div className="w-full h-full overflow-y-auto overflow-x-hidden custom-scrollbar rounded-[16px] relative">
-      {/* 關閉按鈕 */}
-      {onClose && (
-        <div
-          className="absolute left-[20px] top-[15px] cursor-pointer hover:opacity-70 transition-opacity z-10"
-          onClick={onClose}
-        >
-          <div className="relative size-[24px]">
-            <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 20 20">
-              <path clipRule="evenodd" d={closeIconPaths.p275a9800} fill="#637381" fillRule="evenodd" />
-            </svg>
-          </div>
-        </div>
-      )}
-
-      {/* 灰色背景區域 - 頂部部分 */}
-      <div className="bg-[#f4f6f8] rounded-tl-[16px] rounded-tr-[16px] px-[24px] pt-[24px]">
-        {/* 頂部標題和操作按鈕 */}
-        <div className="flex h-[84px] items-center justify-between">
+      {/* ── Sticky 頂部導覽條：關閉、狀態、單號、操作按鈕 ── */}
+      <div className="sticky top-0 z-20 bg-white border-b border-[rgba(145,158,171,0.16)] px-[24px] flex items-center justify-between" style={{ minHeight: 56 }}>
+        {/* 左側：關閉 + 狀態 + 單號 */}
+        <div className="flex items-center gap-[12px]">
+          {onClose && (
+            <div className="cursor-pointer hover:opacity-70 transition-opacity shrink-0" onClick={onClose}>
+              <div className="relative size-[24px]">
+                <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 20 20">
+                  <path clipRule="evenodd" d={closeIconPaths.p275a9800} fill="#637381" fillRule="evenodd" />
+                </svg>
+              </div>
+            </div>
+          )}
           <TopHeader abnormalNumber={abnormalNumber} status={localStatus} />
-          <TopActions onHistoryOpen={() => setShowHistory(true)} />
         </div>
+        {/* 右側：列印、訊息、歷程 */}
+        <TopActions onHistoryOpen={() => setShowHistory(true)} />
+      </div>
 
+      {/* 灰色背景區域（基本資訊 + 不良情形卡片） */}
+      <div className="bg-[#f4f6f8] rounded-tl-[16px] rounded-tr-[16px] px-[24px] pt-[16px]">
         {/* 基本資訊 */}
         <BasicInfo
           vendor={row?.vendor ?? ''}
