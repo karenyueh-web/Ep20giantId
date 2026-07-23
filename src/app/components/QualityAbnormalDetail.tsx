@@ -148,7 +148,7 @@ function IssueSection() {
   const addFiles = useCallback((files: FileList | File[]) => {
     const MAX = 10;
     // 異常圖片只接受圖片檔
-    const arr = Array.from(files).filter(f => f.type.startsWith('image/'));
+    const arr = Array.from(files);
     setImages(prev => {
       const remaining = MAX - prev.length;
       if (remaining <= 0) return prev;
@@ -157,7 +157,7 @@ function IssueSection() {
         name: f.name,
         url: URL.createObjectURL(f),
         file: f,
-        isImage: true,
+        isImage: f.type.startsWith('image/') || /\.(jpe?g|png|gif|bmp|webp|svg|avif|heic)$/i.test(f.name),
       }));
       return [...prev, ...toAdd];
     });
@@ -233,7 +233,7 @@ function IssueSection() {
               {/* 標題列 */}
               <div className="flex items-center justify-between mb-[8px] shrink-0">
                 <p className="css-4hzbpn font-['Public_Sans:Bold','Noto_Sans_JP:Bold',sans-serif] font-bold leading-[24px] text-[14px] text-black">
-                  異常圖片
+                  附件
                   {images.length > 0 && (
                     <span className="ml-[6px] font-normal text-[12px] text-[#637381]">({images.length}/10)</span>
                   )}
@@ -244,25 +244,12 @@ function IssueSection() {
                     <button
                       onClick={handleDownloadAll}
                       className="flex items-center gap-[4px] h-[26px] px-[10px] rounded-[6px] border border-[rgba(145,158,171,0.3)] hover:border-[#1c252e] hover:bg-[rgba(28,37,46,0.04)] transition-colors"
-                      title="下載全部圖片"
+                      title="下載全部附件"
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                         <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="#637381" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                       <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[11px] text-[#637381]">下載全部</span>
-                    </button>
-                  )}
-                  {/* 新增圖片（未達上限才顯示） */}
-                  {images.length < 10 && (
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="flex items-center gap-[4px] h-[26px] px-[10px] rounded-[6px] bg-[#1c252e] hover:bg-[#2c3540] transition-colors"
-                      title="新增圖片"
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                        <path d="M12 5v14M5 12h14" stroke="white" strokeWidth="2" strokeLinecap="round" />
-                      </svg>
-                      <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[11px] text-white">新增</span>
                     </button>
                   )}
                 </div>
@@ -289,14 +276,14 @@ function IssueSection() {
                     onClick={() => fileInputRef.current?.click()}
                   >
                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-                      <rect x="3" y="3" width="18" height="18" rx="3" stroke="#919EAB" strokeWidth="1.5" />
-                      <circle cx="8.5" cy="8.5" r="1.5" fill="#919EAB" />
-                      <path d="M21 15l-5-5L5 21" stroke="#919EAB" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke="#919EAB" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      <polyline points="17 8 12 3 7 8" stroke="#919EAB" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      <line x1="12" y1="3" x2="12" y2="15" stroke="#919EAB" strokeWidth="1.5" strokeLinecap="round" />
                     </svg>
                     <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#919EAB] text-center">
                       拖曳或{' '}
                       <span className="text-[#1D7BF5] cursor-pointer hover:underline">點擊上傳</span>
-                      {' '}圖片（最多10張）
+                      {' '}支援 JPG、PNG、PDF、Word（上限10個）
                     </p>
                   </div>
                 ) : (
@@ -335,11 +322,11 @@ function IssueSection() {
 
       </div>
 
-      {/* 隱藏的 file input（只允許圖片） */}
+      {/* 隱藏的 file input（接受所有類型） */}
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/*"
+        accept=".jpg,.jpeg,.png,.gif,.bmp,.webp,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
         multiple
         className="hidden"
         onChange={handleFileChange}
@@ -537,7 +524,7 @@ function VendorReply({ status }: { status: string }) {
 
   const addFiles = useCallback((files: FileList | File[]) => {
     const MAX = 10;
-    const arr = Array.from(files).filter(f => f.type.startsWith('image/'));
+    const arr = Array.from(files);
     setImages(prev => {
       const remaining = MAX - prev.length;
       if (remaining <= 0) return prev;
@@ -799,7 +786,7 @@ function VendorReply({ status }: { status: string }) {
                     <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#919EAB] text-center">
                       拖曳或{' '}
                       <span className="text-[#1D7BF5] cursor-pointer hover:underline">點擊上傳</span>
-                      {' '}檔案或圖片（上限10個）
+                      {' '}支援 JPG、PNG、PDF、Word（上限10個）
                     </p>
                   </div>
                 ) : (
@@ -827,7 +814,7 @@ function VendorReply({ status }: { status: string }) {
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/*"
+        accept=".jpg,.jpeg,.png,.gif,.bmp,.webp,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
         multiple
         className="hidden"
         onChange={handleFileChange}
@@ -929,7 +916,7 @@ function GiantReply({ status, returnReason, cancelReason, onCancel, onReturn, on
 
   const addFiles = useCallback((files: FileList | File[]) => {
     const MAX = 10;
-    const arr = Array.from(files).filter(f => f.type.startsWith('image/'));
+    const arr = Array.from(files);
     setImages(prev => {
       const remaining = MAX - prev.length;
       if (remaining <= 0) return prev;
@@ -938,7 +925,7 @@ function GiantReply({ status, returnReason, cancelReason, onCancel, onReturn, on
         name: f.name,
         url: URL.createObjectURL(f),
         file: f,
-        isImage: true,
+        isImage: f.type.startsWith('image/') || /\.(jpe?g|png|gif|bmp|webp|svg|avif|heic)$/i.test(f.name),
       }));
       return [...prev, ...toAdd];
     });
@@ -1083,18 +1070,7 @@ function GiantReply({ status, returnReason, cancelReason, onCancel, onReturn, on
                       <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[11px] text-[#637381]">下載全部</span>
                     </button>
                   )}
-                  {isEditable && images.length < 10 && (
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="flex items-center gap-[4px] h-[26px] px-[10px] rounded-[6px] bg-[#1c252e] hover:bg-[#2c3540] transition-colors"
-                      title="新增附件"
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                        <path d="M12 5v14M5 12h14" stroke="white" strokeWidth="2" strokeLinecap="round" />
-                      </svg>
-                      <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[11px] text-white">新增</span>
-                    </button>
-                  )}
+
                 </div>
               </div>
 
@@ -1124,7 +1100,7 @@ function GiantReply({ status, returnReason, cancelReason, onCancel, onReturn, on
                     </svg>
                     <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#919EAB] text-center">
                       {isEditable
-                        ? <>拖曳或{' '}<span className="text-[#1D7BF5] cursor-pointer hover:underline">點擊上傳</span>{' '}檔案或圖片（上饐6個）</>
+                        ? <>拖曳或{' '}<span className="text-[#1D7BF5] cursor-pointer hover:underline">點擊上傳</span>{' '}支援 JPG、PNG、PDF、Word（上限10個）</>
                         : '尚無附件'
                       }
                     </p>
@@ -1156,7 +1132,7 @@ function GiantReply({ status, returnReason, cancelReason, onCancel, onReturn, on
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
+          accept=".jpg,.jpeg,.png,.gif,.bmp,.webp,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
           multiple
           className="hidden"
           onChange={handleFileChange}
