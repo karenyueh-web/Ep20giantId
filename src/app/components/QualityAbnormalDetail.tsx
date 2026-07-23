@@ -984,6 +984,7 @@ function GiantReply({ status, returnReason, cancelReason, initialConfirmText, on
   const [confirmText, setConfirmText] = useState(initialConfirmText ?? '');
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showReturnDialog, setShowReturnDialog] = useState(false);
+  const [showConfirmRequired, setShowConfirmRequired] = useState(false);
 
   // ── 圖片上傳狀態 ──
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1077,7 +1078,13 @@ function GiantReply({ status, returnReason, cancelReason, initialConfirmText, on
               <span className="font-['Public_Sans:Bold',sans-serif] font-bold text-[14px] text-white">儲存後退回廠商</span>
             </button>
             <button
-              onClick={() => onSettle?.(confirmText)}
+              onClick={() => {
+                if (!confirmText.trim()) {
+                  setShowConfirmRequired(true);
+                  return;
+                }
+                onSettle?.(confirmText);
+              }}
               className="flex items-center justify-center h-[36px] px-[16px] rounded-[8px] bg-[#1c252e] hover:bg-[#2c3540] transition-colors shrink-0"
             >
               <span className="font-['Public_Sans:Bold',sans-serif] font-bold text-[14px] text-white">儲存後結案</span>
@@ -1226,6 +1233,46 @@ function GiantReply({ status, returnReason, cancelReason, initialConfirmText, on
           onPrev={() => setLightboxIndex(prev => (prev !== null && prev > 0 ? prev - 1 : prev))}
           onNext={() => setLightboxIndex(prev => (prev !== null && prev < images.length - 1 ? prev + 1 : prev))}
         />
+      )}
+
+      {/* 確認回覆必填 Alert */}
+      {showConfirmRequired && (
+        <BaseOverlay onClose={() => setShowConfirmRequired(false)} maxWidth="400px" maxHeight="300px">
+          <div className="shrink-0 flex items-center gap-[12px] pl-[4px] pr-[16px] py-[4px] border-b border-[rgba(145,158,171,0.12)]">
+            <div className="flex items-center justify-center rounded-[12px] shrink-0 size-[48px] bg-[rgba(255,86,48,0.08)]">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="#FF5630" strokeWidth="1.5" />
+                <path d="M12 8v4M12 16h.01" stroke="#FF5630" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            </div>
+            <p className="flex-1 font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] leading-[22px] text-[#1c252e]">尚未填寫必要欄位</p>
+            <button
+              onClick={() => setShowConfirmRequired(false)}
+              className="flex items-center justify-center w-[36px] h-[36px] rounded-full hover:bg-[rgba(145,158,171,0.12)] transition-colors shrink-0"
+            >
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M15 5L5 15M5 5l10 10" stroke="#637381" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            </button>
+          </div>
+          <div className="flex-1 px-[20px] py-[16px]">
+            <p className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#637381] mb-[12px]">送出前請先填寫以下欄位：</p>
+            <ul className="space-y-[6px]">
+              <li className="flex items-center gap-[8px]">
+                <div className="w-[6px] h-[6px] rounded-full bg-[#FF5630] shrink-0" />
+                <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#1c252e]">確認回覆</p>
+              </li>
+            </ul>
+          </div>
+          <div className="shrink-0 flex justify-end px-[20px] py-[12px] border-t border-[rgba(145,158,171,0.12)]">
+            <button
+              onClick={() => setShowConfirmRequired(false)}
+              className="flex items-center justify-center h-[36px] px-[20px] rounded-[8px] bg-[#1c252e] hover:bg-[#2c3540] transition-colors"
+            >
+              <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-white">確認</span>
+            </button>
+          </div>
+        </BaseOverlay>
       )}
 
       {/* 取消單據對話 */}

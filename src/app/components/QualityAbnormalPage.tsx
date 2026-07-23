@@ -130,6 +130,9 @@ export function QualityAbnormalPage() {
     sectionFilesRef.current.set(rowId, { ...current, [section]: images });
   }, []);
 
+  // ===== 廠商附件暫存 buffer（送出時才合併進歷程，不即時寫獨立條目） =====
+  const pendingVendorAttachmentsRef = useRef<{ action: 'add' | 'delete'; filename: string }[]>([]);
+
   // ===== 目前登入者（mock）=====
   // TODO: 串接真實 auth，從帳號系統取得使用者名稱
   const CURRENT_USER_GIANT = 'Karen Yueh';  // 巨大品保人員（mock）
@@ -288,6 +291,14 @@ export function QualityAbnormalPage() {
     if (!selectedRow) return;
     const vendorName = selectedRow.vendor;
     const submitCount = (selectedRow.replyHistory ?? []).filter((e: HistoryEntry) => e.type === 'vendor_reply').length + 1;
+
+    // 把本次廠商附件異動合併進 detail
+    const attachmentDetails = pendingVendorAttachmentsRef.current.map(a => ({
+      label: a.action === 'add' ? '新增附件' : '刪除附件',
+      value: a.filename,
+    }));
+    pendingVendorAttachmentsRef.current = []; // 清空 buffer
+
     const entry = makeEntry({
       actor: vendorName,
       type: 'vendor_reply',
@@ -298,6 +309,7 @@ export function QualityAbnormalPage() {
         { label: '填表者', value: data.filler },
         { label: '原因分析', value: data.rootCause },
         { label: '提出對策', value: data.countermeasure },
+        ...attachmentDetails,
       ],
     });
     setTableData(prev =>
@@ -390,27 +402,39 @@ export function QualityAbnormalPage() {
   };
 
   // ===== 附件歷程：任意區塊新增/刪除 =====
+  // 廠商回覆(vendor)區塊：推入 buffer，等「回覆巨大」送出時再合併進歷程
+  // 基本資料(basic) / 巨大回覆(giant)：即時寫入獨立歷程
   const handleAttachmentAdd = (section: 'basic' | 'vendor' | 'giant', filename: string) => {
     if (!selectedRow) return;
-    const sectionLabel = section === 'basic' ? '基本資料' : section === 'vendor' ? '廠商回覆' : '巨大回覆';
+    if (section === 'vendor') {
+      pendingVendorAttachmentsRef.current.push({ action: 'add', filename });
+      return;
+    }
+    const sectionLabel = section === 'basic' ? '基本資料' : '巨大回覆';
     const actor = section === 'giant' ? CURRENT_USER_GIANT : selectedRow.vendor;
     pushHistory(selectedRow.id, makeEntry({
       actor,
       type: 'attachment_add',
       section,
-      summary: `新增附件（${sectionLabel}）：${filename}`,
+      summary: `新增附件（${sectionLabel}）`,
+      detail: [{ label: '附件名稱', value: filename }],
     }));
   };
 
   const handleAttachmentDelete = (section: 'basic' | 'vendor' | 'giant', filename: string) => {
     if (!selectedRow) return;
-    const sectionLabel = section === 'basic' ? '基本資料' : section === 'vendor' ? '廠商回覆' : '巨大回覆';
+    if (section === 'vendor') {
+      pendingVendorAttachmentsRef.current.push({ action: 'delete', filename });
+      return;
+    }
+    const sectionLabel = section === 'basic' ? '基本資料' : '巨大回覆';
     const actor = section === 'giant' ? CURRENT_USER_GIANT : selectedRow.vendor;
     pushHistory(selectedRow.id, makeEntry({
       actor,
       type: 'attachment_delete',
       section,
-      summary: `刪除附件（${sectionLabel}）：${filename}`,
+      summary: `刪除附件（${sectionLabel}）`,
+      detail: [{ label: '附件名稱', value: filename }],
     }));
   };
 

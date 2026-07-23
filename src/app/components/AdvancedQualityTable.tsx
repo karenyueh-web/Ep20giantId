@@ -541,9 +541,9 @@ export function AdvancedQualityTable({
       );
     }
 
-    // 確認者 → 只在 G 狀態顯示
+    // 確認者 → V 狀態（尚未回覆）隱藏，其餘狀態有值才顯示
     if (key === 'confirmer') {
-      if (row.status !== 'G' || !value || String(value).trim() === '') return null;
+      if (row.status === 'V' || !value || String(value).trim() === '') return null;
       return (
         <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[#1c252e] text-[14px] truncate" title={String(value)}>
           {String(value)}
