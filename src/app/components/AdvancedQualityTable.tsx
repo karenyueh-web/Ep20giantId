@@ -20,6 +20,24 @@ export interface QualityColumn {
   visible?: boolean;
 }
 
+export type HistorySection = 'basic' | 'vendor' | 'giant' | 'system';
+export type HistoryType =
+  | 'status_change'
+  | 'vendor_reply'
+  | 'giant_reply'
+  | 'attachment_add'
+  | 'attachment_delete';
+
+export interface HistoryEntry {
+  id: string;
+  timestamp: string;       // display string e.g. '2025/01/01 10:30'
+  actor: string;           // 操作者名稱
+  type: HistoryType;
+  section: HistorySection;
+  summary: string;         // 一行摘要
+  detail?: { label: string; value: string }[];  // 可展開明細
+}
+
 export interface QualityRow {
   id: number;
   vendor: string;
@@ -37,6 +55,11 @@ export interface QualityRow {
   gtmConfirm: string;
   confirmer: string;
   attachment: string;
+  isReturned?: boolean;
+  returnReason?: string;
+  vendorReviewer?: string;
+  vendorFiller?: string;
+  replyHistory?: HistoryEntry[];
 }
 
 interface AdvancedQualityTableProps {
@@ -54,7 +77,7 @@ interface AdvancedQualityTableProps {
 // ===== Default Columns =====
 export const defaultQualityColumns: QualityColumn[] = [
   { key: 'vendor', label: '廠商(編號)', width: 200, minWidth: 120 },
-  { key: 'abnormalNumber', label: '品質異常單號', width: 160, minWidth: 120 },
+  { key: 'abnormalNumber', label: '品質異常單號', width: 180, minWidth: 140 },
   { key: 'quantity', label: '數量', width: 90, minWidth: 70 },
   { key: 'orderNumber', label: '訂單號碼', width: 140, minWidth: 100 },
   { key: 'status', label: '單據狀態', width: 110, minWidth: 90 },
@@ -65,9 +88,8 @@ export const defaultQualityColumns: QualityColumn[] = [
   { key: 'emergencyAction', label: '應急處理', width: 180, minWidth: 100 },
   { key: 'causeAnalysis', label: '原因分析', width: 180, minWidth: 100 },
   { key: 'countermeasure', label: '對策提出', width: 180, minWidth: 100 },
-  { key: 'gtmConfirm', label: 'GTM確認', width: 110, minWidth: 80 },
   { key: 'confirmer', label: '確認者', width: 120, minWidth: 80 },
-  { key: 'attachment', label: '附件', width: 100, minWidth: 70 },
+  { key: 'gtmConfirm', label: 'GTM確認', width: 220, minWidth: 100 },
 ];
 
 // ===== Mock Data =====
@@ -78,7 +100,8 @@ export const qualityMockData: QualityRow[] = [
     date: '2024/12/25',
     description: 'REMEDY 7 A 17.5~21.5 TK426-M 金油下-無膜標(一般色) TS1186D',
     defectType: '外觀不良-刮傷', emergencyAction: '退回供應商', causeAnalysis: '',
-    countermeasure: '', gtmConfirm: '', confirmer: '', attachment: ''
+    countermeasure: '', gtmConfirm: '', confirmer: '', attachment: '',
+    replyHistory: [{ id: 'init-1', timestamp: '2024/12/25', actor: 'system', type: 'status_change', section: 'system', summary: '建立單據' }],
   },
   {
     id: 2, vendor: '速聯(000100463)', abnormalNumber: '000200000982', quantity: 120,
@@ -86,7 +109,8 @@ export const qualityMockData: QualityRow[] = [
     date: '2024/12/26',
     description: 'REMEDY 7 A 17.5~21.5 TK426-M 金油下-無膜標(一般色) TS1186D',
     defectType: '尺寸不符', emergencyAction: '特採使用', causeAnalysis: '模具磨損導致尺寸偏差',
-    countermeasure: '更換模具', gtmConfirm: '待確認', confirmer: '', attachment: '1'
+    countermeasure: '更換模具', gtmConfirm: '', confirmer: '', attachment: '1',
+    replyHistory: [{ id: 'init-2', timestamp: '2024/12/26', actor: 'system', type: 'status_change', section: 'system', summary: '建立單據' }],
   },
   {
     id: 3, vendor: '久廣(000100531)', abnormalNumber: '000200000983', quantity: 30,
@@ -94,7 +118,8 @@ export const qualityMockData: QualityRow[] = [
     date: '2024/12/27',
     description: 'DEFY ADVANCED PRO 1 ML/L 前叉 FK901-C',
     defectType: '材質不良', emergencyAction: '退回供應商', causeAnalysis: '',
-    countermeasure: '', gtmConfirm: '', confirmer: '', attachment: ''
+    countermeasure: '', gtmConfirm: '', confirmer: '', attachment: '',
+    replyHistory: [{ id: 'init-3', timestamp: '2024/12/27', actor: 'system', type: 'status_change', section: 'system', summary: '建立單據' }],
   },
   {
     id: 4, vendor: '金盛元(000100597)', abnormalNumber: '000200000984', quantity: 200,
@@ -102,7 +127,8 @@ export const qualityMockData: QualityRow[] = [
     date: '2024/12/28',
     description: 'TCR ADVANCED SL DISC FRAME ML CARBON/ORANGE',
     defectType: '塗裝不良-色差', emergencyAction: '重工處理', causeAnalysis: '烤漆溫度控制不當',
-    countermeasure: '調整烤漆參數', gtmConfirm: '已確認', confirmer: '王大明', attachment: '2'
+    countermeasure: '調整烤漆參數', gtmConfirm: '確認重工結果符合規格，同意放行', confirmer: '王大明', attachment: '2',
+    replyHistory: [{ id: 'init-4', timestamp: '2024/12/28', actor: 'system', type: 'status_change', section: 'system', summary: '建立單據' }],
   },
   {
     id: 5, vendor: '佳承(000100458)', abnormalNumber: '000200000985', quantity: 80,
@@ -110,7 +136,8 @@ export const qualityMockData: QualityRow[] = [
     date: '2024/12/29',
     description: 'CONTACT SLR AERO OD2 HANDLEBAR 400MM',
     defectType: '焊接不良', emergencyAction: '退回供應商', causeAnalysis: '焊接參數設定錯誤',
-    countermeasure: '重新校正焊接機', gtmConfirm: '已確認', confirmer: '李小華', attachment: '3'
+    countermeasure: '重新校正焊接機', gtmConfirm: '廠商已依SOP重新焊接，抗拉測試通過，這次結案', confirmer: '李小華', attachment: '3',
+    replyHistory: [{ id: 'init-5', timestamp: '2024/12/29', actor: 'system', type: 'status_change', section: 'system', summary: '建立單據' }],
   },
   {
     id: 6, vendor: '台灣製造(000100123)', abnormalNumber: '000200000986', quantity: 15,
@@ -118,7 +145,8 @@ export const qualityMockData: QualityRow[] = [
     date: '2025/01/02',
     description: 'FLEET SLR FORWARD SADDLE 145MM',
     defectType: '包裝破損', emergencyAction: '取消訂單', causeAnalysis: '運輸過程中碰撞',
-    countermeasure: '改善包裝方式', gtmConfirm: '已確認', confirmer: '張志明', attachment: ''
+    countermeasure: '改善包裝方式', gtmConfirm: '因運輸方式問題全批破損，確認取消訂單', confirmer: '張志明', attachment: '',
+    replyHistory: [{ id: 'init-6', timestamp: '2025/01/02', actor: 'system', type: 'status_change', section: 'system', summary: '建立單據' }],
   },
   {
     id: 7, vendor: '精密工業(000100456)', abnormalNumber: '000200000987', quantity: 500,
@@ -126,7 +154,8 @@ export const qualityMockData: QualityRow[] = [
     date: '2025/01/03',
     description: 'CONDUCT SL DISC BRAKE FRONT HYDRAULIC',
     defectType: '功能異常-煞車力不足', emergencyAction: '待供應商回覆', causeAnalysis: '',
-    countermeasure: '', gtmConfirm: '', confirmer: '', attachment: '1'
+    countermeasure: '', gtmConfirm: '', confirmer: '', attachment: '1',
+    replyHistory: [{ id: 'init-7', timestamp: '2025/01/03', actor: 'system', type: 'status_change', section: 'system', summary: '建立單據' }],
   },
   {
     id: 8, vendor: '速聯(000100463)', abnormalNumber: '000200000988', quantity: 75,
@@ -134,7 +163,8 @@ export const qualityMockData: QualityRow[] = [
     date: '2025/01/04',
     description: 'SHIMANO DEORE XT RD-M8100 SGS 12-SPEED',
     defectType: '電鍍不良-起泡', emergencyAction: '特採使用', causeAnalysis: '電鍍液濃度異常',
-    countermeasure: '更換電鍍液', gtmConfirm: '待確認', confirmer: '', attachment: '2'
+    countermeasure: '更換電鍍液', gtmConfirm: '', confirmer: '', attachment: '2',
+    replyHistory: [{ id: 'init-8', timestamp: '2025/01/04', actor: 'system', type: 'status_change', section: 'system', summary: '建立單據' }],
   },
   {
     id: 9, vendor: '久廣(000100531)', abnormalNumber: '000200000989', quantity: 40,
@@ -142,7 +172,8 @@ export const qualityMockData: QualityRow[] = [
     date: '2025/01/05',
     description: 'SLR 1 42 DISC WHEELSYSTEM FRONT 12X100',
     defectType: '軸承異音', emergencyAction: '退回供應商', causeAnalysis: '軸承安裝不當',
-    countermeasure: '加強安裝SOP培訓', gtmConfirm: '已確認', confirmer: '陳美玲', attachment: '1'
+    countermeasure: '加強安裝SOP培訓', gtmConfirm: '重新安裝後推力測試正常，這次結案', confirmer: '陳美玲', attachment: '1',
+    replyHistory: [{ id: 'init-9', timestamp: '2025/01/05', actor: 'system', type: 'status_change', section: 'system', summary: '建立單據' }],
   },
   {
     id: 10, vendor: '金盛元(000100597)', abnormalNumber: '000200000990', quantity: 160,
@@ -150,7 +181,8 @@ export const qualityMockData: QualityRow[] = [
     date: '2025/01/06',
     description: 'GAVIA COURSE 1 700X25C TUBELESS READY',
     defectType: '膠料老化', emergencyAction: '退回供應商', causeAnalysis: '',
-    countermeasure: '', gtmConfirm: '', confirmer: '', attachment: ''
+    countermeasure: '', gtmConfirm: '', confirmer: '', attachment: '',
+    replyHistory: [{ id: 'init-10', timestamp: '2025/01/06', actor: 'system', type: 'status_change', section: 'system', summary: '建立單據' }],
   },
   {
     id: 11, vendor: '佳承(000100458)', abnormalNumber: '000200000991', quantity: 25,
@@ -158,7 +190,8 @@ export const qualityMockData: QualityRow[] = [
     date: '2025/01/07',
     description: 'D-FUSE SEATPOST COMPOSITE FOR TCR',
     defectType: '碳纖維裂紋', emergencyAction: '全數退回', causeAnalysis: '成型壓力不足',
-    countermeasure: '調整成型壓力參數', gtmConfirm: '待確認', confirmer: '', attachment: '4'
+    countermeasure: '調整成型壓力參數', gtmConfirm: '', confirmer: '', attachment: '4',
+    replyHistory: [{ id: 'init-11', timestamp: '2025/01/07', actor: 'system', type: 'status_change', section: 'system', summary: '建立單據' }],
   },
   {
     id: 12, vendor: '台灣製造(000100123)', abnormalNumber: '000200000992', quantity: 90,
@@ -166,7 +199,8 @@ export const qualityMockData: QualityRow[] = [
     date: '2025/01/08',
     description: 'PLATFORM PEDAL NYLON BODY CR-MO AXLE',
     defectType: '螺紋不良', emergencyAction: '取消訂單', causeAnalysis: '攻牙刀具磨損',
-    countermeasure: '定期更換刀具', gtmConfirm: '已確認', confirmer: '林志豪', attachment: ''
+    countermeasure: '定期更換刀具', gtmConfirm: '批次螺紋不良率逾標，取消本批訂單', confirmer: '林志豪', attachment: '',
+    replyHistory: [{ id: 'init-12', timestamp: '2025/01/08', actor: 'system', type: 'status_change', section: 'system', summary: '建立單據' }],
   },
   {
     id: 13, vendor: '速聯(000100463)', abnormalNumber: '000200000993', quantity: 300,
@@ -174,7 +208,8 @@ export const qualityMockData: QualityRow[] = [
     date: '2025/01/09',
     description: 'SHIMANO CN-HG701 11-SPEED CHAIN',
     defectType: '硬度不足', emergencyAction: '待供應商回覆', causeAnalysis: '',
-    countermeasure: '', gtmConfirm: '', confirmer: '', attachment: ''
+    countermeasure: '', gtmConfirm: '', confirmer: '', attachment: '',
+    replyHistory: [{ id: 'init-13', timestamp: '2025/01/09', actor: 'system', type: 'status_change', section: 'system', summary: '建立單據' }],
   },
   {
     id: 14, vendor: '精密工業(000100456)', abnormalNumber: '000200000994', quantity: 45,
@@ -182,7 +217,8 @@ export const qualityMockData: QualityRow[] = [
     date: '2025/01/10',
     description: 'CONTACT SL OD2 STEM 90MM -8DEG',
     defectType: '組裝不良', emergencyAction: '重工處理', causeAnalysis: '作業員未按SOP操作',
-    countermeasure: '加強教育訓練', gtmConfirm: '已確認', confirmer: '黃美惠', attachment: '1'
+    countermeasure: '加強教育訓練', gtmConfirm: '重工後外觀確認符合要求，待第二批樣品對比', confirmer: '黃美惠', attachment: '1',
+    replyHistory: [{ id: 'init-14', timestamp: '2025/01/10', actor: 'system', type: 'status_change', section: 'system', summary: '建立單據' }],
   },
   {
     id: 15, vendor: '久廣(000100531)', abnormalNumber: '000200000995', quantity: 60,
@@ -190,7 +226,8 @@ export const qualityMockData: QualityRow[] = [
     date: '2025/01/11',
     description: 'STRATUS LITE GRIP 130MM BLACK',
     defectType: '材質硬度異常', emergencyAction: '退回供應商', causeAnalysis: '原料批次不良',
-    countermeasure: '加強進料檢驗', gtmConfirm: '已確認', confirmer: '吳建宏', attachment: '2'
+    countermeasure: '加強進料檢驗', gtmConfirm: '廠商已更換原料供應商，硬度檢驗通過，結案', confirmer: '吳建宏', attachment: '2',
+    replyHistory: [{ id: 'init-15', timestamp: '2025/01/11', actor: 'system', type: 'status_change', section: 'system', summary: '建立單據' }],
   },
   {
     id: 16, vendor: '金盛元(000100597)', abnormalNumber: '000200000996', quantity: 110,
@@ -198,7 +235,8 @@ export const qualityMockData: QualityRow[] = [
     date: '2025/01/12',
     description: 'SHIMANO BB-MT800 PRESS FIT BB',
     defectType: '防水性不足', emergencyAction: '待供應商回覆', causeAnalysis: '',
-    countermeasure: '', gtmConfirm: '', confirmer: '', attachment: ''
+    countermeasure: '', gtmConfirm: '', confirmer: '', attachment: '',
+    replyHistory: [{ id: 'init-16', timestamp: '2025/01/12', actor: 'system', type: 'status_change', section: 'system', summary: '建立單據' }],
   },
   {
     id: 17, vendor: '佳承(000100458)', abnormalNumber: '000200000997', quantity: 35,
@@ -206,7 +244,8 @@ export const qualityMockData: QualityRow[] = [
     date: '2025/01/13',
     description: 'CADEX BOOST CASSETTE 10-36T 12-SPEED',
     defectType: '齒面粗糙度不符', emergencyAction: '特採使用', causeAnalysis: '切削加工參數偏差',
-    countermeasure: '重新校正CNC參數', gtmConfirm: '待確認', confirmer: '', attachment: '1'
+    countermeasure: '重新校正CNC參數', gtmConfirm: '', confirmer: '', attachment: '1',
+    replyHistory: [{ id: 'init-17', timestamp: '2025/01/13', actor: 'system', type: 'status_change', section: 'system', summary: '建立單據' }],
   },
   {
     id: 18, vendor: '速聯(000100463)', abnormalNumber: '000200000998', quantity: 220,
@@ -214,7 +253,8 @@ export const qualityMockData: QualityRow[] = [
     date: '2025/01/14',
     description: 'SHIMANO FH-MT410-B REAR HUB 32H BOOST',
     defectType: '表面處理不良', emergencyAction: '退回供應商', causeAnalysis: '',
-    countermeasure: '', gtmConfirm: '', confirmer: '', attachment: ''
+    countermeasure: '', gtmConfirm: '', confirmer: '', attachment: '',
+    replyHistory: [{ id: 'init-18', timestamp: '2025/01/14', actor: 'system', type: 'status_change', section: 'system', summary: '建立單據' }],
   },
   {
     id: 19, vendor: '台灣製造(000100123)', abnormalNumber: '000200000999', quantity: 55,
@@ -222,7 +262,8 @@ export const qualityMockData: QualityRow[] = [
     date: '2025/01/15',
     description: 'DT SWISS COMPETITION SPOKE 2.0/1.8 BLK',
     defectType: '強度不足', emergencyAction: '退回供應商', causeAnalysis: '熱處理製程異常',
-    countermeasure: '修正熱處理溫度曲線', gtmConfirm: '已確認', confirmer: '趙明德', attachment: '1'
+    countermeasure: '修正熱處理溫度曲線', gtmConfirm: '廠商已提供熱處理改善報告，硬度符合標準，結案', confirmer: '趙明德', attachment: '1',
+    replyHistory: [{ id: 'init-19', timestamp: '2025/01/15', actor: 'system', type: 'status_change', section: 'system', summary: '建立單據' }],
   },
   {
     id: 20, vendor: '精密工業(000100456)', abnormalNumber: '000200001000', quantity: 180,
@@ -230,7 +271,8 @@ export const qualityMockData: QualityRow[] = [
     date: '2025/01/16',
     description: 'DT SWISS PHR ALLOY NIPPLE 14MM BLK',
     defectType: '電鍍層剝落', emergencyAction: '取消訂單', causeAnalysis: '基材前處理不良',
-    countermeasure: '改善前處理流程', gtmConfirm: '已確認', confirmer: '周雅琳', attachment: ''
+    countermeasure: '改善前處理流程', gtmConfirm: '前處理複驗不及格，已取消訂單', confirmer: '周雅琳', attachment: '',
+    replyHistory: [{ id: 'init-20', timestamp: '2025/01/16', actor: 'system', type: 'status_change', section: 'system', summary: '建立單據' }],
   },
 ];
 
@@ -456,16 +498,25 @@ export function AdvancedQualityTable({
   const getCellValue = (row: QualityRow, key: QualityColumnKey) => {
     const value = row[key];
 
-    // 品質異常單號 → 藍色連結
+    // 品質異常單號 → 藍色連結 + 退回符號
     if (key === 'abnormalNumber') {
       return (
-        <p
-          className="[text-decoration-skip-ink:none] decoration-solid font-['Public_Sans:Regular',sans-serif] font-normal leading-[22px] text-[#005eb8] text-[14px] underline cursor-pointer hover:text-[#003d73] truncate"
-          onClick={() => onRowClick(row)}
-          title={String(value)}
-        >
-          {String(value)}
-        </p>
+        <div className="flex items-center gap-[5px] min-w-0">
+          {row.isReturned && (
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" className="shrink-0" title="已被退回">
+              <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="#B76E00" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <line x1="12" y1="9" x2="12" y2="13" stroke="#B76E00" strokeWidth="2" strokeLinecap="round"/>
+              <line x1="12" y1="17" x2="12.01" y2="17" stroke="#B76E00" strokeWidth="2.5" strokeLinecap="round"/>
+            </svg>
+          )}
+          <p
+            className="[text-decoration-skip-ink:none] decoration-solid font-['Public_Sans:Regular',sans-serif] font-normal leading-[22px] text-[#005eb8] text-[14px] underline cursor-pointer hover:text-[#003d73] truncate"
+            onClick={() => onRowClick(row)}
+            title={String(value)}
+          >
+            {String(value)}
+          </p>
+        </div>
       );
     }
 
@@ -481,27 +532,6 @@ export function AdvancedQualityTable({
       );
     }
 
-    // 附件 → 數字或空
-    if (key === 'attachment') {
-      if (!value || String(value) === '0') {
-        return (
-          <p className="font-['Public_Sans:Regular',sans-serif] font-normal leading-[22px] text-[#919eab] text-[14px]">
-            -
-          </p>
-        );
-      }
-      return (
-        <div className="flex items-center gap-[4px]">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M13.3 6.7L8 12c-1 1-2.6 1-3.6 0s-1-2.6 0-3.6l5.3-5.3c.6-.6 1.6-.6 2.2 0s.6 1.6 0 2.2L6.7 10.5c-.2.2-.6.2-.8 0s-.2-.6 0-.8l4.4-4.4" stroke="#637381" strokeWidth="1.2" strokeLinecap="round" />
-          </svg>
-          <p className="font-['Public_Sans:Regular',sans-serif] font-normal leading-[22px] text-[#1c252e] text-[14px]">
-            {String(value)}
-          </p>
-        </div>
-      );
-    }
-
     // 數量
     if (key === 'quantity') {
       return (
@@ -511,15 +541,41 @@ export function AdvancedQualityTable({
       );
     }
 
-    // 預設
-    const displayValue = value !== undefined && value !== null && String(value).trim() !== '' ? String(value) : '-';
-    const isPlaceholder = displayValue === '-';
+    // 確認者 → 只在 G 狀態顯示
+    if (key === 'confirmer') {
+      if (row.status !== 'G' || !value || String(value).trim() === '') return null;
+      return (
+        <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[#1c252e] text-[14px] truncate" title={String(value)}>
+          {String(value)}
+        </p>
+      );
+    }
+
+    // 長文字欄位 → 截20字元，hover 顯示全文，空值留白
+    const TRUNCATE_KEYS: QualityColumnKey[] = ['defectType', 'emergencyAction', 'causeAnalysis', 'countermeasure', 'gtmConfirm'];
+    if (TRUNCATE_KEYS.includes(key)) {
+      if (!value || String(value).trim() === '') return null;
+      const full = String(value);
+      const display = full.length > 20 ? full.slice(0, 20) + '…' : full;
+      return (
+        <p
+          className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[#1c252e] text-[14px]"
+          title={full}
+          style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+        >
+          {display}
+        </p>
+      );
+    }
+
+    // 預設：空值留白
+    if (!value || String(value).trim() === '') return null;
     return (
       <p
-        className={`font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] truncate w-full ${isPlaceholder ? 'text-[#919eab]' : 'text-[#1c252e]'}`}
-        title={displayValue}
+        className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[#1c252e] text-[14px] truncate w-full"
+        title={String(value)}
       >
-        {displayValue}
+        {String(value)}
       </p>
     );
   };

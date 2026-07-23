@@ -1,7 +1,7 @@
 import svgPaths from "@/imports/svg-imw9bns98t";
-import { useState } from 'react';
-import { QualityAbnormalDetail } from './QualityAbnormalDetail';
-import { AdvancedQualityTable, qualityMockData, defaultQualityColumns, type QualityColumn } from './AdvancedQualityTable';
+import { useState, useRef, useCallback } from 'react';
+import { QualityAbnormalDetail, type UploadedImage } from './QualityAbnormalDetail';
+import { AdvancedQualityTable, qualityMockData, defaultQualityColumns, type QualityColumn, type HistoryEntry } from './AdvancedQualityTable';
 import { TableToolbar } from './TableToolbar';
 import { ColumnSelector } from './ColumnSelector';
 import { FilterDialog, type FilterCondition } from './FilterDialog';
@@ -52,12 +52,16 @@ function Tab({ label, isActive, badge, onClick, type }: { label: string; isActiv
 }
 
 // Tabs
-function Tabs({ activeTab, setActiveTab }: { activeTab: TabKey; setActiveTab: (tab: TabKey) => void }) {
-  // 統計各狀態數量
-  const vCount = qualityMockData.filter(d => d.status === 'V').length;
-  const gCount = qualityMockData.filter(d => d.status === 'G').length;
-  const ceCount = qualityMockData.filter(d => d.status === 'CE').length;
-  const clCount = qualityMockData.filter(d => d.status === 'CL').length;
+function Tabs({ activeTab, setActiveTab, data }: {
+  activeTab: TabKey;
+  setActiveTab: (tab: TabKey) => void;
+  data: typeof qualityMockData;
+}) {
+  // 統計各狀態數量（即時反映 tableData 變化）
+  const vCount = data.filter(d => d.status === 'V').length;
+  const gCount = data.filter(d => d.status === 'G').length;
+  const ceCount = data.filter(d => d.status === 'CE').length;
+  const clCount = data.filter(d => d.status === 'CL').length;
 
   return (
     <div className="relative shrink-0 w-full">
@@ -115,6 +119,41 @@ function SearchField({ label, value, onChange }: { label: string; value: string;
 export function QualityAbnormalPage() {
   const [activeTab, setActiveTab] = useState<TabKey>('All');
   const [selectedRow, setSelectedRow] = useState<any>(null);
+  // mock data 用 state 管理，讓廠商回覆後可即時更新 status
+  const [tableData, setTableData] = useState(qualityMockData);
+
+  // ===== 圖片持久化 ref：儲存每張單各區塊已上傳圖片（關閉再開後可還原） =====
+  const sectionFilesRef = useRef<Map<number, { basic: UploadedImage[]; vendor: UploadedImage[]; giant: UploadedImage[] }>>(new Map());
+
+  const handleFilesChange = useCallback((rowId: number, section: 'basic' | 'vendor' | 'giant', images: UploadedImage[]) => {
+    const current = sectionFilesRef.current.get(rowId) ?? { basic: [], vendor: [], giant: [] };
+    sectionFilesRef.current.set(rowId, { ...current, [section]: images });
+  }, []);
+
+  // ===== 目前登入者（mock）=====
+  // TODO: 串接真實 auth，從帳號系統取得使用者名稱
+  const CURRENT_USER_GIANT = 'Karen Yueh';  // 巨大品保人員（mock）
+
+  // ===== 歷程 Helper =====
+  const now = () => {
+    const d = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+
+  const makeEntry = (e: Omit<HistoryEntry, 'id' | 'timestamp'>): HistoryEntry => ({
+    ...e,
+    id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    timestamp: now(),
+  });
+
+  const pushHistory = (rowId: number, entry: HistoryEntry) => {
+    setTableData(prev => prev.map(r =>
+      r.id === rowId
+        ? { ...r, replyHistory: [...(r.replyHistory ?? []), entry] }
+        : r
+    ));
+  };
 
   // 搜尋
   const [abnormalNumberFilter, setAbnormalNumberFilter] = useState('');
@@ -194,7 +233,7 @@ export function QualityAbnormalPage() {
 
   // ===== 計算過濾結果數 =====
   const getFilteredCount = () => {
-    let data = qualityMockData;
+    let data = tableData;
 
     // Tab 過濾
     if (activeTab !== 'All') {
@@ -244,6 +283,137 @@ export function QualityAbnormalPage() {
     return data.length;
   };
 
+  // ===== 廠商送出回覆：V → G =====
+  const handleVendorReplySubmit = (data: { reviewer: string; filler: string; rootCause: string; countermeasure: string }) => {
+    if (!selectedRow) return;
+    const vendorName = selectedRow.vendor;
+    const submitCount = (selectedRow.replyHistory ?? []).filter((e: HistoryEntry) => e.type === 'vendor_reply').length + 1;
+    const entry = makeEntry({
+      actor: vendorName,
+      type: 'vendor_reply',
+      section: 'vendor',
+      summary: `廠商送出回覆${submitCount > 1 ? `（第 ${submitCount} 次）` : ''}，狀態轉為巨大確認中`,
+      detail: [
+        { label: '審核者', value: data.reviewer },
+        { label: '填表者', value: data.filler },
+        { label: '原因分析', value: data.rootCause },
+        { label: '提出對策', value: data.countermeasure },
+      ],
+    });
+    setTableData(prev =>
+      prev.map(r =>
+        r.id === selectedRow.id
+          ? {
+              ...r,
+              status: 'G' as const,
+              isReturned: false,
+              vendorReviewer: data.reviewer,
+              vendorFiller: data.filler,
+              causeAnalysis: data.rootCause,
+              countermeasure: data.countermeasure,
+              replyHistory: [...(r.replyHistory ?? []), entry],
+            }
+          : r
+      )
+    );
+    // 回到列表，廠商繼續處理下一張單
+    // 圖片已透過 sectionFilesRef 持久化，巨大品保開啟時可還原
+    setSelectedRow(null);
+  };
+
+  // ===== 巨大退回廠商：G → V =====
+  const handleReturn = (reason: string) => {
+    if (!selectedRow) return;
+    const entry = makeEntry({
+      actor: CURRENT_USER_GIANT,
+      type: 'giant_reply',
+      section: 'giant',
+      summary: `巨大退回廠商`,
+      detail: [{ label: '退回原因', value: reason }],
+    });
+    setTableData(prev =>
+      prev.map(r =>
+        r.id === selectedRow.id
+          ? { ...r, status: 'V' as const, isReturned: true, returnReason: reason, replyHistory: [...(r.replyHistory ?? []), entry] }
+          : r
+      )
+    );
+    setSelectedRow(null);
+    setActiveTab('廠商確認中(V)');
+  };
+
+  // ===== 巨大取消單據：G → CE =====
+  const handleCancel = (reason: string) => {
+    if (!selectedRow) return;
+    const entry = makeEntry({
+      actor: CURRENT_USER_GIANT,
+      type: 'giant_reply',
+      section: 'giant',
+      summary: `巨大取消單據`,
+      detail: [{ label: '取消原因', value: reason }],
+    });
+    setTableData(prev =>
+      prev.map(r =>
+        r.id === selectedRow.id
+          ? { ...r, status: 'CE' as const, replyHistory: [...(r.replyHistory ?? []), entry] }
+          : r
+      )
+    );
+    setSelectedRow(null);
+    setActiveTab('取消(CE)');
+  };
+
+  // ===== 巨大結案：G → CL =====
+  const handleSettle = (confirmText: string) => {
+    if (!selectedRow) return;
+    const entry = makeEntry({
+      actor: CURRENT_USER_GIANT,
+      type: 'giant_reply',
+      section: 'giant',
+      summary: '巨大確認結案',
+      detail: confirmText.trim() ? [{ label: '確認回覆', value: confirmText.trim() }] : [],
+    });
+    setTableData(prev =>
+      prev.map(r =>
+        r.id === selectedRow.id
+          ? {
+              ...r,
+              status: 'CL' as const,
+              gtmConfirm: confirmText,   // 儲存確認回覆文字到 row
+              replyHistory: [...(r.replyHistory ?? []), entry],
+            }
+          : r
+      )
+    );
+    setSelectedRow(null);
+    setActiveTab('關閉結案(CL)');
+  };
+
+  // ===== 附件歷程：任意區塊新增/刪除 =====
+  const handleAttachmentAdd = (section: 'basic' | 'vendor' | 'giant', filename: string) => {
+    if (!selectedRow) return;
+    const sectionLabel = section === 'basic' ? '基本資料' : section === 'vendor' ? '廠商回覆' : '巨大回覆';
+    const actor = section === 'giant' ? CURRENT_USER_GIANT : selectedRow.vendor;
+    pushHistory(selectedRow.id, makeEntry({
+      actor,
+      type: 'attachment_add',
+      section,
+      summary: `新增附件（${sectionLabel}）：${filename}`,
+    }));
+  };
+
+  const handleAttachmentDelete = (section: 'basic' | 'vendor' | 'giant', filename: string) => {
+    if (!selectedRow) return;
+    const sectionLabel = section === 'basic' ? '基本資料' : section === 'vendor' ? '廠商回覆' : '巨大回覆';
+    const actor = section === 'giant' ? CURRENT_USER_GIANT : selectedRow.vendor;
+    pushHistory(selectedRow.id, makeEntry({
+      actor,
+      type: 'attachment_delete',
+      section,
+      summary: `刪除附件（${sectionLabel}）：${filename}`,
+    }));
+  };
+
   // ===== 狀態碼轉文字 =====
   const getStatusText = (status: string) => {
     switch (status) {
@@ -255,13 +425,23 @@ export function QualityAbnormalPage() {
     }
   };
 
-  // ===== 顯示明細頁面 =====
+  // ===== 顯示明細頁面（row 用 live tableData，確保歷程即時更新）=====
   if (selectedRow) {
+    const liveRow = tableData.find(r => r.id === selectedRow.id) ?? selectedRow;
     return (
       <div className="content-stretch flex flex-col h-full items-start relative rounded-[16px] w-full">
         <QualityAbnormalDetail
-          abnormalNumber={selectedRow.abnormalNumber}
-          status={getStatusText(selectedRow.status)}
+          abnormalNumber={liveRow.abnormalNumber}
+          status={getStatusText(liveRow.status)}
+          row={liveRow}
+          onVendorReplySubmit={handleVendorReplySubmit}
+          onReturn={handleReturn}
+          onCancel={handleCancel}
+          onSettle={handleSettle}
+          onAttachmentAdd={handleAttachmentAdd}
+          onAttachmentDelete={handleAttachmentDelete}
+          initialFiles={sectionFilesRef.current.get(liveRow.id)}
+          onFilesChange={(section, imgs) => handleFilesChange(liveRow.id, section, imgs)}
           onClose={() => setSelectedRow(null)}
         />
       </div>
@@ -272,7 +452,10 @@ export function QualityAbnormalPage() {
   return (
     <div className="bg-white flex flex-col h-full relative rounded-[16px] shadow-[0px_0px_2px_0px_rgba(145,158,171,0.2),0px_12px_24px_-4px_rgba(145,158,171,0.12)] w-full overflow-hidden">
       {/* Tabs */}
-      <Tabs activeTab={activeTab} setActiveTab={(tab) => {
+      <Tabs
+        activeTab={activeTab}
+        data={tableData}
+        setActiveTab={(tab) => {
         setActiveTab(tab);
         setAbnormalNumberFilter('');
         setPartNumberFilter('');
@@ -328,7 +511,7 @@ export function QualityAbnormalPage() {
       {/* 進階表格 */}
       <AdvancedQualityTable
         activeTab={activeTab}
-        data={qualityMockData}
+        data={tableData}
         onRowClick={(row) => setSelectedRow(row)}
         abnormalNumberFilter={abnormalNumberFilter}
         partNumberFilter={partNumberFilter}

@@ -1,10 +1,12 @@
 import svgPaths from "@/imports/svg-2gq4xnil6q";
 import closeIconPaths from "@/imports/svg-gcyyqek0b9";
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { BaseOverlay } from './BaseOverlay';
+import { type HistoryEntry } from './AdvancedQualityTable';
+import { OrderHistory } from './OrderHistory';
 
 // ─── 檔案資料型別 ────────────────────────────────────────────────────
-interface UploadedImage {
+export interface UploadedImage {
   id: string;
   name: string;
   url: string;       // object URL
@@ -139,11 +141,30 @@ function Thumbnail({ image, onClick, onDelete }: ThumbnailProps) {
 }
 
 // ─── 不良情形和應急處理 + 圖片區（新版）──────────────────────────
-function IssueSection() {
+function IssueSection({
+  defectType,
+  emergencyAction,
+  onAttachmentAdd,
+  onAttachmentDelete,
+  initialImages,
+  onImagesChange,
+  isReadOnly,
+}: {
+  defectType: string;
+  emergencyAction: string;
+  onAttachmentAdd?: (filename: string) => void;
+  onAttachmentDelete?: (filename: string) => void;
+  initialImages?: UploadedImage[];
+  onImagesChange?: (images: UploadedImage[]) => void;
+  isReadOnly?: boolean;
+}) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [images, setImages] = useState<UploadedImage[]>([]);
+  const [images, setImages] = useState<UploadedImage[]>(initialImages ?? []);
   const [isDragging, setIsDragging] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+
+  // 圖片變動時通知父層儲存（重新開啟時可還原）
+  useEffect(() => { onImagesChange?.(images); }, [images]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const addFiles = useCallback((files: FileList | File[]) => {
     const MAX = 10;
@@ -159,9 +180,10 @@ function IssueSection() {
         file: f,
         isImage: f.type.startsWith('image/') || /\.(jpe?g|png|gif|bmp|webp|svg|avif|heic)$/i.test(f.name),
       }));
+      toAdd.forEach(img => onAttachmentAdd?.(img.name));
       return [...prev, ...toAdd];
     });
-  }, []);
+  }, [onAttachmentAdd]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) addFiles(e.target.files);
@@ -177,7 +199,10 @@ function IssueSection() {
   const handleDelete = (id: string) => {
     setImages(prev => {
       const target = prev.find(img => img.id === id);
-      if (target) URL.revokeObjectURL(target.url);
+      if (target) {
+        URL.revokeObjectURL(target.url);
+        onAttachmentDelete?.(target.name);
+      }
       return prev.filter(img => img.id !== id);
     });
   };
@@ -194,7 +219,7 @@ function IssueSection() {
   return (
     <>
       {/* ── 三欄等寬排版：不良情形 | 應急處理 | 異常圖片 ── */}
-      <div className="flex gap-[13px] w-full py-[20px]" style={{ minHeight: 200 }}>
+      <div className="flex gap-[13px] w-full my-[20px]" style={{ height: 200 }}>
 
         {/* ── 欄 1：不良情形 ── */}
         <div className="flex-1 min-w-0">
@@ -202,12 +227,7 @@ function IssueSection() {
             <div className="p-[10px] h-full flex flex-col">
               <p className="css-4hzbpn font-['Public_Sans:Bold','Noto_Sans_JP:Bold',sans-serif] font-bold leading-[24px] text-[14px] text-black mb-[10px]">不良情形</p>
               <div className="flex-1 overflow-y-auto custom-scrollbar font-['Public_Sans:Light','Noto_Sans_JP:Light',sans-serif] font-light leading-[24px] text-[#637381] text-[14px]">
-                <p className="css-4hzbpn mb-0">{`1.料號1159-HAK11X-01) 碟煞座飾片, `}</p>
-                <p className="css-4hzbpn mb-0">{`2.來貨碟煞座兩孔尺寸精度異常( 如附件), 判定NG, `}</p>
-                <p className="css-4hzbpn mb-0">{`3.因尺寸精度異常造成在產線無法組裝而影響生產, `}</p>
-                <p className="css-4hzbpn mb-0">{`4.GTM廠內未上線庫存共有1112PCS,避免生產因此問題停線。GTM先全檢良品供產線生產, `}</p>
-                <p className="css-4hzbpn mb-0">{`5.不良數有60個, 將辦理J訂單退回.全檢會產生相關費用會歸屬貴司扣款, `}</p>
-                <p className="css-4hzbpn">{`6.1/21到貨一批數量:433SET,訂單號碼: 4000675605-020,  全檢後不良數量:14SET, 將辦理J訂單退回.`}</p>
+                <p className="css-4hzbpn">{defectType || '—'}</p>
               </div>
             </div>
           </div>
@@ -219,8 +239,7 @@ function IssueSection() {
             <div className="p-[10px] h-full flex flex-col">
               <p className="css-4hzbpn font-['Public_Sans:Bold','Noto_Sans_JP:Bold',sans-serif] font-bold leading-[24px] text-[14px] text-black mb-[10px]">應急處理</p>
               <div className="flex-1 overflow-y-auto custom-scrollbar font-['Public_Sans:Light','Noto_Sans_JP:Light',sans-serif] font-light leading-[24px] text-[#637381] text-[14px]">
-                <p className="css-4hzbpn mb-0">{`1-1.60W上叉發泡成型膨脹導致中管不入，檢驗後挑除重量不符標準內之不良品 `}</p>
-                <p className="css-4hzbpn">1-2.39L 22pcs、42L 87pcs、45L 102pcs</p>
+                <p className="css-4hzbpn">{emergencyAction || '—'}</p>
               </div>
             </div>
           </div>
@@ -258,22 +277,22 @@ function IssueSection() {
               {/* 拖曳上傳 / 縮圖展示區 */}
               <div
                 className={`flex-1 relative rounded-[6px] transition-colors ${
-                  isDragging
+                  !isReadOnly && isDragging
                     ? 'bg-[rgba(29,123,245,0.06)] border-[2px] border-dashed border-[#1D7BF5]'
                     : images.length === 0
                       ? 'border border-dashed border-[rgba(145,158,171,0.4)]'
                       : ''
                 }`}
                 style={{ minHeight: 80 }}
-                onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                onDragLeave={() => setIsDragging(false)}
-                onDrop={handleDrop}
+                onDragOver={!isReadOnly ? (e) => { e.preventDefault(); setIsDragging(true); } : undefined}
+                onDragLeave={!isReadOnly ? () => setIsDragging(false) : undefined}
+                onDrop={!isReadOnly ? handleDrop : undefined}
               >
                 {images.length === 0 ? (
                   /* 空狀態 */
                   <div
-                    className="absolute inset-0 flex flex-col items-center justify-center cursor-pointer gap-[4px]"
-                    onClick={() => fileInputRef.current?.click()}
+                    className={`absolute inset-0 flex flex-col items-center justify-center gap-[4px] ${!isReadOnly ? 'cursor-pointer' : ''}`}
+                    onClick={!isReadOnly ? () => fileInputRef.current?.click() : undefined}
                   >
                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
                       <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke="#919EAB" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -281,9 +300,13 @@ function IssueSection() {
                       <line x1="12" y1="3" x2="12" y2="15" stroke="#919EAB" strokeWidth="1.5" strokeLinecap="round" />
                     </svg>
                     <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#919EAB] text-center">
-                      拖曳或{' '}
-                      <span className="text-[#1D7BF5] cursor-pointer hover:underline">點擊上傳</span>
-                      {' '}支援 JPG、PNG、PDF、Word（上限10個）
+                      {isReadOnly ? '尚無附件' : (
+                        <>
+                          拖曳或{' '}
+                          <span className="text-[#1D7BF5] cursor-pointer hover:underline">點擊上傳</span>
+                          {' '}支援 JPG、PNG、PDF、Word（上限10個）
+                        </>
+                      )}
                     </p>
                   </div>
                 ) : (
@@ -295,12 +318,12 @@ function IssueSection() {
                           key={img.id}
                           image={img}
                           onClick={() => setLightboxIndex(idx)}
-                          onDelete={() => handleDelete(img.id)}
+                          onDelete={isReadOnly ? undefined : () => handleDelete(img.id)}
                         />
                       ))}
 
                       {/* 補充上傳格（未達上限才顯示） */}
-                      {images.length < 10 && (
+                      {!isReadOnly && images.length < 10 && (
                         <button
                           className="flex items-center justify-center rounded-[8px] border border-dashed border-[rgba(145,158,171,0.4)] hover:border-[#1D7BF5] hover:bg-[rgba(29,123,245,0.04)] transition-colors shrink-0"
                           style={{ width: 72, height: 72 }}
@@ -407,12 +430,16 @@ function IconsNotificationsIcChat() {
 }
 
 // 頂部操作區
-function TopActions() {
+function TopActions({ onHistoryOpen }: { onHistoryOpen?: () => void }) {
   return (
     <div className="content-stretch flex gap-[12px] items-center">
       <IconsSolidIcSolarPrinterMinimalisticBold />
       <IconsNotificationsIcChat />
-      <p className="[text-decoration-skip-ink:none] css-ew64yg decoration-solid font-['Roboto:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[32px] text-[#005eb8] text-[16px] underline cursor-pointer hover:text-[#003d73]" style={{ fontVariationSettings: "'wdth' 100" }}>
+      <p
+        onClick={onHistoryOpen}
+        className="[text-decoration-skip-ink:none] css-ew64yg decoration-solid font-['Roboto:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[32px] text-[#005eb8] text-[16px] underline cursor-pointer hover:text-[#003d73]"
+        style={{ fontVariationSettings: "'wdth' 100" }}
+      >
         歷程
       </p>
     </div>
@@ -464,7 +491,14 @@ function InfoItem({ label, value }: { label: string; value: string }) {
 }
 
 // 基本資訊區
-function BasicInfo() {
+interface BasicInfoProps {
+  vendor: string;
+  orderNumber: string;
+  quantity: number;
+  partNumber: string;
+  description: string;
+}
+function BasicInfo({ vendor, orderNumber, quantity, partNumber, description }: BasicInfoProps) {
   return (
     <div className="content-stretch flex flex-col gap-[10px] items-start px-0 py-[10px] w-full">
       {/* 基本資料標籤 */}
@@ -476,32 +510,56 @@ function BasicInfo() {
       </div>
 
       <div className="content-stretch flex gap-[10px] items-center w-full">
-        <InfoItem label="協調者" value="G00036986" />
-        <InfoItem label="廠商(編號)" value="華銘(0001000641)" />
-        <InfoItem label="訂單號碼" value="4000649723" />
-        <InfoItem label="數量" value="60" />
-        <InfoItem label="料號" value="1127-BB2980-004" />
+        <InfoItem label="廠商(編號)" value={vendor} />
+        <InfoItem label="訂單號碼" value={orderNumber} />
+        <InfoItem label="數量" value={String(quantity)} />
+        <InfoItem label="料號" value={partNumber} />
       </div>
       <div className="content-stretch flex gap-[10px] items-start w-full">
         <p className="css-ew64yg font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[#1c252e] text-[14px] shrink-0">長規格敘述</p>
-        <p className="css-ew64yg font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[#637381] text-[14px]">REMEDY 7 A 17.5~21.5 TK426-M 金油下-無膜標(一般色) TS1186D</p>
+        <p className="css-ew64yg font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[#637381] text-[14px]">{description}</p>
       </div>
     </div>
   );
 }
 
 // 廠商回覆區塊
-function VendorReply({ status }: { status: string }) {
+interface VendorReplyData {
+  reviewer: string;
+  filler: string;
+  rootCause: string;
+  countermeasure: string;
+}
+
+function VendorReply({
+  status,
+  initialData,
+  returnReason,
+  onSubmitSuccess,
+  onAttachmentAdd,
+  onAttachmentDelete,
+  initialImages,
+  onImagesChange,
+}: {
+  status: string;
+  initialData?: VendorReplyData;
+  returnReason?: string;
+  onSubmitSuccess?: (data: VendorReplyData) => void;
+  onAttachmentAdd?: (filename: string) => void;
+  onAttachmentDelete?: (filename: string) => void;
+  initialImages?: UploadedImage[];
+  onImagesChange?: (images: UploadedImage[]) => void;
+}) {
   const isReadOnly = status !== '廠商確認中';
 
-  // ── 欄位 state ──
-  const [reviewer, setReviewer] = useState('方詩椀');
-  const [filler, setFiller] = useState('朱紋賢');
-  const [rootCause, setRootCause] = useState('因NC鐘孔夾具磨搏，未及時修正，導致鐘孔偏心，產生不良');
-  const [countermeasure, setCountermeasure] = useState('因NC鐘孔夾具磨搏，未及時');
+  // ── 欄位 state（如果是 read-only 則帶入已存的資料） ──
+  const [reviewer, setReviewer] = useState(initialData?.reviewer ?? '');
+  const [filler, setFiller] = useState(initialData?.filler ?? '');
+  const [rootCause, setRootCause] = useState(initialData?.rootCause ?? '');
+  const [countermeasure, setCountermeasure] = useState(initialData?.countermeasure ?? '');
   const [missingFields, setMissingFields] = useState<string[]>([]);
 
-  // ── 驗證並送出 ──
+  // ── 驗證並送出（將填寫內容傳回父層） ──
   const handleSubmit = () => {
     const missing: string[] = [];
     if (!reviewer.trim()) missing.push('審核者');
@@ -513,14 +571,17 @@ function VendorReply({ status }: { status: string }) {
       return;
     }
     // TODO: 送出 API
-    alert('回覆已送出！');
+    onSubmitSuccess?.({ reviewer, filler, rootCause, countermeasure });
   };
 
   // ── 圖片上傳狀態 ──
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [images, setImages] = useState<UploadedImage[]>([]);
+  const [images, setImages] = useState<UploadedImage[]>(initialImages ?? []);
   const [isDragging, setIsDragging] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+
+  // 圖片變動時通知父層儲存（重新開啟時可還原）
+  useEffect(() => { onImagesChange?.(images); }, [images]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const addFiles = useCallback((files: FileList | File[]) => {
     const MAX = 10;
@@ -533,10 +594,12 @@ function VendorReply({ status }: { status: string }) {
         name: f.name,
         url: URL.createObjectURL(f),
         file: f,
+        isImage: f.type.startsWith('image/') || /\.(jpe?g|png|gif|bmp|webp|svg|avif|heic)$/i.test(f.name),
       }));
+      toAdd.forEach(img => onAttachmentAdd?.(img.name));
       return [...prev, ...toAdd];
     });
-  }, []);
+  }, [onAttachmentAdd]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) addFiles(e.target.files);
@@ -552,7 +615,10 @@ function VendorReply({ status }: { status: string }) {
   const handleDelete = (id: string) => {
     setImages(prev => {
       const target = prev.find(img => img.id === id);
-      if (target) URL.revokeObjectURL(target.url);
+      if (target) {
+        URL.revokeObjectURL(target.url);
+        onAttachmentDelete?.(target.name);
+      }
       return prev.filter(img => img.id !== id);
     });
   };
@@ -595,7 +661,7 @@ function VendorReply({ status }: { status: string }) {
         ) : (
           <div className="flex items-center gap-[6px] shrink-0">
             <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] text-[#1c252e]">審核者</p>
-            <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[14px] text-[#637381]">方詩椀</p>
+            <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[14px] text-[#637381]">{reviewer}</p>
           </div>
         )}
 
@@ -614,7 +680,7 @@ function VendorReply({ status }: { status: string }) {
         ) : (
           <div className="flex items-center gap-[6px] shrink-0">
             <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] text-[#1c252e]">填表者</p>
-            <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[14px] text-[#637381]">朱紋賢</p>
+            <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[14px] text-[#637381]">{filler}</p>
           </div>
         )}
 
@@ -629,6 +695,13 @@ function VendorReply({ status }: { status: string }) {
           </div>
         )}
       </div>
+
+      {/* ── 退回原因 banner（被退回的單才顯示） ── */}
+      {!!returnReason && (
+        <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[13px] text-[#FF5630] mb-[14px]">
+          巨大退回原因：{returnReason}
+        </p>
+      )}
 
       {/* ── 驗證失敗 Alert ── */}
       {missingFields.length > 0 && (
@@ -679,7 +752,7 @@ function VendorReply({ status }: { status: string }) {
 
 
       {/* ── 三欄等寬：原因分析 | 提出對策 | 附件 ── */}
-      <div className="flex gap-[13px] w-full" style={{ minHeight: 200 }}>
+      <div className="flex gap-[13px] w-full" style={{ height: 200 }}>
 
         {/* 欄 1：原因分析 */}
         <div className="flex-1 min-w-0">
@@ -724,7 +797,7 @@ function VendorReply({ status }: { status: string }) {
                     style={{ minHeight: '100%' }}
                   />
                 ) : (
-                  <p className="css-ew64yg font-['Public_Sans:Light','Noto_Sans_JP:Light','Noto_Sans_SC:Light',sans-serif] font-light leading-[24px] text-[#637381] text-[14px]">因NC钻孔夹具磨损，未及时1、应急厂商库存及厂内库存安排全检，不良挑出 2、即刻修改NC夹具，重做检具，确保生产无错位再生产 3、制做专用检具，制程生产中及出货依检具检测管控，防止不良产生及流出修正，导致钻孔偏心，产生不良</p>
+                  <p className="css-ew64yg font-['Public_Sans:Light','Noto_Sans_JP:Light',sans-serif] font-light leading-[24px] text-[#637381] text-[14px]">{countermeasure}</p>
                 )}
               </div>
             </div>
@@ -762,21 +835,21 @@ function VendorReply({ status }: { status: string }) {
               {/* 拖曳上傳 / 縮圖展示區 */}
               <div
                 className={`flex-1 relative rounded-[6px] transition-colors ${
-                  isDragging
+                  !isReadOnly && isDragging
                     ? 'bg-[rgba(29,123,245,0.06)] border-[2px] border-dashed border-[#1D7BF5]'
                     : images.length === 0
                       ? 'border border-dashed border-[rgba(145,158,171,0.4)]'
                       : ''
                 }`}
                 style={{ minHeight: 80 }}
-                onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                onDragLeave={() => setIsDragging(false)}
-                onDrop={handleDrop}
+                onDragOver={!isReadOnly ? (e) => { e.preventDefault(); setIsDragging(true); } : undefined}
+                onDragLeave={!isReadOnly ? () => setIsDragging(false) : undefined}
+                onDrop={!isReadOnly ? handleDrop : undefined}
               >
                 {images.length === 0 ? (
                   <div
-                    className="absolute inset-0 flex flex-col items-center justify-center cursor-pointer gap-[4px]"
-                    onClick={() => fileInputRef.current?.click()}
+                    className={`absolute inset-0 flex flex-col items-center justify-center gap-[4px] ${!isReadOnly ? 'cursor-pointer' : ''}`}
+                    onClick={!isReadOnly ? () => fileInputRef.current?.click() : undefined}
                   >
                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
                       <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke="#919EAB" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -784,9 +857,13 @@ function VendorReply({ status }: { status: string }) {
                       <line x1="12" y1="3" x2="12" y2="15" stroke="#919EAB" strokeWidth="1.5" strokeLinecap="round" />
                     </svg>
                     <p className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#919EAB] text-center">
-                      拖曳或{' '}
-                      <span className="text-[#1D7BF5] cursor-pointer hover:underline">點擊上傳</span>
-                      {' '}支援 JPG、PNG、PDF、Word（上限10個）
+                      {isReadOnly ? '尚無附件' : (
+                        <>
+                          拖曳或{' '}
+                          <span className="text-[#1D7BF5] cursor-pointer hover:underline">點擊上傳</span>
+                          {' '}支援 JPG、PNG、PDF、Word（上限10個）
+                        </>
+                      )}
                     </p>
                   </div>
                 ) : (
@@ -797,7 +874,7 @@ function VendorReply({ status }: { status: string }) {
                           key={img.id}
                           image={img}
                           onClick={() => setLightboxIndex(idx)}
-                          onDelete={() => handleDelete(img.id)}
+                          onDelete={isReadOnly ? undefined : () => handleDelete(img.id)}
                         />
                       ))}
                     </div>
@@ -902,17 +979,20 @@ function ReasonInputOverlay({ title, placeholder, confirmLabel, confirmColor, on
   );
 }
 
-function GiantReply({ status, returnReason, cancelReason, onCancel, onReturn, onSettle }: GiantReplyProps) {
+function GiantReply({ status, returnReason, cancelReason, initialConfirmText, onCancel, onReturn, onSettle, onAttachmentAdd, onAttachmentDelete, initialImages, onImagesChange }: GiantReplyProps & { initialConfirmText?: string; onAttachmentAdd?: (filename: string) => void; onAttachmentDelete?: (filename: string) => void; initialImages?: UploadedImage[]; onImagesChange?: (images: UploadedImage[]) => void }) {
   const isEditable = status === '巨大確認中';
-  const [confirmText, setConfirmText] = useState('後續會要求廠商圖面修改尺寸，確認來貨車把手尺寸符合圖面要求');
+  const [confirmText, setConfirmText] = useState(initialConfirmText ?? '');
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showReturnDialog, setShowReturnDialog] = useState(false);
 
   // ── 圖片上傳狀態 ──
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [images, setImages] = useState<UploadedImage[]>([]);
+  const [images, setImages] = useState<UploadedImage[]>(initialImages ?? []);
   const [isDragging, setIsDragging] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+
+  // 圖片變動時通知父層儲存（重新開啟時可還原）
+  useEffect(() => { onImagesChange?.(images); }, [images]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const addFiles = useCallback((files: FileList | File[]) => {
     const MAX = 10;
@@ -927,9 +1007,10 @@ function GiantReply({ status, returnReason, cancelReason, onCancel, onReturn, on
         file: f,
         isImage: f.type.startsWith('image/') || /\.(jpe?g|png|gif|bmp|webp|svg|avif|heic)$/i.test(f.name),
       }));
+      toAdd.forEach(img => onAttachmentAdd?.(img.name));
       return [...prev, ...toAdd];
     });
-  }, []);
+  }, [onAttachmentAdd]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) addFiles(e.target.files);
@@ -945,7 +1026,10 @@ function GiantReply({ status, returnReason, cancelReason, onCancel, onReturn, on
   const handleDelete = (id: string) => {
     setImages(prev => {
       const target = prev.find(img => img.id === id);
-      if (target) URL.revokeObjectURL(target.url);
+      if (target) {
+        URL.revokeObjectURL(target.url);
+        onAttachmentDelete?.(target.name);
+      }
       return prev.filter(img => img.id !== id);
     });
   };
@@ -993,7 +1077,7 @@ function GiantReply({ status, returnReason, cancelReason, onCancel, onReturn, on
               <span className="font-['Public_Sans:Bold',sans-serif] font-bold text-[14px] text-white">儲存後退回廠商</span>
             </button>
             <button
-              onClick={onSettle}
+              onClick={() => onSettle?.(confirmText)}
               className="flex items-center justify-center h-[36px] px-[16px] rounded-[8px] bg-[#1c252e] hover:bg-[#2c3540] transition-colors shrink-0"
             >
               <span className="font-['Public_Sans:Bold',sans-serif] font-bold text-[14px] text-white">儲存後結案</span>
@@ -1002,28 +1086,22 @@ function GiantReply({ status, returnReason, cancelReason, onCancel, onReturn, on
         )}
       </div>
 
-      {/* 退回 / 取消 原因 banner */}
-      {(returnReason || cancelReason) && (
-        <div className={`flex items-start gap-[10px] px-[14px] py-[10px] rounded-[8px] mb-[14px] ${
-          cancelReason ? 'bg-[rgba(145,158,171,0.12)]' : 'bg-[rgba(0,184,217,0.08)]'
-        }`}>
+      {/* 取消原因 banner */}
+      {!!cancelReason && (
+        <div className="flex items-start gap-[10px] px-[14px] py-[10px] rounded-[8px] mb-[14px] bg-[rgba(145,158,171,0.12)]">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="shrink-0 mt-[3px]">
-            <circle cx="12" cy="12" r="10" stroke={cancelReason ? '#637381' : '#00b8d9'} strokeWidth="1.5" />
-            <path d="M12 8v4M12 16h.01" stroke={cancelReason ? '#637381' : '#00b8d9'} strokeWidth="2" strokeLinecap="round" />
+            <circle cx="12" cy="12" r="10" stroke="#637381" strokeWidth="1.5" />
+            <path d="M12 8v4M12 16h.01" stroke="#637381" strokeWidth="2" strokeLinecap="round" />
           </svg>
           <div>
-            <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#1c252e] mb-[2px]">
-              {cancelReason ? '取消原因' : '退回原因'}
-            </p>
-            <p className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#637381]">
-              {cancelReason || returnReason}
-            </p>
+            <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#1c252e] mb-[2px]">取消原因</p>
+            <p className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#637381]">{cancelReason}</p>
           </div>
         </div>
       )}
 
       {/* 二欄：確認回覆(1) | 附件(2) */}
-      <div className="flex gap-[13px] w-full" style={{ minHeight: 180 }}>
+      <div className="flex gap-[13px] w-full" style={{ height: 200 }}>
 
         {/* 欄 1：確認回覆 */}
         <div className="flex-1 min-w-0">
@@ -1176,34 +1254,70 @@ function GiantReply({ status, returnReason, cancelReason, onCancel, onReturn, on
     </div>
   );
 }
-// 主組件
+// 主元件
 interface QualityAbnormalDetailProps {
   abnormalNumber: string;
   status: string;
+  row?: {
+    vendor: string;
+    orderNumber: string;
+    quantity: number;
+    partNumber: string;
+    description: string;
+    defectType: string;
+    emergencyAction: string;
+    causeAnalysis: string;
+    countermeasure: string;
+    gtmConfirm?: string;
+    vendorReviewer?: string;
+    vendorFiller?: string;
+    isReturned?: boolean;
+    returnReason?: string;
+    replyHistory?: HistoryEntry[];
+  };
+  onVendorReplySubmit?: (data: VendorReplyData) => void;
+  onReturn?: (reason: string) => void;
+  onCancel?: (reason: string) => void;
+  onSettle?: (confirmText: string) => void;
+  onAttachmentAdd?: (section: 'basic' | 'vendor' | 'giant', filename: string) => void;
+  onAttachmentDelete?: (section: 'basic' | 'vendor' | 'giant', filename: string) => void;
+  /** 圖片持久化：重新開啟時帶入各區塊已上傳圖片 */
+  initialFiles?: { basic: UploadedImage[]; vendor: UploadedImage[]; giant: UploadedImage[] };
+  /** 圖片變動時通知父層儲存 */
+  onFilesChange?: (section: 'basic' | 'vendor' | 'giant', images: UploadedImage[]) => void;
   onClose?: () => void;
 }
 
-export function QualityAbnormalDetail({ abnormalNumber, status: initialStatus, onClose }: QualityAbnormalDetailProps) {
+export function QualityAbnormalDetail({ abnormalNumber, status: initialStatus, row, onVendorReplySubmit, onReturn, onCancel, onSettle, onAttachmentAdd, onAttachmentDelete, initialFiles, onFilesChange, onClose }: QualityAbnormalDetailProps) {
   const [localStatus, setLocalStatus] = useState(initialStatus);
-  const [returnReason, setReturnReason] = useState('');
+  const [returnReason, setReturnReason] = useState(row?.returnReason ?? '');
   const [cancelReason, setCancelReason] = useState('');
+  const [showHistory, setShowHistory] = useState(false);
+
+  // 當外部 status prop 改變時（例如廠商送出後 V→G），同步更新 localStatus
+  useEffect(() => {
+    setLocalStatus(initialStatus);
+  }, [initialStatus]);
 
   const handleCancel = (reason: string) => {
     setCancelReason(reason);
     setLocalStatus('取消');
+    onCancel?.(reason);
   };
 
   const handleReturn = (reason: string) => {
     setReturnReason(reason);
     setLocalStatus('廠商確認中');
+    onReturn?.(reason);
   };
 
-  const handleSettle = () => {
+  const handleSettle = (confirmText: string) => {
     setLocalStatus('已結案');
+    onSettle?.(confirmText);
   };
 
-  // 巨大回覆顯示條件：非「廠商確認中」，或曾退回過（有 returnReason）
-  const showGiantReply = localStatus !== '廠商確認中' || !!returnReason;
+  // 巨大回覆顯示條件：非「廠商確認中」，或曾退回過（有 returnReason 或 row.isReturned）
+  const showGiantReply = localStatus !== '廠商確認中' || !!returnReason || !!row?.isReturned;
 
   return (
     <div className="w-full h-full overflow-y-auto overflow-x-hidden custom-scrollbar rounded-[16px] relative">
@@ -1226,18 +1340,46 @@ export function QualityAbnormalDetail({ abnormalNumber, status: initialStatus, o
         {/* 頂部標題和操作按鈕 */}
         <div className="flex h-[84px] items-center justify-between">
           <TopHeader abnormalNumber={abnormalNumber} status={localStatus} />
-          <TopActions />
+          <TopActions onHistoryOpen={() => setShowHistory(true)} />
         </div>
 
         {/* 基本資訊 */}
-        <BasicInfo />
+        <BasicInfo
+          vendor={row?.vendor ?? ''}
+          orderNumber={row?.orderNumber ?? ''}
+          quantity={row?.quantity ?? 0}
+          partNumber={row?.partNumber ?? ''}
+          description={row?.description ?? ''}
+        />
 
         {/* 不良情形 + 應急處理 + 品保圖片 */}
-        <IssueSection />
+        <IssueSection
+          defectType={row?.defectType ?? ''}
+          emergencyAction={row?.emergencyAction ?? ''}
+          onAttachmentAdd={onAttachmentAdd ? (fn) => onAttachmentAdd('basic', fn) : undefined}
+          onAttachmentDelete={onAttachmentDelete ? (fn) => onAttachmentDelete('basic', fn) : undefined}
+          initialImages={initialFiles?.basic}
+          onImagesChange={onFilesChange ? (imgs) => onFilesChange('basic', imgs) : undefined}
+          isReadOnly={localStatus === '取消' || localStatus === '已結案'}
+        />
       </div>
 
       {/* 廠商回覆區（白色背景） */}
-      <VendorReply status={localStatus} />
+      <VendorReply
+        status={localStatus}
+        initialData={{
+          reviewer: row?.vendorReviewer ?? '',
+          filler: row?.vendorFiller ?? '',
+          rootCause: row?.causeAnalysis ?? '',
+          countermeasure: row?.countermeasure ?? '',
+        }}
+        returnReason={row?.returnReason}
+        onSubmitSuccess={onVendorReplySubmit ?? onClose}
+        onAttachmentAdd={onAttachmentAdd ? (fn) => onAttachmentAdd('vendor', fn) : undefined}
+        onAttachmentDelete={onAttachmentDelete ? (fn) => onAttachmentDelete('vendor', fn) : undefined}
+        initialImages={initialFiles?.vendor}
+        onImagesChange={onFilesChange ? (imgs) => onFilesChange('vendor', imgs) : undefined}
+      />
 
       {/* 巨大回覆區 */}
       {showGiantReply && (
@@ -1245,9 +1387,28 @@ export function QualityAbnormalDetail({ abnormalNumber, status: initialStatus, o
           status={localStatus}
           returnReason={returnReason || undefined}
           cancelReason={cancelReason || undefined}
+          initialConfirmText={row?.gtmConfirm ?? ''}
           onCancel={handleCancel}
           onReturn={handleReturn}
           onSettle={handleSettle}
+          onAttachmentAdd={onAttachmentAdd ? (fn) => onAttachmentAdd('giant', fn) : undefined}
+          onAttachmentDelete={onAttachmentDelete ? (fn) => onAttachmentDelete('giant', fn) : undefined}
+          initialImages={initialFiles?.giant}
+          onImagesChange={onFilesChange ? (imgs) => onFilesChange('giant', imgs) : undefined}
+        />
+      )}
+
+      {/* 歷程 Overlay：使用系統標準 OrderHistory 表格元件 */}
+      {showHistory && (
+        <OrderHistory
+          onClose={() => setShowHistory(false)}
+          titleLabel="品質異常歷程"
+          entries={[...(row?.replyHistory ?? [])].reverse().map(e => ({
+            date: e.timestamp,
+            event: e.summary,
+            operator: e.actor === 'system' ? '系統' : e.actor,
+            remark: e.detail?.map(d => `${d.label}：${d.value}`).join('；') ?? '',
+          }))}
         />
       )}
     </div>
