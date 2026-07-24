@@ -184,9 +184,9 @@ export const pageConfig: Record<PageType, PageConfig> = {
 
   // ── 產險 ───────────────────────────────────────────────────────────────────
   'insurance-maintain': {
-    navLabel: '保險維護',
-    title: '保險維護',
-    breadcrumb: '產險 • 保險維護',
+    navLabel: '產險資料維護',
+    title: '產險資料維護',
+    breadcrumb: '產險資料維護',
   },
 
   // ── 新零件 ─────────────────────────────────────────────────────────────────

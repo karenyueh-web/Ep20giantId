@@ -7,6 +7,7 @@ import { VendorAccountReviewPageNew } from "@/app/components/VendorAccountReview
 import { GiantAccountManagementPageNew } from "@/app/components/GiantAccountManagementPageNew";
 import { PermissionSettingsPage } from "@/app/components/PermissionSettingsPage";
 import { UnderConstructionPage } from "@/app/components/UnderConstructionPage";
+import { InsuranceMaintenancePage } from "@/app/components/InsuranceMaintenancePage";
 import { ShippingBasicSettingsPage } from "@/app/components/ShippingBasicSettingsPage";
 import { ShipmentCreatePage } from "@/app/components/ShipmentCreatePage";
 import { ShipmentListPage } from "@/app/components/ShipmentListPage";
@@ -469,8 +470,24 @@ export default function App() {
           </ResponsivePageLayout>
         );
       case 'insurance-maintain':
+        return (
+          <InsuranceMaintenancePage
+            currentPage={currentPage}
+            onPageChange={handlePageChange}
+            onLogout={handleLogout}
+            userRole={userRole}
+          />
+        );
       case 'newparts-project':
       case 'newparts-settings':
+        return (
+          <UnderConstructionPage
+            currentPage={currentPage}
+            onPageChange={handlePageChange}
+            onLogout={handleLogout}
+            userRole={userRole}
+          />
+        );
       case 'vendor-evaluation':
         return (
           <ResponsivePageLayout

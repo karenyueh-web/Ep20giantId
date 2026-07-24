@@ -34,3 +34,63 @@
   - ❌ 錯誤：`<Comp prop1={a} {/* 說明 */} prop2={b} />`
   - ✅ 正確：把註解改成行內文字說明，或用 `// 單行註解` 寫在 prop 前一行（JSX 外部）
   - 若需要在 prop 旁解釋，直接寫在 JSX 元素的前一行 comment 即可
+
+### ⭐ 歷程（OrderHistory）使用規範
+- **禁止自製歷程面板**（側邊欄、自訂 inline 列表、自訂 Modal 等）
+- 所有功能頁面的「歷程」功能，**一律使用 `OrderHistory` 元件**（位於 `src/app/components/OrderHistory.tsx`）
+- `OrderHistory` 是一個**全螢幕 Modal**（`fixed inset-0 z-[200]`），點遮罩或返回箭頭可關閉
+
+#### 正確用法
+```tsx
+import { OrderHistory } from './OrderHistory';
+
+// state 控制開關
+const [showHistory, setShowHistory] = useState(false);
+
+// 歷程按鈕（點擊開啟）
+<button onClick={() => setShowHistory(true)}>歷程</button>
+
+// Modal（放在 return 最外層，與其他內容並列）
+{showHistory && (
+  <OrderHistory
+    onClose={() => setShowHistory(false)}
+    titleLabel="產險歷程"           // 自訂標題，選填
+    entries={history.map(h => ({
+      date: h.timestamp,            // 對應欄位：日期
+      event: h.summary,             // 對應欄位：事項
+      operator: h.actor,            // 對應欄位：操作人員
+      remark: '',                   // 對應欄位：備註
+    }))}
+  />
+)}
+```
+
+#### entries 格式（來自 `OrderStoreContext.HistoryEntry`）
+| 欄位 | 說明 |
+|------|------|
+| `date` | 時間戳記，顯示於「日期」欄 |
+| `event` | 事項摘要，顯示於「事項」欄 |
+| `operator` | 操作人員名稱，顯示於「操作人員」欄 |
+| `remark` | 備註，顯示於「備註」欄（可傳空字串） |
+
+#### ❌ 禁止的做法
+- ❌ 自製側邊欄（`shrink-0 flex flex-col rounded-[12px] border ...`）
+- ❌ 自製 inline 歷程列表（`form.history.map(...)`）
+- ❌ 用 `BaseOverlay` 自製歷程彈窗
+- ❌ 傳入與 `OrderStoreContext.HistoryEntry` 不符的 entries 結構
+- ❌ 「歷程」觸發元素使用 `<button>` 加灰色樣式
+
+#### 歷程觸發按鈕的正確樣式（藍色底線文字）
+參考 `QualityAbnormalDetail.tsx` 的 `TopActions` 元件：
+```tsx
+{/* ✅ 正確：藍色底線文字，Roboto 字體 */}
+<p
+  onClick={() => setShowHistory(true)}
+  className="[text-decoration-skip-ink:none] decoration-solid font-['Roboto:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[32px] text-[#005eb8] text-[16px] underline cursor-pointer hover:text-[#003d73] shrink-0"
+>
+  歷程
+</p>
+
+{/* ❌ 錯誤：灰色 button 或自訂顏色 */}
+<button className="text-[#637381]..." style={{ color: '...' }}>歷程</button>
+```
