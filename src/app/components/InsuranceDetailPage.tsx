@@ -458,14 +458,14 @@ export function InsuranceDetailPage({
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
-    set('attachments', [...form.attachments, ...Array.from(files).map(f => ({ name: f.name }))]);
+    set('attachments', [...form.attachments, ...Array.from(files).map(f => ({ name: f.name, url: URL.createObjectURL(f) }))]);
     e.target.value = '';
   };
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     const files = e.dataTransfer.files;
     if (!files) return;
-    set('attachments', [...form.attachments, ...Array.from(files).map(f => ({ name: f.name }))]);
+    set('attachments', [...form.attachments, ...Array.from(files).map(f => ({ name: f.name, url: URL.createObjectURL(f) }))]);
   };
 
   // ── 動作按鈕 ──
@@ -827,7 +827,14 @@ export function InsuranceDetailPage({
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="shrink-0">
                     <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" stroke="#637381" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
-                  <span className="flex-1 text-[14px] text-[#1c252e] truncate font-['Public_Sans:Regular',sans-serif]">{att.name}</span>
+                  <a
+                    href={att.url || '#'}
+                    download={att.name}
+                    onClick={e => { if (!att.url) e.preventDefault(); }}
+                    className={`flex-1 text-[14px] truncate font-['Public_Sans:Regular',sans-serif] ${att.url ? 'text-[#005eb8] underline cursor-pointer hover:text-[#003d73]' : 'text-[#1c252e]'}`}
+                  >
+                    {att.name}
+                  </a>
                   {!isReadOnly && (
                     <button
                       onClick={() => set('attachments', form.attachments.filter((_, i) => i !== idx))}

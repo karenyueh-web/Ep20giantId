@@ -4,7 +4,7 @@ import { TableToolbar } from './TableToolbar';
 import { ColumnSelector } from './ColumnSelector';
 import { FilterDialog, type FilterCondition } from './FilterDialog';
 import { PaginationControls } from './PaginationControls';
-import { CheckboxIcon } from './CheckboxIcon';
+
 import { DropdownSelect } from './DropdownSelect';
 import { SearchField } from './SearchField';
 import { BaseOverlay } from './BaseOverlay';
@@ -123,7 +123,7 @@ function DraggableColHeader({
         </svg>
       </div>
       <div className="flex items-center px-[16px] w-full">
-        <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[22px] text-[#637381] text-[12px] truncate flex-1">{col.label}</p>
+        <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[22px] text-[#637381] text-[14px] truncate flex-1">{col.label}</p>
         {sortKey === col.key && <span className="ml-[4px] text-[#637381] text-[10px]">{sortDir === 'asc' ? '▲' : '▼'}</span>}
       </div>
       {!isLast && (
@@ -219,7 +219,7 @@ export function InsuranceMaintenancePage({ currentPage, onPageChange, onLogout, 
   const [vendorFilter, setVendorFilter] = useState('');
   const [paidFilter, setPaidFilter] = useState('');
   const [columns, setColumns] = useState<ColDef[]>(DEFAULT_COLS);
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+
   const [sortKey, setSortKey] = useState<ColKey | null>('year');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [page, setPage] = useState(1);
@@ -281,14 +281,7 @@ export function InsuranceMaintenancePage({ currentPage, onPageChange, onLogout, 
   const vCount  = tableData.filter(r => r.status === 'V').length;
   const gCount  = tableData.filter(r => r.status === 'G').length;
   const clCount = tableData.filter(r => r.status === 'CL').length;
-  const isAllSelected  = paginatedData.length > 0 && paginatedData.every(r => selectedIds.has(r.id));
-  const isSomeSelected = selectedIds.size > 0 && !isAllSelected;
 
-  const handleSelectAll = () => {
-    if (isAllSelected) setSelectedIds(new Set());
-    else setSelectedIds(new Set(paginatedData.map(r => r.id)));
-  };
-  const handleToggleRow = (id: number) => setSelectedIds(prev => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
   const handleSort = (key: ColKey) => { if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortKey(key); setSortDir('asc'); } };
   const handleMoveCol = useCallback((from: number, to: number) => setColumns(prev => { const next = [...prev]; const [m] = next.splice(from, 1); next.splice(to, 0, m); return next; }), []);
   const handleResizeStart = useCallback((key: ColKey, startX: number, startW: number) => {
@@ -383,30 +376,13 @@ export function InsuranceMaintenancePage({ currentPage, onPageChange, onLogout, 
             >快到期名單</button>
           }
         />
-        {/* Selection bar */}
-        {selectedIds.size > 0 && (
-          <div className="shrink-0 flex items-center h-[48px] border-b border-[rgba(145,158,171,0.08)] bg-[#d9e8f5]">
-            <div className="flex items-center justify-center shrink-0" style={{ width: 48 }}>
-              <button onClick={handleSelectAll} className="flex items-center justify-center w-[36px] h-[36px] rounded-full hover:bg-[rgba(0,85,156,0.12)] transition-colors">
-                <CheckboxIcon checked={isAllSelected} indeterminate={isSomeSelected} />
-              </button>
-            </div>
-            <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-[#1c252e] leading-[24px] mr-[4px]">{selectedIds.size} selected</span>
-          </div>
-        )}
+
         {/* Table */}
         <DndProvider backend={HTML5Backend}>
           <div ref={scrollContainerRef} onMouseDown={handleMouseDown} className="flex-1 min-h-0 overflow-x-auto overflow-y-auto custom-scrollbar cursor-grab">
             <div style={{ minWidth: totalWidth }} className="w-full">
               {/* Header */}
               <div className="flex sticky top-0 z-10">
-                <div className="bg-[#f4f6f8] border-b border-[rgba(145,158,171,0.08)] flex items-center justify-center shrink-0" style={{ width: 48, height: 56, position: 'sticky', left: 0, zIndex: 20 }}>
-                  {selectedIds.size === 0 && (
-                    <button onClick={handleSelectAll} className="flex items-center justify-center w-[36px] h-[36px] rounded-full hover:bg-[rgba(0,85,156,0.12)] transition-colors">
-                      <CheckboxIcon checked={isAllSelected} indeterminate={isSomeSelected} />
-                    </button>
-                  )}
-                </div>
                 {columns.map((col, idx) => (
                   <DraggableColHeader key={col.key} col={col} index={idx} isLast={idx === columns.length - 1}
                     onMove={handleMoveCol} sortKey={sortKey} sortDir={sortDir}
@@ -420,9 +396,6 @@ export function InsuranceMaintenancePage({ currentPage, onPageChange, onLogout, 
                 <div className="flex items-center justify-center py-[60px] text-[#637381] text-[14px]">沒有符合條件的資料</div>
               ) : paginatedData.map(row => (
                 <div key={row.id} className="group flex border-b border-[rgba(145,158,171,0.08)] hover:bg-[rgba(145,158,171,0.04)] cursor-pointer" onClick={() => setSelectedRow(row)}>
-                  <div data-is-checkbox="true" onClick={e => e.stopPropagation()} className="flex items-center justify-center shrink-0 bg-white group-hover:bg-[rgba(145,158,171,0.04)]" style={{ width: 48, minWidth: 48, position: 'sticky', left: 0, zIndex: 4 }}>
-                    <CheckboxIcon checked={selectedIds.has(row.id)} onChange={() => handleToggleRow(row.id)} />
-                  </div>
                   {columns.map(col => (
                     <div key={col.key} className="flex items-center px-[16px] border-r border-[rgba(145,158,171,0.06)]" style={{ width: col.width, minWidth: col.minWidth, height: 52 }}>
                       {col.key === 'year' && (
