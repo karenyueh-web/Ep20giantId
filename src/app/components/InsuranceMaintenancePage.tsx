@@ -192,7 +192,7 @@ function ExpiryModal({ onClose, data, onRowClick }: {
                   onClick={() => { onClose(); onRowClick(row); }}
                 >
                   <div className="w-[140px] shrink-0">
-                    <span className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[14px] text-[#1677ff] underline hover:text-[#0958d9] transition-colors">{row.year}產險資料</span>
+                    <span className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[14px] text-[#1677ff] underline hover:text-[#0958d9] transition-colors">{row.vendorName}-{row.year}產險資料</span>
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[14px] text-[#1c252e] truncate">{row.vendorName}({row.vendorCode})</p>
@@ -296,7 +296,7 @@ export function InsuranceMaintenancePage({ currentPage, onPageChange, onLogout, 
     let maxDataW = 0;
     sortedData.forEach(row => {
       let text = '';
-      if (key === 'year') text = `${row.year}產險資料`;
+      if (key === 'year') text = `${row.vendorName}-${row.year}產險資料`;
       else if (key === 'vendor') text = `${row.vendorName}(${row.vendorCode})`;
       else if (key === 'status') text = row.status;
       else if (key === 'effectiveDate') text = row.effectiveDate;
@@ -316,7 +316,7 @@ export function InsuranceMaintenancePage({ currentPage, onPageChange, onLogout, 
         currentPage={currentPage}
         onPageChange={onPageChange}
         onLogout={onLogout}
-        userRole={userRole}
+        userRole={liveRow.status === 'V' ? 'vendor' : 'giant'}
         onBack={() => setSelectedRow(null)}
         onSave={updated => { setTableData(prev => prev.map(r => r.id === updated.id ? updated : r)); setSelectedRow(null); }}
         onStatusChange={(id, status) => { setTableData(prev => prev.map(r => r.id === id ? { ...r, status } : r)); setSelectedRow(null); }}
@@ -399,7 +399,7 @@ export function InsuranceMaintenancePage({ currentPage, onPageChange, onLogout, 
                   {columns.map(col => (
                     <div key={col.key} className="flex items-center px-[16px] border-r border-[rgba(145,158,171,0.06)]" style={{ width: col.width, minWidth: col.minWidth, height: 52 }}>
                       {col.key === 'year' && (
-                        <button onClick={e => { e.stopPropagation(); setSelectedRow(row); }} className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] text-[#1677ff] underline hover:text-[#0958d9] transition-colors cursor-pointer truncate">{row.year}產險資料</button>
+                        <button onClick={e => { e.stopPropagation(); setSelectedRow(row); }} className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] text-[#1677ff] underline hover:text-[#0958d9] transition-colors cursor-pointer truncate">{row.vendorName}-{row.year}產險資料</button>
                       )}
                       {col.key === 'vendor' && <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] text-[#1c252e] truncate">{row.vendorName}({row.vendorCode})</p>}
                       {col.key === 'status' && <StatusBadge status={row.status} />}

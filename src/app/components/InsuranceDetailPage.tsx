@@ -1,4 +1,5 @@
 import { useState, useRef, useMemo } from 'react';
+import { BaseOverlay } from './BaseOverlay';
 import closeIconPaths from "@/imports/svg-gcyyqek0b9";
 import { ResponsivePageLayout } from './ResponsivePageLayout';
 import { DropdownSelect } from './DropdownSelect';
@@ -46,7 +47,7 @@ function FloatingInput({
   noResize?: boolean;
   hasError?: boolean;
 }) {
-  const defaultBorder = hasError ? '#ff5630' : (required && !value ? '#ff5630' : 'rgba(145,158,171,0.2)');
+  const defaultBorder = hasError ? '#ff5630' : 'rgba(145,158,171,0.2)';
   const handleFocus = (el: HTMLElement) => {
     if (disabled) return;
     const b = el.parentElement?.querySelector('[aria-hidden]') as HTMLElement;
@@ -59,7 +60,7 @@ function FloatingInput({
   const labelNode = (
     <div className="absolute flex items-center left-[14px] px-[2px] top-[-7px] z-10">
       <div className="absolute bg-white h-[2px] left-0 right-0 top-[7px]" />
-      <p className="relative shrink-0 leading-[14px] whitespace-nowrap" style={{ fontSize: '14px', fontWeight: 600, color: hasError ? '#ff5630' : (required && !value ? '#ff5630' : '#1c252e') }}>
+      <p className="relative shrink-0 leading-[14px] whitespace-nowrap" style={{ fontSize: '14px', fontWeight: 600, color: hasError ? '#ff5630' : '#1c252e' }}>
         {required && <span style={{ color: '#ff5630', marginRight: '2px' }}>*</span>}
         {label}
       </p>
@@ -126,12 +127,13 @@ function StatusBadge({ status }: { status: InsuranceStatus }) {
 }
 
 // ─── SectionTitle ─────────────────────────────────────────────────────────────
-function SectionTitle({ title }: { title: string }) {
+function SectionTitle({ title, required }: { title: string; required?: boolean }) {
   return (
     <div className="h-[48px] min-h-[48px] relative shrink-0">
       <div aria-hidden="true" className="absolute border-[#1c252e] border-b-2 border-solid inset-0 pointer-events-none" />
       <div className="flex items-center h-full px-[4px]">
         <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[28px] text-[#1c252e] text-[18px] whitespace-nowrap">
+          {required && <span style={{ color: '#ff5630', marginRight: '4px' }}>*</span>}
           {title}
         </p>
       </div>
@@ -269,7 +271,7 @@ function saveLastUsedCurrency(code: string) {
 }
 
 function PremiumAmountRow({
-  label, amount, currency, onAmountChange, onCurrencyChange, disabled,
+  label, amount, currency, onAmountChange, onCurrencyChange, disabled, required, hasError: externalHasError,
 }: {
   label: string;
   amount: number | null;
@@ -277,10 +279,68 @@ function PremiumAmountRow({
   onAmountChange?: (v: number | null) => void;
   onCurrencyChange?: (v: string) => void;
   disabled?: boolean;
+  required?: boolean;
+  hasError?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery]   = useState('');
   const dropRef = useRef<HTMLDivElement>(null);
+
+  // ── 千分位輸入狀態 ──
+  const [inputText, setInputText] = useState<string | null>(null);
+  const [internalHasError, setInternalHasError] = useState(false);
+  // 外部驗證失敗 OR 內部 blur 失敗
+  const hasError = externalHasError || internalHasError;
+
+  // 格式化數值為千分位字串
+  const formatNumber = (v: number | null): string => {
+    if (v === null || v === undefined) return '';
+    return v.toLocaleString('en-US');
+  };
+
+  // 解析千分位字串為數字
+  const parseInput = (s: string): number | null => {
+    const clean = s.replace(/,/g, '').trim();
+    if (clean === '') return null;
+    const n = Number(clean);
+    return isNaN(n) ? null : n;
+  };
+
+  // 顯示值：輸入中用 inputText，否則用格式化的 amount
+  const displayValue = inputText !== null ? inputText : formatNumber(amount);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    // 只允許數字、逗號、一個小數點
+    const cleaned = raw.replace(/[^\d.,]/g, '');
+    setInputText(cleaned);
+    setInternalHasError(false);
+    const parsed = parseInput(cleaned);
+    onAmountChange?.(parsed);
+  };
+
+  const handleBlur = () => {
+    const parsed = parseInput(inputText ?? '');
+    // 驗證：有值時不可為 0
+    if (parsed !== null && parsed <= 0) {
+      setInternalHasError(true);
+    } else {
+      setInternalHasError(false);
+      onAmountChange?.(parsed);
+    }
+    // 離開輸入框後回到格式化顯示
+    setInputText(null);
+  };
+
+  const handleFocus = () => {
+    // 進入編輯時，把 amount 轉成純數字字串（去掉逗號）
+    if (amount !== null) {
+      setInputText(String(amount));
+    } else {
+      setInputText('');
+    }
+    setInternalHasError(false);
+  };
 
   const sorted = useMemo(() => {
     const lastUsed = getLastUsedCurrencies();
@@ -301,109 +361,122 @@ function PremiumAmountRow({
   }, [sorted, query]);
 
   return (
-    <div className="flex items-center gap-[12px]">
-      {/* 左側 label */}
-      <span className="shrink-0 font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[14px] text-[#1c252e] leading-[22px]">
-        {label}
-      </span>
+    <div className="flex flex-col gap-[4px]">
+      <div className="flex items-center gap-[12px]">
+        {/* 左側 label */}
+        <span className="shrink-0 font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[14px] leading-[22px]" style={{ color: hasError ? '#ff5630' : '#1c252e' }}>
+          {required && <span style={{ color: '#ff5630', marginRight: '2px' }}>*</span>}
+          {label}
+        </span>
 
-      {/* 金額 + 幣別 組合 pill：relative 在這層，下拉面板定位於此 */}
-      <div className="relative flex items-center rounded-[8px] border border-[rgba(145,158,171,0.32)] h-[36px]">
-        {/* 金額 input */}
-        <input
-          type="number"
-          className="w-[140px] h-full px-[12px] text-[14px] text-[#1c252e] outline-none bg-transparent border-0 placeholder:text-[#919eab]"
-          value={amount !== null ? String(amount) : ''}
-          onChange={e => onAmountChange?.(e.target.value === '' ? null : Number(e.target.value))}
-          readOnly={disabled}
-          placeholder={disabled ? '' : '金額'}
-        />
+        {/* 金額 + 幣別 組合 pill：relative 在這層，下拉面板定位於此 */}
+        <div className={`relative flex items-center rounded-[8px] border h-[36px] transition-colors ${
+          hasError ? 'border-[#ff4842]' : 'border-[rgba(145,158,171,0.32)]'
+        }`}>
+          {/* 金額 input */}
+          <input
+            type="text"
+            inputMode="numeric"
+            className="w-[140px] h-full px-[12px] text-[14px] text-[#1c252e] outline-none bg-transparent border-0 placeholder:text-[#919eab]"
+            value={displayValue}
+            onChange={handleChange}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            readOnly={disabled}
+            placeholder={disabled ? '' : '金額'}
+          />
 
-        {/* 分隔線 */}
-        <div className="w-[1px] h-[20px] bg-[rgba(145,158,171,0.32)] shrink-0" />
+          {/* 分隔線 */}
+          <div className="w-[1px] h-[20px] bg-[rgba(145,158,171,0.32)] shrink-0" />
 
-        {/* 幣別 pill trigger */}
-        <button
-          disabled={disabled}
-          onClick={() => !disabled && setOpen(o => !o)}
-          className="flex items-center gap-[4px] px-[12px] h-[36px] text-[14px] font-semibold text-[#1c252e] hover:bg-[#f4f6f8] rounded-r-[8px] transition-colors disabled:cursor-default min-w-[72px]"
-        >
-          <span>{currency || '幣別'}</span>
-          {!disabled && (
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-              <path d="M6 9l6 6 6-6" stroke="#637381" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          )}
-        </button>
+          {/* 幣別 pill trigger */}
+          <button
+            disabled={disabled}
+            onClick={() => !disabled && setOpen(o => !o)}
+            className="flex items-center gap-[4px] px-[12px] h-[36px] text-[14px] font-semibold text-[#1c252e] hover:bg-[#f4f6f8] rounded-r-[8px] transition-colors disabled:cursor-default min-w-[72px]"
+          >
+            <span>{currency || '幣別'}</span>
+            {!disabled && (
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                <path d="M6 9l6 6 6-6" stroke="#637381" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            )}
+          </button>
 
-        {/* 幣別搜尋式下拉面板 — 定位於 pill 容器下方左側 */}
-        {open && (
-          <>
-            <div className="fixed inset-0 z-[90]" onClick={() => { setOpen(false); setQuery(''); }} />
-            <div
-              className="absolute left-0 z-[100] bg-white rounded-[8px] shadow-[0px_8px_24px_rgba(0,0,0,0.12)] border border-[rgba(145,158,171,0.16)]"
-              style={{ top: 'calc(100% + 8px)', minWidth: '320px', maxHeight: '320px', display: 'flex', flexDirection: 'column' }}
-            >
-              {/* 搜尋欄 */}
-              <div className="px-[10px] py-[8px] border-b border-[rgba(145,158,171,0.12)] shrink-0">
-                <div className="flex items-center gap-[6px] border border-[rgba(145,158,171,0.32)] rounded-[6px] px-[10px] py-[5px] focus-within:border-[#005eb8] transition-colors">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" className="shrink-0">
-                    <circle cx="11" cy="11" r="8" stroke="#919eab" strokeWidth="2"/>
-                    <path d="m21 21-4.35-4.35" stroke="#919eab" strokeWidth="2" strokeLinecap="round"/>
-                  </svg>
-                  <input
-                    autoFocus
-                    type="text"
-                    value={query}
-                    onChange={e => setQuery(e.target.value)}
-                    onClick={e => e.stopPropagation()}
-                    placeholder="搜尋代碼或名稱..."
-                    className="flex-1 text-[13px] text-[#1c252e] placeholder:text-[#c4cdd6] outline-none bg-transparent border-0"
-                  />
-                  {query && (
-                    <button onClick={e => { e.stopPropagation(); setQuery(''); }} className="text-[#919eab] hover:text-[#1c252e]">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M18 6 6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
-                    </button>
+          {/* 幣別搜尋式下拉面板 — 定位於 pill 容器下方左側 */}
+          {open && (
+            <>
+              <div className="fixed inset-0 z-[90]" onClick={() => { setOpen(false); setQuery(''); }} />
+              <div
+                className="absolute left-0 z-[100] bg-white rounded-[8px] shadow-[0px_8px_24px_rgba(0,0,0,0.12)] border border-[rgba(145,158,171,0.16)]"
+                style={{ top: 'calc(100% + 8px)', minWidth: '320px', maxHeight: '320px', display: 'flex', flexDirection: 'column' }}
+              >
+                {/* 搜尋欄 */}
+                <div className="px-[10px] py-[8px] border-b border-[rgba(145,158,171,0.12)] shrink-0">
+                  <div className="flex items-center gap-[6px] border border-[rgba(145,158,171,0.32)] rounded-[6px] px-[10px] py-[5px] focus-within:border-[#005eb8] transition-colors">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" className="shrink-0">
+                      <circle cx="11" cy="11" r="8" stroke="#919eab" strokeWidth="2"/>
+                      <path d="m21 21-4.35-4.35" stroke="#919eab" strokeWidth="2" strokeLinecap="round"/>
+                    </svg>
+                    <input
+                      autoFocus
+                      type="text"
+                      value={query}
+                      onChange={e => setQuery(e.target.value)}
+                      onClick={e => e.stopPropagation()}
+                      placeholder="搜尋代碼或名稱..."
+                      className="flex-1 text-[13px] text-[#1c252e] placeholder:text-[#c4cdd6] outline-none bg-transparent border-0"
+                    />
+                    {query && (
+                      <button onClick={e => { e.stopPropagation(); setQuery(''); }} className="text-[#919eab] hover:text-[#1c252e]">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M18 6 6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                      </button>
+                    )}
+                  </div>
+                </div>
+                {/* 選項列表 */}
+                <div className="overflow-y-auto custom-scrollbar flex-1">
+                  {filtered.length > 0 ? filtered.map((c, i) => {
+                    const lastUsed = getLastUsedCurrencies();
+                    const isLastRecent = !query && lastUsed.length > 0 && i === lastUsed.length - 1 && i < filtered.length - 1;
+                    return (
+                      <div key={`${c.code}-${i}`}>
+                        <div
+                          className={`px-[14px] py-[9px] cursor-pointer flex items-center justify-between transition-colors ${
+                            currency === c.code ? 'bg-[rgba(0,94,184,0.08)]' : 'hover:bg-[rgba(145,158,171,0.06)]'
+                          }`}
+                          onClick={() => { saveLastUsedCurrency(c.code); onCurrencyChange?.(c.code); setOpen(false); setQuery(''); }}
+                        >
+                          <div>
+                            <span className="font-semibold text-[13px] text-[#005eb8] mr-[8px]">{c.code}</span>
+                            <span className="text-[13px] text-[#1c252e]">{c.fullName || c.shortName}</span>
+                          </div>
+                          {currency === c.code && (
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="shrink-0">
+                              <path d="M20 6 9 17l-5-5" stroke="#005eb8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          )}
+                        </div>
+                        {isLastRecent && <div className="mx-[14px] border-t border-[rgba(145,158,171,0.16)]" />}
+                      </div>
+                    );
+                  }) : (
+                    <div className="px-[14px] py-[16px] text-center">
+                      <p className="text-[13px] text-[#919eab]">無符合的幣別</p>
+                    </div>
                   )}
                 </div>
               </div>
-              {/* 選項列表 */}
-              <div className="overflow-y-auto custom-scrollbar flex-1">
-                {filtered.length > 0 ? filtered.map((c, i) => {
-                  const lastUsed = getLastUsedCurrencies();
-                  const isLastRecent = !query && lastUsed.length > 0 && i === lastUsed.length - 1 && i < filtered.length - 1;
-                  return (
-                    <div key={`${c.code}-${i}`}>
-                      <div
-                        className={`px-[14px] py-[9px] cursor-pointer flex items-center justify-between transition-colors ${
-                          currency === c.code ? 'bg-[rgba(0,94,184,0.08)]' : 'hover:bg-[rgba(145,158,171,0.06)]'
-                        }`}
-                        onClick={() => { saveLastUsedCurrency(c.code); onCurrencyChange?.(c.code); setOpen(false); setQuery(''); }}
-                      >
-                        <div>
-                          <span className="font-semibold text-[13px] text-[#005eb8] mr-[8px]">{c.code}</span>
-                          <span className="text-[13px] text-[#1c252e]">{c.fullName || c.shortName}</span>
-                        </div>
-                        {currency === c.code && (
-                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="shrink-0">
-                            <path d="M20 6 9 17l-5-5" stroke="#005eb8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                          </svg>
-                        )}
-                      </div>
-                      {isLastRecent && <div className="mx-[14px] border-t border-[rgba(145,158,171,0.16)]" />}
-                    </div>
-                  );
-                }) : (
-                  <div className="px-[14px] py-[16px] text-center">
-                    <p className="text-[13px] text-[#919eab]">無符合的幣別</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </>
-        )}
+            </>
+          )}
+        </div>
       </div>
-
+      {/* 錯誤提示 */}
+      {hasError && (
+        <span className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] text-[12px] text-[#ff4842] leading-[18px] ml-[0px]">
+          金額不可為 0
+        </span>
+      )}
     </div>
   );
 }
@@ -424,6 +497,8 @@ export function InsuranceDetailPage({
   const isVendor = activeRole === 'vendor';
   const [showHistory, setShowHistory] = useState(false);
   const [form, setForm] = useState<InsuranceRecord>({ ...record });
+  const [missingFields, setMissingFields] = useState<string[]>([]);
+  const [showValidation, setShowValidation] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ── 從廠商明細查詢廠商資料（廠商編號、主要營業商品）──
@@ -468,12 +543,35 @@ export function InsuranceDetailPage({
     set('attachments', [...form.attachments, ...Array.from(files).map(f => ({ name: f.name, url: URL.createObjectURL(f) }))]);
   };
 
+  // ── 廠商必填欄位驗證 ──
+  const validateVendorFields = (): string[] => {
+    const missing: string[] = [];
+    if (form.factories.length === 0)             missing.push('工廠涵蓋範圍（至少勾選一項）');
+    if (!form.insuranceCompanyZh.trim())         missing.push('保險公司名稱（中）');
+    if (!form.insuranceCompanyEn.trim())         missing.push('保險公司名稱（En）');
+    if (!form.effectiveDate)                     missing.push('生效日期');
+    if (!form.expiryDate)                        missing.push('截止日期');
+    if (!form.creditRating.trim())               missing.push('保險公司信用評等');
+    if (form.premium === null || form.premium <= 0)  missing.push('保費金額（需大於 0）');
+    if (!form.premiumCurrency)                   missing.push('保費幣別');
+    if (form.attachments.length === 0)           missing.push('保單附件（至少上傳一份）');
+    return missing;
+  };
+
   // ── 動作按鈕 ──
   const handleSave = () => onSave(form);
   const handleReturnToVendor = () => onStatusChange(form.id, 'V');
   const handleCloseAfterSave = () => { onSave(form); onStatusChange(form.id, 'CL'); };
   const handleConfirmClose = () => onStatusChange(form.id, 'CL');
-  const handleTransferToProcurement = () => onStatusChange(form.id, 'G');
+  const handleTransferToProcurement = () => {
+    const missing = validateVendorFields();
+    if (missing.length > 0) {
+      setShowValidation(true);
+      setMissingFields(missing);
+      return;
+    }
+    onStatusChange(form.id, 'G');
+  };
 
   // ── 動作按鈕列 ──
   function ActionButtons() {
@@ -584,7 +682,10 @@ export function InsuranceDetailPage({
 
               {/* Row 1b: 工廠涵蓋範圍（移至廠商編號下方） */}
               <div className="flex items-center gap-[12px] flex-wrap">
-                <span className="shrink-0 font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[14px] text-[#1c252e] w-[120px]">
+                <span className={`shrink-0 font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[14px] w-[120px] ${
+                  isVendor && !isReadOnly && showValidation && form.factories.length === 0 ? 'text-[#ff5630]' : 'text-[#1c252e]'
+                }`}>
+                  {isVendor && !isReadOnly && <span style={{ color: '#ff5630', marginRight: '2px' }}>*</span>}
                   工廠涵蓋範圍
                 </span>
                 <CheckItem label="同去年設定" checked={form.sameAsLastYear} disabled={isReadOnly} onChange={handleSameAsLastYear} />
@@ -613,6 +714,8 @@ export function InsuranceDetailPage({
                     disabled={isReadOnly}
                     placeholder="請輸入中文名稱"
                     noResize
+                    required={isVendor && !isReadOnly}
+                    hasError={isVendor && !isReadOnly && showValidation && !form.insuranceCompanyZh.trim()}
                   />
                 </div>
                 <div className="min-w-0" style={{ flex: 2 }}>
@@ -623,6 +726,8 @@ export function InsuranceDetailPage({
                     disabled={isReadOnly}
                     placeholder="Please enter English name"
                     noResize
+                    required={isVendor && !isReadOnly}
+                    hasError={isVendor && !isReadOnly && showValidation && !form.insuranceCompanyEn.trim()}
                   />
                 </div>
               </div>
@@ -635,6 +740,8 @@ export function InsuranceDetailPage({
                     value={form.effectiveDate}
                     onChange={v => set('effectiveDate', v)}
                     disabled={isReadOnly}
+                    required={isVendor && !isReadOnly}
+                    hasError={isVendor && !isReadOnly && showValidation && !form.effectiveDate}
                   />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -643,6 +750,8 @@ export function InsuranceDetailPage({
                     value={form.expiryDate}
                     onChange={v => set('expiryDate', v)}
                     disabled={isReadOnly}
+                    required={isVendor && !isReadOnly}
+                    hasError={isVendor && !isReadOnly && showValidation && !form.expiryDate}
                   />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -653,6 +762,8 @@ export function InsuranceDetailPage({
                     disabled={isReadOnly}
                     placeholder="如 AM Best: A+"
                     noResize
+                    required={isVendor && !isReadOnly}
+                    hasError={isVendor && !isReadOnly && showValidation && !form.creditRating.trim()}
                   />
                 </div>
               </div>
@@ -768,6 +879,8 @@ export function InsuranceDetailPage({
                 onAmountChange={v => set('premium', v)}
                 onCurrencyChange={v => set('premiumCurrency', v)}
                 disabled={isReadOnly}
+                required={isVendor && !isReadOnly}
+                hasError={isVendor && !isReadOnly && showValidation && (form.premium === null || form.premium <= 0)}
               />
 
               {/* 巨大視角才顯示 */}
@@ -815,7 +928,10 @@ export function InsuranceDetailPage({
 
             {/* ── 保單附件 section ── */}
             <div className="flex items-center gap-[16px] mb-[16px]">
-              <SectionTitle title="保單附件" />
+              <SectionTitle title="保單附件" required={isVendor && !isReadOnly} />
+              {isVendor && !isReadOnly && showValidation && form.attachments.length === 0 && (
+                <span className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#ff5630] leading-[18px]">至少需上傳一份附件</span>
+              )}
             </div>
             <div className="flex flex-col gap-[8px] mb-[24px]">
               {/* 附件列表 */}
@@ -881,6 +997,51 @@ export function InsuranceDetailPage({
             remark: '',
           }))}
         />
+      )}
+
+      {/* ══ 廠商必填欄位驗證 Alert ══ */}
+      {missingFields.length > 0 && (
+        <BaseOverlay onClose={() => setMissingFields([])} maxWidth="420px" maxHeight="360px">
+          {/* 頂部警示列 */}
+          <div className="shrink-0 flex items-center gap-[12px] pl-[4px] pr-[16px] py-[4px] border-b border-[rgba(145,158,171,0.12)]">
+            <div className="flex items-center justify-center rounded-[12px] shrink-0 size-[48px] bg-[rgba(255,86,48,0.08)]">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="#FF5630" strokeWidth="1.5" />
+                <path d="M12 8v4M12 16h.01" stroke="#FF5630" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            </div>
+            <p className="flex-1 font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] leading-[22px] text-[#1c252e]">尚未填寫必要欄位</p>
+            <button
+              onClick={() => setMissingFields([])}
+              className="flex items-center justify-center w-[36px] h-[36px] rounded-full hover:bg-[rgba(145,158,171,0.12)] transition-colors shrink-0"
+            >
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M15 5L5 15M5 5l10 10" stroke="#637381" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            </button>
+          </div>
+          {/* 內容 */}
+          <div className="flex-1 overflow-y-auto px-[20px] py-[16px]">
+            <p className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#637381] mb-[12px]">轉交整合採購前請先完成以下欄位：</p>
+            <ul className="space-y-[6px]">
+              {missingFields.map(f => (
+                <li key={f} className="flex items-center gap-[8px]">
+                  <div className="w-[6px] h-[6px] rounded-full bg-[#FF5630] shrink-0" />
+                  <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#1c252e]">{f}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+          {/* 底部 */}
+          <div className="shrink-0 flex justify-end px-[20px] py-[12px] border-t border-[rgba(145,158,171,0.12)]">
+            <button
+              onClick={() => setMissingFields([])}
+              className="flex items-center justify-center h-[36px] px-[20px] rounded-[8px] bg-[#1c252e] hover:bg-[#2c3540] transition-colors"
+            >
+              <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-white">確認</span>
+            </button>
+          </div>
+        </BaseOverlay>
       )}
     </ResponsivePageLayout>
   );
