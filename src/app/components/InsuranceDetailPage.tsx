@@ -62,9 +62,10 @@ function FloatingInput({
     const b = el.parentElement?.querySelector('[aria-hidden]') as HTMLElement;
     if (b) { b.style.borderColor = defaultBorder; b.style.boxShadow = 'none'; }
   };
+  const labelBg = disabled ? '#f4f6f8' : 'white';
   const labelNode = (
     <div className="absolute flex items-center left-[14px] px-[2px] top-[-7px] z-10">
-      <div className="absolute bg-white h-[2px] left-0 right-0 top-[7px]" />
+      <div className="absolute h-[2px] left-0 right-0 top-[7px]" style={{ background: labelBg }} />
       <p className="relative shrink-0 leading-[14px] whitespace-nowrap" style={{ fontSize: '14px', fontWeight: 600, color: hasError ? '#ff5630' : vendorField ? '#005eb8' : '#1c252e' }}>
         {required && <span style={{ color: '#ff5630', marginRight: '2px' }}>*</span>}
         {label}
@@ -73,7 +74,7 @@ function FloatingInput({
   );
   if (noResize) {
     return (
-      <div className="relative w-full h-[54px]">
+      <div className="relative w-full h-[54px]" style={{ background: disabled ? '#f4f6f8' : 'white', borderRadius: 8 }}>
         <div aria-hidden="true" className="absolute inset-0 pointer-events-none rounded-[8px] border border-solid" style={{ borderColor: defaultBorder }} />
         {labelNode}
         <input
@@ -87,12 +88,11 @@ function FloatingInput({
           onFocus={e => handleFocus(e.currentTarget)}
           onBlur={e => handleBlur(e.currentTarget)}
         />
-        {disabled && <div className="absolute inset-0 rounded-[8px] bg-[rgba(145,158,171,0.06)] pointer-events-none" />}
       </div>
     );
   }
   return (
-    <div className="relative w-full" style={{ minHeight: '54px' }}>
+    <div className="relative w-full" style={{ minHeight: '54px', background: disabled ? '#f4f6f8' : 'white', borderRadius: 8 }}>
       <div aria-hidden="true" className="absolute inset-0 pointer-events-none rounded-[8px] border border-solid" style={{ borderColor: defaultBorder }} />
       {labelNode}
       <textarea
@@ -230,14 +230,14 @@ function FloatingDateField({
   const borderColor = hasError ? '#ff5630' : 'rgba(145,158,171,0.2)';
 
   return (
-    <div className="relative w-full" ref={ref} style={{ minHeight: '54px' }}>
+    <div className="relative w-full" ref={ref} style={{ minHeight: '54px', background: disabled ? '#f4f6f8' : 'white', borderRadius: 8 }}>
       <div
         aria-hidden="true"
         className="absolute inset-0 pointer-events-none rounded-[8px] border border-solid transition-colors"
         style={{ borderColor }}
       />
       <div className="absolute flex items-center left-[14px] px-[2px] top-[-7px] z-10">
-        <div className="absolute bg-white h-[2px] left-0 right-0 top-[7px]" />
+        <div className="absolute h-[2px] left-0 right-0 top-[7px]" style={{ background: disabled ? '#f4f6f8' : 'white' }} />
         <p className="relative shrink-0 leading-[14px]" style={{ fontSize: '14px', fontWeight: 600, color: hasError ? '#ff5630' : vendorField ? '#005eb8' : '#1c252e' }}>
           {required && <span style={{ color: '#ff5630', marginRight: '2px' }}>*</span>}
           {label}
@@ -403,7 +403,7 @@ function PremiumAmountRow({
       {/* 金額 + 幣別 組合 pill：relative 在這層，下拉面板定位於此 */}
       <div className={`relative flex items-center rounded-[8px] border h-[36px] transition-colors w-full ${
         hasError ? 'border-[#ff4842]' : 'border-[rgba(145,158,171,0.32)]'
-      }`}>
+      }`} style={{ background: disabled ? '#f4f6f8' : 'white' }}>
         {/* 金額 input */}
         <input
           type="text"
@@ -814,37 +814,46 @@ export function InsuranceDetailPage({
                 </div>
               </div>
 
-              {/* Row 1b: 工廠涵蓋範圍（移至廠商編號下方） */}
-              <div className="flex items-center gap-[12px] flex-wrap">
-                <span className={`shrink-0 font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[14px] w-[120px] ${
-                  isVendor && !isReadOnly && showValidation && form.factories.length === 0
-                    ? 'text-[#ff5630]'
-                    : !isVendor ? 'text-[#005eb8]' : 'text-[#1c252e]'
-                }`}>
-                  {isVendor && !isReadOnly && <span style={{ color: '#ff5630', marginRight: '2px' }}>*</span>}
-                  工廠涵蓋範圍
-                </span>
-                <CheckItem
-                  label="同去年設定"
-                  checked={form.sameAsLastYear}
-                  disabled={isReadOnly || !lastYearRecord}
-                  onChange={handleSameAsLastYear}
-                />
-                <div className="w-[1px] h-[14px] bg-[rgba(145,158,171,0.32)]" />
-                {FACTORY_LIST.map(f => (
+              {/* Row 1b: 工廠涵蓋範圍 — 框框樣式（同其他備註） */}
+              <div className="relative rounded-[8px] border border-[rgba(145,158,171,0.2)] h-[54px] px-[20px] flex items-center"
+                style={{ background: isReadOnly ? '#f4f6f8' : 'white' }}
+              >
+                {/* 浮動標籤 */}
+                <div className="absolute flex items-center left-[14px] px-[2px] top-[-7px] z-10">
+                  <div className="absolute h-[2px] left-0 right-0 top-[7px]" style={{ background: isReadOnly ? '#f4f6f8' : 'white' }} />
+                  <p className={`relative text-[14px] font-semibold ${
+                    isVendor && !isReadOnly && showValidation && form.factories.length === 0
+                      ? 'text-[#ff5630]'
+                      : !isVendor ? 'text-[#005eb8]' : 'text-[#1c252e]'
+                  }`}>
+                    {isVendor && !isReadOnly && <span style={{ color: '#ff5630', marginRight: '2px' }}>*</span>}
+                    工廠涵蓋範圍
+                  </p>
+                </div>
+                {/* 內容：同去年設定 + 分隔線 + 工廠 checkboxes */}
+                <div className="flex items-center gap-[12px] flex-wrap">
                   <CheckItem
-                    key={f}
-                    label={f}
-                    checked={form.factories.includes(f)}
-                    disabled={isReadOnly}
-                    onChange={checked => {
-                      // 工廠異動時，若同去年設定已勾 → 自動取消（視為不同於去年）
-                      if (form.sameAsLastYear) set('sameAsLastYear', false);
-                      if (checked) set('factories', [...form.factories, f]);
-                      else set('factories', form.factories.filter(x => x !== f));
-                    }}
+                    label="同去年設定"
+                    checked={form.sameAsLastYear}
+                    disabled={isReadOnly || !lastYearRecord}
+                    onChange={handleSameAsLastYear}
                   />
-                ))}
+                  <div className="w-[1px] h-[14px] bg-[rgba(145,158,171,0.32)]" />
+                  {FACTORY_LIST.map(f => (
+                    <CheckItem
+                      key={f}
+                      label={f}
+                      checked={form.factories.includes(f)}
+                      disabled={isReadOnly}
+                      onChange={checked => {
+                        // 工廠異動時，若同去年設定已勾 → 自動取消（視為不同於去年）
+                        if (form.sameAsLastYear) set('sameAsLastYear', false);
+                        if (checked) set('factories', [...form.factories, f]);
+                        else set('factories', form.factories.filter(x => x !== f));
+                      }}
+                    />
+                  ))}
+                </div>
               </div>
 
               {/* Row 2+3: 保險公司名稱(中) 1份 / (En) 2份 並排 */}
@@ -985,7 +994,7 @@ export function InsuranceDetailPage({
                   </div>
 
                   {/* 其他備註 Checkboxes — 底色區塊 */}
-                  <div className="relative rounded-[8px] border border-[rgba(145,158,171,0.2)] bg-[#f4f6f8] px-[20px] py-[14px]">
+                  <div className="relative rounded-[8px] border border-[rgba(145,158,171,0.2)] bg-[#f4f6f8] h-[54px] px-[20px] flex items-center">
                     {/* 浮動標籤 */}
                     <div className="absolute flex items-center left-[14px] px-[2px] top-[-7px] z-10">
                       <div className="absolute bg-[#f4f6f8] h-[2px] left-0 right-0 top-[7px]" />
