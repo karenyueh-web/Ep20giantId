@@ -527,6 +527,7 @@ export function InsuranceDetailPage({
   const [activeRole, setActiveRole] = useState<UserRole>(initialUserRole);
   const isVendor = activeRole === 'vendor';
   const [showReturnDialog, setShowReturnDialog] = useState(false);
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [form, setForm] = useState<InsuranceRecord>({ ...record });
   const [missingFields, setMissingFields] = useState<string[]>([]);
@@ -725,7 +726,7 @@ export function InsuranceDetailPage({
           <ActionButton label="取消單據" variant="danger" onClick={() => alert('取消單據（mock）')} />
           <ActionButton label="退回廠商" variant="red" onClick={() => setShowReturnDialog(true)} />
           <ActionButton label="儲存" variant="green" onClick={handleSave} />
-          <ActionButton label="儲存後結案" onClick={handleCloseAfterSave} />
+          <ActionButton label="儲存後結案" onClick={() => setShowCloseConfirm(true)} />
         </div>
       );
     }
@@ -734,7 +735,7 @@ export function InsuranceDetailPage({
         <div className="flex items-center gap-[8px]">
           <ActionButton label="退回廠商" variant="red" onClick={() => setShowReturnDialog(true)} />
           <ActionButton label="儲存" variant="green" onClick={handleSave} />
-          <ActionButton label="儲存後結案" onClick={handleCloseAfterSave} />
+          <ActionButton label="儲存後結案" onClick={() => setShowCloseConfirm(true)} />
         </div>
       );
     }
@@ -1166,6 +1167,51 @@ export function InsuranceDetailPage({
           onConfirm={reason => { handleReturnToVendor(reason); setShowReturnDialog(false); }}
           onClose={() => setShowReturnDialog(false)}
         />
+      )}
+
+      {/* ══ 儲存後結案 確認彈窗 ══ */}
+      {showCloseConfirm && (
+        <BaseOverlay onClose={() => setShowCloseConfirm(false)} maxWidth="420px" maxHeight="280px">
+          {/* 頂部 */}
+          <div className="shrink-0 flex items-center gap-[12px] pl-[4px] pr-[16px] py-[4px] border-b border-[rgba(145,158,171,0.12)]">
+            <div className="flex items-center justify-center rounded-[12px] shrink-0 size-[48px] bg-[rgba(255,171,0,0.08)]">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="#FFAB00" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <p className="flex-1 font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] leading-[22px] text-[#1c252e]">確認結案</p>
+            <button onClick={() => setShowCloseConfirm(false)} className="flex items-center justify-center w-[36px] h-[36px] rounded-full hover:bg-[rgba(145,158,171,0.12)] transition-colors shrink-0">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M15 5L5 15M5 5l10 10" stroke="#637381" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            </button>
+          </div>
+          {/* 內容 */}
+          <div className="flex-1 px-[20px] py-[20px] flex flex-col gap-[6px]">
+            <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] text-[14px] text-[#1c252e] leading-[22px]">
+              請確認所有資料均已填寫正確。
+            </p>
+            <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] text-[14px] text-[#ff5630] leading-[22px] font-semibold">
+              ⚠ 結案後所有欄位將不可再修改。
+            </p>
+          </div>
+          {/* 底部 */}
+          <div className="shrink-0 flex justify-end gap-[8px] px-[20px] py-[12px] border-t border-[rgba(145,158,171,0.12)]">
+            <button
+              onClick={() => setShowCloseConfirm(false)}
+              className="flex items-center justify-center h-[36px] px-[20px] rounded-[8px] border border-[rgba(145,158,171,0.3)] hover:bg-[rgba(145,158,171,0.08)] transition-colors"
+            >
+              <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#637381]">取消</span>
+            </button>
+            <button
+              onClick={() => { setShowCloseConfirm(false); handleCloseAfterSave(); }}
+              className="flex items-center justify-center h-[36px] px-[20px] rounded-[8px] transition-colors"
+              style={{ backgroundColor: '#1c252e' }}
+            >
+              <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-white">確認結案</span>
+            </button>
+          </div>
+        </BaseOverlay>
       )}
 
       {/* ══ 廠商必填欄位驗證 Alert ══ */}
