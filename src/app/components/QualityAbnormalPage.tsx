@@ -5,6 +5,7 @@ import { AdvancedQualityTable, qualityMockData, defaultQualityColumns, type Qual
 import { TableToolbar } from './TableToolbar';
 import { ColumnSelector } from './ColumnSelector';
 import { FilterDialog, type FilterCondition } from './FilterDialog';
+import QualityAbnormalPrintPage from './QualityAbnormalPrintPage';
 
 // Tab 類型
 type TabKey = 'All' | '廠商確認中(V)' | '巨大確認中(G)' | '取消(CE)' | '關閉結案(CL)';
@@ -119,6 +120,8 @@ function SearchField({ label, value, onChange }: { label: string; value: string;
 export function QualityAbnormalPage() {
   const [activeTab, setActiveTab] = useState<TabKey>('All');
   const [selectedRow, setSelectedRow] = useState<any>(null);
+  // 列印頁面狀態
+  const [showPrint, setShowPrint] = useState(false);
   // mock data 用 state 管理，讓廠商回覆後可即時更新 status
   const [tableData, setTableData] = useState(qualityMockData);
 
@@ -452,6 +455,17 @@ export function QualityAbnormalPage() {
   // ===== 顯示明細頁面（row 用 live tableData，確保歷程即時更新）=====
   if (selectedRow) {
     const liveRow = tableData.find(r => r.id === selectedRow.id) ?? selectedRow;
+
+    // 列印預覽：切換為列印頁面
+    if (showPrint) {
+      return (
+        <QualityAbnormalPrintPage
+          row={liveRow}
+          onBack={() => setShowPrint(false)}
+        />
+      );
+    }
+
     return (
       <div className="content-stretch flex flex-col h-full items-start relative rounded-[16px] w-full">
         <QualityAbnormalDetail
@@ -467,6 +481,7 @@ export function QualityAbnormalPage() {
           initialFiles={sectionFilesRef.current.get(liveRow.id)}
           onFilesChange={(section, imgs) => handleFilesChange(liveRow.id, section, imgs)}
           onClose={() => setSelectedRow(null)}
+          onPrint={() => setShowPrint(true)}
         />
       </div>
     );

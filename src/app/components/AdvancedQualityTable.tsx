@@ -55,6 +55,8 @@ export interface QualityRow {
   gtmConfirm: string;
   confirmer: string;
   attachment: string;
+  /** TODO: 未來從中台開單人員資料串接 */
+  coordinator: string;
   isReturned?: boolean;
   returnReason?: string;
   vendorReviewer?: string;
@@ -101,6 +103,7 @@ export const qualityMockData: QualityRow[] = [
     description: 'REMEDY 7 A 17.5~21.5 TK426-M 金油下-無膜標(一般色) TS1186D',
     defectType: '外觀不良-刮傷', emergencyAction: '退回供應商', causeAnalysis: '',
     countermeasure: '', gtmConfirm: '', confirmer: '', attachment: '',
+    coordinator: 'Karen Yueh', // TODO: 從中台開單人員資料串接
     replyHistory: [{ id: 'init-1', timestamp: '2024/12/25', actor: 'system', type: 'status_change', section: 'system', summary: '建立單據' }],
   },
   {
@@ -110,6 +113,7 @@ export const qualityMockData: QualityRow[] = [
     description: 'REMEDY 7 A 17.5~21.5 TK426-M 金油下-無膜標(一般色) TS1186D',
     defectType: '尺寸不符', emergencyAction: '特採使用', causeAnalysis: '模具磨損導致尺寸偏差',
     countermeasure: '更換模具', gtmConfirm: '', confirmer: '', attachment: '1',
+    coordinator: 'Karen Yueh', // TODO: 從中台開單人員資料串接
     replyHistory: [{ id: 'init-2', timestamp: '2024/12/26', actor: 'system', type: 'status_change', section: 'system', summary: '建立單據' }],
   },
   {
@@ -119,6 +123,7 @@ export const qualityMockData: QualityRow[] = [
     description: 'DEFY ADVANCED PRO 1 ML/L 前叉 FK901-C',
     defectType: '材質不良', emergencyAction: '退回供應商', causeAnalysis: '',
     countermeasure: '', gtmConfirm: '', confirmer: '', attachment: '',
+    coordinator: 'Amy Lin', // TODO: 從中台開單人員資料串接
     replyHistory: [{ id: 'init-3', timestamp: '2024/12/27', actor: 'system', type: 'status_change', section: 'system', summary: '建立單據' }],
   },
   {
@@ -128,6 +133,7 @@ export const qualityMockData: QualityRow[] = [
     description: 'TCR ADVANCED SL DISC FRAME ML CARBON/ORANGE',
     defectType: '塗裝不良-色差', emergencyAction: '重工處理', causeAnalysis: '烤漆溫度控制不當',
     countermeasure: '調整烤漆參數', gtmConfirm: '確認重工結果符合規格，同意放行', confirmer: '王大明', attachment: '2',
+    coordinator: 'Peter Chang', // TODO: 從中台開單人員資料串接
     replyHistory: [{ id: 'init-4', timestamp: '2024/12/28', actor: 'system', type: 'status_change', section: 'system', summary: '建立單據' }],
   },
   {
@@ -137,6 +143,7 @@ export const qualityMockData: QualityRow[] = [
     description: 'CONTACT SLR AERO OD2 HANDLEBAR 400MM',
     defectType: '焊接不良', emergencyAction: '退回供應商', causeAnalysis: '焊接參數設定錯誤',
     countermeasure: '重新校正焊接機', gtmConfirm: '廠商已依SOP重新焊接，抗拉測試通過，這次結案', confirmer: '李小華', attachment: '3',
+    coordinator: 'Karen Yueh', // TODO: 從中台開單人員資料串接
     replyHistory: [{ id: 'init-5', timestamp: '2024/12/29', actor: 'system', type: 'status_change', section: 'system', summary: '建立單據' }],
   },
   {
@@ -146,6 +153,7 @@ export const qualityMockData: QualityRow[] = [
     description: 'FLEET SLR FORWARD SADDLE 145MM',
     defectType: '包裝破損', emergencyAction: '取消訂單', causeAnalysis: '運輸過程中碰撞',
     countermeasure: '改善包裝方式', gtmConfirm: '因運輸方式問題全批破損，確認取消訂單', confirmer: '張志明', attachment: '',
+    coordinator: 'Amy Lin', // TODO: 從中台開單人員資料串接
     replyHistory: [{ id: 'init-6', timestamp: '2025/01/02', actor: 'system', type: 'status_change', section: 'system', summary: '建立單據' }],
   },
   {
@@ -155,6 +163,7 @@ export const qualityMockData: QualityRow[] = [
     description: 'CONDUCT SL DISC BRAKE FRONT HYDRAULIC',
     defectType: '功能異常-煞車力不足', emergencyAction: '待供應商回覆', causeAnalysis: '',
     countermeasure: '', gtmConfirm: '', confirmer: '', attachment: '1',
+    coordinator: 'Peter Chang', // TODO: 從中台開單人員資料串接
     replyHistory: [{ id: 'init-7', timestamp: '2025/01/03', actor: 'system', type: 'status_change', section: 'system', summary: '建立單據' }],
   },
   {
@@ -164,6 +173,7 @@ export const qualityMockData: QualityRow[] = [
     description: 'SHIMANO DEORE XT RD-M8100 SGS 12-SPEED',
     defectType: '電鍍不良-起泡', emergencyAction: '特採使用', causeAnalysis: '電鍍液濃度異常',
     countermeasure: '更換電鍍液', gtmConfirm: '', confirmer: '', attachment: '2',
+    coordinator: 'Karen Yueh', // TODO: 從中台開單人員資料串接
     replyHistory: [{ id: 'init-8', timestamp: '2025/01/04', actor: 'system', type: 'status_change', section: 'system', summary: '建立單據' }],
   },
   {
@@ -173,6 +183,7 @@ export const qualityMockData: QualityRow[] = [
     description: 'SLR 1 42 DISC WHEELSYSTEM FRONT 12X100',
     defectType: '軸承異音', emergencyAction: '退回供應商', causeAnalysis: '軸承安裝不當',
     countermeasure: '加強安裝SOP培訓', gtmConfirm: '重新安裝後推力測試正常，這次結案', confirmer: '陳美玲', attachment: '1',
+    coordinator: 'Amy Lin', // TODO: 從中台開單人員資料串接
     replyHistory: [{ id: 'init-9', timestamp: '2025/01/05', actor: 'system', type: 'status_change', section: 'system', summary: '建立單據' }],
   },
   {
@@ -182,6 +193,7 @@ export const qualityMockData: QualityRow[] = [
     description: 'GAVIA COURSE 1 700X25C TUBELESS READY',
     defectType: '膠料老化', emergencyAction: '退回供應商', causeAnalysis: '',
     countermeasure: '', gtmConfirm: '', confirmer: '', attachment: '',
+    coordinator: 'Peter Chang', // TODO: 從中台開單人員資料串接
     replyHistory: [{ id: 'init-10', timestamp: '2025/01/06', actor: 'system', type: 'status_change', section: 'system', summary: '建立單據' }],
   },
   {
@@ -191,6 +203,7 @@ export const qualityMockData: QualityRow[] = [
     description: 'D-FUSE SEATPOST COMPOSITE FOR TCR',
     defectType: '碳纖維裂紋', emergencyAction: '全數退回', causeAnalysis: '成型壓力不足',
     countermeasure: '調整成型壓力參數', gtmConfirm: '', confirmer: '', attachment: '4',
+    coordinator: 'Karen Yueh', // TODO: 從中台開單人員資料串接
     replyHistory: [{ id: 'init-11', timestamp: '2025/01/07', actor: 'system', type: 'status_change', section: 'system', summary: '建立單據' }],
   },
   {
@@ -200,6 +213,7 @@ export const qualityMockData: QualityRow[] = [
     description: 'PLATFORM PEDAL NYLON BODY CR-MO AXLE',
     defectType: '螺紋不良', emergencyAction: '取消訂單', causeAnalysis: '攻牙刀具磨損',
     countermeasure: '定期更換刀具', gtmConfirm: '批次螺紋不良率逾標，取消本批訂單', confirmer: '林志豪', attachment: '',
+    coordinator: 'Amy Lin', // TODO: 從中台開單人員資料串接
     replyHistory: [{ id: 'init-12', timestamp: '2025/01/08', actor: 'system', type: 'status_change', section: 'system', summary: '建立單據' }],
   },
   {
@@ -209,6 +223,7 @@ export const qualityMockData: QualityRow[] = [
     description: 'SHIMANO CN-HG701 11-SPEED CHAIN',
     defectType: '硬度不足', emergencyAction: '待供應商回覆', causeAnalysis: '',
     countermeasure: '', gtmConfirm: '', confirmer: '', attachment: '',
+    coordinator: 'Peter Chang', // TODO: 從中台開單人員資料串接
     replyHistory: [{ id: 'init-13', timestamp: '2025/01/09', actor: 'system', type: 'status_change', section: 'system', summary: '建立單據' }],
   },
   {
@@ -218,6 +233,7 @@ export const qualityMockData: QualityRow[] = [
     description: 'CONTACT SL OD2 STEM 90MM -8DEG',
     defectType: '組裝不良', emergencyAction: '重工處理', causeAnalysis: '作業員未按SOP操作',
     countermeasure: '加強教育訓練', gtmConfirm: '重工後外觀確認符合要求，待第二批樣品對比', confirmer: '黃美惠', attachment: '1',
+    coordinator: 'Karen Yueh', // TODO: 從中台開單人員資料串接
     replyHistory: [{ id: 'init-14', timestamp: '2025/01/10', actor: 'system', type: 'status_change', section: 'system', summary: '建立單據' }],
   },
   {
@@ -236,6 +252,7 @@ export const qualityMockData: QualityRow[] = [
     description: 'SHIMANO BB-MT800 PRESS FIT BB',
     defectType: '防水性不足', emergencyAction: '待供應商回覆', causeAnalysis: '',
     countermeasure: '', gtmConfirm: '', confirmer: '', attachment: '',
+    coordinator: 'Peter Chang', // TODO: 從中台開單人員資料串接
     replyHistory: [{ id: 'init-16', timestamp: '2025/01/12', actor: 'system', type: 'status_change', section: 'system', summary: '建立單據' }],
   },
   {
@@ -245,6 +262,7 @@ export const qualityMockData: QualityRow[] = [
     description: 'CADEX BOOST CASSETTE 10-36T 12-SPEED',
     defectType: '齒面粗糙度不符', emergencyAction: '特採使用', causeAnalysis: '切削加工參數偏差',
     countermeasure: '重新校正CNC參數', gtmConfirm: '', confirmer: '', attachment: '1',
+    coordinator: 'Amy Lin', // TODO: 從中台開單人員資料串接
     replyHistory: [{ id: 'init-17', timestamp: '2025/01/13', actor: 'system', type: 'status_change', section: 'system', summary: '建立單據' }],
   },
   {
@@ -254,6 +272,7 @@ export const qualityMockData: QualityRow[] = [
     description: 'SHIMANO FH-MT410-B REAR HUB 32H BOOST',
     defectType: '表面處理不良', emergencyAction: '退回供應商', causeAnalysis: '',
     countermeasure: '', gtmConfirm: '', confirmer: '', attachment: '',
+    coordinator: 'Karen Yueh', // TODO: 從中台開單人員資料串接
     replyHistory: [{ id: 'init-18', timestamp: '2025/01/14', actor: 'system', type: 'status_change', section: 'system', summary: '建立單據' }],
   },
   {
@@ -263,6 +282,7 @@ export const qualityMockData: QualityRow[] = [
     description: 'DT SWISS COMPETITION SPOKE 2.0/1.8 BLK',
     defectType: '強度不足', emergencyAction: '退回供應商', causeAnalysis: '熱處理製程異常',
     countermeasure: '修正熱處理溫度曲線', gtmConfirm: '廠商已提供熱處理改善報告，硬度符合標準，結案', confirmer: '趙明德', attachment: '1',
+    coordinator: 'Peter Chang', // TODO: 從中台開單人員資料串接
     replyHistory: [{ id: 'init-19', timestamp: '2025/01/15', actor: 'system', type: 'status_change', section: 'system', summary: '建立單據' }],
   },
   {
@@ -272,6 +292,7 @@ export const qualityMockData: QualityRow[] = [
     description: 'DT SWISS PHR ALLOY NIPPLE 14MM BLK',
     defectType: '電鍍層剝落', emergencyAction: '取消訂單', causeAnalysis: '基材前處理不良',
     countermeasure: '改善前處理流程', gtmConfirm: '前處理複驗不及格，已取消訂單', confirmer: '周雅琳', attachment: '',
+    coordinator: 'Amy Lin', // TODO: 從中台開單人員資料串接
     replyHistory: [{ id: 'init-20', timestamp: '2025/01/16', actor: 'system', type: 'status_change', section: 'system', summary: '建立單據' }],
   },
 ];

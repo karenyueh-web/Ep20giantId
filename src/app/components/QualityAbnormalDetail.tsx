@@ -430,10 +430,12 @@ function IconsNotificationsIcChat() {
 }
 
 // 頂部操作區
-function TopActions({ onHistoryOpen }: { onHistoryOpen?: () => void }) {
+function TopActions({ onHistoryOpen, onPrint }: { onHistoryOpen?: () => void; onPrint?: () => void }) {
   return (
     <div className="content-stretch flex gap-[12px] items-center">
-      <IconsSolidIcSolarPrinterMinimalisticBold />
+      <div onClick={onPrint}>
+        <IconsSolidIcSolarPrinterMinimalisticBold />
+      </div>
       <IconsNotificationsIcChat />
       <p
         onClick={onHistoryOpen}
@@ -1333,9 +1335,11 @@ interface QualityAbnormalDetailProps {
   /** 圖片變動時通知父層儲存 */
   onFilesChange?: (section: 'basic' | 'vendor' | 'giant', images: UploadedImage[]) => void;
   onClose?: () => void;
+  /** 點擊列印 icon 時觸發 */
+  onPrint?: () => void;
 }
 
-export function QualityAbnormalDetail({ abnormalNumber, status: initialStatus, row, onVendorReplySubmit, onReturn, onCancel, onSettle, onAttachmentAdd, onAttachmentDelete, initialFiles, onFilesChange, onClose }: QualityAbnormalDetailProps) {
+export function QualityAbnormalDetail({ abnormalNumber, status: initialStatus, row, onVendorReplySubmit, onReturn, onCancel, onSettle, onAttachmentAdd, onAttachmentDelete, initialFiles, onFilesChange, onClose, onPrint }: QualityAbnormalDetailProps) {
   const [localStatus, setLocalStatus] = useState(initialStatus);
   const [returnReason, setReturnReason] = useState(row?.returnReason ?? '');
   const [cancelReason, setCancelReason] = useState('');
@@ -1384,7 +1388,7 @@ export function QualityAbnormalDetail({ abnormalNumber, status: initialStatus, r
           <TopHeader abnormalNumber={abnormalNumber} status={localStatus} />
         </div>
         {/* 右側：列印、訊息、歷程 */}
-        <TopActions onHistoryOpen={() => setShowHistory(true)} />
+        <TopActions onHistoryOpen={() => setShowHistory(true)} onPrint={onPrint} />
       </div>
 
       {/* 灰色背景區域（基本資訊 + 不良情形卡片） */}
