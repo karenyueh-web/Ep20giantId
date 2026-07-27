@@ -1,5 +1,6 @@
 import { useState, useRef, useMemo } from 'react';
 import { BaseOverlay } from './BaseOverlay';
+import { ReasonInputOverlay } from './ReasonInputOverlay';
 import closeIconPaths from "@/imports/svg-gcyyqek0b9";
 import { ResponsivePageLayout } from './ResponsivePageLayout';
 import { DropdownSelect } from './DropdownSelect';
@@ -526,7 +527,6 @@ export function InsuranceDetailPage({
   const [activeRole, setActiveRole] = useState<UserRole>(initialUserRole);
   const isVendor = activeRole === 'vendor';
   const [showReturnDialog, setShowReturnDialog] = useState(false);
-  const [returnReason, setReturnReason] = useState('');
   const [showHistory, setShowHistory] = useState(false);
   const [form, setForm] = useState<InsuranceRecord>({ ...record });
   const [missingFields, setMissingFields] = useState<string[]>([]);
@@ -723,7 +723,7 @@ export function InsuranceDetailPage({
       return (
         <div className="flex items-center gap-[8px]">
           <ActionButton label="取消單據" variant="danger" onClick={() => alert('取消單據（mock）')} />
-          <ActionButton label="退回廠商" variant="red" onClick={() => { setReturnReason(''); setShowReturnDialog(true); }} />
+          <ActionButton label="退回廠商" variant="red" onClick={() => setShowReturnDialog(true)} />
           <ActionButton label="儲存" variant="green" onClick={handleSave} />
           <ActionButton label="儲存後結案" onClick={handleCloseAfterSave} />
         </div>
@@ -732,7 +732,7 @@ export function InsuranceDetailPage({
     if (!isVendor && form.status === 'G') {
       return (
         <div className="flex items-center gap-[8px]">
-          <ActionButton label="退回廠商" variant="red" onClick={() => { setReturnReason(''); setShowReturnDialog(true); }} />
+          <ActionButton label="退回廠商" variant="red" onClick={() => setShowReturnDialog(true)} />
           <ActionButton label="儲存" variant="green" onClick={handleSave} />
           <ActionButton label="儲存後結案" onClick={handleCloseAfterSave} />
         </div>
@@ -1156,59 +1156,16 @@ export function InsuranceDetailPage({
         />
       )}
 
-      {/* ══ 退回廠商原因彈窗 ══ */}
+      {/* ══ 退回廠商原因彈窗（品保作業標準元件 ReasonInputOverlay）══ */}
       {showReturnDialog && (
-        <BaseOverlay onClose={() => setShowReturnDialog(false)} maxWidth="480px" maxHeight="360px">
-          {/* 頂部標題 */}
-          <div className="shrink-0 flex items-center gap-[12px] pl-[4px] pr-[16px] py-[4px] border-b border-[rgba(145,158,171,0.12)]">
-            <div className="flex items-center justify-center rounded-[12px] shrink-0 size-[48px] bg-[rgba(0,94,184,0.08)]">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="#005eb8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-            <p className="flex-1 font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] leading-[22px] text-[#1c252e]">請輸入退回原因</p>
-            <button
-              onClick={() => setShowReturnDialog(false)}
-              className="flex items-center justify-center w-[36px] h-[36px] rounded-full hover:bg-[rgba(145,158,171,0.12)] transition-colors shrink-0"
-            >
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <path d="M15 5L5 15M5 5l10 10" stroke="#637381" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
-            </button>
-          </div>
-          {/* 輸入區 */}
-          <div className="flex-1 overflow-y-auto px-[20px] py-[16px] flex flex-col gap-[8px]">
-            <div className="relative rounded-[8px] min-h-[140px]">
-              <div aria-hidden="true" className="absolute border-2 border-[#005eb8] border-solid inset-0 pointer-events-none rounded-[8px]" />
-              <textarea
-                value={returnReason}
-                onChange={e => { if (e.target.value.length <= 50) setReturnReason(e.target.value); }}
-                placeholder="請簡述退回原因，限 50 字"
-                rows={6}
-                className="w-full min-h-[140px] px-[16px] py-[12px] font-['Public_Sans:Regular',sans-serif] font-normal text-[14px] leading-[22px] bg-transparent outline-none resize-none placeholder:text-[#919eab] text-[#1c252e] rounded-[8px]"
-              />
-            </div>
-            <p className="text-right text-[12px] text-[#919eab]">{returnReason.length} / 50</p>
-          </div>
-          {/* 底部按鈕 */}
-          <div className="shrink-0 flex items-center justify-end gap-[8px] px-[20px] py-[12px] border-t border-[rgba(145,158,171,0.12)]">
-            <button
-              onClick={() => setShowReturnDialog(false)}
-              className="flex items-center justify-center h-[36px] px-[20px] rounded-[8px] border border-[rgba(145,158,171,0.32)] hover:bg-[rgba(145,158,171,0.08)] transition-colors"
-            >
-              <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#1c252e]">取消</span>
-            </button>
-            <button
-              onClick={() => {
-                setShowReturnDialog(false);
-                handleReturnToVendor(returnReason.trim());
-              }}
-              className="flex items-center justify-center h-[36px] px-[20px] rounded-[8px] bg-[#004680] hover:bg-[#003560] transition-colors"
-            >
-              <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-white">確認退回</span>
-            </button>
-          </div>
-        </BaseOverlay>
+        <ReasonInputOverlay
+          title="退回廠商"
+          placeholder="請說明退回原因..."
+          confirmLabel="確認退回"
+          confirmColor="#ff5630"
+          onConfirm={reason => { handleReturnToVendor(reason); setShowReturnDialog(false); }}
+          onClose={() => setShowReturnDialog(false)}
+        />
       )}
 
       {/* ══ 廠商必填欄位驗證 Alert ══ */}

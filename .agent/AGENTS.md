@@ -14,6 +14,24 @@
 - **新彈窗/Dialog** 必須用 `BaseOverlay` 作為外層容器，禁止用 `fixed div` 或 `createPortal` 自製遮罩
 - **錯誤提示** 禁止用 `toast.error`，必須用標準 Alert 彈窗（`ForecastDeleteDeniedOverlay` 為範本）
 
+### ⭐ 開發前必先搜尋現有元件（禁止重複造輪子）
+開發任何新功能、彈窗、元件之前，**必須先用 `grep_search` 搜尋專案內是否已有相同或類似的元件**。
+
+- 找到後**直接引用**，不可自製重複的 UI
+- 若找到**兩種以上的設計方式**，**必須詢問使用者**再決定採用哪一種，不可自行判斷
+- ❌ 禁止：先動手實作，事後才發現專案內已有現成元件
+- ✅ 正確流程：`grep_search` 搜尋關鍵字 → 確認無現成元件 → 才開始實作
+
+#### 常見應搜尋的場景
+| 要做的功能 | 搜尋關鍵字建議 |
+|-----------|--------------|
+| 退回/取消 原因輸入彈窗 | `ReasonInputOverlay`、`退回原因`、`returnReason` |
+| 歷程紀錄 | `OrderHistory`、`HistoryEntry` |
+| 刪除確認彈窗 | `DeleteDenied`、`confirmDelete`、`刪除` |
+| Toggle 開關 | `ToggleSwitch` |
+| 日期選擇器 | `SimpleDatePicker`、`FloatingDateField` |
+| 下拉選單 | `DropdownSelect` |
+
 ### StandardDataTable 使用規則
 - 嵌入已有外層卡片的頁面（Tab + 搜尋列 + 表格 的 Settings 類頁面），**必須傳入 `embedded` prop**，否則搜尋列下方會出現多餘的 shadow 邊緣
 - 搜尋列容器 **禁止加 `border-b`**，`TableToolbar` 本身已有分隔效果
