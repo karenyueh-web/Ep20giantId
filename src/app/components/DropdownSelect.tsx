@@ -170,9 +170,9 @@ export function DropdownSelect({
         />
         {/* 浮動標籤（label 為空時不渲染） */}
         {label && (
-          <div className="absolute flex items-center left-[14px] px-[2px] top-[-5px] z-10">
-            <div className="absolute bg-white h-[2px] left-0 right-0 top-[5px]" />
-            <p className={`relative text-[12px] font-semibold ${error ? 'text-[#ff5630]' : 'text-[#637381]'}`}>
+          <div className="absolute flex items-center left-[14px] px-[2px] top-[-7px] z-10">
+            <div className="absolute bg-white h-[2px] left-0 right-0 top-[7px]" />
+            <p className={`relative text-[14px] font-semibold ${error ? 'text-[#ff5630]' : 'text-[#1c252e]'}`}>
               {label}
             </p>
           </div>

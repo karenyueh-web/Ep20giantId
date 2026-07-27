@@ -30,13 +30,17 @@ const CLAIM_BASIS_OPTIONS = [
   { value: 'B', label: 'B（事故發生基礎制）' },
 ];
 const FACTORY_LIST = ['GTM', 'GCK', 'GCM', 'GCT', 'GEV', 'GEM', 'GHM'];
-const INSURANCE_TYPE_LIST = ['CGL', 'PLG', 'PLI'];
+const INSURANCE_TYPE_OPTIONS = [
+  { value: 'CGL', label: 'CGL（Commercial General Liability）' },
+  { value: 'PLG', label: 'PLG（Product Liability General）' },
+  { value: 'PLI', label: 'PLI（Product Liability Insurance）' },
+];
 
 // ─── FloatingInput（標準表單輸入元件，帶浮動標籤）──────────────────────────────
 // 規格來源：SKILL.md「⭐ 表單輸入元件規範」
 // 比照 ShippingBasicSettingsPage.tsx 的完整實作（含 onFocus/onBlur 邊框互動）
 function FloatingInput({
-  label, value, onChange, disabled, placeholder, required, noResize, hasError,
+  label, value, onChange, disabled, placeholder, required, noResize, hasError, vendorField,
 }: {
   label: string;
   value: string;
@@ -46,6 +50,7 @@ function FloatingInput({
   required?: boolean;
   noResize?: boolean;
   hasError?: boolean;
+  vendorField?: boolean;
 }) {
   const defaultBorder = hasError ? '#ff5630' : 'rgba(145,158,171,0.2)';
   const handleFocus = (el: HTMLElement) => {
@@ -60,7 +65,7 @@ function FloatingInput({
   const labelNode = (
     <div className="absolute flex items-center left-[14px] px-[2px] top-[-7px] z-10">
       <div className="absolute bg-white h-[2px] left-0 right-0 top-[7px]" />
-      <p className="relative shrink-0 leading-[14px] whitespace-nowrap" style={{ fontSize: '14px', fontWeight: 600, color: hasError ? '#ff5630' : '#1c252e' }}>
+      <p className="relative shrink-0 leading-[14px] whitespace-nowrap" style={{ fontSize: '14px', fontWeight: 600, color: hasError ? '#ff5630' : vendorField ? '#005eb8' : '#1c252e' }}>
         {required && <span style={{ color: '#ff5630', marginRight: '2px' }}>*</span>}
         {label}
       </p>
@@ -127,12 +132,15 @@ function StatusBadge({ status }: { status: InsuranceStatus }) {
 }
 
 // ─── SectionTitle ─────────────────────────────────────────────────────────────
-function SectionTitle({ title, required }: { title: string; required?: boolean }) {
+function SectionTitle({ title, required, vendorField }: { title: string; required?: boolean; vendorField?: boolean }) {
   return (
     <div className="h-[48px] min-h-[48px] relative shrink-0">
       <div aria-hidden="true" className="absolute border-[#1c252e] border-b-2 border-solid inset-0 pointer-events-none" />
       <div className="flex items-center h-full px-[4px]">
-        <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[28px] text-[#1c252e] text-[18px] whitespace-nowrap">
+        <p
+          className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[28px] text-[18px] whitespace-nowrap"
+          style={{ color: vendorField ? '#005eb8' : '#1c252e' }}
+        >
           {required && <span style={{ color: '#ff5630', marginRight: '4px' }}>*</span>}
           {title}
         </p>
@@ -190,7 +198,7 @@ function ActionButton({
 
 // ─── FloatingDateField（與 ShipmentDetailPage 相同實作）───────────────────────
 function FloatingDateField({
-  label, value, onChange, required, placeholder = '選擇日期', hasError, disabled,
+  label, value, onChange, required, placeholder = '選擇日期', hasError, disabled, vendorField,
 }: {
   label: string;
   value: string;
@@ -199,6 +207,7 @@ function FloatingDateField({
   placeholder?: string;
   hasError?: boolean;
   disabled?: boolean;
+  vendorField?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [pos, setPos]   = useState({ top: 0, left: 0 });
@@ -227,7 +236,7 @@ function FloatingDateField({
       />
       <div className="absolute flex items-center left-[14px] px-[2px] top-[-7px] z-10">
         <div className="absolute bg-white h-[2px] left-0 right-0 top-[7px]" />
-        <p className="relative shrink-0 leading-[14px]" style={{ fontSize: '14px', fontWeight: 600, color: hasError ? '#ff5630' : '#1c252e' }}>
+        <p className="relative shrink-0 leading-[14px]" style={{ fontSize: '14px', fontWeight: 600, color: hasError ? '#ff5630' : vendorField ? '#005eb8' : '#1c252e' }}>
           {required && <span style={{ color: '#ff5630', marginRight: '2px' }}>*</span>}
           {label}
         </p>
@@ -271,7 +280,7 @@ function saveLastUsedCurrency(code: string) {
 }
 
 function PremiumAmountRow({
-  label, amount, currency, onAmountChange, onCurrencyChange, disabled, required, hasError: externalHasError,
+  label, amount, currency, onAmountChange, onCurrencyChange, disabled, required, hasError: externalHasError, vendorField,
 }: {
   label: string;
   amount: number | null;
@@ -281,6 +290,7 @@ function PremiumAmountRow({
   disabled?: boolean;
   required?: boolean;
   hasError?: boolean;
+  vendorField?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery]   = useState('');
@@ -361,119 +371,120 @@ function PremiumAmountRow({
   }, [sorted, query]);
 
   return (
-    <div className="flex flex-col gap-[4px]">
-      <div className="flex items-center gap-[12px]">
-        {/* 左側 label */}
-        <span className="shrink-0 font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[14px] leading-[22px]" style={{ color: hasError ? '#ff5630' : '#1c252e' }}>
-          {required && <span style={{ color: '#ff5630', marginRight: '2px' }}>*</span>}
-          {label}
-        </span>
+    <div className="flex flex-col gap-[4px] min-w-0">
+      {/* 上方 label */}
+      <span
+        className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[14px] leading-[22px] truncate"
+        style={{ color: hasError ? '#ff5630' : vendorField ? '#005eb8' : '#1c252e' }}
+      >
+        {required && <span style={{ color: '#ff5630', marginRight: '2px' }}>*</span>}
+        {label}
+      </span>
 
-        {/* 金額 + 幣別 組合 pill：relative 在這層，下拉面板定位於此 */}
-        <div className={`relative flex items-center rounded-[8px] border h-[36px] transition-colors ${
-          hasError ? 'border-[#ff4842]' : 'border-[rgba(145,158,171,0.32)]'
-        }`}>
-          {/* 金額 input */}
-          <input
-            type="text"
-            inputMode="numeric"
-            className="w-[140px] h-full px-[12px] text-[14px] text-[#1c252e] outline-none bg-transparent border-0 placeholder:text-[#919eab]"
-            value={displayValue}
-            onChange={handleChange}
-            onFocus={handleFocus}
-            onBlur={handleBlur}
-            readOnly={disabled}
-            placeholder={disabled ? '' : '金額'}
-          />
+      {/* 金額 + 幣別 組合 pill：relative 在這層，下拉面板定位於此 */}
+      <div className={`relative flex items-center rounded-[8px] border h-[36px] transition-colors w-full ${
+        hasError ? 'border-[#ff4842]' : 'border-[rgba(145,158,171,0.32)]'
+      }`}>
+        {/* 金額 input */}
+        <input
+          type="text"
+          inputMode="numeric"
+          className="flex-1 min-w-0 h-full px-[12px] text-[14px] text-[#1c252e] outline-none bg-transparent border-0 placeholder:text-[#919eab]"
+          value={displayValue}
+          onChange={handleChange}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          readOnly={disabled}
+          placeholder={disabled ? '' : '金額'}
+        />
 
-          {/* 分隔線 */}
-          <div className="w-[1px] h-[20px] bg-[rgba(145,158,171,0.32)] shrink-0" />
+        {/* 分隔線 */}
+        <div className="w-[1px] h-[20px] bg-[rgba(145,158,171,0.32)] shrink-0" />
 
-          {/* 幣別 pill trigger */}
-          <button
-            disabled={disabled}
-            onClick={() => !disabled && setOpen(o => !o)}
-            className="flex items-center gap-[4px] px-[12px] h-[36px] text-[14px] font-semibold text-[#1c252e] hover:bg-[#f4f6f8] rounded-r-[8px] transition-colors disabled:cursor-default min-w-[72px]"
-          >
-            <span>{currency || '幣別'}</span>
-            {!disabled && (
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                <path d="M6 9l6 6 6-6" stroke="#637381" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            )}
-          </button>
+        {/* 幣別 pill trigger */}
+        <button
+          disabled={disabled}
+          onClick={() => !disabled && setOpen(o => !o)}
+          className="flex items-center gap-[4px] px-[10px] h-[36px] text-[13px] font-semibold text-[#1c252e] hover:bg-[#f4f6f8] rounded-r-[8px] transition-colors disabled:cursor-default shrink-0"
+        >
+          <span className="whitespace-nowrap">{currency || '幣別'}</span>
+          {!disabled && (
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+              <path d="M6 9l6 6 6-6" stroke="#637381" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          )}
+        </button>
 
-          {/* 幣別搜尋式下拉面板 — 定位於 pill 容器下方左側 */}
-          {open && (
-            <>
-              <div className="fixed inset-0 z-[90]" onClick={() => { setOpen(false); setQuery(''); }} />
-              <div
-                className="absolute left-0 z-[100] bg-white rounded-[8px] shadow-[0px_8px_24px_rgba(0,0,0,0.12)] border border-[rgba(145,158,171,0.16)]"
-                style={{ top: 'calc(100% + 8px)', minWidth: '320px', maxHeight: '320px', display: 'flex', flexDirection: 'column' }}
-              >
-                {/* 搜尋欄 */}
-                <div className="px-[10px] py-[8px] border-b border-[rgba(145,158,171,0.12)] shrink-0">
-                  <div className="flex items-center gap-[6px] border border-[rgba(145,158,171,0.32)] rounded-[6px] px-[10px] py-[5px] focus-within:border-[#005eb8] transition-colors">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" className="shrink-0">
-                      <circle cx="11" cy="11" r="8" stroke="#919eab" strokeWidth="2"/>
-                      <path d="m21 21-4.35-4.35" stroke="#919eab" strokeWidth="2" strokeLinecap="round"/>
-                    </svg>
-                    <input
-                      autoFocus
-                      type="text"
-                      value={query}
-                      onChange={e => setQuery(e.target.value)}
-                      onClick={e => e.stopPropagation()}
-                      placeholder="搜尋代碼或名稱..."
-                      className="flex-1 text-[13px] text-[#1c252e] placeholder:text-[#c4cdd6] outline-none bg-transparent border-0"
-                    />
-                    {query && (
-                      <button onClick={e => { e.stopPropagation(); setQuery(''); }} className="text-[#919eab] hover:text-[#1c252e]">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M18 6 6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
-                      </button>
-                    )}
-                  </div>
-                </div>
-                {/* 選項列表 */}
-                <div className="overflow-y-auto custom-scrollbar flex-1">
-                  {filtered.length > 0 ? filtered.map((c, i) => {
-                    const lastUsed = getLastUsedCurrencies();
-                    const isLastRecent = !query && lastUsed.length > 0 && i === lastUsed.length - 1 && i < filtered.length - 1;
-                    return (
-                      <div key={`${c.code}-${i}`}>
-                        <div
-                          className={`px-[14px] py-[9px] cursor-pointer flex items-center justify-between transition-colors ${
-                            currency === c.code ? 'bg-[rgba(0,94,184,0.08)]' : 'hover:bg-[rgba(145,158,171,0.06)]'
-                          }`}
-                          onClick={() => { saveLastUsedCurrency(c.code); onCurrencyChange?.(c.code); setOpen(false); setQuery(''); }}
-                        >
-                          <div>
-                            <span className="font-semibold text-[13px] text-[#005eb8] mr-[8px]">{c.code}</span>
-                            <span className="text-[13px] text-[#1c252e]">{c.fullName || c.shortName}</span>
-                          </div>
-                          {currency === c.code && (
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="shrink-0">
-                              <path d="M20 6 9 17l-5-5" stroke="#005eb8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                          )}
-                        </div>
-                        {isLastRecent && <div className="mx-[14px] border-t border-[rgba(145,158,171,0.16)]" />}
-                      </div>
-                    );
-                  }) : (
-                    <div className="px-[14px] py-[16px] text-center">
-                      <p className="text-[13px] text-[#919eab]">無符合的幣別</p>
-                    </div>
+        {/* 幣別搜尋式下拉面板 — 定位於 pill 容器下方左側 */}
+        {open && (
+          <>
+            <div className="fixed inset-0 z-[90]" onClick={() => { setOpen(false); setQuery(''); }} />
+            <div
+              className="absolute left-0 z-[100] bg-white rounded-[8px] shadow-[0px_8px_24px_rgba(0,0,0,0.12)] border border-[rgba(145,158,171,0.16)]"
+              style={{ top: 'calc(100% + 8px)', minWidth: '320px', maxHeight: '320px', display: 'flex', flexDirection: 'column' }}
+            >
+              {/* 搜尋欄 */}
+              <div className="px-[10px] py-[8px] border-b border-[rgba(145,158,171,0.12)] shrink-0">
+                <div className="flex items-center gap-[6px] border border-[rgba(145,158,171,0.32)] rounded-[6px] px-[10px] py-[5px] focus-within:border-[#005eb8] transition-colors">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" className="shrink-0">
+                    <circle cx="11" cy="11" r="8" stroke="#919eab" strokeWidth="2"/>
+                    <path d="m21 21-4.35-4.35" stroke="#919eab" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                  <input
+                    autoFocus
+                    type="text"
+                    value={query}
+                    onChange={e => setQuery(e.target.value)}
+                    onClick={e => e.stopPropagation()}
+                    placeholder="搜尋代碼或名稱..."
+                    className="flex-1 text-[13px] text-[#1c252e] placeholder:text-[#c4cdd6] outline-none bg-transparent border-0"
+                  />
+                  {query && (
+                    <button onClick={e => { e.stopPropagation(); setQuery(''); }} className="text-[#919eab] hover:text-[#1c252e]">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M18 6 6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                    </button>
                   )}
                 </div>
               </div>
-            </>
-          )}
-        </div>
+              {/* 選項列表 */}
+              <div className="overflow-y-auto custom-scrollbar flex-1">
+                {filtered.length > 0 ? filtered.map((c, i) => {
+                  const lastUsed = getLastUsedCurrencies();
+                  const isLastRecent = !query && lastUsed.length > 0 && i === lastUsed.length - 1 && i < filtered.length - 1;
+                  return (
+                    <div key={`${c.code}-${i}`}>
+                      <div
+                        className={`px-[14px] py-[9px] cursor-pointer flex items-center justify-between transition-colors ${
+                          currency === c.code ? 'bg-[rgba(0,94,184,0.08)]' : 'hover:bg-[rgba(145,158,171,0.06)]'
+                        }`}
+                        onClick={() => { saveLastUsedCurrency(c.code); onCurrencyChange?.(c.code); setOpen(false); setQuery(''); }}
+                      >
+                        <div>
+                          <span className="font-semibold text-[13px] text-[#005eb8] mr-[8px]">{c.code}</span>
+                          <span className="text-[13px] text-[#1c252e]">{c.fullName || c.shortName}</span>
+                        </div>
+                        {currency === c.code && (
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="shrink-0">
+                            <path d="M20 6 9 17l-5-5" stroke="#005eb8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        )}
+                      </div>
+                      {isLastRecent && <div className="mx-[14px] border-t border-[rgba(145,158,171,0.16)]" />}
+                    </div>
+                  );
+                }) : (
+                  <div className="px-[14px] py-[16px] text-center">
+                    <p className="text-[13px] text-[#919eab]">無符合的幣別</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        )}
       </div>
       {/* 錯誤提示 */}
       {hasError && (
-        <span className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] text-[12px] text-[#ff4842] leading-[18px] ml-[0px]">
+        <span className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] text-[12px] text-[#ff4842] leading-[18px]">
           金額不可為 0
         </span>
       )}
@@ -683,7 +694,9 @@ export function InsuranceDetailPage({
               {/* Row 1b: 工廠涵蓋範圍（移至廠商編號下方） */}
               <div className="flex items-center gap-[12px] flex-wrap">
                 <span className={`shrink-0 font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[14px] w-[120px] ${
-                  isVendor && !isReadOnly && showValidation && form.factories.length === 0 ? 'text-[#ff5630]' : 'text-[#1c252e]'
+                  isVendor && !isReadOnly && showValidation && form.factories.length === 0
+                    ? 'text-[#ff5630]'
+                    : !isVendor ? 'text-[#005eb8]' : 'text-[#1c252e]'
                 }`}>
                   {isVendor && !isReadOnly && <span style={{ color: '#ff5630', marginRight: '2px' }}>*</span>}
                   工廠涵蓋範圍
@@ -716,6 +729,7 @@ export function InsuranceDetailPage({
                     noResize
                     required={isVendor && !isReadOnly}
                     hasError={isVendor && !isReadOnly && showValidation && !form.insuranceCompanyZh.trim()}
+                    vendorField={!isVendor}
                   />
                 </div>
                 <div className="min-w-0" style={{ flex: 2 }}>
@@ -728,6 +742,7 @@ export function InsuranceDetailPage({
                     noResize
                     required={isVendor && !isReadOnly}
                     hasError={isVendor && !isReadOnly && showValidation && !form.insuranceCompanyEn.trim()}
+                    vendorField={!isVendor}
                   />
                 </div>
               </div>
@@ -742,6 +757,7 @@ export function InsuranceDetailPage({
                     disabled={isReadOnly}
                     required={isVendor && !isReadOnly}
                     hasError={isVendor && !isReadOnly && showValidation && !form.effectiveDate}
+                    vendorField={!isVendor}
                   />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -752,6 +768,7 @@ export function InsuranceDetailPage({
                     disabled={isReadOnly}
                     required={isVendor && !isReadOnly}
                     hasError={isVendor && !isReadOnly && showValidation && !form.expiryDate}
+                    vendorField={!isVendor}
                   />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -764,6 +781,7 @@ export function InsuranceDetailPage({
                     noResize
                     required={isVendor && !isReadOnly}
                     hasError={isVendor && !isReadOnly && showValidation && !form.creditRating.trim()}
+                    vendorField={!isVendor}
                   />
                 </div>
               </div>
@@ -773,9 +791,9 @@ export function InsuranceDetailPage({
               {/* ── 巨大視角專屬欄位 ── */}
               {!isVendor && (
                 <>
-                  {/* 回朔日期 */}
+                  {/* 回朔日期 + 投保險種 + 投保物料（同一列，三等欄） */}
                   <div className="flex items-center gap-[16px]">
-                    <div style={{ width: '33.33%' }}>
+                    <div className="flex-1 min-w-0">
                       <FloatingDateField
                         label="回朔日期"
                         value={form.retroactiveDate}
@@ -783,28 +801,14 @@ export function InsuranceDetailPage({
                         disabled={isReadOnly}
                       />
                     </div>
-                  </div>
-
-                  {/* 投保險種 + 投保物料 */}
-                  <div className="flex items-center gap-[16px] flex-wrap">
-                    <div className="flex items-center gap-[8px]">
-                      <span className="shrink-0 font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[14px] text-[#1c252e]">
-                        投保險種
-                      </span>
-                      <div className="flex items-center gap-[10px]">
-                        {INSURANCE_TYPE_LIST.map(type => (
-                          <CheckItem
-                            key={type}
-                            label={type}
-                            checked={form.insuranceType.includes(type)}
-                            disabled={isReadOnly}
-                            onChange={checked => {
-                              if (checked) set('insuranceType', [...form.insuranceType, type]);
-                              else set('insuranceType', form.insuranceType.filter(t => t !== type));
-                            }}
-                          />
-                        ))}
-                      </div>
+                    <div className="flex-1 min-w-0">
+                      <DropdownSelect
+                        label="投保險種"
+                        value={form.insuranceType}
+                        onChange={v => set('insuranceType', v)}
+                        options={INSURANCE_TYPE_OPTIONS}
+                        disabled={isReadOnly}
+                      />
                     </div>
                     <div className="flex-1 min-w-0">
                       <FloatingInput
@@ -817,9 +821,9 @@ export function InsuranceDetailPage({
                     </div>
                   </div>
 
-                  {/* 索賠制式 + 代表人 + 備註 */}
-                  <div className="flex items-center gap-[16px] flex-wrap">
-                    <div className="w-[220px] shrink-0">
+                  {/* 索賠制式 + 代表人 + 備註（三等欄） */}
+                  <div className="flex items-center gap-[16px]">
+                    <div className="flex-1 min-w-0">
                       <DropdownSelect
                         label="索賠制式"
                         value={form.claimBasis}
@@ -828,13 +832,14 @@ export function InsuranceDetailPage({
                         disabled={isReadOnly}
                       />
                     </div>
-                    <div className="w-[160px] shrink-0">
+                    <div className="flex-1 min-w-0">
                       <FloatingInput
                         label="代表人"
                         value={form.representative}
                         onChange={v => set('representative', v)}
                         disabled={isReadOnly}
                         placeholder="代表人"
+                        noResize
                       />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -844,23 +849,28 @@ export function InsuranceDetailPage({
                         onChange={v => set('notes', v)}
                         disabled={isReadOnly}
                         placeholder="備註"
+                        noResize
                       />
                     </div>
                   </div>
 
-                  {/* 條款 Checkboxes */}
-                  <div className="flex items-center gap-[12px] flex-wrap">
-                    <span className="shrink-0 font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[14px] text-[#1c252e] w-[120px]">
-                      條款
-                    </span>
-                    <CheckItem label="安全部品" checked={form.safetyParts} disabled={isReadOnly} onChange={v => set('safetyParts', v)} />
-                    <CheckItem label="合約簽訂" checked={form.contractSigned} disabled={isReadOnly} onChange={v => set('contractSigned', v)} />
-                    <CheckItem label="綠波合約" checked={form.greenWave} disabled={isReadOnly} onChange={v => set('greenWave', v)} />
-                    <CheckItem label="OE附約" checked={form.oeAttachment} disabled={isReadOnly} onChange={v => set('oeAttachment', v)} />
-                    <CheckItem label="MOU" checked={form.mou} disabled={isReadOnly} onChange={v => set('mou', v)} />
-                    <CheckItem label="供應商人權調查問卷" checked={form.humanRightsSurvey} disabled={isReadOnly} onChange={v => set('humanRightsSurvey', v)} />
-                    <CheckItem label="投保區域含美加" checked={form.coversUSA} disabled={isReadOnly} onChange={v => set('coversUSA', v)} />
-                    <CheckItem label="巨大為附加被保險人" checked={form.giantAsAdditional} disabled={isReadOnly} onChange={v => set('giantAsAdditional', v)} />
+                  {/* 其他備註 Checkboxes — 底色區塊 */}
+                  <div className="relative rounded-[8px] border border-[rgba(145,158,171,0.2)] bg-[#f4f6f8] px-[20px] py-[14px]">
+                    {/* 浮動標籤 */}
+                    <div className="absolute flex items-center left-[14px] px-[2px] top-[-7px] z-10">
+                      <div className="absolute bg-[#f4f6f8] h-[2px] left-0 right-0 top-[7px]" />
+                      <p className="relative text-[14px] font-semibold text-[#1c252e]">其他備註</p>
+                    </div>
+                    <div className="flex items-center gap-[16px] flex-wrap">
+                      <CheckItem label="安全部品" checked={form.safetyParts} disabled={isReadOnly} onChange={v => set('safetyParts', v)} />
+                      <CheckItem label="合約簽訂" checked={form.contractSigned} disabled={isReadOnly} onChange={v => set('contractSigned', v)} />
+                      <CheckItem label="綠波合約" checked={form.greenWave} disabled={isReadOnly} onChange={v => set('greenWave', v)} />
+                      <CheckItem label="OE附約" checked={form.oeAttachment} disabled={isReadOnly} onChange={v => set('oeAttachment', v)} />
+                      <CheckItem label="MOU" checked={form.mou} disabled={isReadOnly} onChange={v => set('mou', v)} />
+                      <CheckItem label="供應商人權調查問卷" checked={form.humanRightsSurvey} disabled={isReadOnly} onChange={v => set('humanRightsSurvey', v)} />
+                      <CheckItem label="投保區域含美加" checked={form.coversUSA} disabled={isReadOnly} onChange={v => set('coversUSA', v)} />
+                      <CheckItem label="巨大為附加被保險人" checked={form.giantAsAdditional} disabled={isReadOnly} onChange={v => set('giantAsAdditional', v)} />
+                    </div>
                   </div>
                 </>
               )}
@@ -870,23 +880,26 @@ export function InsuranceDetailPage({
             <div className="flex items-center gap-[16px] mb-[16px]">
               <SectionTitle title="保費資訊" />
             </div>
-            <div className="flex flex-col gap-[12px] mb-[24px]">
+            <div className="flex items-start gap-[16px] mb-[24px]">
               {/* 保費（廠商+巨大都顯示） */}
-              <PremiumAmountRow
-                label="保費"
-                amount={form.premium}
-                currency={form.premiumCurrency}
-                onAmountChange={v => set('premium', v)}
-                onCurrencyChange={v => set('premiumCurrency', v)}
-                disabled={isReadOnly}
-                required={isVendor && !isReadOnly}
-                hasError={isVendor && !isReadOnly && showValidation && (form.premium === null || form.premium <= 0)}
-              />
+              <div className="flex-1 min-w-0">
+                <PremiumAmountRow
+                  label="保費"
+                  amount={form.premium}
+                  currency={form.premiumCurrency}
+                  onAmountChange={v => set('premium', v)}
+                  onCurrencyChange={v => set('premiumCurrency', v)}
+                  disabled={isReadOnly}
+                  required={isVendor && !isReadOnly}
+                  hasError={isVendor && !isReadOnly && showValidation && (form.premium === null || form.premium <= 0)}
+                  vendorField={!isVendor}
+                />
+              </div>
 
-              {/* 巨大視角才顯示 */}
+              {/* 巨大視角才顯示的四個金額 */}
               {!isVendor && (
                 <>
-                  <div className="flex items-center gap-[16px] flex-wrap">
+                  <div className="flex-1 min-w-0">
                     <PremiumAmountRow
                       label="合約簽訂保額"
                       amount={form.contractPolicyAmount}
@@ -895,6 +908,8 @@ export function InsuranceDetailPage({
                       onCurrencyChange={v => set('contractPolicyCurrency', v)}
                       disabled={isReadOnly}
                     />
+                  </div>
+                  <div className="flex-1 min-w-0">
                     <PremiumAmountRow
                       label="單一事故賠償金額"
                       amount={form.singleIncidentAmount}
@@ -904,7 +919,7 @@ export function InsuranceDetailPage({
                       disabled={isReadOnly}
                     />
                   </div>
-                  <div className="flex items-center gap-[16px] flex-wrap">
+                  <div className="flex-1 min-w-0">
                     <PremiumAmountRow
                       label="標準保額"
                       amount={form.standardPolicyAmount}
@@ -913,6 +928,8 @@ export function InsuranceDetailPage({
                       onCurrencyChange={v => set('standardPolicyCurrency', v)}
                       disabled={isReadOnly}
                     />
+                  </div>
+                  <div className="flex-1 min-w-0">
                     <PremiumAmountRow
                       label="廠商最高賠償金額"
                       amount={form.maxCompensation}
@@ -928,7 +945,7 @@ export function InsuranceDetailPage({
 
             {/* ── 保單附件 section ── */}
             <div className="flex items-center gap-[16px] mb-[16px]">
-              <SectionTitle title="保單附件" required={isVendor && !isReadOnly} />
+              <SectionTitle title="保單附件" required={isVendor && !isReadOnly} vendorField={!isVendor} />
               {isVendor && !isReadOnly && showValidation && form.attachments.length === 0 && (
                 <span className="font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#ff5630] leading-[18px]">至少需上傳一份附件</span>
               )}
