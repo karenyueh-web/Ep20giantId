@@ -983,23 +983,6 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
         )}
       </div>
 
-      {/* 2. 新零件專案 */}
-      <div className="w-full">
-        <NavItem 
-          icon={<PartsIcon />} 
-          label="新零件專案" 
-          hasSubmenu 
-          isExpanded={expandedMenus.includes('newparts')}
-          onClick={() => toggleMenu('newparts')}
-        />
-        {expandedMenus.includes('newparts') && (
-          <div className="w-full">
-            <SubMenuItem label="新零件專案維護" page="newparts-project" onNavigate={onPageChange} isActive={currentPage === 'newparts-project'} />
-            <SubMenuItem label="專案設定" page="newparts-settings" onNavigate={onPageChange} isActive={currentPage === 'newparts-settings'} />
-          </div>
-        )}
-      </div>
-
       {/* 3. 訂單管理 */}
       <div className="w-full">
         <NavItem 
