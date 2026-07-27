@@ -351,7 +351,14 @@ export const insuranceMockData: InsuranceRecord[] = [
     maxCompensation: null,
     maxCompensationCurrency: '',
     attachments: [],
-    history: [],
+    history: [
+      {
+        id: 'sys-5-1',
+        timestamp: '2025-01-05T09:00:00.000Z',
+        actor: '系統',
+        summary: '建立 2025 年度資料，狀態設為 V（待驗證）',
+      },
+    ],
     mainProducts: '自行車輪輻、花鼓',
   },
 
@@ -654,7 +661,14 @@ export const insuranceMockData: InsuranceRecord[] = [
     maxCompensation: null,
     maxCompensationCurrency: '',
     attachments: [],
-    history: [],
+    history: [
+      {
+        id: 'sys-10-1',
+        timestamp: '2025-01-05T09:00:00.000Z',
+        actor: '系統',
+        summary: '建立 2025 年度資料，狀態設為 V（待驗證）',
+      },
+    ],
     mainProducts: '自行車輪胎、內胎',
   },
 

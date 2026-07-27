@@ -177,19 +177,21 @@ function ActionButton({
   label, variant = 'primary', onClick,
 }: {
   label: string;
-  variant?: 'primary' | 'danger' | 'outline';
+  variant?: 'primary' | 'danger' | 'red' | 'green' | 'outline';
   onClick?: () => void;
 }) {
   const cls =
-    variant === 'danger'
+    variant === 'danger' || variant === 'red'
       ? 'bg-[#ff5630] hover:bg-[#dd4015] text-white'
+      : variant === 'green'
+      ? 'bg-[#16a34a] hover:bg-[#15803d] text-white'
       : variant === 'outline'
       ? 'bg-white hover:bg-[#f4f6f8] text-[#1c252e] border border-[rgba(145,158,171,0.32)]'
       : 'bg-[#1c252e] hover:bg-[#2c3540] text-white';
   return (
     <button
       onClick={onClick}
-      className={`h-[36px] px-[20px] rounded-[8px] text-[14px] font-semibold transition-colors shrink-0 ${cls}`}
+      className={`h-[36px] w-[108px] rounded-[8px] text-[14px] font-semibold transition-colors shrink-0 ${cls}`}
     >
       {label}
     </button>
@@ -316,39 +318,56 @@ function PremiumAmountRow({
     return isNaN(n) ? null : n;
   };
 
-  // 顯示值：輸入中用 inputText，否則用格式化的 amount
+  // 格式化純數字字串為千分位（保留小數）
+  const formatRaw = (raw: string): string => {
+    if (!raw) return '';
+    const [intPart, decPart] = raw.split('.');
+    const formatted = Number(intPart || '0').toLocaleString('en-US');
+    return decPart !== undefined ? `${formatted}.${decPart}` : formatted;
+  };
+
+  // 顯示值：inputText 有值時用它（含千分位），否則用格式化的 amount
   const displayValue = inputText !== null ? inputText : formatNumber(amount);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value;
-    // 只允許數字、逗號、一個小數點
-    const cleaned = raw.replace(/[^\d.,]/g, '');
-    setInputText(cleaned);
+    const el = e.target;
+    const raw = el.value;
+    // 只保留數字、一個小數點
+    const digitsOnly = raw.replace(/[^\d.]/g, '');
+    // 格式化為千分位
+    const formatted = formatRaw(digitsOnly);
+    // 計算游標：新字串比舊字串多了幾個逗號，對應補偏移
+    const cursorPos = el.selectionStart ?? formatted.length;
+    const oldCommas = (inputText ?? '').slice(0, cursorPos).replace(/[^,]/g, '').length;
+    const newRawLen = digitsOnly.slice(0, cursorPos - oldCommas + (raw.slice(0, cursorPos).replace(/[^\d.]/g, '').length - digitsOnly.slice(0, cursorPos - oldCommas).length)).length;
+    const newCommas = formatted.slice(0, newRawLen + Math.floor((newRawLen - 1) / 3)).replace(/[^,]/g, '').length;
+    const newCursor = formatted.length; // 最簡單：游標移到尾端（解決逗號插入跳位問題）
+
+    setInputText(formatted);
     setInternalHasError(false);
-    const parsed = parseInput(cleaned);
+    const parsed = parseInput(formatted);
     onAmountChange?.(parsed);
+
+    // 非同步設定游標（React 重渲前先設定會被蓋掉）
+    requestAnimationFrame(() => {
+      if (el.isConnected) el.setSelectionRange(newCursor, newCursor);
+    });
   };
 
   const handleBlur = () => {
     const parsed = parseInput(inputText ?? '');
-    // 驗證：有值時不可為 0
     if (parsed !== null && parsed <= 0) {
       setInternalHasError(true);
     } else {
       setInternalHasError(false);
       onAmountChange?.(parsed);
     }
-    // 離開輸入框後回到格式化顯示
     setInputText(null);
   };
 
   const handleFocus = () => {
-    // 進入編輯時，把 amount 轉成純數字字串（去掉逗號）
-    if (amount !== null) {
-      setInputText(String(amount));
-    } else {
-      setInputText('');
-    }
+    // focus 時顯示千分位格式（不剝掉逗號，讓使用者直接看到格式化值）
+    setInputText(formatNumber(amount));
     setInternalHasError(false);
   };
 
@@ -506,6 +525,8 @@ export function InsuranceDetailPage({
 }: InsuranceDetailPageProps) {
   const [activeRole, setActiveRole] = useState<UserRole>(initialUserRole);
   const isVendor = activeRole === 'vendor';
+  const [showReturnDialog, setShowReturnDialog] = useState(false);
+  const [returnReason, setReturnReason] = useState('');
   const [showHistory, setShowHistory] = useState(false);
   const [form, setForm] = useState<InsuranceRecord>({ ...record });
   const [missingFields, setMissingFields] = useState<string[]>([]);
@@ -529,14 +550,17 @@ export function InsuranceDetailPage({
     form.status === 'CL' ||
     (isVendor && (form.status === 'G' || form.status === 'CL'));
 
+  // ── 去年同廠商的已結案資料 ──
+  const lastYearRecord = insuranceMockData.find(
+    r => r.vendorCode === record.vendorCode && r.year === record.year - 1 && r.status === 'CL',
+  );
+
   // ── 同去年設定 ──
   const handleSameAsLastYear = (checked: boolean) => {
+    if (checked && !lastYearRecord) return; // 無去年資料，不允許勾選
     set('sameAsLastYear', checked);
-    if (checked) {
-      const lastYear = insuranceMockData.find(
-        r => r.vendorCode === record.vendorCode && r.year === record.year - 1 && r.status === 'CL',
-      );
-      if (lastYear) set('factories', [...lastYear.factories]);
+    if (checked && lastYearRecord) {
+      set('factories', [...lastYearRecord.factories]);
     }
   };
 
@@ -569,11 +593,105 @@ export function InsuranceDetailPage({
     return missing;
   };
 
+  // ── 歷程輔助：逐欄比對差異，產生人可讀摘要 ──
+  const buildChangeHistory = (prev: InsuranceRecord, next: InsuranceRecord, suffix = ''): HistoryEntry | null => {
+    const actor = activeRole === 'vendor' ? (form.vendorName || '廠商') : '巨大';
+    const FIELD_LABELS: Partial<Record<keyof InsuranceRecord, string>> = {
+      insuranceCompanyZh: '保險公司名稱(中)',
+      insuranceCompanyEn: '保險公司名稱(En)',
+      effectiveDate:      '生效日期',
+      expiryDate:         '截止日期',
+      retroactiveDate:    '回朔日期',
+      insuranceType:      '投保險種',
+      insuredMaterial:    '投保物料',
+      claimBasis:         '索賠制式',
+      creditRating:       '保險公司信用評等',
+      representative:     '代表人',
+      notes:              '備註',
+      premium:            '保費',
+      premiumCurrency:    '保費幣別',
+      contractPolicyAmount:   '合約簽訂保額',
+      contractPolicyCurrency: '合約簽訂保額幣別',
+      singleIncidentAmount:   '單一事故賠償金額',
+      singleIncidentCurrency: '單一事故賠償金額幣別',
+      standardPolicyAmount:   '標準保額',
+      standardPolicyCurrency: '標準保額幣別',
+      maxCompensation:        '廠商最高賠償金額',
+      maxCompensationCurrency:'廠商最高賠償金額幣別',
+      safetyParts:            '安全部品',
+      contractSigned:         '合約簽訂',
+      greenWave:              '綠波合約',
+      oeAttachment:           'OE附約',
+      mou:                    'MOU',
+      humanRightsSurvey:      '供應商人權調查問卷',
+      coversUSA:              '投保區域含美加',
+      giantAsAdditional:      '巨大為附加被保險人',
+      sameAsLastYear:         '同去年設定',
+      factories:              '工廠涵蓋範圍',
+      isPaid:                 '繳費狀態',
+      attachments:            '保單附件',
+    };
+    const changed: string[] = [];
+    (Object.keys(FIELD_LABELS) as (keyof InsuranceRecord)[]).forEach(key => {
+      const a = JSON.stringify(prev[key]);
+      const b = JSON.stringify(next[key]);
+      if (a !== b) changed.push(FIELD_LABELS[key]!);
+    });
+    const summary = changed.length > 0
+      ? `儲存${suffix}（修改：${changed.join('、')}）`
+      : `儲存${suffix}（無欄位變更）`;
+    return {
+      id: Date.now().toString(),
+      timestamp: new Date().toISOString(),
+      actor,
+      summary,
+    };
+  };
+
   // ── 動作按鈕 ──
-  const handleSave = () => onSave(form);
-  const handleReturnToVendor = () => onStatusChange(form.id, 'V');
-  const handleCloseAfterSave = () => { onSave(form); onStatusChange(form.id, 'CL'); };
-  const handleConfirmClose = () => onStatusChange(form.id, 'CL');
+  const handleSave = () => {
+    const entry = buildChangeHistory(record, form);
+    const updated = entry ? { ...form, history: [entry, ...form.history] } : form;
+    onSave(updated);
+  };
+
+  const handleReturnToVendor = (reason: string) => {
+    const newHistory: HistoryEntry = {
+      id: Date.now().toString(),
+      timestamp: new Date().toISOString(),
+      actor: activeRole === 'vendor' ? (form.vendorName || '廠商') : '巨大',
+      summary: reason ? `退回廠商：${reason}` : '退回廠商',
+    };
+    const updatedForm = { ...form, history: [newHistory, ...form.history] };
+    onSave(updatedForm);
+    onStatusChange(form.id, 'V');
+  };
+
+  const handleCloseAfterSave = () => {
+    const entry = buildChangeHistory(record, form, '並結案');
+    const closedEntry: HistoryEntry = {
+      id: (Date.now() + 1).toString(),
+      timestamp: new Date().toISOString(),
+      actor: activeRole === 'vendor' ? (form.vendorName || '廠商') : '巨大',
+      summary: '確認結案',
+    };
+    const updated = { ...form, history: [closedEntry, ...(entry ? [entry] : []), ...form.history] };
+    onSave(updated);
+    onStatusChange(form.id, 'CL');
+  };
+
+  const handleConfirmClose = () => {
+    const entry: HistoryEntry = {
+      id: Date.now().toString(),
+      timestamp: new Date().toISOString(),
+      actor: activeRole === 'vendor' ? (form.vendorName || '廠商') : '巨大',
+      summary: '確認結案',
+    };
+    const updated = { ...form, history: [entry, ...form.history] };
+    onSave(updated);
+    onStatusChange(form.id, 'CL');
+  };
+
   const handleTransferToProcurement = () => {
     const missing = validateVendorFields();
     if (missing.length > 0) {
@@ -581,6 +699,14 @@ export function InsuranceDetailPage({
       setMissingFields(missing);
       return;
     }
+    const entry: HistoryEntry = {
+      id: Date.now().toString(),
+      timestamp: new Date().toISOString(),
+      actor: form.vendorName || '廠商',
+      summary: '轉交整合採購',
+    };
+    const updated = { ...form, history: [entry, ...form.history] };
+    onSave(updated);
     onStatusChange(form.id, 'G');
   };
 
@@ -597,7 +723,8 @@ export function InsuranceDetailPage({
       return (
         <div className="flex items-center gap-[8px]">
           <ActionButton label="取消單據" variant="danger" onClick={() => alert('取消單據（mock）')} />
-          <ActionButton label="退回廠商" onClick={handleReturnToVendor} />
+          <ActionButton label="退回廠商" variant="red" onClick={() => { setReturnReason(''); setShowReturnDialog(true); }} />
+          <ActionButton label="儲存" variant="green" onClick={handleSave} />
           <ActionButton label="儲存後結案" onClick={handleCloseAfterSave} />
         </div>
       );
@@ -605,8 +732,9 @@ export function InsuranceDetailPage({
     if (!isVendor && form.status === 'G') {
       return (
         <div className="flex items-center gap-[8px]">
-          <ActionButton label="退回廠商" onClick={handleReturnToVendor} />
-          <ActionButton label="確認結案" onClick={handleConfirmClose} />
+          <ActionButton label="退回廠商" variant="red" onClick={() => { setReturnReason(''); setShowReturnDialog(true); }} />
+          <ActionButton label="儲存" variant="green" onClick={handleSave} />
+          <ActionButton label="儲存後結案" onClick={handleCloseAfterSave} />
         </div>
       );
     }
@@ -650,11 +778,6 @@ export function InsuranceDetailPage({
               <span className="text-[#919eab] text-[12px]">⇄</span>
               <button onClick={() => setActiveRole('vendor')} className={`text-[12px] font-semibold px-[6px] py-[1px] rounded-[4px] transition-colors ${activeRole === 'vendor' ? 'bg-[#1c252e] text-white' : 'text-[#637381] hover:text-[#1c252e]'}`}>廠商</button>
             </div>
-            <button className="flex items-center text-[#637381] hover:text-[#1c252e] transition-colors shrink-0">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
             <p onClick={() => setShowHistory(true)} className="[text-decoration-skip-ink:none] decoration-solid font-['Roboto:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[32px] text-[#005eb8] text-[16px] underline cursor-pointer hover:text-[#003d73] shrink-0">歷程</p>
             {!isReadOnly && <ActionButtons />}
           </div>
@@ -701,7 +824,12 @@ export function InsuranceDetailPage({
                   {isVendor && !isReadOnly && <span style={{ color: '#ff5630', marginRight: '2px' }}>*</span>}
                   工廠涵蓋範圍
                 </span>
-                <CheckItem label="同去年設定" checked={form.sameAsLastYear} disabled={isReadOnly} onChange={handleSameAsLastYear} />
+                <CheckItem
+                  label="同去年設定"
+                  checked={form.sameAsLastYear}
+                  disabled={isReadOnly || !lastYearRecord}
+                  onChange={handleSameAsLastYear}
+                />
                 <div className="w-[1px] h-[14px] bg-[rgba(145,158,171,0.32)]" />
                 {FACTORY_LIST.map(f => (
                   <CheckItem
@@ -710,6 +838,8 @@ export function InsuranceDetailPage({
                     checked={form.factories.includes(f)}
                     disabled={isReadOnly}
                     onChange={checked => {
+                      // 工廠異動時，若同去年設定已勾 → 自動取消（視為不同於去年）
+                      if (form.sameAsLastYear) set('sameAsLastYear', false);
                       if (checked) set('factories', [...form.factories, f]);
                       else set('factories', form.factories.filter(x => x !== f));
                     }}
@@ -718,8 +848,8 @@ export function InsuranceDetailPage({
               </div>
 
               {/* Row 2+3: 保險公司名稱(中) 1份 / (En) 2份 並排 */}
-              <div className="flex items-center gap-[16px]">
-                <div className="flex-1 min-w-0">
+              <div className="grid grid-cols-3 gap-[16px]">
+                <div className="min-w-0">
                   <FloatingInput
                     label="保險公司名稱(中)"
                     value={form.insuranceCompanyZh}
@@ -732,7 +862,7 @@ export function InsuranceDetailPage({
                     vendorField={!isVendor}
                   />
                 </div>
-                <div className="min-w-0" style={{ flex: 2 }}>
+                <div className="col-span-2 min-w-0">
                   <FloatingInput
                     label="保險公司名稱(En)"
                     value={form.insuranceCompanyEn}
@@ -882,7 +1012,7 @@ export function InsuranceDetailPage({
             </div>
             <div className="flex items-start gap-[16px] mb-[24px]">
               {/* 保費（廠商+巨大都顯示） */}
-              <div className="flex-1 min-w-0">
+              <div className={isVendor ? 'w-fit' : 'flex-1 min-w-0'}>
                 <PremiumAmountRow
                   label="保費"
                   amount={form.premium}
@@ -994,6 +1124,7 @@ export function InsuranceDetailPage({
                     <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="#919eab" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                   <p className="text-[13px] text-[#637381]">點擊或拖曳上傳檔案</p>
+                  <p className="text-[12px] text-[#919eab]">支援格式：PDF、JPG、PNG、XLSX｜單檔上限 10 MB</p>
                   <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileSelect} />
                 </div>
               )}
@@ -1014,6 +1145,61 @@ export function InsuranceDetailPage({
             remark: '',
           }))}
         />
+      )}
+
+      {/* ══ 退回廠商原因彈窗 ══ */}
+      {showReturnDialog && (
+        <BaseOverlay onClose={() => setShowReturnDialog(false)} maxWidth="480px" maxHeight="360px">
+          {/* 頂部標題 */}
+          <div className="shrink-0 flex items-center gap-[12px] pl-[4px] pr-[16px] py-[4px] border-b border-[rgba(145,158,171,0.12)]">
+            <div className="flex items-center justify-center rounded-[12px] shrink-0 size-[48px] bg-[rgba(0,94,184,0.08)]">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="#005eb8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <p className="flex-1 font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] leading-[22px] text-[#1c252e]">請輸入退回原因</p>
+            <button
+              onClick={() => setShowReturnDialog(false)}
+              className="flex items-center justify-center w-[36px] h-[36px] rounded-full hover:bg-[rgba(145,158,171,0.12)] transition-colors shrink-0"
+            >
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M15 5L5 15M5 5l10 10" stroke="#637381" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            </button>
+          </div>
+          {/* 輸入區 */}
+          <div className="flex-1 overflow-y-auto px-[20px] py-[16px] flex flex-col gap-[8px]">
+            <div className="relative rounded-[8px] min-h-[140px]">
+              <div aria-hidden="true" className="absolute border-2 border-[#005eb8] border-solid inset-0 pointer-events-none rounded-[8px]" />
+              <textarea
+                value={returnReason}
+                onChange={e => { if (e.target.value.length <= 50) setReturnReason(e.target.value); }}
+                placeholder="請簡述退回原因，限 50 字"
+                rows={6}
+                className="w-full min-h-[140px] px-[16px] py-[12px] font-['Public_Sans:Regular',sans-serif] font-normal text-[14px] leading-[22px] bg-transparent outline-none resize-none placeholder:text-[#919eab] text-[#1c252e] rounded-[8px]"
+              />
+            </div>
+            <p className="text-right text-[12px] text-[#919eab]">{returnReason.length} / 50</p>
+          </div>
+          {/* 底部按鈕 */}
+          <div className="shrink-0 flex items-center justify-end gap-[8px] px-[20px] py-[12px] border-t border-[rgba(145,158,171,0.12)]">
+            <button
+              onClick={() => setShowReturnDialog(false)}
+              className="flex items-center justify-center h-[36px] px-[20px] rounded-[8px] border border-[rgba(145,158,171,0.32)] hover:bg-[rgba(145,158,171,0.08)] transition-colors"
+            >
+              <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#1c252e]">取消</span>
+            </button>
+            <button
+              onClick={() => {
+                setShowReturnDialog(false);
+                handleReturnToVendor(returnReason.trim());
+              }}
+              className="flex items-center justify-center h-[36px] px-[20px] rounded-[8px] bg-[#004680] hover:bg-[#003560] transition-colors"
+            >
+              <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-white">確認退回</span>
+            </button>
+          </div>
+        </BaseOverlay>
       )}
 
       {/* ══ 廠商必填欄位驗證 Alert ══ */}
