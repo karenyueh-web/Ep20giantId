@@ -36,6 +36,18 @@
 - 嵌入已有外層卡片的頁面（Tab + 搜尋列 + 表格 的 Settings 類頁面），**必須傳入 `embedded` prop**，否則搜尋列下方會出現多餘的 shadow 邊緣
 - 搜尋列容器 **禁止加 `border-b`**，`TableToolbar` 本身已有分隔效果
 
+### ⭐ 導覽列（NavigationList）異動規則
+**新增或移除 NavigationList.tsx 的選單項目時，必須同步更新 `PermissionSettingsPage.tsx` 的權限資料。**
+
+| 操作 | NavigationList.tsx | PermissionSettingsPage.tsx |
+|------|-------------------|---------------------------|
+| 新增 menu | 加入 `NavItem` + `SubMenuItem` | 同步新增對應的 `id` / `label` 至權限樹 |
+| 移除 menu | 刪除 `NavItem` + `SubMenuItem` | 同步刪除對應的權限節點 |
+
+- ✅ 正確：兩個檔案一起改
+- ❌ 錯誤：只改 NavigationList，忘記同步 PermissionSettingsPage
+
+
 ### 表格標題列 Checkbox 顯示規則
 - 表格有 Selection Bar（批次操作列）的頁面，標題列 checkbox 必須在有列被選取時隱藏
   - 條件：`selectedIds.size > 0` 時，不渲染標題列的 checkbox 按鈕

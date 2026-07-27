@@ -147,14 +147,7 @@ const FEATURE_TREE: FeatureNode[] = [
           },
         ],
       },
-      {
-        id: 'mgmt-newparts',
-        label: '新零件專案',
-        children: [
-          { id: 'mgmt-newparts-maintain', label: '新零件專案維護' },
-          { id: 'mgmt-newparts-settings', label: '專案設定' },
-        ],
-      },
+
       {
         id: 'mgmt-order',
         label: '訂單管理',
