@@ -519,6 +519,7 @@ function DeliveryOntimeTab() {
           onExportCsv={() => {}}
           className="rounded-none shadow-none"
           updateTime="2025/05/05 12:30"
+          refreshInterval="每月5日一次"
         />
       </div>
 
@@ -759,6 +760,7 @@ function ArrivalOntimeTab() {
           onExportCsv={() => {}}
           className="rounded-none shadow-none"
           updateTime="2025/05/05 12:30"
+          refreshInterval="每月5日一次"
         />
       </div>
 

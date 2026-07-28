@@ -10,6 +10,8 @@ interface PaginationControlsProps {
   onItemsPerPageChange?: (items: number) => void;
   /** 資料更新時間（有傳入時顯示在 pagination 列右側） */
   updateTime?: string;
+  /** 資料更新頻率文字（預設「10分鐘一次」） */
+  refreshInterval?: string;
 }
 
 const PAGE_SIZE_OPTIONS = [100, 500, 1000, 5000];
@@ -21,6 +23,7 @@ export function PaginationControls({
   onPageChange,
   onItemsPerPageChange,
   updateTime,
+  refreshInterval,
 }: PaginationControlsProps) {
   const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
   const startItem = totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
@@ -161,7 +164,7 @@ export function PaginationControls({
       {/* 資料更新時間（絕對定位貼右） */}
       {updateTime && (
         <div className="absolute right-[16px] top-1/2 -translate-y-1/2 shrink-0">
-          <UpdateTimeLabel label="資料更新時間" currentTime={updateTime} />
+          <UpdateTimeLabel label="資料更新時間" currentTime={updateTime} refreshInterval={refreshInterval} />
         </div>
       )}
     </div>

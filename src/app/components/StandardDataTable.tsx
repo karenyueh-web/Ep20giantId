@@ -84,8 +84,9 @@ export interface StandardDataTableProps<T extends { id: number }> {
   batchActions?: ReactNode;
   /** 覆寫外層容器的額外 className（例如嵌入其他 card 時可用 rounded-none 去掉圓角）*/
   className?: string;
-  /** 資料更新時間，傳入後顯示在右下角 pagination 列 */
   updateTime?: string;
+  /** 資料更新頻率文字（預設「10分鐘一次」），傳入後覆寫 tooltip 顯示 */
+  refreshInterval?: string;
   /**
    * 嵌入模式（預設 false）
    * - false：獨立卡片樣式，帶 shadow + rounded-[16px]（適合頁面頂層使用）
@@ -121,6 +122,7 @@ export function StandardDataTable<T extends { id: number }>({
   batchActions,
   className,
   updateTime,
+  refreshInterval,
   embedded = false,
 }: StandardDataTableProps<T>) {
   const { scrollContainerRef, handleMouseDown, canDragScroll } = useHorizontalDragScroll();
@@ -512,6 +514,7 @@ export function StandardDataTable<T extends { id: number }>({
           onPageChange={setPage}
           onItemsPerPageChange={n => { setPerPage(n); setPage(1); }}
           updateTime={updateTime}
+          refreshInterval={refreshInterval}
         />
       </div>
     </div>

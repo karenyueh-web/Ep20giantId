@@ -164,6 +164,8 @@ const INITIAL_DATA: ScheduleRow[] = [
   { id:31, category:'觸發程式', name:'收貨資料回傳',                                        enabled:true,  scheduleType:'weekday', days:'每天',                  startTime:'08:00', intervalMinutes:'60',  url:'', mailTypes:'', mailTypesArr:[], updatedAt:'2025/10/10 08:00' },
   { id:32, category:'觸發程式', name:'價格異動偵測',                                        enabled:true,  scheduleType:'weekday', days:'每天',                  startTime:'08:00', intervalMinutes:'30',  url:'', mailTypes:'', mailTypesArr:[], updatedAt:'2025/10/10 08:00' },
   { id:33, category:'觸發程式', name:'初次危害物質報告繳交通知',                              enabled:true,  scheduleType:'date',    days:'7月31號',              startTime:'08:00', intervalMinutes:'once', url:'/api/quality/hazard/annual-init', mailTypes:'', mailTypesArr:[], updatedAt:'2026/07/17 08:00' },
+  // ── 廠商評價 ──
+  { id:34, category:'觸發程式', name:'廠商評價計算（交貨準時率、答交準時率、廠商評價表）', enabled:true,  scheduleType:'date',    days:'每月5號',              startTime:'08:00', intervalMinutes:'once', url:'/api/vendor-evaluation/calculate', mailTypes:'', mailTypesArr:[], updatedAt:'2025/10/10 08:00' },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
