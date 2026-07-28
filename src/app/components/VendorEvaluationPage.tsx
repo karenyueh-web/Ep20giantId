@@ -572,6 +572,17 @@ function ArrivalDetailDialog({ row, onClose }: ArrivalDetailDialogProps) {
     { key: 'ontimeQty',  label: '準時答交數量', width: 130, minWidth: 110 },
   ];
 
+  // 期間標籤：使用 new Date(year, month, 0) 動態計算月底
+  const periodLabel = (() => {
+    if (row.period.length !== 6) return row.period;
+    const year  = parseInt(row.period.slice(0, 4));
+    const month = parseInt(row.period.slice(4, 6));
+    const lastDay = new Date(year, month, 0).getDate();
+    const mm = String(month).padStart(2, '0');
+    const dd = String(lastDay).padStart(2, '0');
+    return `${year}/${mm}/01-${year}/${mm}/${dd}`;
+  })();
+
   return (
     <BaseOverlay onClose={onClose} maxWidth="1200px" maxHeight="760px">
       <div className="relative w-full h-full flex flex-col">
@@ -595,6 +606,13 @@ function ArrivalDetailDialog({ row, onClose }: ArrivalDetailDialogProps) {
           <div className="flex items-center gap-[8px] h-[28px] px-[10px] rounded-[6px] bg-[rgba(0,94,184,0.08)]">
             <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#005eb8] leading-none whitespace-nowrap">
               {row.vendorDisplay}
+            </span>
+          </div>
+
+          {/* 期間 Tag（與交貨準時率明細對齊） */}
+          <div className="flex items-center gap-[8px] h-[28px] px-[10px] rounded-[6px] bg-[rgba(145,158,171,0.08)]">
+            <span className="font-['Public_Sans:Regular',sans-serif] font-normal text-[13px] text-[#637381] leading-none whitespace-nowrap">
+              {periodLabel}
             </span>
           </div>
 
