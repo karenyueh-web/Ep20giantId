@@ -32,10 +32,10 @@ export default function QualityAbnormalPrintPage({ row, onBack }: QualityAbnorma
       '  <title>GTM 協力廠商商品品質異常對策表</title>',
       '  <style>',
       '    @page { size: A4 portrait; margin: 8mm 10mm; }',
-      '    *, *::before, *::after { box-sizing: border-box; }',
+      '    *, *::before, *::after { box-sizing: border-box; box-shadow: none !important; }',
       '    html, body { margin: 0; padding: 0; background: white; font-family: "Noto Sans TC","微軟正黑體",sans-serif; }',
       '    table { border-collapse: collapse; width: 100%; }',
-      '    td { border: 1px solid #333; padding: 2px 4px; font-size: 10.5px; vertical-align: middle; word-break: break-all; }',
+      '    td { border: 1px solid #333; padding: 2px 4px; font-size: 12px; vertical-align: middle; word-break: break-all; }',
       '  </style>',
       '</head>',
       '<body>' + cloned.innerHTML + '</body>',
@@ -108,7 +108,7 @@ function QualityAbnormalDoc({ row }: { row: QualityRow }) {
 
   /** 一般資料格 */
   const td: React.CSSProperties = {
-    border: B, padding: '3px 5px', fontSize: '10.5px',
+    border: B, padding: '3px 5px', fontSize: '12px',
     verticalAlign: 'middle', wordBreak: 'break-all',
   };
 
@@ -133,24 +133,24 @@ function QualityAbnormalDoc({ row }: { row: QualityRow }) {
         padding: '16px 20px',
         boxSizing: 'border-box',
         fontFamily: "'Noto Sans TC','微軟正黑體',sans-serif",
-        fontSize: '10.5px',
+        fontSize: '12px',
         color: '#000',
         display: 'flex',
         flexDirection: 'column',
       }}
     >
       {/* ── 標題區 ── */}
-      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '4px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '4px', position: 'relative' }}>
         <GiantLogo />
-        <div style={{ flex: 1, textAlign: 'center' }}>
-          <span style={{ fontSize: '16px', fontWeight: 'bold', letterSpacing: '1px' }}>
+        <div style={{ position: 'absolute', left: 0, right: 0, textAlign: 'center', pointerEvents: 'none' }}>
+          <span style={{ fontSize: '24px', fontWeight: 'bold', letterSpacing: '1px' }}>
             GTM 協力廠商商品品質異常對策表(EP)
           </span>
         </div>
       </div>
 
       {/* 協調者 / QM單號 */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', marginBottom: '6px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '6px' }}>
         <span>協調者：{row.coordinator || '—'}</span>
         {/* TODO: 協調者未來從中台開單人員資料串接 */}
         <span>QM品質異常通知單號：{row.abnormalNumber}</span>
@@ -177,17 +177,17 @@ function QualityAbnormalDoc({ row }: { row: QualityRow }) {
             <col style={{ width: '18px' }} />
             <col style={{ width: '56px' }} />
             <col style={{ width: '130px' }} />
-            <col style={{ width: '30px' }} />
+            <col style={{ width: '38px' }} />
             <col style={{ width: '140px' }} />
-            <col style={{ width: '50px' }} />
+            <col style={{ width: '62px' }} />
             <col style={{ width: '110px' }} />
-            <col style={{ width: '28px' }} />
+            <col style={{ width: '36px' }} />
             <col />
           </colgroup>
           <tbody>
 
             {/* ── Row 1: 廠商 ── */}
-            <tr>
+            <tr style={{ height: '40px' }}>
               <td colSpan={2} style={th}>廠商</td>
               <td style={td}>{row.vendor}</td>
               <td style={th}>日期</td>
@@ -199,17 +199,17 @@ function QualityAbnormalDoc({ row }: { row: QualityRow }) {
             </tr>
 
             {/* ── Row 2: 零件編號 ── */}
-            <tr>
+            <tr style={{ height: '40px' }}>
               <td colSpan={2} style={th}>零件編號</td>
-              <td colSpan={2} style={td}>{row.partNumber}</td>
+              <td colSpan={3} style={td}>{row.partNumber}</td>
               <td style={th}>規格敍述</td>
-              <td colSpan={4} style={td}>{row.description}</td>
+              <td colSpan={3} style={td}>{row.description}</td>
             </tr>
 
             {/* ── Row 3: 不良情形 ── */}
             <tr>
               <td colSpan={2} style={th}>不良情形</td>
-              <td colSpan={7} style={{ ...content, minHeight: '60px' }}>
+              <td colSpan={7} style={{ ...content, height: '125px' }}>
                 {row.defectType}
               </td>
             </tr>
@@ -217,55 +217,39 @@ function QualityAbnormalDoc({ row }: { row: QualityRow }) {
             {/* ── Row 4: 應急處理 ── */}
             <tr>
               <td colSpan={2} style={th}>應急處理</td>
-              <td colSpan={7} style={{ ...content, minHeight: '60px' }}>
+              <td colSpan={7} style={{ ...content, height: '125px' }}>
                 {row.emergencyAction}
               </td>
             </tr>
 
-            {/* ── Row 5: 原因分析（保存期限 rowspan=2）── */}
+            {/* ── Row 5: 原因分析 ── */}
             <tr>
-              <td
-                rowSpan={2}
-                style={{
-                  ...th,
-                  writingMode: 'vertical-rl',
-                  textOrientation: 'mixed',
-                  letterSpacing: '3px',
-                  fontSize: '10px',
-                  padding: '4px 2px',
-                  width: '18px',
-                }}
-              >
-                保存期限：二年
-              </td>
-              <td style={th}>原因分析</td>
-              <td colSpan={7} style={{ ...content, height: '130px' }}>
+              <td colSpan={2} style={th}>原因分析</td>
+              <td colSpan={7} style={{ ...content, height: '196px' }}>
                 {row.causeAnalysis}
               </td>
             </tr>
 
             {/* ── Row 6: 對策提出 ── */}
             <tr>
-              <td style={th}>對策提出</td>
-              <td colSpan={7} style={{ ...content, height: '130px' }}>
+              <td colSpan={2} style={th}>對策提出</td>
+              <td colSpan={7} style={{ ...content, height: '196px' }}>
                 {row.countermeasure}
               </td>
             </tr>
 
-            {/* ── Row 7: GTM確認 ── */}
+            {/* ── Row 7: GTM確認（上：回覆內容 80%，下：日期確認者 20%）── */}
             <tr>
-              <td colSpan={2} style={th}>GTM確認</td>
-              <td colSpan={7} style={{ ...content, minHeight: '80px' }}>
+              <td colSpan={2} rowSpan={2} style={{ ...th, verticalAlign: 'middle' }}>GTM確認</td>
+              <td colSpan={7} style={{ ...content, height: '176px' }}>
                 {row.gtmConfirm}
               </td>
             </tr>
-
-            {/* ── Row 8: 日期 / 確認者 ── */}
             <tr>
-              <td colSpan={9} style={{ ...td, fontSize: '10px' }}>
+              <td colSpan={7} style={{ ...td, height: '20px', fontSize: '12px', color: '#000', overflow: 'hidden' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>日期：{bottomDate}</span>
-                  <span>確認者：{row.confirmer || '—'}</span>
+                  <span style={{ color: '#000' }}>日期：{bottomDate}</span>
+                  <span style={{ color: '#000' }}>確認者：{row.confirmer || '—'}</span>
                 </div>
               </td>
             </tr>
@@ -273,20 +257,42 @@ function QualityAbnormalDoc({ row }: { row: QualityRow }) {
           </tbody>
         </table>
 
-        {/* ── 右側豎向文字：流程 ── */}
+        {/* ── 右側豎向文字：保存期限 ── */}
         <div
           style={{
             border: B,
             borderLeft: 'none',
-            width: '22px',
+            width: '44px',
             flexShrink: 0,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             background: '#f0f0f0',
             writingMode: 'vertical-rl',
-            textOrientation: 'mixed',
-            fontSize: '10px',
+            textOrientation: 'upright',
+            fontSize: '16px',
+            fontWeight: 'bold',
+            letterSpacing: '2px',
+            padding: '4px 2px',
+          }}
+        >
+          保存期限：二年
+        </div>
+
+        {/* ── 右側豎向文字：流程 ── */}
+        <div
+          style={{
+            border: B,
+            borderLeft: 'none',
+            width: '44px',
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: '#f0f0f0',
+            writingMode: 'vertical-rl',
+            textOrientation: 'upright',
+            fontSize: '16px',
             fontWeight: 'bold',
             letterSpacing: '2px',
             padding: '4px 2px',
@@ -301,29 +307,21 @@ function QualityAbnormalDoc({ row }: { row: QualityRow }) {
         <tbody>
           {/* 品質編號 / 公司名 */}
           <tr>
-            <td colSpan={4} style={{ ...td, fontSize: '10px', border: 'none', padding: '2px 0' }}>
-              品質：219A-03
+            <td colSpan={4} style={{ ...td, fontSize: '12px', border: 'none', padding: '2px 0' }}>
+              品質:219A-03
             </td>
-            <td colSpan={4} style={{ ...td, fontSize: '10px', textAlign: 'right', border: 'none', padding: '2px 0' }}>
+            <td colSpan={4} style={{ ...td, fontSize: '12px', textAlign: 'right', border: 'none', padding: '2px 0' }}>
               巨大機械工業股份有限公司
             </td>
           </tr>
-          {/* 主管 / 審核 / 填表 */}
+          {/* 主管 / 審核 / 填表（標籤+括號合一格）*/}
           <tr>
-            <td style={{ ...th, width: '12%' }}>主管：</td>
+            <td style={{ ...th, width: '12%', verticalAlign: 'top', lineHeight: '1.6' }}>主管<br />(GTM)</td>
             <td style={{ ...td, width: '22%' }}>&nbsp;</td>
-            <td style={{ ...th, width: '10%' }}>審核：</td>
-            <td style={{ ...td, width: '22%' }}>&nbsp;</td>
-            <td style={{ ...th, width: '10%' }}>填表：</td>
-            <td style={{ ...td, width: '24%' }}>&nbsp;</td>
-          </tr>
-          <tr>
-            <td style={{ ...td, textAlign: 'center', fontSize: '10px', color: '#555' }}>(GTM)</td>
-            <td style={td}>&nbsp;</td>
-            <td style={{ ...td, textAlign: 'center', fontSize: '10px', color: '#555' }}>(協力廠)</td>
-            <td style={td}>&nbsp;</td>
-            <td style={{ ...td, textAlign: 'center', fontSize: '10px', color: '#555' }}>(協力廠)</td>
-            <td style={td}>&nbsp;</td>
+            <td style={{ ...th, width: '10%', verticalAlign: 'top', lineHeight: '1.6' }}>審核<br />(協力廠)</td>
+            <td style={{ ...td, width: '22%', verticalAlign: 'middle' }}>{row.vendorReviewer || ''}</td>
+            <td style={{ ...th, width: '10%', verticalAlign: 'top', lineHeight: '1.6' }}>填表<br />(協力廠)</td>
+            <td style={{ ...td, width: '24%', verticalAlign: 'middle' }}>{row.vendorFiller || ''}</td>
           </tr>
         </tbody>
       </table>
