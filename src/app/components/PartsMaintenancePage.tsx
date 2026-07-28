@@ -250,11 +250,16 @@ export default function PartsMaintenancePage({
       data = data.filter((p) => p.material.toLowerCase().includes(kw));
     }
     if (filterVendor.trim()) {
-      const kw = filterVendor.trim().toLowerCase();
-      data = data.filter(
-        (p) =>
-          p.vendorName.toLowerCase().includes(kw) ||
-          p.vendorCode.toLowerCase().includes(kw),
+      // 支援逗號分隔多廠商，各 token OR 聯集
+      const tokens = filterVendor
+        .split(',')
+        .map(t => t.trim().toLowerCase())
+        .filter(Boolean);
+      data = data.filter(p =>
+        tokens.some(t =>
+          p.vendorName.toLowerCase().includes(t) ||
+          p.vendorCode.toLowerCase().includes(t)
+        )
       );
     }
     if (filterPlant) {
@@ -508,6 +513,7 @@ export default function PartsMaintenancePage({
           value={filterVendor}
           onChange={setFilterVendor}
           type="search"
+          placeholder="廠商名稱或代碼，多選請用逗號分隔"
         />
         <DropdownSelect
           label="工廠"

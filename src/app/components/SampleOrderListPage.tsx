@@ -139,11 +139,16 @@ export default function SampleOrderListPage({ userRole: _userRole }: SampleOrder
       data = data.filter((o) => o.material.toLowerCase().includes(kw));
     }
     if (filterVendor.trim()) {
-      const kw = filterVendor.trim().toLowerCase();
-      data = data.filter(
-        (o) =>
-          o.vendorName.toLowerCase().includes(kw) ||
-          o.vendorCode.toLowerCase().includes(kw),
+      // 支援逗號分隔多廠商，各 token OR 聯集
+      const tokens = filterVendor
+        .split(',')
+        .map(t => t.trim().toLowerCase())
+        .filter(Boolean);
+      data = data.filter(o =>
+        tokens.some(t =>
+          o.vendorName.toLowerCase().includes(t) ||
+          o.vendorCode.toLowerCase().includes(t)
+        )
       );
     }
 
@@ -422,6 +427,7 @@ export default function SampleOrderListPage({ userRole: _userRole }: SampleOrder
           value={filterVendor}
           onChange={setFilterVendor}
           type="search"
+          placeholder="廠商名稱或代碼，多選請用逗號分隔"
         />
       </div>
 
