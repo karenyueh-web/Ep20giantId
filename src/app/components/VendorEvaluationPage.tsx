@@ -120,21 +120,79 @@ const IS_ONTIME_OPTIONS = [
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Mock 資料：交貨準時率清單
+// 共用工具：期間字串 → 日期範圍 label
+// 支援三種格式：
+//   月："202506"  → "2025/06/01-2025/06/30"
+//   季："2025Q2" → "2025/04/01-2025/06/30"
+//   年："2025"   → "2025/01/01-2025/12/31"
+// ─────────────────────────────────────────────────────────────────────────────
+
+function getPeriodDateRange(period: string): string {
+  // 月：6 碼數字 YYYYMM
+  if (/^\d{6}$/.test(period)) {
+    const year  = parseInt(period.slice(0, 4));
+    const month = parseInt(period.slice(4, 6));
+    const lastDay = new Date(year, month, 0).getDate();
+    const mm = String(month).padStart(2, '0');
+    const dd = String(lastDay).padStart(2, '0');
+    return `${year}/${mm}/01-${year}/${mm}/${dd}`;
+  }
+  // 季：YYYYQn
+  const qMatch = period.match(/^(\d{4})Q([1-4])$/);
+  if (qMatch) {
+    const year      = qMatch[1];
+    const q         = parseInt(qMatch[2]);
+    const startMonth = (q - 1) * 3 + 1;
+    const endMonth   = q * 3;
+    const lastDay    = new Date(parseInt(year), endMonth, 0).getDate();
+    const sm = String(startMonth).padStart(2, '0');
+    const em = String(endMonth).padStart(2, '0');
+    const dd = String(lastDay).padStart(2, '0');
+    return `${year}/${sm}/01-${year}/${em}/${dd}`;
+  }
+  // 年：4 碼數字 YYYY
+  if (/^\d{4}$/.test(period)) {
+    return `${period}/01/01-${period}/12/31`;
+  }
+  return period;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Mock 資料：交貨準時率清單（月 / 季 / 年）
 // ─────────────────────────────────────────────────────────────────────────────
 
 const MOCK_DELIVERY_ROWS: DeliveryOntimeRow[] = [
-  { id: 1,  vendorDisplay: '速聯(000100463)', vendorCode: '000100463', period: '202506', ontimeRate: '100%', ontimeQty: 52,  totalQty: 52  },
-  { id: 2,  vendorDisplay: '速聯(000100463)', vendorCode: '000100463', period: '202507', ontimeRate: '100%', ontimeQty: 100, totalQty: 100 },
-  { id: 3,  vendorDisplay: '速聯(000100463)', vendorCode: '000100463', period: '202508', ontimeRate: '80%',  ontimeQty: 80,  totalQty: 100 },
+  { id: 1,  vendorDisplay: '速聯(000100463)',      vendorCode: '000100463', period: '202506', ontimeRate: '100%', ontimeQty: 52,  totalQty: 52  },
+  { id: 2,  vendorDisplay: '速聯(000100463)',      vendorCode: '000100463', period: '202507', ontimeRate: '100%', ontimeQty: 100, totalQty: 100 },
+  { id: 3,  vendorDisplay: '速聯(000100463)',      vendorCode: '000100463', period: '202508', ontimeRate: '80%',  ontimeQty: 80,  totalQty: 100 },
   { id: 4,  vendorDisplay: '台灣日立(000200128)', vendorCode: '000200128', period: '202506', ontimeRate: '95%',  ontimeQty: 95,  totalQty: 100 },
   { id: 5,  vendorDisplay: '台灣日立(000200128)', vendorCode: '000200128', period: '202507', ontimeRate: '88%',  ontimeQty: 44,  totalQty: 50  },
   { id: 6,  vendorDisplay: '台灣日立(000200128)', vendorCode: '000200128', period: '202508', ontimeRate: '100%', ontimeQty: 60,  totalQty: 60  },
   { id: 7,  vendorDisplay: '聯華電子(000300077)', vendorCode: '000300077', period: '202506', ontimeRate: '75%',  ontimeQty: 75,  totalQty: 100 },
   { id: 8,  vendorDisplay: '聯華電子(000300077)', vendorCode: '000300077', period: '202507', ontimeRate: '90%',  ontimeQty: 90,  totalQty: 100 },
   { id: 9,  vendorDisplay: '聯華電子(000300077)', vendorCode: '000300077', period: '202508', ontimeRate: '85%',  ontimeQty: 85,  totalQty: 100 },
-  { id: 10, vendorDisplay: '台達電(000400055)', vendorCode: '000400055', period: '202506', ontimeRate: '92%',  ontimeQty: 46,  totalQty: 50  },
-  { id: 11, vendorDisplay: '台達電(000400055)', vendorCode: '000400055', period: '202507', ontimeRate: '100%', ontimeQty: 200, totalQty: 200 },
+  { id: 10, vendorDisplay: '台達電(000400055)',   vendorCode: '000400055', period: '202506', ontimeRate: '92%',  ontimeQty: 46,  totalQty: 50  },
+  { id: 11, vendorDisplay: '台達電(000400055)',   vendorCode: '000400055', period: '202507', ontimeRate: '100%', ontimeQty: 200, totalQty: 200 },
+];
+
+const MOCK_DELIVERY_ROWS_QUARTER: DeliveryOntimeRow[] = [
+  { id: 1,  vendorDisplay: '速聯(000100463)',      vendorCode: '000100463', period: '2025Q1', ontimeRate: '97%',  ontimeQty: 291, totalQty: 300 },
+  { id: 2,  vendorDisplay: '速聯(000100463)',      vendorCode: '000100463', period: '2025Q2', ontimeRate: '100%', ontimeQty: 232, totalQty: 232 },
+  { id: 3,  vendorDisplay: '台灣日立(000200128)', vendorCode: '000200128', period: '2025Q1', ontimeRate: '88%',  ontimeQty: 220, totalQty: 250 },
+  { id: 4,  vendorDisplay: '台灣日立(000200128)', vendorCode: '000200128', period: '2025Q2', ontimeRate: '95%',  ontimeQty: 199, totalQty: 210 },
+  { id: 5,  vendorDisplay: '聯華電子(000300077)', vendorCode: '000300077', period: '2025Q1', ontimeRate: '80%',  ontimeQty: 240, totalQty: 300 },
+  { id: 6,  vendorDisplay: '聯華電子(000300077)', vendorCode: '000300077', period: '2025Q2', ontimeRate: '85%',  ontimeQty: 255, totalQty: 300 },
+  { id: 7,  vendorDisplay: '台達電(000400055)',   vendorCode: '000400055', period: '2025Q1', ontimeRate: '92%',  ontimeQty: 184, totalQty: 200 },
+  { id: 8,  vendorDisplay: '台達電(000400055)',   vendorCode: '000400055', period: '2025Q2', ontimeRate: '100%', ontimeQty: 246, totalQty: 246 },
+];
+
+const MOCK_DELIVERY_ROWS_YEAR: DeliveryOntimeRow[] = [
+  { id: 1,  vendorDisplay: '速聯(000100463)',      vendorCode: '000100463', period: '2025', ontimeRate: '98%',  ontimeQty: 980, totalQty: 1000 },
+  { id: 2,  vendorDisplay: '速聯(000100463)',      vendorCode: '000100463', period: '2024', ontimeRate: '95%',  ontimeQty: 950, totalQty: 1000 },
+  { id: 3,  vendorDisplay: '台灣日立(000200128)', vendorCode: '000200128', period: '2025', ontimeRate: '91%',  ontimeQty: 910, totalQty: 1000 },
+  { id: 4,  vendorDisplay: '台灣日立(000200128)', vendorCode: '000200128', period: '2024', ontimeRate: '87%',  ontimeQty: 870, totalQty: 1000 },
+  { id: 5,  vendorDisplay: '聯華電子(000300077)', vendorCode: '000300077', period: '2025', ontimeRate: '83%',  ontimeQty: 830, totalQty: 1000 },
+  { id: 6,  vendorDisplay: '台達電(000400055)',   vendorCode: '000400055', period: '2025', ontimeRate: '96%',  ontimeQty: 960, totalQty: 1000 },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -179,6 +237,26 @@ const MOCK_ARRIVAL_ROWS: ArrivalOntimeRow[] = [
   { id: 9,  vendorDisplay: '聯華電子(000300077)', vendorCode: '000300077', period: '202508', ontimeRate: '85%',  ontimeQty: 85,  totalQty: 100, avgDaysDiff: 4 },
   { id: 10, vendorDisplay: '台達電(000400055)',   vendorCode: '000400055', period: '202506', ontimeRate: '92%',  ontimeQty: 46,  totalQty: 50,  avgDaysDiff: 1 },
   { id: 11, vendorDisplay: '台達電(000400055)',   vendorCode: '000400055', period: '202507', ontimeRate: '100%', ontimeQty: 200, totalQty: 200, avgDaysDiff: 0 },
+];
+
+const MOCK_ARRIVAL_ROWS_QUARTER: ArrivalOntimeRow[] = [
+  { id: 1,  vendorDisplay: '速聯(000100463)',      vendorCode: '000100463', period: '2025Q1', ontimeRate: '96%',  ontimeQty: 288, totalQty: 300, avgDaysDiff: 1 },
+  { id: 2,  vendorDisplay: '速聯(000100463)',      vendorCode: '000100463', period: '2025Q2', ontimeRate: '100%', ontimeQty: 240, totalQty: 240, avgDaysDiff: 1 },
+  { id: 3,  vendorDisplay: '台灣日立(000200128)', vendorCode: '000200128', period: '2025Q1', ontimeRate: '90%',  ontimeQty: 225, totalQty: 250, avgDaysDiff: 2 },
+  { id: 4,  vendorDisplay: '台灣日立(000200128)', vendorCode: '000200128', period: '2025Q2', ontimeRate: '93%',  ontimeQty: 195, totalQty: 210, avgDaysDiff: 3 },
+  { id: 5,  vendorDisplay: '聯華電子(000300077)', vendorCode: '000300077', period: '2025Q1', ontimeRate: '78%',  ontimeQty: 234, totalQty: 300, avgDaysDiff: 4 },
+  { id: 6,  vendorDisplay: '聯華電子(000300077)', vendorCode: '000300077', period: '2025Q2', ontimeRate: '83%',  ontimeQty: 249, totalQty: 300, avgDaysDiff: 5 },
+  { id: 7,  vendorDisplay: '台達電(000400055)',   vendorCode: '000400055', period: '2025Q1', ontimeRate: '93%',  ontimeQty: 186, totalQty: 200, avgDaysDiff: 1 },
+  { id: 8,  vendorDisplay: '台達電(000400055)',   vendorCode: '000400055', period: '2025Q2', ontimeRate: '100%', ontimeQty: 246, totalQty: 246, avgDaysDiff: 0 },
+];
+
+const MOCK_ARRIVAL_ROWS_YEAR: ArrivalOntimeRow[] = [
+  { id: 1,  vendorDisplay: '速聯(000100463)',      vendorCode: '000100463', period: '2025', ontimeRate: '97%',  ontimeQty: 970,  totalQty: 1000, avgDaysDiff: 1 },
+  { id: 2,  vendorDisplay: '速聯(000100463)',      vendorCode: '000100463', period: '2024', ontimeRate: '94%',  ontimeQty: 940,  totalQty: 1000, avgDaysDiff: 2 },
+  { id: 3,  vendorDisplay: '台灣日立(000200128)', vendorCode: '000200128', period: '2025', ontimeRate: '90%',  ontimeQty: 900,  totalQty: 1000, avgDaysDiff: 2 },
+  { id: 4,  vendorDisplay: '台灣日立(000200128)', vendorCode: '000200128', period: '2024', ontimeRate: '85%',  ontimeQty: 850,  totalQty: 1000, avgDaysDiff: 3 },
+  { id: 5,  vendorDisplay: '聯華電子(000300077)', vendorCode: '000300077', period: '2025', ontimeRate: '81%',  ontimeQty: 810,  totalQty: 1000, avgDaysDiff: 5 },
+  { id: 6,  vendorDisplay: '台達電(000400055)',   vendorCode: '000400055', period: '2025', ontimeRate: '95%',  ontimeQty: 950,  totalQty: 1000, avgDaysDiff: 1 },
 ];
 
 // Mock 資料：答交準時率明細
@@ -267,15 +345,8 @@ function DeliveryDetailDialog({ row, onClose }: DeliveryDetailDialogProps) {
 
   // 標題子標題：廠商名 + 週期範圍
   // 使用 new Date(year, month, 0) 動態計算月底（等效 SQL: dateadd(day,-1, dateadd(m,...,0))），大小月/閏年自動正確
-  const periodLabel = (() => {
-    if (row.period.length !== 6) return row.period;
-    const year  = parseInt(row.period.slice(0, 4));
-    const month = parseInt(row.period.slice(4, 6));
-    const lastDay = new Date(year, month, 0).getDate(); // day 0 of month+1 = last day of month
-    const mm = String(month).padStart(2, '0');
-    const dd = String(lastDay).padStart(2, '0');
-    return `${year}/${mm}/01-${year}/${mm}/${dd}`;
-  })();
+  // 標題子標題：廠商名 + 週期範圍（支援月/季/年三種格式）
+  const periodLabel = getPeriodDateRange(row.period);
 
   return (
     <BaseOverlay onClose={onClose} maxWidth="1300px" maxHeight="760px">
@@ -397,8 +468,17 @@ function DeliveryOntimeTab() {
   const [detailRow, setDetailRow] = useState<DeliveryOntimeRow | null>(null);
 
   // ── 篩選邏輯 ────────────────────────────────────────────────────────────
+  // 依計算週期切換基礎資料集
+  const baseRows = useMemo(() => {
+    switch (filterPeriodType) {
+      case '季': return MOCK_DELIVERY_ROWS_QUARTER;
+      case '年': return MOCK_DELIVERY_ROWS_YEAR;
+      default:   return MOCK_DELIVERY_ROWS;  // '月'
+    }
+  }, [filterPeriodType]);
+
   const filteredRows = useMemo(() => {
-    let data = MOCK_DELIVERY_ROWS;
+    let data = baseRows;
     if (filterVendor.trim()) {
       // 支援逗號分隔多選廠商，各 token 以 OR 聯集比對廠商名稱或代碼
       const tokens = filterVendor
@@ -413,7 +493,7 @@ function DeliveryOntimeTab() {
       );
     }
     return data;
-  }, [filterVendor]);
+  }, [baseRows, filterVendor]);
 
   // ── 欄位定義 ────────────────────────────────────────────────────────────
   const columns: StandardColumn<DeliveryOntimeRow>[] = useMemo(() => [
@@ -573,16 +653,8 @@ function ArrivalDetailDialog({ row, onClose }: ArrivalDetailDialogProps) {
     { key: 'ontimeQty',  label: '準時答交數量', width: 130, minWidth: 110 },
   ];
 
-  // 期間標籤：使用 new Date(year, month, 0) 動態計算月底
-  const periodLabel = (() => {
-    if (row.period.length !== 6) return row.period;
-    const year  = parseInt(row.period.slice(0, 4));
-    const month = parseInt(row.period.slice(4, 6));
-    const lastDay = new Date(year, month, 0).getDate();
-    const mm = String(month).padStart(2, '0');
-    const dd = String(lastDay).padStart(2, '0');
-    return `${year}/${mm}/01-${year}/${mm}/${dd}`;
-  })();
+  // 期間標籤：支援月/季/年三種格式
+  const periodLabel = getPeriodDateRange(row.period);
 
   return (
     <BaseOverlay onClose={onClose} maxWidth="1200px" maxHeight="760px">
@@ -658,8 +730,17 @@ function ArrivalOntimeTab() {
   const [filterVendor,     setFilterVendor]     = useState('');
   const [detailRow, setDetailRow] = useState<ArrivalOntimeRow | null>(null);
 
+  // 依計算週期切換基礎資料集
+  const baseRows = useMemo(() => {
+    switch (filterPeriodType) {
+      case '季': return MOCK_ARRIVAL_ROWS_QUARTER;
+      case '年': return MOCK_ARRIVAL_ROWS_YEAR;
+      default:   return MOCK_ARRIVAL_ROWS;  // '月'
+    }
+  }, [filterPeriodType]);
+
   const filteredRows = useMemo(() => {
-    let data = MOCK_ARRIVAL_ROWS;
+    let data = baseRows;
     if (filterVendor.trim()) {
       // 支援逗號分隔多選廠商，OR 聯集
       const tokens = filterVendor
@@ -674,7 +755,7 @@ function ArrivalOntimeTab() {
       );
     }
     return data;
-  }, [filterVendor]);
+  }, [baseRows, filterVendor]);
 
   const columns: StandardColumn<ArrivalOntimeRow>[] = useMemo(() => [
     { key: 'vendorDisplay', label: '廠商（編號）',   width: 200, minWidth: 150 },
