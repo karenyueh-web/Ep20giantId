@@ -9,9 +9,11 @@ interface SearchFieldProps {
   placeholder?: string;
   /** 'search' shows magnifying glass on left; 'date' shows calendar icon on right */
   type?: 'search' | 'date';
+  /** 允許選擇過去日期（預設 false，即只能選今天之後）；查詢歷史資料時傳 true */
+  allowPastDates?: boolean;
 }
 
-export function SearchField({ label, value, onChange, placeholder = ' ', type = 'search' }: SearchFieldProps) {
+export function SearchField({ label, value, onChange, placeholder = ' ', type = 'search', allowPastDates = false }: SearchFieldProps) {
   const [showPicker, setShowPicker] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -106,7 +108,7 @@ export function SearchField({ label, value, onChange, placeholder = ' ', type = 
         <div className="absolute top-[58px] left-0 z-[100]">
           <SimpleDatePicker
             selectedDate={value}
-            minDate={(() => {
+            minDate={allowPastDates ? undefined : (() => {
               const t = new Date();
               return `${t.getFullYear()}/${String(t.getMonth()+1).padStart(2,'0')}/${String(t.getDate()).padStart(2,'0')}`;
             })()}

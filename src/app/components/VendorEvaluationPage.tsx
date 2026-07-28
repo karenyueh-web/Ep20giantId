@@ -555,6 +555,7 @@ function DeliveryOntimeTab() {
             value={filterDateFrom}
             onChange={setFilterDateFrom}
             type="date"
+            allowPastDates
           />
         </div>
         <div className="flex-1 min-w-0">
@@ -563,6 +564,7 @@ function DeliveryOntimeTab() {
             value={filterDateTo}
             onChange={setFilterDateTo}
             type="date"
+            allowPastDates
           />
         </div>
         <div className="flex-1 min-w-0">
@@ -797,6 +799,7 @@ function ArrivalOntimeTab() {
             value={filterDateFrom}
             onChange={setFilterDateFrom}
             type="date"
+            allowPastDates
           />
         </div>
         <div className="flex-1 min-w-0">
@@ -805,6 +808,7 @@ function ArrivalOntimeTab() {
             value={filterDateTo}
             onChange={setFilterDateTo}
             type="date"
+            allowPastDates
           />
         </div>
         <div className="flex-1 min-w-0">
