@@ -89,7 +89,10 @@ export function ForecastOrderListWithTabs() {
   // ── 搜尋過濾資料 ──
   const searchFilteredData = useMemo(() => {
     return tableData.filter(row => {
-      if (vendorSearch && !row.vendor.toLowerCase().includes(vendorSearch.toLowerCase())) return false;
+      if (vendorSearch) {
+        const tokens = vendorSearch.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+        if (!tokens.some(t => row.vendor.toLowerCase().includes(t))) return false;
+      }
       if (purchaseGroupSearch && row.purchaseGroup !== purchaseGroupSearch) return false;
       if (materialNoSearch && !row.materialNo.toLowerCase().includes(materialNoSearch.toLowerCase())) return false;
       return true;
@@ -216,6 +219,7 @@ export function ForecastOrderListWithTabs() {
             label="廠商"
             value={vendorSearch}
             onChange={setVendorSearch}
+            placeholder="廠商名稱或代碼，多選請用逗號分隔"
           />
           <div className="flex-1 min-w-[150px]">
             <DropdownSelect

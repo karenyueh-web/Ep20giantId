@@ -1014,7 +1014,7 @@ function OutsourceTab({ onOrderDetail, onShipmentDetail }: OutsourceTabProps) {
           <DropdownSelect label="是否收料" value={isReceivedFilter} onChange={setIsReceivedFilter} options={RECEIVED_OPTIONS} />
         </div>
         <div className="flex-1 min-w-0">
-          <SearchField label="供應商" value={vendorKeyword} onChange={setVendorKeyword} placeholder="名稱或代碼關鍵字" />
+          <SearchField label="供應商" value={vendorKeyword} onChange={setVendorKeyword} placeholder="廠商名稱或代碼，多選請用逗號分隔" />
         </div>
         <div className="flex-1 min-w-0">
           <SearchField label="單號序號" value={orderDocSeqKeyword} onChange={setOrderDocSeqKeyword} placeholder="單號序號關鍵字" />
@@ -1258,10 +1258,8 @@ function ShouldShipNotShippedTab() {
 
     if (purchaseOrg) data = data.filter(r => r.purchaseOrg === purchaseOrg);
     if (vendorKeyword.trim()) {
-      const kw = vendorKeyword.trim().toLowerCase();
-      data = data.filter(r =>
-        r.vendorName.toLowerCase().includes(kw) || r.vendorCode.toLowerCase().includes(kw)
-      );
+      const tokens = vendorKeyword.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+      data = data.filter(r => tokens.some(t => r.vendorName.toLowerCase().includes(t) || r.vendorCode.toLowerCase().includes(t)));
     }
     if (materialKeyword.trim()) {
       const kw = materialKeyword.trim().toLowerCase();
@@ -1444,7 +1442,7 @@ function ShouldShipNotShippedTab() {
             label="供應商"
             value={vendorKeyword}
             onChange={setVendorKeyword}
-            placeholder="名稱或代碼關鍵字"
+            placeholder="廠商名稱或代碼，多選請用逗號分隔"
           />
         </div>
         {/* 料號 */}
@@ -1658,10 +1656,8 @@ function ShippedNotReceivedTab({ onOrderDetail, onShipmentDetail }: ShippedNotRe
     // 搜尋列篩選
     if (purchaseOrg) data = data.filter(r => r.purchaseOrg === purchaseOrg);
     if (vendorKeyword.trim()) {
-      const kw = vendorKeyword.trim().toLowerCase();
-      data = data.filter(r =>
-        r.vendorName.toLowerCase().includes(kw) || r.vendorCode.toLowerCase().includes(kw)
-      );
+      const tokens = vendorKeyword.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+      data = data.filter(r => tokens.some(t => r.vendorName.toLowerCase().includes(t) || r.vendorCode.toLowerCase().includes(t)));
     }
     if (materialKeyword.trim()) {
       const kw = materialKeyword.trim().toLowerCase();
@@ -1778,7 +1774,7 @@ function ShippedNotReceivedTab({ onOrderDetail, onShipmentDetail }: ShippedNotRe
             label="供應商"
             value={vendorKeyword}
             onChange={setVendorKeyword}
-            placeholder="名稱或代碼關鍵字"
+            placeholder="廠商名稱或代碼，多選請用逗號分隔"
           />
         </div>
         {/* 料號 */}

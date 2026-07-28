@@ -445,7 +445,10 @@ function Tab1IncomingInspection() {
 
   const filtered = useMemo(() => {
     return rows.filter(row => {
-      const matchVendor = !vendorSearch || row.vendor.includes(vendorSearch);
+      const matchVendor = !vendorSearch || (() => {
+        const tokens = vendorSearch.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+        return tokens.some(t => row.vendor.toLowerCase().includes(t));
+      })();
       const matchPart   = !partSearch   || row.partNo.toLowerCase().includes(partSearch.toLowerCase());
       return matchVendor && matchPart;
     });
@@ -482,6 +485,7 @@ function Tab1IncomingInspection() {
             label="廠商"
             value={vendorSearch}
             onChange={setVendorSearch}
+            placeholder="廠商名稱或代碼，多選請用逗號分隔"
           />
         </div>
         <div className="flex-1 min-w-0">

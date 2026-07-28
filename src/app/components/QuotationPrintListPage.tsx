@@ -118,10 +118,8 @@ export default function QuotationPrintListPage({ userRole: _userRole }: Quotatio
   const filteredRows = useMemo(() => {
     let data = allFlatRows;
     if (filterCompany.trim()) {
-      const kw = filterCompany.trim().toLowerCase();
-      data = data.filter((r) =>
-        r.vendorDisplay.toLowerCase().includes(kw) || r.vendorCode.toLowerCase().includes(kw)
-      );
+      const tokens = filterCompany.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+      data = data.filter(r => tokens.some(t => r.vendorDisplay.toLowerCase().includes(t) || r.vendorCode.toLowerCase().includes(t)));
     }
     if (filterPurchaseOrg) {
       data = data.filter((r) => r.purchaseOrg === filterPurchaseOrg);
@@ -237,6 +235,7 @@ export default function QuotationPrintListPage({ userRole: _userRole }: Quotatio
             value={filterCompany}
             onChange={setFilterCompany}
             type="search"
+            placeholder="廠商名稱或代碼，多選請用逗號分隔"
           />
         </div>
         <div className="flex-1 min-w-0">

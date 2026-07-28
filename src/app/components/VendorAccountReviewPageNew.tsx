@@ -67,11 +67,13 @@ function Tab({
 function SearchField({ 
   label, 
   value, 
-  onChange 
+  onChange,
+  placeholder = " "
 }: { 
   label: string; 
   value: string; 
   onChange: (value: string) => void;
+  placeholder?: string;
 }) {
   return (
     <div className="flex-1 flex flex-col relative">
@@ -90,7 +92,7 @@ function SearchField({
               type="text"
               value={value}
               onChange={(e) => onChange(e.target.value)}
-              placeholder=" "
+              placeholder={placeholder}
               className="flex-1 font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[#1c252e] text-[15px] bg-transparent border-none outline-none"
               style={{ border: 'none', outline: 'none' }}
             />
@@ -473,7 +475,10 @@ export function VendorAccountReviewPageNew({
   const baseVendors = activeTab === 'success' ? mockVendorsSuccess : mockVendorsFail;
   const filteredVendors = baseVendors.filter(vendor => {
     const matchesRole = !selectedRole || vendor.role === selectedRole;
-    const matchesVendorName = !vendorNameFilter || vendor.name.toLowerCase().includes(vendorNameFilter.toLowerCase());
+    const matchesVendorName = !vendorNameFilter || (() => {
+      const tokens = vendorNameFilter.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+      return tokens.some(t => vendor.name.toLowerCase().includes(t));
+    })();
     const matchesCompanyName = !companyNameFilter || vendor.company.toLowerCase().includes(companyNameFilter.toLowerCase());
     return matchesRole && matchesVendorName && matchesCompanyName;
   });
@@ -515,7 +520,7 @@ export function VendorAccountReviewPageNew({
           {/* 搜索区域 */}
           <div className="relative shrink-0 w-full" style={{ borderBottom: 'none' }}>
             <div className="flex gap-[16px] items-center pl-[20px] pr-[8px] py-[20px]" style={{ borderBottom: 'none' }}>
-              <SearchField label="廠商姓名" value={vendorNameFilter} onChange={setVendorNameFilter} />
+              <SearchField label="廠商姓名" value={vendorNameFilter} onChange={setVendorNameFilter} placeholder="廠商名稱或代碼，多選請用逗號分隔" />
               {activeTab === 'success' && (
                 <SearchField label="公司名稱" value={companyNameFilter} onChange={setCompanyNameFilter} />
               )}

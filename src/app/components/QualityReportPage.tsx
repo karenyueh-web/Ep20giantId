@@ -478,7 +478,10 @@ export function QualityReportPage() {
     if (submittedFilter === '已繳' && row.files.length === 0) return false;
     if (submittedFilter === '未繳' && row.files.length > 0) return false;
     if (partNoFilter && !row.partNo.toLowerCase().includes(partNoFilter.toLowerCase())) return false;
-    if (vendorFilter  && !row.vendor.toLowerCase().includes(vendorFilter.toLowerCase())) return false;
+    if (vendorFilter) {
+      const tokens = vendorFilter.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+      if (!tokens.some(t => row.vendor.toLowerCase().includes(t))) return false;
+    }
     // Advanced filters
     if (appliedFilters.length > 0) {
       return appliedFilters.every(f => {
@@ -737,7 +740,7 @@ export function QualityReportPage() {
           <SearchField label="料號" value={partNoFilter} onChange={setPartNoFilter} />
         </div>
         <div className="flex-1 min-w-0">
-          <SearchField label="廠商(編號)" value={vendorFilter} onChange={setVendorFilter} />
+          <SearchField label="廠商(編號)" value={vendorFilter} onChange={setVendorFilter} placeholder="廠商名稱或代碼，多選請用逗號分隔" />
         </div>
       </div>
 

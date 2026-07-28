@@ -334,10 +334,12 @@ export function ScheduleChangeListWithTabs({ userRole }: ScheduleChangeListWithT
     }
     // 搜尋欄：廠商(編號)
     if (vendorSearch.trim()) {
-      const q = vendorSearch.toLowerCase();
+      const tokens = vendorSearch.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
       list = list.filter(o =>
-        (o.vendorName ?? '').toLowerCase().includes(q) ||
-        (o.vendorCode ?? '').toLowerCase().includes(q)
+        tokens.some(t =>
+          (o.vendorName ?? '').toLowerCase().includes(t) ||
+          (o.vendorCode ?? '').toLowerCase().includes(t)
+        )
       );
     }
     // 進階篩選
@@ -636,7 +638,7 @@ export function ScheduleChangeListWithTabs({ userRole }: ScheduleChangeListWithT
       {/* ── 搜尋欄 ─────────────────────────────────────────────────────────── */}
       <div className="flex gap-[16px] items-end flex-wrap px-[20px] pt-[16px] pb-[14px] shrink-0">
         <SearchField label="單號序號"   value={docSeqNoSearch} onChange={setDocSeqNoSearch} />
-        <SearchField label="廠商(編號)" value={vendorSearch}   onChange={setVendorSearch} />
+        <SearchField label="廠商(編號)" value={vendorSearch} onChange={setVendorSearch} placeholder="廠商名稱或代碼，多選請用逗號分隔" />
       </div>
 
       {/* ── Toolbar ────────────────────────────────────────────────────────── */}

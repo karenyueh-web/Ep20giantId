@@ -1,4 +1,4 @@
-﻿import { useState, useMemo, useCallback, useEffect , useRef } from 'react';
+import { useState, useMemo, useCallback, useEffect , useRef } from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { useDrag, useDrop } from 'react-dnd';
@@ -486,7 +486,7 @@ export function OrderScheduleInquiryPage({ userRole: _userRole }: OrderScheduleI
           <SearchField label="單號序號" value={docSeqNoSearch} onChange={v => { setDocSeqNoSearch(v); setPage(1); }} type="search" />
         </div>
         <div className="flex-1 min-w-[200px]">
-          <SearchField label="廠商(編號)" value={vendorSearch} onChange={v => { setVendorSearch(v); setPage(1); }} type="search" />
+          <SearchField label="廠商(編號)" value={vendorSearch} onChange={v => { setVendorSearch(v); setPage(1); }} type="search" placeholder="廠商名稱或代碼，多選請用逗號分隔" />
         </div>
       </div>
 

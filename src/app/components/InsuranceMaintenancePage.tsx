@@ -253,7 +253,10 @@ export function InsuranceMaintenancePage({ currentPage, onPageChange, onLogout, 
     if (activeTab === '巨大確認中(G)' && r.status !== 'G') return false;
     if (activeTab === '關閉結案(CL)' && r.status !== 'CL') return false;
     if (yearFilter && String(r.year) !== yearFilter) return false;
-    if (vendorFilter && !r.vendorName.includes(vendorFilter) && !r.vendorCode.includes(vendorFilter)) return false;
+    if (vendorFilter) {
+      const tokens = vendorFilter.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+      if (!tokens.some(t => r.vendorName.toLowerCase().includes(t) || r.vendorCode.toLowerCase().includes(t))) return false;
+    }
     if (paidFilter === 'paid' && !r.isPaid) return false;
     if (paidFilter === 'unpaid' && r.isPaid) return false;
     for (const f of appliedFilters) {
@@ -340,7 +343,7 @@ export function InsuranceMaintenancePage({ currentPage, onPageChange, onLogout, 
         {/* 搜尋列 */}
         <div className="shrink-0 flex gap-[16px] items-center px-[20px] py-[20px]">
           <div className="flex-1 min-w-0"><DropdownSelect label="年度" value={yearFilter} onChange={setYearFilter} options={yearOptions} /></div>
-          <div className="flex-1 min-w-0"><SearchField label="廠商" value={vendorFilter} onChange={setVendorFilter} placeholder="廠商名稱或編號" /></div>
+          <div className="flex-1 min-w-0"><SearchField label="廠商" value={vendorFilter} onChange={setVendorFilter} placeholder="廠商名稱或代碼，多選請用逗號分隔" /></div>
           <div className="flex-1 min-w-0"><DropdownSelect label="已繳/未繳" value={paidFilter} onChange={setPaidFilter} options={paidOptions} /></div>
         </div>
         {/* Toolbar */}

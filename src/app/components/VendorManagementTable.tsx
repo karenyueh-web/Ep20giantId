@@ -184,9 +184,10 @@ export function VendorManagementTable({
   // 多重篩選
   const filteredVendors = mockVendors.filter(vendor => {
     // 廠商簡稱篩選
-    const matchesVendorName = !vendorNameFilter || 
-      vendor.name.toLowerCase().includes(vendorNameFilter.toLowerCase()) ||
-      vendor.code.includes(vendorNameFilter);
+    const matchesVendorName = !vendorNameFilter || (() => {
+      const tokens = vendorNameFilter.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+      return tokens.some(t => vendor.name.toLowerCase().includes(t) || vendor.code.toLowerCase().includes(t));
+    })();
     
     // 業務人員篩選
     const matchesSalesPerson = !salesPersonFilter || 

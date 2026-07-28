@@ -886,7 +886,7 @@ export function CorrectionCreatePage({ userRole, onNavigateToList }: CorrectionC
           label="廠商(編號)"
           value={vendorSearch}
           onChange={setVendorSearch}
-          placeholder="輸入廠商簡稱或編號"
+          placeholder="廠商名稱或代碼，多選請用逗號分隔"
         />
       </div>
 
