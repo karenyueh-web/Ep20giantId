@@ -173,7 +173,7 @@ export function DropdownSelect({
         {label && (
           <div className="absolute flex items-center left-[14px] px-[2px] top-[-7px] z-10">
             <div className="absolute h-[2px] left-0 right-0 top-[7px]" style={{ background: disabled ? '#f4f6f8' : 'white' }} />
-            <p className={`relative text-[14px] font-semibold ${error ? 'text-[#ff5630]' : 'text-[#1c252e]'}`}>
+            <p className={`font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] relative text-[12px] font-semibold ${error ? 'text-[#ff5630]' : 'text-[#637381]'}`}>
               {label}
             </p>
           </div>

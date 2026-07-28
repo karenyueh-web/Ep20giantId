@@ -60,8 +60,11 @@ interface DeliveryDetailRow {
 const COMPANY_OPTIONS = [
   { value: '', label: '全部' },
   { value: 'GTM', label: 'GTM' },
+  { value: 'DTC', label: 'DTC' },
   { value: 'GEM', label: 'GEM' },
   { value: 'GHM', label: 'GHM' },
+  { value: 'DTE', label: 'DTE' },
+  { value: 'GVM', label: 'GVM' },
 ];
 
 const PERIOD_OPTIONS = [
@@ -185,12 +188,19 @@ function DeliveryDetailDialog({ row, onClose }: DeliveryDetailDialogProps) {
   ];
 
   // 標題子標題：廠商名 + 週期範圍
-  const periodLabel = row.period.length === 6
-    ? `${row.period.slice(0, 4)}/${row.period.slice(4, 6)}/01-${row.period.slice(0, 4)}/${row.period.slice(4, 6)}/30`
-    : row.period;
+  // 使用 new Date(year, month, 0) 動態計算月底（等效 SQL: dateadd(day,-1, dateadd(m,...,0))），大小月/閏年自動正確
+  const periodLabel = (() => {
+    if (row.period.length !== 6) return row.period;
+    const year  = parseInt(row.period.slice(0, 4));
+    const month = parseInt(row.period.slice(4, 6));
+    const lastDay = new Date(year, month, 0).getDate(); // day 0 of month+1 = last day of month
+    const mm = String(month).padStart(2, '0');
+    const dd = String(lastDay).padStart(2, '0');
+    return `${year}/${mm}/01-${year}/${mm}/${dd}`;
+  })();
 
   return (
-    <BaseOverlay onClose={onClose} maxWidth="980px" maxHeight="640px">
+    <BaseOverlay onClose={onClose} maxWidth="1300px" maxHeight="760px">
       <div className="relative w-full h-full flex flex-col">
 
         {/* ── 頂部標題列 ── */}
@@ -226,7 +236,7 @@ function DeliveryDetailDialog({ row, onClose }: DeliveryDetailDialogProps) {
 
           {/* 右側篩選器 */}
           <div className="flex-1 flex items-center gap-[12px] justify-end">
-            <div style={{ width: 160 }}>
+            <div className="flex-1 min-w-0">
               <SearchField
                 label="訂單號碼"
                 value={filterOrderNo}
@@ -234,7 +244,7 @@ function DeliveryDetailDialog({ row, onClose }: DeliveryDetailDialogProps) {
                 type="search"
               />
             </div>
-            <div style={{ width: 140 }}>
+            <div className="flex-1 min-w-0">
               <SearchField
                 label="訂單序號"
                 value={filterOrderSeq}
@@ -242,7 +252,7 @@ function DeliveryDetailDialog({ row, onClose }: DeliveryDetailDialogProps) {
                 type="search"
               />
             </div>
-            <div style={{ width: 120 }}>
+            <div className="flex-1 min-w-0">
               <DropdownSelect
                 label="是否準時"
                 value={filterIsOntime}
@@ -253,22 +263,7 @@ function DeliveryDetailDialog({ row, onClose }: DeliveryDetailDialogProps) {
           </div>
         </div>
 
-        {/* ── 結果數量列 ── */}
-        <div className="shrink-0 flex items-center gap-[12px] px-[24px] py-[10px] bg-[rgba(145,158,171,0.04)]">
-          <span className="font-['Public_Sans:Regular',sans-serif] font-normal text-[13px] text-[#637381]">
-            {filteredDetails.length} results
-          </span>
-          <div className="flex-1" />
-          {/* Export 按鈕 */}
-          <button className="flex items-center gap-[6px] h-[32px] px-[12px] rounded-[6px] border border-[rgba(145,158,171,0.32)] hover:bg-[rgba(145,158,171,0.08)] transition-colors">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="#637381" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            <span className="font-['Public_Sans:Regular',sans-serif] font-normal text-[13px] text-[#637381]">Export</span>
-          </button>
-        </div>
-
-        {/* ── 表格 ── */}
+        {/* ── 表格（含 Toolbar：results count + Columns + Filters + Export） ── */}
         <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
           <StandardDataTable<DeliveryDetailRow>
             columns={detailColumns}
@@ -276,6 +271,7 @@ function DeliveryDetailDialog({ row, onClose }: DeliveryDetailDialogProps) {
             storageKey="delivery-ontime-detail-v1"
             showCheckbox={false}
             externalFilteredData={filteredDetails}
+            onExportCsv={() => {}}
             className="rounded-none shadow-none"
           />
         </div>
@@ -326,10 +322,16 @@ function DeliveryOntimeTab() {
   const filteredRows = useMemo(() => {
     let data = MOCK_DELIVERY_ROWS;
     if (filterVendor.trim()) {
-      const kw = filterVendor.trim().toLowerCase();
+      // 支援逗號分隔多選廠商，各 token 以 OR 聯集比對廠商名稱或代碼
+      const tokens = filterVendor
+        .split(',')
+        .map(t => t.trim().toLowerCase())
+        .filter(Boolean);
       data = data.filter(r =>
-        r.vendorDisplay.toLowerCase().includes(kw) ||
-        r.vendorCode.toLowerCase().includes(kw)
+        tokens.some(t =>
+          r.vendorDisplay.toLowerCase().includes(t) ||
+          r.vendorCode.toLowerCase().includes(t)
+        )
       );
     }
     return data;
@@ -391,7 +393,7 @@ function DeliveryOntimeTab() {
         </div>
         <div className="flex-1 min-w-0">
           <SearchField
-            label="訂單日期(起)"
+            label="廠商可交貨日(起)"
             value={filterDateFrom}
             onChange={setFilterDateFrom}
             type="date"
@@ -399,7 +401,7 @@ function DeliveryOntimeTab() {
         </div>
         <div className="flex-1 min-w-0">
           <SearchField
-            label="訂單日期(迄)"
+            label="廠商可交貨日(迄)"
             value={filterDateTo}
             onChange={setFilterDateTo}
             type="date"
@@ -423,7 +425,7 @@ function DeliveryOntimeTab() {
             value={filterVendor}
             onChange={setFilterVendor}
             type="search"
-            placeholder="廠商名稱或代碼"
+            placeholder="廠商名稱或代碼，多選請用逗號分隔"
           />
         </div>
       </div>
