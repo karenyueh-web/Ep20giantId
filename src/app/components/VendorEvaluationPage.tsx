@@ -9,7 +9,12 @@
  *   - 容許天數依採購組織（DTE/GEM/GHM）與廠商類型（國內/國外）不同
  *   - 點擊準時率百分比 → 彈窗顯示交貨準時率明細
  *
- * TAB 2：達交準時率（建置中）
+ * TAB 2：答交準時率
+ *   - 公式：準時答交數量 / 區間訂購量
+ *   - 準時定義：依廠別/貿易條件判斷；GTM/DTC 看 INCO1，GEM/GHM/DTE 看 IsForeign
+ *   - 計算基準：下單日(add_date) 到 確認交期(agr_date_fst/agr_date) 的工作天數
+ *   - 點擊準時率百分比 → 彈窗顯示答交準時率明細
+ *
  * TAB 3：廠商評價表（建置中）
  *
  * 排程：每月 5 日上午 8 點自動計算
@@ -53,6 +58,31 @@ interface DeliveryDetailRow {
   isOntime: '是' | '否';  // 是否準時
 }
 
+/** 答交準時率清單列 */
+interface ArrivalOntimeRow {
+  id: number;
+  vendorDisplay: string;  // 廠商名稱(編號)
+  vendorCode: string;
+  period: string;         // 計算週期，如 202506
+  ontimeRate: string;     // 答交準時率，如 "100%"
+  ontimeQty: number;      // 準時答交數量
+  totalQty: number;       // 區間訂購量（SUM of ord_qty）
+  avgDaysDiff: number;    // 平均答交天數（工作天數差）
+}
+
+/** 答交準時率明細列 */
+interface ArrivalDetailRow {
+  id: number;
+  orderDate: string;    // 下單日 (add_date)
+  confirmDate: string;  // 確認交期 (agr_date_fst 優先 / agr_date 次之)
+  orderNo: string;      // 訂單號碼
+  orderSeq: string;     // 訂單序號
+  ordQty: number;       // 訂單數量 (ord_qty)
+  ontimeQty: number;    // 準時確認數量
+  daysDiff: number;     // 工作天數差
+  isOntime: '是' | '否';
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 靜態選項
 // ─────────────────────────────────────────────────────────────────────────────
@@ -65,6 +95,16 @@ const COMPANY_OPTIONS = [
   { value: 'GHM', label: 'GHM' },
   { value: 'DTE', label: 'DTE' },
   { value: 'GVM', label: 'GVM' },
+];
+
+// 答交準時率廠別選項（依 MD 規格，無 GVM）
+const ARRIVAL_COMPANY_OPTIONS = [
+  { value: '', label: '全部' },
+  { value: 'GTM', label: 'GTM' },
+  { value: 'DTC', label: 'DTC' },
+  { value: 'GEM', label: 'GEM' },
+  { value: 'GHM', label: 'GHM' },
+  { value: 'DTE', label: 'DTE' },
 ];
 
 const PERIOD_OPTIONS = [
@@ -124,12 +164,50 @@ const DEFAULT_DETAIL: DeliveryDetailRow[] = [
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Mock 資料：答交準時率清單
+// ─────────────────────────────────────────────────────────────────────────────
+
+const MOCK_ARRIVAL_ROWS: ArrivalOntimeRow[] = [
+  { id: 1,  vendorDisplay: '速聯(000100463)',      vendorCode: '000100463', period: '202506', ontimeRate: '100%', ontimeQty: 60,  totalQty: 60,  avgDaysDiff: 1 },
+  { id: 2,  vendorDisplay: '速聯(000100463)',      vendorCode: '000100463', period: '202507', ontimeRate: '100%', ontimeQty: 100, totalQty: 100, avgDaysDiff: 0 },
+  { id: 3,  vendorDisplay: '速聯(000100463)',      vendorCode: '000100463', period: '202508', ontimeRate: '80%',  ontimeQty: 80,  totalQty: 100, avgDaysDiff: 2 },
+  { id: 4,  vendorDisplay: '台灣日立(000200128)', vendorCode: '000200128', period: '202506', ontimeRate: '95%',  ontimeQty: 95,  totalQty: 100, avgDaysDiff: 1 },
+  { id: 5,  vendorDisplay: '台灣日立(000200128)', vendorCode: '000200128', period: '202507', ontimeRate: '88%',  ontimeQty: 44,  totalQty: 50,  avgDaysDiff: 3 },
+  { id: 6,  vendorDisplay: '台灣日立(000200128)', vendorCode: '000200128', period: '202508', ontimeRate: '100%', ontimeQty: 60,  totalQty: 60,  avgDaysDiff: 2 },
+  { id: 7,  vendorDisplay: '聯華電子(000300077)', vendorCode: '000300077', period: '202506', ontimeRate: '75%',  ontimeQty: 75,  totalQty: 100, avgDaysDiff: 5 },
+  { id: 8,  vendorDisplay: '聯華電子(000300077)', vendorCode: '000300077', period: '202507', ontimeRate: '90%',  ontimeQty: 90,  totalQty: 100, avgDaysDiff: 2 },
+  { id: 9,  vendorDisplay: '聯華電子(000300077)', vendorCode: '000300077', period: '202508', ontimeRate: '85%',  ontimeQty: 85,  totalQty: 100, avgDaysDiff: 4 },
+  { id: 10, vendorDisplay: '台達電(000400055)',   vendorCode: '000400055', period: '202506', ontimeRate: '92%',  ontimeQty: 46,  totalQty: 50,  avgDaysDiff: 1 },
+  { id: 11, vendorDisplay: '台達電(000400055)',   vendorCode: '000400055', period: '202507', ontimeRate: '100%', ontimeQty: 200, totalQty: 200, avgDaysDiff: 0 },
+];
+
+// Mock 資料：答交準時率明細
+const MOCK_ARRIVAL_DETAIL_MAP: Record<number, ArrivalDetailRow[]> = {
+  1: [
+    { id: 1, orderDate: '2025/06/05', confirmDate: '2025/06/06', orderNo: '5000273356', orderSeq: '10', ordQty: 30, ontimeQty: 30, daysDiff: 1, isOntime: '是' },
+    { id: 2, orderDate: '2025/06/10', confirmDate: '2025/06/11', orderNo: '5000273357', orderSeq: '10', ordQty: 30, ontimeQty: 30, daysDiff: 1, isOntime: '是' },
+  ],
+  3: [
+    { id: 1, orderDate: '2025/08/01', confirmDate: '2025/08/02', orderNo: '5000289200', orderSeq: '10', ordQty: 50, ontimeQty: 50, daysDiff: 1, isOntime: '是' },
+    { id: 2, orderDate: '2025/08/05', confirmDate: '2025/08/15', orderNo: '5000289201', orderSeq: '20', ordQty: 50, ontimeQty: 0,  daysDiff: 8, isOntime: '否' },
+  ],
+  5: [
+    { id: 1, orderDate: '2025/07/01', confirmDate: '2025/07/04', orderNo: '5000281100', orderSeq: '10', ordQty: 30, ontimeQty: 30, daysDiff: 3, isOntime: '是' },
+    { id: 2, orderDate: '2025/07/10', confirmDate: '2025/07/22', orderNo: '5000281101', orderSeq: '20', ordQty: 20, ontimeQty: 0,  daysDiff: 9, isOntime: '否' },
+  ],
+};
+
+const DEFAULT_ARRIVAL_DETAIL: ArrivalDetailRow[] = [
+  { id: 1, orderDate: '2025/06/01', confirmDate: '2025/06/02', orderNo: '5000299999', orderSeq: '10', ordQty: 100, ontimeQty: 100, daysDiff: 1, isOntime: '是' },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
 // TAB 設定
 // ─────────────────────────────────────────────────────────────────────────────
 
 const TABS: { key: EvalTab; label: string }[] = [
   { key: 'delivery-ontime', label: '交貨準時率' },
-  { key: 'arrival-ontime',  label: '達交準時率' },
+  { key: 'arrival-ontime',  label: '答交準時率' },
   { key: 'evaluation-sheet', label: '廠商評價表' },
 ];
 
@@ -456,6 +534,228 @@ function DeliveryOntimeTab() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 答交準時率明細彈窗
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface ArrivalDetailDialogProps {
+  row: ArrivalOntimeRow;
+  onClose: () => void;
+}
+
+function ArrivalDetailDialog({ row, onClose }: ArrivalDetailDialogProps) {
+  const [filterOrderNo,  setFilterOrderNo]  = useState('');
+  const [filterOrderSeq, setFilterOrderSeq] = useState('');
+
+  const allDetails = MOCK_ARRIVAL_DETAIL_MAP[row.id] ?? DEFAULT_ARRIVAL_DETAIL;
+
+  const filteredDetails = useMemo(() => {
+    let data = allDetails;
+    if (filterOrderNo.trim()) {
+      const kw = filterOrderNo.trim().toLowerCase();
+      data = data.filter(d => d.orderNo.toLowerCase().includes(kw));
+    }
+    if (filterOrderSeq.trim()) {
+      const kw = filterOrderSeq.trim().toLowerCase();
+      data = data.filter(d => d.orderSeq.toLowerCase().includes(kw));
+    }
+    return data;
+  }, [allDetails, filterOrderNo, filterOrderSeq]);
+
+  // 欄位順序依示意圖：訂單日期、同意日期、差異天數、訂單號碼、訂單序號、訂單數量、準時答交數量
+  const detailColumns: StandardColumn<ArrivalDetailRow>[] = [
+    { key: 'orderDate',   label: '訂單日期',     width: 120, minWidth: 100 },
+    { key: 'confirmDate', label: '同意日期',     width: 120, minWidth: 100 },
+    { key: 'daysDiff',   label: '差異天數',     width: 110, minWidth: 90  },
+    { key: 'orderNo',     label: '訂單號碼',     width: 130, minWidth: 110 },
+    { key: 'orderSeq',   label: '訂單序號',     width: 100, minWidth: 80  },
+    { key: 'ordQty',     label: '訂單數量',     width: 100, minWidth: 80  },
+    { key: 'ontimeQty',  label: '準時答交數量', width: 130, minWidth: 110 },
+  ];
+
+  return (
+    <BaseOverlay onClose={onClose} maxWidth="1200px" maxHeight="760px">
+      <div className="relative w-full h-full flex flex-col">
+
+        {/* ── 頂部標題列 ── */}
+        <div className="shrink-0 flex items-center gap-[16px] px-[24px] pt-[24px] pb-[16px] border-b border-[rgba(145,158,171,0.12)]">
+          <button
+            onClick={onClose}
+            className="flex items-center justify-center w-[32px] h-[32px] rounded-full hover:bg-[rgba(145,158,171,0.12)] transition-colors shrink-0"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M19 12H5M5 12l7 7M5 12l7-7" stroke="#637381" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+
+          <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[18px] leading-[28px] text-[#1c252e] shrink-0">
+            答交準時率明細
+          </p>
+
+          {/* 廠商名稱 Tag */}
+          <div className="flex items-center gap-[8px] h-[28px] px-[10px] rounded-[6px] bg-[rgba(0,94,184,0.08)]">
+            <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#005eb8] leading-none whitespace-nowrap">
+              {row.vendorDisplay}
+            </span>
+          </div>
+
+          {/* 右側篩選器：僅訂單號碼 + 訂單序號（無是否準時） */}
+          <div className="flex-1 flex items-center gap-[12px] justify-end">
+            <div className="flex-1 min-w-0" style={{ maxWidth: 200 }}>
+              <SearchField label="訂單號碼" value={filterOrderNo} onChange={setFilterOrderNo} type="search" />
+            </div>
+            <div className="flex-1 min-w-0" style={{ maxWidth: 200 }}>
+              <SearchField label="訂單序號" value={filterOrderSeq} onChange={setFilterOrderSeq} type="search" />
+            </div>
+          </div>
+        </div>
+
+        {/* ── 表格（含 Toolbar） ── */}
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+          <StandardDataTable<ArrivalDetailRow>
+            columns={detailColumns}
+            data={filteredDetails}
+            storageKey="arrival-ontime-detail-v1"
+            showCheckbox={false}
+            externalFilteredData={filteredDetails}
+            onExportCsv={() => {}}
+            className="rounded-none shadow-none"
+          />
+        </div>
+
+      </div>
+    </BaseOverlay>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 答交準時率 TAB 主內容
+// ─────────────────────────────────────────────────────────────────────────────
+
+function ArrivalOntimeTab() {
+  const [filterCompany,    setFilterCompany]    = useState('GTM');
+  const [filterDateFrom,   setFilterDateFrom]   = useState('');
+  const [filterDateTo,     setFilterDateTo]     = useState('');
+  const [filterPeriodType, setFilterPeriodType] = useState('月');
+  const [filterVendor,     setFilterVendor]     = useState('');
+  const [detailRow, setDetailRow] = useState<ArrivalOntimeRow | null>(null);
+
+  const filteredRows = useMemo(() => {
+    let data = MOCK_ARRIVAL_ROWS;
+    if (filterVendor.trim()) {
+      // 支援逗號分隔多選廠商，OR 聯集
+      const tokens = filterVendor
+        .split(',')
+        .map(t => t.trim().toLowerCase())
+        .filter(Boolean);
+      data = data.filter(r =>
+        tokens.some(t =>
+          r.vendorDisplay.toLowerCase().includes(t) ||
+          r.vendorCode.toLowerCase().includes(t)
+        )
+      );
+    }
+    return data;
+  }, [filterVendor]);
+
+  const columns: StandardColumn<ArrivalOntimeRow>[] = useMemo(() => [
+    { key: 'vendorDisplay', label: '廠商（編號）',   width: 200, minWidth: 150 },
+    { key: 'period',        label: '計算週期',       width: 120, minWidth: 100 },
+    {
+      key: 'ontimeRate',
+      label: '答交準時率',
+      width: 130,
+      minWidth: 100,
+      renderCell: (val, row) => (
+        <button
+          onClick={() => setDetailRow(row)}
+          className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] text-[#1677ff] underline hover:text-[#0958d9] transition-colors cursor-pointer"
+        >
+          {val as string}
+        </button>
+      ),
+    },
+    { key: 'ontimeQty',   label: '準時答交數量', width: 130, minWidth: 110 },
+    { key: 'totalQty',   label: '區間訂購量',   width: 120, minWidth: 100 },
+    { key: 'avgDaysDiff', label: '平均答交天數', width: 130, minWidth: 110 },
+  ], []);
+
+  return (
+    <>
+      {/* ── 搜尋列 第一排（4 欄） ── */}
+      <div className="shrink-0 flex gap-[16px] items-center px-[20px] pt-[20px] pb-[12px]">
+        <div className="flex-1 min-w-0">
+          <DropdownSelect
+            label="下單公司"
+            value={filterCompany}
+            onChange={setFilterCompany}
+            options={ARRIVAL_COMPANY_OPTIONS}
+          />
+        </div>
+        <div className="flex-1 min-w-0">
+          <SearchField
+            label="下單日(起)"
+            value={filterDateFrom}
+            onChange={setFilterDateFrom}
+            type="date"
+          />
+        </div>
+        <div className="flex-1 min-w-0">
+          <SearchField
+            label="下單日(迄)"
+            value={filterDateTo}
+            onChange={setFilterDateTo}
+            type="date"
+          />
+        </div>
+        <div className="flex-1 min-w-0">
+          <DropdownSelect
+            label="計算週期"
+            value={filterPeriodType}
+            onChange={setFilterPeriodType}
+            options={PERIOD_OPTIONS}
+          />
+        </div>
+      </div>
+
+      {/* ── 搜尋列 第二排（廠商搜尋） ── */}
+      <div className="shrink-0 flex gap-[16px] items-center px-[20px] pb-[20px]">
+        <div className="flex-1 min-w-0">
+          <SearchField
+            label="廠商"
+            value={filterVendor}
+            onChange={setFilterVendor}
+            type="search"
+            placeholder="廠商名稱或代碼，多選請用逗號分隔"
+          />
+        </div>
+      </div>
+
+      {/* ── 表格 ── */}
+      <div className="flex-1 min-h-0 flex flex-col overflow-hidden relative">
+        <StandardDataTable<ArrivalOntimeRow>
+          columns={columns}
+          data={filteredRows}
+          storageKey="vendor-eval-arrival-ontime-v1"
+          showCheckbox={false}
+          externalFilteredData={filteredRows}
+          onExportCsv={() => {}}
+          className="rounded-none shadow-none"
+          updateTime="2025/05/05 12:30"
+        />
+      </div>
+
+      {/* ── 明細彈窗 ── */}
+      {detailRow && (
+        <ArrivalDetailDialog
+          row={detailRow}
+          onClose={() => setDetailRow(null)}
+        />
+      )}
+    </>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // 主頁面元件
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -494,11 +794,7 @@ export function VendorEvaluationPage() {
       {/* ── TAB 內容 ── */}
       {activeTab === 'delivery-ontime' && <DeliveryOntimeTab />}
 
-      {activeTab === 'arrival-ontime' && (
-        <div className="flex flex-col flex-1 min-h-0">
-          <UnderConstruction title="達交準時率" />
-        </div>
-      )}
+      {activeTab === 'arrival-ontime' && <ArrivalOntimeTab />}
 
       {activeTab === 'evaluation-sheet' && (
         <div className="flex flex-col flex-1 min-h-0">
