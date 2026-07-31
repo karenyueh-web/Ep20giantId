@@ -817,7 +817,7 @@ export function QualityReportPage() {
                 {visibleCols.map((col, i) => (
                   <div
                     key={col.key}
-                    className="flex items-center px-[16px] h-[52px] shrink-0 overflow-hidden"
+                    className="flex items-center px-[16px] h-[56px] shrink-0 overflow-hidden"
                     style={i === visibleCols.length - 1
                       ? { minWidth: col.width, flex: 1 }
                       : { width: col.width, minWidth: col.minWidth }}

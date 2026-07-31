@@ -47,7 +47,7 @@ const PAGE_META: Partial<Record<string, { title: string; breadcrumb: string }>> 
 // ── Mock 骨架列（假資料，背景模糊用） ──────────────────────────────────────────
 function MockRow({ widths, shade }: { widths: number[]; shade?: boolean }) {
   return (
-    <div className={`flex h-[52px] border-b border-[rgba(145,158,171,0.06)] ${shade ? 'bg-[rgba(145,158,171,0.03)]' : ''}`}>
+    <div className={`flex h-[56px] border-b border-[rgba(145,158,171,0.06)] ${shade ? 'bg-[rgba(145,158,171,0.03)]' : ''}`}>
       {widths.map((w, i) => (
         <div
           key={i}
@@ -82,7 +82,7 @@ function MockSearchBar() {
 // ── Mock Toolbar 骨架 ─────────────────────────────────────────────────────────
 function MockToolbar() {
   return (
-    <div className="flex items-center justify-between px-[20px] h-[52px] border-b border-[rgba(145,158,171,0.08)]">
+    <div className="flex items-center justify-between px-[20px] h-[56px] border-b border-[rgba(145,158,171,0.08)]">
       <div className="flex gap-[8px] items-center">
         <div className="h-[12px] w-[60px] rounded-full bg-[rgba(145,158,171,0.22)]" />
         <div className="h-[12px] w-[40px] rounded-full bg-[rgba(145,158,171,0.16)]" />
@@ -128,7 +128,7 @@ function MockContent() {
         ))}
       </div>
       {/* 分頁列 */}
-      <div className="h-[52px] border-t border-[rgba(145,158,171,0.08)] flex items-center px-[20px] gap-[12px]">
+      <div className="h-[56px] border-t border-[rgba(145,158,171,0.08)] flex items-center px-[20px] gap-[12px]">
         {[60, 40, 36, 36, 36].map((w, i) => (
           <div key={i} className="h-[28px] rounded-[6px] bg-[rgba(145,158,171,0.15)]" style={{ width: w }} />
         ))}

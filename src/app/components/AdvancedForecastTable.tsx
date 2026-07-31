@@ -488,7 +488,7 @@ export function AdvancedForecastTable({
             {paginatedData.map((row) => (
               <div
                 key={row.id}
-                className={`flex border-b border-[rgba(145,158,171,0.08)] h-[52px] hover:bg-[rgba(145,158,171,0.04)] transition-colors ${
+                className={`flex border-b border-[rgba(145,158,171,0.08)] h-[56px] hover:bg-[rgba(145,158,171,0.04)] transition-colors ${
                   selectedIds.has(row.id) ? 'bg-[rgba(0,94,184,0.04)]' : ''
                 }`}
               >

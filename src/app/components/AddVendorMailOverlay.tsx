@@ -269,7 +269,7 @@ export function AddVendorMailOverlay({ onClose, onSave }: AddVendorMailOverlayPr
             {/* 表格數據行容器 */}
             <div className="flex-1 overflow-y-auto custom-scrollbar">
               {vendorRows.map((row) => (
-                <div key={row.id} className="flex items-center h-[76px] border-t border-[rgba(145,158,171,0.08)]">
+                <div key={row.id} className="flex items-center h-[56px] border-t border-[rgba(145,158,171,0.08)]">
                   {/* 刪除按鈕 */}
                   <div className="w-[24px] ml-[12px] flex items-center justify-center shrink-0">
                     <button

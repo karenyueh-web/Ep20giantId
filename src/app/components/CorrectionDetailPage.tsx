@@ -1337,7 +1337,7 @@ export function CorrectionDetailPage({
                       return (
                       <div
                         key={row.id}
-                        className={`flex items-center w-full gap-[20px] px-[45px] h-[52px] border-t border-[rgba(145,158,171,0.1)] first:border-t-0 relative transition-colors ${isDeleted ? 'bg-[rgba(255,86,48,0.04)]' : !purchaserOrig ? 'bg-[rgba(0,94,184,0.03)]' : deletedChanged ? 'bg-[rgba(0,94,184,0.03)]' : ''}`}
+                        className={`flex items-center w-full gap-[20px] px-[45px] h-[56px] border-t border-[rgba(145,158,171,0.1)] first:border-t-0 relative transition-colors ${isDeleted ? 'bg-[rgba(255,86,48,0.04)]' : !purchaserOrig ? 'bg-[rgba(0,94,184,0.03)]' : deletedChanged ? 'bg-[rgba(0,94,184,0.03)]' : ''}`}
                       >
                         {/* 軟刪除紅線覆蓋層 */}
                         {isDeleted && (
@@ -1729,7 +1729,7 @@ export function CorrectionDetailPage({
                   return (
                     <div
                       key={row.id}
-                      className="flex items-center gap-[8px] px-[12px] h-[52px] border-t border-[rgba(145,158,171,0.1)] first:border-t-0 relative transition-colors"
+                      className="flex items-center gap-[8px] px-[12px] h-[56px] border-t border-[rgba(145,158,171,0.1)] first:border-t-0 relative transition-colors"
                     >
                       {/* 項次 */}
                       <div className="shrink-0 w-[32px]"><p className="font-['Public_Sans:Regular',sans-serif] font-normal leading-[22px] text-[13px] whitespace-nowrap text-[#454f5b]">{idx + 1}</p></div>
@@ -1856,7 +1856,7 @@ export function CorrectionDetailPage({
                 return (
                   <div
                     key={row.id}
-                    className={`flex items-center w-full gap-[20px] px-[45px] h-[52px] border-t border-[rgba(145,158,171,0.1)] first:border-t-0 relative transition-colors ${isStrikethrough ? 'bg-[rgba(255,86,48,0.04)]' : ''}`}
+                    className={`flex items-center w-full gap-[20px] px-[45px] h-[56px] border-t border-[rgba(145,158,171,0.1)] first:border-t-0 relative transition-colors ${isStrikethrough ? 'bg-[rgba(255,86,48,0.04)]' : ''}`}
                   >
                     {isStrikethrough && <div className="absolute inset-x-[45px] top-1/2 h-[1.5px] bg-[#ff5630] pointer-events-none z-[1]" />}
                     <div className="flex items-center shrink-0 w-[50px]">

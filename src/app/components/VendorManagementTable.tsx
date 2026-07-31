@@ -364,7 +364,7 @@ export function VendorManagementTable({
             {sortedVendors.map((vendor) => (
               <div 
                 key={vendor.id} 
-                className="flex border-b border-[rgba(145,158,171,0.08)] h-[76px] hover:bg-[rgba(145,158,171,0.04)]"
+                className="flex border-b border-[rgba(145,158,171,0.08)] h-[56px] hover:bg-[rgba(145,158,171,0.04)]"
               >
                 {visibleColumns.map((column, colIndex) => {
                   const isLastCol = colIndex === visibleColumns.length - 1;

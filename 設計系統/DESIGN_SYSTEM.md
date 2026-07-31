@@ -152,10 +152,8 @@ avatar, chip, round btn → rounded-[500px]
 | `h-[36px]` | **286** | Input 框、FilterDialog select |
 | `h-[40px]` | **190** | FilterSelect（react-select）、搜尋按鈕 |
 | `h-[48px]` | **294** | SelectionToolbar、Tab 列、主按鈕 |
-| `h-[52px]` | — | 一般表格資料列 |
 | `h-[54px]` | 99 | DropdownSelect（floating label） |
-| `h-[56px]` | — | 表格表頭 |
-| `h-[76px]` | 82 | 修正單/歷史訂單資料列 |
+| `h-[56px]` | — | 表格表頭與**所有**資料列（統一，依集團規範）|
 
 ---
 
@@ -247,8 +245,7 @@ border-bottom: border-b border-[rgba(145,158,171,0.08)]
 
 ### 表格資料列
 
-- **一般清單**：`h-[52px]`
-- **修正單 / 歷史訂單**：`h-[76px]`
+- **所有資料列統一**：`h-[56px]`（依集團規範，不再區分功能模組）
 
 ### 分頁列（Pagination）
 ```
@@ -688,11 +685,11 @@ px-[16px]
 
 | 功能 | Checkbox 寬 | DocNo | 行高 | DnD | Resizable |
 |------|------------|-------|------|-----|-----------|
-| 採購訂單查詢 | 88px | docSeqNo (160px+) | 52px | ✅ | ✅ |
-| 預測訂單查詢 | 88px | 無 sticky | 52px | ✅ | ✅ |
-| 修正單查詢 | 56px | correctionDocNo | 76px | ✅ | ✅ |
-| 歷史訂單查詢 | 88px | 單號序號 (160px) | 76px | ✅ | ✅ |
-| 品質異常查詢 | 無 | abnormalNumber | 76px | ✅ | ✅ |
+| 採購訂單查詢 | 88px | docSeqNo (160px+) | 56px | ✅ | ✅ |
+| 預測訂單查詢 | 88px | 無 sticky | 56px | ✅ | ✅ |
+| 修正單查詢 | 56px | correctionDocNo | 56px | ✅ | ✅ |
+| 歷史訂單查詢 | 88px | 單號序號 (160px) | 56px | ✅ | ✅ |
+| 品質異常查詢 | 無 | abnormalNumber | 56px | ✅ | ✅ |
 
 ### 10.5 欄寬調整（Resizable）
 
@@ -1196,7 +1193,7 @@ useEffect(() => {
 9. **DnD type 字串每個表格獨立**，禁止跨表格共用同一 type
 10. **欄位排序優先判斷數字 → 中文 → 英文**，對應使用不同 locale 的 `localeCompare`
 11. **localStorage key 格式固定：** `{feature}_{userEmail}_{tab}_columns`
-12. **Stitch 生成 UI 僅供靈感**，實際實作必須遵循此文件
+12. **Claude Design 生成 UI 僅供靈感**，實際實作必須遵循此文件
 13. **Sticky 欄 hover 背景必須為實心色** — 禁止使用 `rgba` 半透明色（見功能九 9.1），否則 hover 時底層文字會透出
 14. **資料列 Cell 必須有 `shrink-0` + `minWidth`** — 缺少 shrink-0 會被 flex 壓縮，欄位顯示不完整（見功能九 9.2）
 15. **Cell 內文字用 `flex-1 min-w-0`，禁止用 `w-full`** — flex 容器內 w-full 無法正確觸發 truncate（見功能九 9.3）

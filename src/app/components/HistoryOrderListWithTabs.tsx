@@ -643,7 +643,7 @@ export function HistoryOrderListWithTabs() {
             {paginatedData.map(row => (
               <div
                 key={row.id}
-                className={`flex border-b border-[rgba(145,158,171,0.08)] h-[76px] hover:bg-[rgba(145,158,171,0.04)] group transition-colors ${selectedIds.has(row.id) ? 'bg-[rgba(0,94,184,0.04)]' : ''}`}
+                className={`flex border-b border-[rgba(145,158,171,0.08)] h-[56px] hover:bg-[rgba(145,158,171,0.04)] group transition-colors ${selectedIds.has(row.id) ? 'bg-[rgba(0,94,184,0.04)]' : ''}`}
               >
                 {/* Checkbox cell */}
                 <div

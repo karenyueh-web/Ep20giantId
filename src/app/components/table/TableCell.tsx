@@ -29,7 +29,7 @@ export function TableCell({
 }: TableCellProps) {
   return (
     <div
-      className={`h-[52px] flex items-center px-[16px] shrink-0 ${
+      className={`h-[56px] flex items-center px-[16px] shrink-0 ${
         isLast ? '' : 'border-r border-[rgba(145,158,171,0.08)]'
       } ${className}`}
       style={{ width, ...style }}

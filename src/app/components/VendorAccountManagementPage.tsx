@@ -433,7 +433,7 @@ function GiantVendorTable({ onVendorClick, onSalesClick }: { onVendorClick: () =
 
         {/* 資料列區域 */}
         {currentData.map((vendor) => (
-          <div key={vendor.id} className="min-h-[76px] relative shrink-0 min-w-max">
+          <div key={vendor.id} className="h-[56px] relative shrink-0 min-w-max">
             <div className="content-stretch flex items-center overflow-clip relative size-full">
               {/* 廠商簡稱(編號) */}
               <div className="content-stretch flex items-center overflow-clip relative shrink-0 w-[150px]">
@@ -672,7 +672,7 @@ function VendorTable({ onVendorClick, onSalesClick }: { onVendorClick: () => voi
         </div>
 
         {/* 表格數據行（只有一筆資料） */}
-        <div className="h-[76px] relative shrink-0 min-w-max" data-name="Table/Order/Row">
+        <div className="h-[56px] relative shrink-0 min-w-max" data-name="Table/Order/Row">
           <div className="content-stretch flex items-center overflow-clip relative rounded-[inherit] size-full">
             {/* 廠商簡稱(編號) */}
             <div className="content-stretch flex items-center overflow-clip relative shrink-0" style={{ width: `${columnWidths.vendorName}px` }}>

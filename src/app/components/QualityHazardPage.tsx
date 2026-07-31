@@ -866,7 +866,7 @@ export function QualityHazardPage() {
                   return (
                     <div
                       key={col.key}
-                      className={`flex items-center px-[16px] h-[52px] shrink-0 overflow-hidden${isConfirmed ? ' bg-[rgba(34,197,94,0.1)]' : ''}`}
+                      className={`flex items-center px-[16px] h-[56px] shrink-0 overflow-hidden${isConfirmed ? ' bg-[rgba(34,197,94,0.1)]' : ''}`}
                       style={i === visibleCols.length - 1
                         ? { minWidth: col.width, flex: 1 }
                         : { width: col.width, minWidth: col.minWidth }}
