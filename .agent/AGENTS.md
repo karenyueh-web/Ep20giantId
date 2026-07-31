@@ -40,12 +40,27 @@ EP 專案規範（DESIGN_SYSTEM.md）
 
 ## 開發前必讀規範
 
-### SKILL.md 必須完整閱讀
-開發新頁面、新元件、新功能前，讀取 `SKILL.md` 時**必須完整讀完全部內容**，包含 801 行之後的部分。
+### ⭐ 所有 SKILL 必須完整閱讀（開發前強制執行）
 
+所有 SKILL 統一放在 `.agent/skills/` 資料夾，目前包含：
+
+| 資料夾 | 說明 | 適用時機 |
+|--------|------|---------|
+| `component-design/SKILL.md` | UI 元件規範（BaseOverlay、FloatingInput、StandardDataTable 等） | 開發任何新頁面、新元件、新功能前 **必讀** |
+| `ui-visual-parity/SKILL.md` | UI 視覺對齊工具（截圖比對、差異分類、修正流程） | 使用者提供截圖說「顯示有問題」時 **必讀** |
+
+#### 閱讀規則
+- 開發新頁面、新元件、新功能前，**必須依序讀完 `.agent/skills/` 下的所有 SKILL.md**
 - `view_file` 一次最多顯示 800 行，若檔案超過 800 行，**必須繼續呼叫一次讀取剩餘行數**
 - 看到提示 *"The above content does NOT show the entire file contents"* 時，**必須繼續讀完**，不可假設前半段已足夠
-- 讀完整份 SKILL.md 後，才可以開始動工
+- ❌ 禁止：只讀一份 SKILL 就開始動工
+- ✅ 正確：`.agent/skills/` 下每份 SKILL 都讀完 → 才開始實作
+
+#### 使用者提供截圖時的額外流程
+當使用者說「顯示很奇怪」、「跟設計稿不符」並附上截圖時，**必須先執行 `ui-visual-parity` SKILL 的比對流程**：
+1. 描述截圖的預期視覺結構
+2. 列出實作差異（Block / Expected / Actual / Difference / Owner / Fix）
+3. 從最上層（token → 共用元件 → 頁面）由外到內修正
 
 ### 元件規範（避免重造輪子）
 - **啟用/停用 Toggle** 一律使用 `<ToggleSwitch>` 元件（啟用為綠色 `#22c55e`），**禁止自訂顏色或自製 Toggle 元件**

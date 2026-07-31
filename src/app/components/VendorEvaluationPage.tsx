@@ -83,6 +83,26 @@ interface ArrivalDetailRow {
   isOntime: '是' | '否';
 }
 
+/** 廠商評價表清單列 */
+interface EvaluationSheetRow {
+  id: number;
+  purchaseOrg: string;
+  vendorDisplay: string;
+  vendorCode: string;
+  period: string;
+  totalScore: number;
+  materialRate: string;
+  qualityScore: number;
+  qualityAbnormal: number;
+  freeInspect: number;
+  leadtimeScore: number;
+  remark: string;
+  deliveryScore: number;
+  deliveryRate: string;
+  arrivalScore: number;
+  arrivalRate: string;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 靜態選項
 // ─────────────────────────────────────────────────────────────────────────────
@@ -277,6 +297,31 @@ const MOCK_ARRIVAL_DETAIL_MAP: Record<number, ArrivalDetailRow[]> = {
 
 const DEFAULT_ARRIVAL_DETAIL: ArrivalDetailRow[] = [
   { id: 1, orderDate: '2025/06/01', confirmDate: '2025/06/02', orderNo: '5000299999', orderSeq: '10', ordQty: 100, ontimeQty: 100, daysDiff: 1, isOntime: '是' },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Mock 資料：廠商評價表
+// ─────────────────────────────────────────────────────────────────────────────
+
+const MOCK_EVALUATION_ROWS: EvaluationSheetRow[] = [
+  { id: 1,  purchaseOrg: '1101', vendorDisplay: '速聯(000100463)',      vendorCode: '000100463', period: '202506', totalScore: 88, materialRate: '99.99%', qualityScore: 30, qualityAbnormal: 18, freeInspect: 10, leadtimeScore: 0, remark: '', deliveryScore: 17, deliveryRate: '85.7%', arrivalScore: 13, arrivalRate: '91.2%' },
+  { id: 2,  purchaseOrg: '1101', vendorDisplay: '速聯(000100463)',      vendorCode: '000100463', period: '202507', totalScore: 95, materialRate: '99.99%', qualityScore: 30, qualityAbnormal: 20, freeInspect: 10, leadtimeScore: 0, remark: '', deliveryScore: 20, deliveryRate: '100%',  arrivalScore: 15, arrivalRate: '100%'  },
+  { id: 3,  purchaseOrg: '1101', vendorDisplay: '速聯(000100463)',      vendorCode: '000100463', period: '202508', totalScore: 72, materialRate: '99.99%', qualityScore: 30, qualityAbnormal: 10, freeInspect: 10, leadtimeScore: 0, remark: '', deliveryScore: 19, deliveryRate: '85.7%', arrivalScore: 3,  arrivalRate: '68.4%' },
+  { id: 4,  purchaseOrg: '1101', vendorDisplay: '台灣日立(000200128)', vendorCode: '000200128', period: '202506', totalScore: 80, materialRate: '99.94%', qualityScore: 25, qualityAbnormal: 15, freeInspect: 10, leadtimeScore: 0, remark: '', deliveryScore: 18, deliveryRate: '95%',   arrivalScore: 12, arrivalRate: '85.0%' },
+  { id: 5,  purchaseOrg: '1101', vendorDisplay: '台灣日立(000200128)', vendorCode: '000200128', period: '202507', totalScore: 75, materialRate: '99.90%', qualityScore: 22, qualityAbnormal: 13, freeInspect: 10, leadtimeScore: 0, remark: '', deliveryScore: 16, deliveryRate: '88%',   arrivalScore: 14, arrivalRate: '93.0%' },
+  { id: 6,  purchaseOrg: '1101', vendorDisplay: '台灣日立(000200128)', vendorCode: '000200128', period: '202508', totalScore: 90, materialRate: '99.99%', qualityScore: 30, qualityAbnormal: 20, freeInspect: 10, leadtimeScore: 0, remark: '', deliveryScore: 20, deliveryRate: '100%',  arrivalScore: 10, arrivalRate: '78.0%' },
+  { id: 7,  purchaseOrg: '1102', vendorDisplay: '聯華電子(000300077)', vendorCode: '000300077', period: '202506', totalScore: 68, materialRate: '99.70%', qualityScore: 20, qualityAbnormal: 8,  freeInspect: 5,  leadtimeScore: 0, remark: '', deliveryScore: 14, deliveryRate: '75%',   arrivalScore: 21, arrivalRate: '75.0%' },
+  { id: 8,  purchaseOrg: '1102', vendorDisplay: '聯華電子(000300077)', vendorCode: '000300077', period: '202507', totalScore: 78, materialRate: '99.94%', qualityScore: 25, qualityAbnormal: 13, freeInspect: 5,  leadtimeScore: 0, remark: '', deliveryScore: 18, deliveryRate: '90%',   arrivalScore: 17, arrivalRate: '90.0%' },
+  { id: 9,  purchaseOrg: '1102', vendorDisplay: '聯華電子(000300077)', vendorCode: '000300077', period: '202508', totalScore: 73, materialRate: '99.90%', qualityScore: 22, qualityAbnormal: 11, freeInspect: 5,  leadtimeScore: 0, remark: '', deliveryScore: 16, deliveryRate: '85%',   arrivalScore: 19, arrivalRate: '85.0%' },
+  { id: 10, purchaseOrg: '1102', vendorDisplay: '台達電(000400055)',   vendorCode: '000400055', period: '202506', totalScore: 85, materialRate: '99.97%', qualityScore: 28, qualityAbnormal: 17, freeInspect: 10, leadtimeScore: 0, remark: '', deliveryScore: 17, deliveryRate: '92%',   arrivalScore: 13, arrivalRate: '92.0%' },
+  { id: 11, purchaseOrg: '1102', vendorDisplay: '台達電(000400055)',   vendorCode: '000400055', period: '202507', totalScore: 98, materialRate: '99.99%', qualityScore: 30, qualityAbnormal: 20, freeInspect: 10, leadtimeScore: 0, remark: '', deliveryScore: 20, deliveryRate: '100%',  arrivalScore: 18, arrivalRate: '100%'  },
+];
+
+const EVAL_SHEET_ORG_OPTIONS = [
+  { value: '', label: '全部' },
+  { value: '1101', label: '1101' },
+  { value: '1102', label: '1102' },
+  { value: '1103', label: '1103' },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -861,6 +906,269 @@ function ArrivalOntimeTab() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 廠商評價彈窗：共用欄位元件（必須定義在元件外部，避免 re-render 時重新建立）
+// ─────────────────────────────────────────────────────────────────────────────
+
+const evalInputCls = "flex-1 font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[#1c252e] text-[14px] bg-transparent border-none outline-none";
+const evalInputReadonlyCls = "flex-1 font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[#637381] text-[14px] bg-transparent border-none outline-none";
+
+function EvalEditableField({ value, onChange, inputMode }: {
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  inputMode?: 'numeric' | 'text';
+}) {
+  return (
+    <div className="flex-1 rounded-[8px] relative">
+      <div aria-hidden="true" className="absolute border border-[rgba(145,158,171,0.16)] border-solid inset-0 pointer-events-none rounded-[8px]" />
+      <div className="flex gap-[12px] items-center pl-[12px] pr-[8px] py-[6px] w-full">
+        <input type="text" inputMode={inputMode ?? 'text'} value={value} onChange={onChange} className={evalInputCls} />
+      </div>
+    </div>
+  );
+}
+
+function EvalReadonlyField({ value }: { value: string | number }) {
+  return (
+    <div className="flex-1 rounded-[8px] relative bg-[rgba(145,158,171,0.08)]">
+      <div aria-hidden="true" className="absolute border border-[rgba(145,158,171,0.12)] border-solid inset-0 pointer-events-none rounded-[8px]" />
+      <div className="flex gap-[12px] items-center pl-[12px] pr-[8px] py-[6px] w-full">
+        <span className={evalInputReadonlyCls}>{value}</span>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 計分函式（廠商評價表）
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** 交貨準時率 → 得分（最高 25） */
+function calcDeliveryScore(rateStr: string): number {
+  const r = parseFloat(rateStr.replace('%', ''));
+  if (isNaN(r)) return 0;
+  if (r >= 100)   return 25;
+  if (r >= 95)    return 23;
+  if (r >= 90)    return 21;
+  if (r >= 85)    return 19;
+  if (r >= 80)    return 17;
+  if (r >= 75)    return 15;
+  if (r >= 70)    return 13;
+  if (r >= 65)    return 11;
+  if (r >= 60)    return 9;
+  if (r >= 55)    return 7;
+  if (r >= 50)    return 5;
+  if (r >= 45)    return 3;
+  return 2;
+}
+
+/** 預答交滿足率 → 得分（最高 10） */
+function calcArrivalScore(rateStr: string): number {
+  const r = parseFloat(rateStr.replace('%', ''));
+  if (isNaN(r)) return 0;
+  if (r >= 100) return 10;
+  if (r >= 95)  return 9;
+  if (r >= 90)  return 8;
+  if (r >= 85)  return 7;
+  if (r >= 80)  return 6;
+  if (r >= 75)  return 5;
+  if (r >= 70)  return 4;
+  if (r >= 60)  return 3;
+  return 2;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 廠商評價分數彈窗
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface EvaluationSheetDetailDialogProps {
+  row: EvaluationSheetRow;
+  onClose: () => void;
+}
+
+function EvaluationSheetDetailDialog({ row, onClose }: EvaluationSheetDetailDialogProps) {
+  const [materialScore,   setMaterialScore]   = useState(String(row.qualityScore));
+  const [qualityAbnormal, setQualityAbnormal] = useState(String(row.qualityAbnormal));
+  const [freeInspect,     setFreeInspect]     = useState(String(row.freeInspect));
+  const [leadtimeScore,   setLeadtimeScore]   = useState(String(row.leadtimeScore));
+  const [remark,          setRemark]          = useState(row.remark);
+
+  const autoDeliveryScore = calcDeliveryScore(row.deliveryRate);
+  const autoArrivalScore  = calcArrivalScore(row.arrivalRate);
+
+  function handleNumericChange(val: string, setter: (v: string) => void) {
+    const cleaned = val.replace(/[^0-9]/g, '');
+    if (cleaned === '') { setter(''); return; }
+    setter(String(Math.min(100, Math.max(0, parseInt(cleaned, 10)))));
+  }
+
+  const labelCls = "font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[#1c252e] text-[14px] whitespace-nowrap";
+
+  return (
+    <BaseOverlay onClose={onClose} maxWidth="560px" maxHeight="640px">
+      <div className="relative w-full h-full">
+        <button
+          className="absolute left-[20px] top-[20px] z-10 cursor-pointer hover:opacity-70 transition-opacity"
+          onClick={onClose}
+        >
+          <svg width="24" height="24" viewBox="0 0 20 20" fill="none">
+            <path clipRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" fill="#637381" fillRule="evenodd" />
+          </svg>
+        </button>
+
+        <div className="flex flex-col h-full px-[50px] pt-[56px] pb-[32px] gap-[24px] overflow-y-auto custom-scrollbar">
+
+          {/* Header */}
+          <div className="flex items-center gap-[12px] shrink-0">
+            <div className="bg-[rgba(0,94,184,0.16)] h-[24px] min-w-[24px] rounded-[6px] flex items-center justify-center px-[6px]">
+              <p className="font-['Public_Sans:Bold',sans-serif] font-bold leading-[20px] text-[12px] text-center whitespace-nowrap text-[#005eb8]">{row.period}</p>
+            </div>
+            <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[18px] leading-[28px] text-[#1c252e]">廠商評價分數</p>
+            <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[14px] text-[#637381] leading-[22px]">{row.vendorDisplay}</p>
+          </div>
+
+          {/* 欄位 */}
+          <div className="flex flex-col gap-[12px]">
+
+            {/* 物料良品率 */}
+            <div className="flex gap-[10px] items-center">
+              <div className="w-[110px] shrink-0"><p className={labelCls}>物料良品率</p></div>
+              <div className="w-[64px] shrink-0"><p className="font-['Public_Sans:Regular',sans-serif] font-normal leading-[22px] text-[#637381] text-[14px]">{row.materialRate}</p></div>
+              <EvalEditableField value={materialScore} onChange={e => handleNumericChange(e.target.value, setMaterialScore)} inputMode="numeric" />
+            </div>
+
+            {/* 交貨準時率 */}
+            <div className="flex gap-[10px] items-center">
+              <div className="w-[110px] shrink-0"><p className={labelCls}>交貨準時率</p></div>
+              <div className="w-[64px] shrink-0"><p className="font-['Public_Sans:Regular',sans-serif] font-normal leading-[22px] text-[#637381] text-[14px]">{row.deliveryRate}</p></div>
+              <EvalReadonlyField value={autoDeliveryScore} />
+            </div>
+
+            {/* 預答交滿足率 */}
+            <div className="flex gap-[10px] items-center">
+              <div className="w-[110px] shrink-0"><p className={labelCls}>預答交滿足率</p></div>
+              <div className="w-[64px] shrink-0"><p className="font-['Public_Sans:Regular',sans-serif] font-normal leading-[22px] text-[#637381] text-[14px]">{row.arrivalRate}</p></div>
+              <EvalReadonlyField value={autoArrivalScore} />
+            </div>
+
+            {/* 品質異常 */}
+            <div className="flex gap-[10px] items-center">
+              <div className="w-[110px] shrink-0"><p className={labelCls}>品質異常</p></div>
+              <div className="w-[64px] shrink-0" />
+              <EvalEditableField value={qualityAbnormal} onChange={e => handleNumericChange(e.target.value, setQualityAbnormal)} inputMode="numeric" />
+            </div>
+
+            {/* 免檢 */}
+            <div className="flex gap-[10px] items-center">
+              <div className="w-[110px] shrink-0"><p className={labelCls}>免檢</p></div>
+              <div className="w-[64px] shrink-0" />
+              <EvalEditableField value={freeInspect} onChange={e => handleNumericChange(e.target.value, setFreeInspect)} inputMode="numeric" />
+            </div>
+
+            {/* Leadtime > 6天 */}
+            <div className="flex gap-[10px] items-center">
+              <div className="w-[110px] shrink-0"><p className={labelCls}>Leadtime &gt; 6天</p></div>
+              <div className="w-[64px] shrink-0" />
+              <EvalEditableField value={leadtimeScore} onChange={e => handleNumericChange(e.target.value, setLeadtimeScore)} inputMode="numeric" />
+            </div>
+
+            {/* 備註 */}
+            <div className="flex gap-[10px] items-center">
+              <div className="w-[110px] shrink-0"><p className={labelCls}>備註</p></div>
+              <div className="w-[64px] shrink-0" />
+              <EvalEditableField value={remark} onChange={e => setRemark(e.target.value)} />
+            </div>
+
+          </div>
+
+          {/* 儲存按鈕 */}
+          <button
+            className="shrink-0 w-full h-[36px] rounded-[8px] flex items-center justify-center hover:bg-[#004680] transition-colors mt-auto"
+            style={{ backgroundColor: '#00559c' }}
+            onClick={onClose}
+          >
+            <p className="font-['Public_Sans:Bold',sans-serif] font-bold leading-[24px] text-white text-[14px]">儲存</p>
+          </button>
+
+        </div>
+      </div>
+    </BaseOverlay>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 廠商評價表 TAB
+// ─────────────────────────────────────────────────────────────────────────────
+
+function EvaluationSheetTab() {
+  const [orgFilter,    setOrgFilter]    = useState('');
+  const [vendorFilter, setVendorFilter] = useState('');
+  const [periodFilter, setPeriodFilter] = useState('');
+  const [detailRow,    setDetailRow]    = useState<EvaluationSheetRow | null>(null);
+
+  const filtered = MOCK_EVALUATION_ROWS.filter(r => {
+    if (orgFilter    && r.purchaseOrg   !== orgFilter)                              return false;
+    if (vendorFilter && !r.vendorDisplay.toLowerCase().includes(vendorFilter.toLowerCase())) return false;
+    if (periodFilter && !r.period.includes(periodFilter))                           return false;
+    return true;
+  });
+
+  const columns: StandardColumn<EvaluationSheetRow>[] = [
+    { key: 'purchaseOrg',    label: '採購組織', width: 100, minWidth: 80 },
+    { key: 'vendorDisplay',  label: '廠商',     width: 200, minWidth: 120 },
+    {
+      key: 'period', label: '期別', width: 120, minWidth: 90,
+      renderCell: (_val, row) => (
+        <button
+          onClick={() => setDetailRow(row)}
+          className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] text-[#1677ff] underline hover:text-[#0958d9] transition-colors cursor-pointer"
+        >
+          {row.period}
+        </button>
+      ),
+    },
+    { key: 'totalScore',     label: '總分',         width: 80,  minWidth: 60 },
+    { key: 'materialRate',   label: '物料良品率',   width: 110, minWidth: 90 },
+    { key: 'qualityScore',   label: '物料良品分數', width: 110, minWidth: 90 },
+    { key: 'deliveryRate',   label: '交貨準時率',   width: 110, minWidth: 90 },
+    { key: 'deliveryScore',  label: '交貨準時分數', width: 110, minWidth: 90 },
+    { key: 'arrivalRate',    label: '預答交滿足率', width: 110, minWidth: 90 },
+    { key: 'arrivalScore',   label: '預答交分數',   width: 110, minWidth: 90 },
+  ];
+
+  return (
+    <>
+      {/* 搜尋列 */}
+      <div className="shrink-0 flex gap-[16px] items-center px-[20px] py-[20px]">
+        <div className="flex-1 min-w-0">
+          <DropdownSelect label="採購組織" value={orgFilter} onChange={setOrgFilter} options={EVAL_SHEET_ORG_OPTIONS} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <SearchField label="廠商" value={vendorFilter} onChange={setVendorFilter} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <SearchField label="期別" value={periodFilter} onChange={setPeriodFilter} />
+        </div>
+      </div>
+
+      {/* 表格 */}
+      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+        <StandardDataTable<EvaluationSheetRow>
+          columns={columns}
+          data={filtered}
+          storageKey="vendor-eval-sheet-v1"
+          showCheckbox={false}
+          className="rounded-none shadow-none"
+        />
+      </div>
+
+      {detailRow && (
+        <EvaluationSheetDetailDialog row={detailRow} onClose={() => setDetailRow(null)} />
+      )}
+    </>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // 主頁面元件
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -901,11 +1209,7 @@ export function VendorEvaluationPage() {
 
       {activeTab === 'arrival-ontime' && <ArrivalOntimeTab />}
 
-      {activeTab === 'evaluation-sheet' && (
-        <div className="flex flex-col flex-1 min-h-0">
-          <UnderConstruction title="廠商評價表" />
-        </div>
-      )}
+      {activeTab === 'evaluation-sheet' && <EvaluationSheetTab />}
 
     </div>
   );

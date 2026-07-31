@@ -70,6 +70,8 @@ export default function App() {
   // ── 零件資訊維護 breadcrumb state ──
   const [partsTitle, setPartsTitle] = useState('零件資訊');
   const [partsBreadcrumb, setPartsBreadcrumb] = useState('零件/索樣 • 零件資訊');
+  // ── 廠商評價 breadcrumb state ──
+  const [vendorEvalBreadcrumb, setVendorEvalBreadcrumb] = useState(pageConfig['vendor-evaluation'].breadcrumb);
 
   const handleLoginSuccess = (role: UserRole) => {
     setIsLoggedIn(true);
@@ -492,13 +494,15 @@ export default function App() {
         return (
           <ResponsivePageLayout
             currentPage={currentPage}
-            onPageChange={handlePageChange}
+            onPageChange={(p) => { setVendorEvalBreadcrumb(pageConfig['vendor-evaluation'].breadcrumb); handlePageChange(p); }}
             onLogout={handleLogout}
             userRole={userRole}
             title={pageConfig['vendor-evaluation'].title}
-            breadcrumb={pageConfig['vendor-evaluation'].breadcrumb}
+            breadcrumb={vendorEvalBreadcrumb}
           >
-            <VendorEvaluationPage />
+            <VendorEvaluationPage
+              onBreadcrumbChange={(bc) => setVendorEvalBreadcrumb(bc)}
+            />
           </ResponsivePageLayout>
         );
       case 'quality-report':
