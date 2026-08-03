@@ -942,10 +942,14 @@ function EvalReadonlyField({ value }: { value: string | number }) {
 // 計分函式（廠商評價表）
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** 交貨準時率 → 得分（最高 25） */
-function calcDeliveryScore(rateStr: string): number {
+/**
+ * 交貨準時率 → 得分（最高 25）
+ * null / 空值 = 當月無交貨 → 依舊系統邏輯給滿分 25
+ */
+function calcDeliveryScore(rateStr: string | null | undefined): number {
+  if (!rateStr || rateStr.trim() === '' || rateStr === '-') return 25;
   const r = parseFloat(rateStr.replace('%', ''));
-  if (isNaN(r)) return 0;
+  if (isNaN(r)) return 25;
   if (r >= 100)   return 25;
   if (r >= 95)    return 23;
   if (r >= 90)    return 21;
@@ -961,10 +965,14 @@ function calcDeliveryScore(rateStr: string): number {
   return 2;
 }
 
-/** 預答交滿足率 → 得分（最高 10） */
-function calcArrivalScore(rateStr: string): number {
+/**
+ * 預答交滿足率 → 得分（最高 10）
+ * null / 空值 = 當月無下單 → 依舊系統邏輯給滿分 10
+ */
+function calcArrivalScore(rateStr: string | null | undefined): number {
+  if (!rateStr || rateStr.trim() === '' || rateStr === '-') return 10;
   const r = parseFloat(rateStr.replace('%', ''));
-  if (isNaN(r)) return 0;
+  if (isNaN(r)) return 10;
   if (r >= 100) return 10;
   if (r >= 95)  return 9;
   if (r >= 90)  return 8;
@@ -974,6 +982,29 @@ function calcArrivalScore(rateStr: string): number {
   if (r >= 70)  return 4;
   if (r >= 60)  return 3;
   return 2;
+}
+
+/**
+ * 物料良品率 → 得分（最高 30）
+ * 特殊值（對應舊系統 mat_yield_rateT）：
+ *   null / ''（無收料也無退換貨）→ 視為 100%，給滿分 30
+ *   '#NA'（有退換貨但無收料量）→ 無法計算，得 0 分
+ */
+function calcMaterialScore(rateStr: string | null | undefined): number {
+  if (!rateStr || rateStr.trim() === '') return 30;
+  if (rateStr === '#NA') return 0;
+  const r = parseFloat(rateStr.replace('%', ''));
+  if (isNaN(r) || r >= 99.99) return 30;
+  if (r >= 99.97) return 28;
+  if (r >= 99.94) return 26;
+  if (r >= 99.90) return 24;
+  if (r >= 99.70) return 22;
+  if (r >= 99.50) return 20;
+  if (r >= 99.30) return 18;
+  if (r >= 99.00) return 16;
+  if (r >= 96.00) return 14;
+  if (r >= 85.00) return 12;
+  return 10;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -994,6 +1025,15 @@ function EvaluationSheetDetailDialog({ row, onClose }: EvaluationSheetDetailDial
 
   const autoDeliveryScore = calcDeliveryScore(row.deliveryRate);
   const autoArrivalScore  = calcArrivalScore(row.arrivalRate);
+
+  // 即時合計總分（對應舊系統 vVend_Score.score_TTL）
+  const liveTotal =
+    (parseInt(materialScore)   || 0) +
+    autoDeliveryScore +
+    autoArrivalScore +
+    (parseInt(qualityAbnormal) || 0) +
+    (parseInt(freeInspect)     || 0) +
+    (parseInt(leadtimeScore)   || 0);
 
   function handleNumericChange(val: string, setter: (v: string) => void) {
     const cleaned = val.replace(/[^0-9]/g, '');
@@ -1018,12 +1058,19 @@ function EvaluationSheetDetailDialog({ row, onClose }: EvaluationSheetDetailDial
         <div className="flex flex-col h-full px-[50px] pt-[56px] pb-[32px] gap-[24px] overflow-y-auto custom-scrollbar">
 
           {/* Header */}
-          <div className="flex items-center gap-[12px] shrink-0">
+          <div className="flex items-center gap-[12px] shrink-0 flex-wrap">
             <div className="bg-[rgba(0,94,184,0.16)] h-[24px] min-w-[24px] rounded-[6px] flex items-center justify-center px-[6px]">
               <p className="font-['Public_Sans:Bold',sans-serif] font-bold leading-[20px] text-[12px] text-center whitespace-nowrap text-[#005eb8]">{row.period}</p>
             </div>
             <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[18px] leading-[28px] text-[#1c252e]">廠商評價分數</p>
             <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[14px] text-[#637381] leading-[22px]">{row.vendorDisplay}</p>
+            {/* 即時總分 */}
+            <div className="ml-auto flex items-center gap-[8px]">
+              <p className="font-['Public_Sans:Regular',sans-serif] font-normal text-[13px] text-[#637381] whitespace-nowrap">總分</p>
+              <div className="flex items-center justify-center rounded-[10px] px-[14px] py-[4px] bg-[rgba(0,94,184,0.08)]">
+                <p className="font-['Public_Sans:Bold',sans-serif] font-bold text-[20px] leading-none text-[#005eb8]">{liveTotal}</p>
+              </div>
+            </div>
           </div>
 
           {/* 欄位 */}
@@ -1032,7 +1079,20 @@ function EvaluationSheetDetailDialog({ row, onClose }: EvaluationSheetDetailDial
             {/* 物料良品率 */}
             <div className="flex gap-[10px] items-center">
               <div className="w-[110px] shrink-0"><p className={labelCls}>物料良品率</p></div>
-              <div className="w-[64px] shrink-0"><p className="font-['Public_Sans:Regular',sans-serif] font-normal leading-[22px] text-[#637381] text-[14px]">{row.materialRate}</p></div>
+              <div className="w-[64px] shrink-0">
+                {row.materialRate === '#NA' ? (
+                  <span
+                    title="有退換貨但無收料量，無法計算良品率"
+                    className="font-['Public_Sans:SemiBold',sans-serif] font-semibold leading-[22px] text-[#ff5630] text-[13px] cursor-help"
+                  >
+                    #NA ⚠
+                  </span>
+                ) : (
+                  <p className="font-['Public_Sans:Regular',sans-serif] font-normal leading-[22px] text-[#637381] text-[14px]">
+                    {row.materialRate || '—'}
+                  </p>
+                )}
+              </div>
               <EvalEditableField value={materialScore} onChange={e => handleNumericChange(e.target.value, setMaterialScore)} inputMode="numeric" />
             </div>
 
@@ -1126,13 +1186,26 @@ function EvaluationSheetTab() {
         </button>
       ),
     },
-    { key: 'totalScore',     label: '總分',         width: 80,  minWidth: 60 },
-    { key: 'materialRate',   label: '物料良品率',   width: 110, minWidth: 90 },
-    { key: 'qualityScore',   label: '物料良品分數', width: 110, minWidth: 90 },
-    { key: 'deliveryRate',   label: '交貨準時率',   width: 110, minWidth: 90 },
-    { key: 'deliveryScore',  label: '交貨準時分數', width: 110, minWidth: 90 },
-    { key: 'arrivalRate',    label: '預答交滿足率', width: 110, minWidth: 90 },
-    { key: 'arrivalScore',   label: '預答交分數',   width: 110, minWidth: 90 },
+    { key: 'totalScore',      label: '總分',             width: 80,  minWidth: 60 },
+    { key: 'materialRate',    label: '物料良品率',       width: 110, minWidth: 90 },
+    { key: 'qualityScore',    label: '物料良品分數',     width: 110, minWidth: 90 },
+    { key: 'deliveryRate',    label: '交貨準時率',       width: 110, minWidth: 90 },
+    { key: 'deliveryScore',   label: '交貨準時分數',     width: 110, minWidth: 90 },
+    { key: 'arrivalRate',     label: '預答交滿足率',     width: 110, minWidth: 90 },
+    { key: 'arrivalScore',    label: '預答交分數',       width: 110, minWidth: 90 },
+    { key: 'qualityAbnormal', label: '品質異常分數',     width: 110, minWidth: 90 },
+    { key: 'freeInspect',     label: '免驗率分數',       width: 110, minWidth: 90 },
+    {
+      key: 'leadtimeScore',
+      label: 'Leadtime>6天分數',
+      width: 130,
+      minWidth: 110,
+      renderCell: (val) => (
+        <span className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] text-[#1c252e]">
+          {val as number}
+        </span>
+      ),
+    },
   ];
 
   return (
