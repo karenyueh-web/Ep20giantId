@@ -148,9 +148,15 @@ function Auth({ onLoginSuccess, onRegisterClick, onForgotPassword }: AuthProps) 
     // Validate credentials
     if (email === 'vendor@vendor.com' && password === '12345') {
       setHasError(false);
+      localStorage.setItem('currentUserEmail', 'vendor@vendor.com');
+      localStorage.setItem('currentUserType', 'vendor');
+      localStorage.setItem('currentUserName', '張淑玲'); // 廠商業務姓名
       onLoginSuccess('vendor');
     } else if (email === 'g00106917@giant.com' && password === '12345') {
       setHasError(false);
+      localStorage.setItem('currentUserEmail', 'g00106917@giant.com');
+      localStorage.setItem('currentUserType', 'giant');
+      localStorage.setItem('currentUserName', '李宜瑾-Evelyn Lee'); // 員工姓名（來自 GiantAccount 資料）
       onLoginSuccess('giant');
     } else {
       setHasError(true);
@@ -243,6 +249,8 @@ function Auth({ onLoginSuccess, onRegisterClick, onForgotPassword }: AuthProps) 
           type="button"
           onClick={() => {
             localStorage.setItem('currentUserEmail', 'g00106917@giant.com');
+            localStorage.setItem('currentUserType', 'giant');
+            localStorage.setItem('currentUserName', '李宜瑾-Evelyn Lee');
             onLoginSuccess('giant');
           }}
           className="w-full h-[38px] rounded-[8px] border border-dashed border-[#f59e0b] bg-[#fffbeb] hover:bg-[#fef3c7] transition-colors flex items-center justify-center gap-[6px]"

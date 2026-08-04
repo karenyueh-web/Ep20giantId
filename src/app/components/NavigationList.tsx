@@ -3,143 +3,440 @@ import {
   LayoutDashboard, Megaphone, ClipboardList, FilePen, Truck,
   Receipt, Users, Settings as SettingsIcon, UserCheck, Component,
   Shield, ShieldCheck, PackageCheck, CalendarDays,
-  ChevronDown, ChevronRight, MessageCircle,
+  ChevronDown, ChevronRight, MessageCircle, Globe,
 } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import svgPaths from "@/imports/svg-d84x18jyny";
 import type { PageType } from './MainLayout';
 import { pageConfig } from '@/app/config/pageConfig';
-import imgImgAvatar25 from "figma:asset/267fe8c99db3e57af5fb08e1bedfbdb0788f011c.png";
-import Settings from "@/imports/Settings";
+import { BaseOverlay } from './BaseOverlay';
 import { mockVendorsSuccess, mockVendorsFail } from '@/imports/廠商帳號審核-4007-9767';
 import { useLanguage, type Language } from './LanguageContext';
 import { useSidebar } from './SidebarContext';
 import { getSampleOrders } from './sampleOrderData';
 import { getParts } from './partsMaintenanceData';
 
-// 用戶頭像組件
-function Img() {
+
+// ── 通知數量（預留後端對接端點）────────────────────────────────────────────────
+// TODO: 對接後端 API 時，將 fetchNotificationCounts 替換為真實呼叫
+// 範例：const res = await fetch('/api/notifications/counts'); return res.json();
+async function fetchNotificationCounts(): Promise<{ announcement: number; chat: number }> {
+  // 目前回傳 0；待功能上線後改為實際 API 回傳
+  return { announcement: 0, chat: 0 };
+}
+
+function useNotificationCounts() {
+  const [counts, setCounts] = useState({ announcement: 0, chat: 0 });
+  useEffect(() => {
+    fetchNotificationCounts().then(setCounts);
+    // 可開啟定時輪詢（每 30 秒）：
+    // const id = setInterval(() => fetchNotificationCounts().then(setCounts), 30000);
+    // return () => clearInterval(id);
+  }, []);
+  return counts;
+}
+
+// ── 大頭像元件 ─────────────────────────────────────────────────────────────────
+interface UserAvatarProps {
+  name: string;
+  onClick: () => void;
+}
+
+function UserAvatar({ name, onClick }: UserAvatarProps) {
+  const [avatarSrc, setAvatarSrc] = useState<string | null>(() =>
+    localStorage.getItem('userAvatar')
+  );
+
+  useEffect(() => {
+    const handler = () => setAvatarSrc(localStorage.getItem('userAvatar'));
+    window.addEventListener('userAvatarChanged', handler);
+    return () => window.removeEventListener('userAvatarChanged', handler);
+  }, []);
+
+  // 取名字第一字：中文直接取；英文格式（如 "李宜瑾-Evelyn Lee"）取首個中文字
+  const firstChar = (() => {
+    const ch = name.charAt(0);
+    return ch || '?';
+  })();
+
   return (
-    <div className="content-stretch flex items-center justify-center relative rounded-[500px] shrink-0 size-[48px]" data-name="img">
-      <div className="flex-[1_0_0] h-full min-h-px min-w-px relative rounded-[500px]" data-name="#Img_Avatar.25">
-        <div aria-hidden="true" className="absolute inset-0 pointer-events-none rounded-[500px]">
-          <div className="absolute bg-[#dad0fc] inset-0 rounded-[500px]" />
-          <img alt="" className="absolute max-w-none object-cover rounded-[500px] size-full" src={imgImgAvatar25} />
+    <button
+      onClick={onClick}
+      className="relative rounded-[500px] shrink-0 size-[44px] overflow-hidden cursor-pointer group"
+      title="點擊更換頭像"
+    >
+      {avatarSrc ? (
+        <img src={avatarSrc} alt="avatar" className="size-full object-cover rounded-[500px]" />
+      ) : (
+        <div
+          className="size-full rounded-[500px] flex items-center justify-center"
+          style={{ backgroundColor: '#00559c' }}
+        >
+          <span className="font-['Public_Sans:Bold','Noto_Sans_JP:Bold',sans-serif] font-bold text-white text-[17px] leading-none select-none">
+            {firstChar}
+          </span>
+        </div>
+      )}
+      {/* hover 提示遮罩 */}
+      <div className="absolute inset-0 rounded-[500px] bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+          <path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4 12.5-12.5z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </div>
+    </button>
+
+  );
+}
+
+// ── 頭像裁切 Overlay（Canvas 裁切器）───────────────────────────────────────────
+const CROP_CANVAS_SIZE = 280;
+const CROP_RADIUS = 120;
+
+function AvatarCropOverlay({ onClose, onSave }: { onClose: () => void; onSave: (dataUrl: string) => void }) {
+  const [imageSrc, setImageSrc] = useState<string | null>(null);
+  const [scale, setScale] = useState(1);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const isDraggingRef = useRef(false);
+  const dragStartRef = useRef({ x: 0, y: 0 });
+  const offsetRef = useRef({ x: 0, y: 0 });
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const previewImgRef = useRef<HTMLImageElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const draw = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const img = previewImgRef.current;
+
+    ctx.clearRect(0, 0, CROP_CANVAS_SIZE, CROP_CANVAS_SIZE);
+
+    if (img) {
+      const w = img.naturalWidth * scale;
+      const h = img.naturalHeight * scale;
+      ctx.drawImage(img, CROP_CANVAS_SIZE / 2 - w / 2 + offset.x, CROP_CANVAS_SIZE / 2 - h / 2 + offset.y, w, h);
+    }
+
+    // 暗色遮罩（evenodd 保留圓形透明區）
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.beginPath();
+    ctx.rect(0, 0, CROP_CANVAS_SIZE, CROP_CANVAS_SIZE);
+    ctx.arc(CROP_CANVAS_SIZE / 2, CROP_CANVAS_SIZE / 2, CROP_RADIUS, 0, Math.PI * 2, true);
+    ctx.fill('evenodd');
+    ctx.restore();
+
+    // 圓形邊框
+    ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(CROP_CANVAS_SIZE / 2, CROP_CANVAS_SIZE / 2, CROP_RADIUS, 0, Math.PI * 2);
+    ctx.stroke();
+  }, [scale, offset]);
+
+  useEffect(() => { draw(); }, [draw]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const src = ev.target?.result as string;
+      setImageSrc(src);
+      const img = new Image();
+      img.onload = () => {
+        previewImgRef.current = img;
+        const fitScale = Math.max(
+          (CROP_RADIUS * 2) / img.naturalWidth,
+          (CROP_RADIUS * 2) / img.naturalHeight
+        ) * 1.1;
+        setScale(fitScale);
+        setOffset({ x: 0, y: 0 });
+        offsetRef.current = { x: 0, y: 0 };
+      };
+      img.src = src;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!previewImgRef.current) return;
+    isDraggingRef.current = true;
+    dragStartRef.current = { x: e.clientX - offsetRef.current.x, y: e.clientY - offsetRef.current.y };
+  };
+  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isDraggingRef.current) return;
+    const newOffset = { x: e.clientX - dragStartRef.current.x, y: e.clientY - dragStartRef.current.y };
+    offsetRef.current = newOffset;
+    setOffset(newOffset);
+  };
+  const handleMouseUp = () => { isDraggingRef.current = false; };
+
+  const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.06 : 0.06;
+    setScale(s => Math.max(0.2, Math.min(6, s + delta)));
+  };
+
+  const handleSave = () => {
+    const img = previewImgRef.current;
+    if (!img) return;
+    const OUTPUT = 220;
+    const offCanvas = document.createElement('canvas');
+    offCanvas.width = OUTPUT;
+    offCanvas.height = OUTPUT;
+    const ctx = offCanvas.getContext('2d');
+    if (!ctx) return;
+    ctx.beginPath();
+    ctx.arc(OUTPUT / 2, OUTPUT / 2, OUTPUT / 2, 0, Math.PI * 2);
+    ctx.clip();
+    const ratio = OUTPUT / CROP_CANVAS_SIZE;
+    const w = img.naturalWidth * scale * ratio;
+    const h = img.naturalHeight * scale * ratio;
+    ctx.drawImage(img, OUTPUT / 2 - w / 2 + offset.x * ratio, OUTPUT / 2 - h / 2 + offset.y * ratio, w, h);
+    onSave(offCanvas.toDataURL('image/png'));
+  };
+
+  return (
+    <BaseOverlay onClose={onClose} maxWidth="420px" maxHeight="540px">
+      <div className="relative w-full h-full">
+        {/* 關閉按鈕 */}
+        <button
+          className="absolute left-[20px] top-[20px] z-10 cursor-pointer hover:opacity-70 transition-opacity"
+          onClick={onClose}
+        >
+          <svg width="24" height="24" viewBox="0 0 20 20" fill="none">
+            <path clipRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" fill="#637381" fillRule="evenodd" />
+          </svg>
+        </button>
+
+        <div className="flex flex-col h-full px-[40px] pt-[58px] pb-[32px] gap-[16px]">
+          <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[28px] text-[#1c252e] text-[18px]">
+            更換頭像
+          </p>
+
+          {/* Canvas 預覽 */}
+          <div className="flex flex-col items-center gap-[8px]">
+            <canvas
+              ref={canvasRef}
+              width={CROP_CANVAS_SIZE}
+              height={CROP_CANVAS_SIZE}
+              className="rounded-[12px] bg-[#1c252e]"
+              style={{ cursor: imageSrc ? 'grab' : 'default', width: CROP_CANVAS_SIZE, height: CROP_CANVAS_SIZE }}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+              onWheel={handleWheel}
+            />
+            {imageSrc && (
+              <p className="text-[12px] text-[#919eab] text-center">拖拉移動位置・滾輪縮放大小</p>
+            )}
+          </div>
+
+          {/* 縮放滑桿 */}
+          {imageSrc && (
+            <div className="flex items-center gap-[12px]">
+              <span className="text-[12px] text-[#637381] shrink-0">縮小</span>
+              <input
+                type="range" min="0.2" max="6" step="0.01"
+                value={scale}
+                onChange={e => setScale(Number(e.target.value))}
+                className="flex-1"
+                style={{ accentColor: '#00559c' }}
+              />
+              <span className="text-[12px] text-[#637381] shrink-0">放大</span>
+            </div>
+          )}
+
+          {/* 按鈕 */}
+          <div className="flex flex-col gap-[8px] mt-auto">
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full h-[36px] rounded-[8px] border border-[rgba(145,158,171,0.2)] flex items-center justify-center hover:bg-[#f4f6f8] transition-colors"
+            >
+              <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold leading-[24px] text-[#1c252e] text-[14px]">選擇圖片</p>
+            </button>
+            {imageSrc && (
+              <button
+                onClick={handleSave}
+                className="w-full h-[36px] rounded-[8px] flex items-center justify-center hover:bg-[#004680] transition-colors"
+                style={{ backgroundColor: '#00559c' }}
+              >
+                <p className="font-['Public_Sans:Bold',sans-serif] font-bold leading-[24px] text-white text-[14px]">儲存頭像</p>
+              </button>
+            )}
+          </div>
+          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
         </div>
       </div>
-    </div>
+    </BaseOverlay>
   );
 }
 
-function Avatar() {
-  return (
-    <div className="bg-[#dfe3e8] content-stretch flex items-center justify-center relative rounded-[500px] shrink-0" data-name="Avatar">
-      <Img />
-    </div>
-  );
-}
-
-// 語言選擇器組件
-function LanguageSelector() {
+// ── 語言選擇下拉（由地球 icon 觸發）────────────────────────────────────────────
+function LanguageDropdown({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const { language, setLanguage } = useLanguage();
-  const [isOpen, setIsOpen] = useState(false);
-
   const languageOptions: { value: Language; label: string }[] = [
     { value: '繁中', label: '繁中' },
     { value: '簡中', label: '簡中' },
     { value: 'English', label: 'English' },
   ];
 
+  if (!isOpen) return null;
   return (
-    <div className="relative w-full">
-      {/* 語言選擇按鈕 - 白框白字 */}
-      <div 
-        className="flex-[1_0_0] min-h-px min-w-px relative rounded-[8px] cursor-pointer hover:bg-[rgba(255,255,255,0.1)] transition-colors border border-white border-solid"
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        <div className="flex flex-row items-center justify-center size-full">
-          <div className="content-stretch flex gap-[12px] items-center justify-center pl-[12px] pr-[8px] py-[6px] relative w-full">
-            <p className="css-ew64yg font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[22px] relative shrink-0 text-white text-[14px]">
-              {language}
+    <>
+      <div className="fixed inset-0 z-[100]" onClick={onClose} />
+      <div className="absolute top-[calc(100%+6px)] left-1/2 -translate-x-1/2 bg-white rounded-[10px] shadow-[0px_0px_2px_0px_rgba(145,158,171,0.24),0px_20px_40px_-4px_rgba(145,158,171,0.24)] z-[101] overflow-hidden min-w-[120px]">
+        {languageOptions.map((opt) => (
+          <div
+            key={opt.value}
+            className={`px-[14px] py-[10px] cursor-pointer hover:bg-[rgba(145,158,171,0.06)] transition-colors ${
+              language === opt.value ? 'bg-[rgba(0,94,184,0.08)]' : ''
+            }`}
+            onClick={() => { setLanguage(opt.value); onClose(); }}
+          >
+            <p className={`font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] ${
+              language === opt.value ? 'text-[#005eb8]' : 'text-[#1c252e]'
+            }`}>
+              {opt.label}
             </p>
-            <div className="relative shrink-0 size-[16px]">
-              <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
-                <g id="icons/solid/ic-eva:arrow-ios-downward-fill">
-                  <path d={svgPaths.p2b32f00} fill="white" id="primary-shape" />
-                </g>
-              </svg>
-            </div>
           </div>
-        </div>
+        ))}
       </div>
-
-      {/* 下拉選單 */}
-      {isOpen && (
-        <>
-          {/* 遮罩層 */}
-          <div 
-            className="fixed inset-0 z-[100]" 
-            onClick={() => setIsOpen(false)}
-          />
-          {/* 選單內容 */}
-          <div className="absolute top-full left-0 right-0 mt-[4px] bg-white rounded-[8px] shadow-lg border border-[rgba(145,158,171,0.16)] z-[101] overflow-hidden">
-            {languageOptions.map((opt) => (
-              <div
-                key={opt.value}
-                className={`px-[12px] py-[8px] cursor-pointer hover:bg-[#f4f6f8] transition-colors ${language === opt.value ? 'bg-[rgba(0,94,184,0.08)]' : ''}`}
-                onClick={() => {
-                  setLanguage(opt.value);
-                  setIsOpen(false);
-                }}
-              >
-                <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] text-[#1c252e]">{opt.label}</p>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
+    </>
   );
 }
 
-// 用戶信息組件
+// ── 用戶信息組件（新版：上下版面 + 4 icon 快捷鍵）─────────────────────────────
 interface UserInfoProps {
   onPageChange: (page: PageType) => void;
 }
 
 function UserInfo({ onPageChange }: UserInfoProps) {
-  // 從 localStorage 讀取當前用戶資訊
   const currentUserEmail = localStorage.getItem('currentUserEmail') || 'g00106917@giant.com';
-  const currentUserRole = localStorage.getItem('currentUserRole') || '巨大角色';
-  
+  const currentUserType  = localStorage.getItem('currentUserType')  || 'giant';
+  const currentUserName  = localStorage.getItem('currentUserName')  || '';
+  // 帳號類型前綴：giant → 巨大，vendor → 廠商
+  const typeLabel = currentUserType === 'vendor' ? '廠商' : '巨大';
+  const notifications    = useNotificationCounts();
+
+  const [showCropper, setShowCropper] = useState(false);
+  const [langOpen, setLangOpen] = useState(false);
+
+  const handleAvatarSave = (dataUrl: string) => {
+    localStorage.setItem('userAvatar', dataUrl);
+    window.dispatchEvent(new Event('userAvatarChanged'));
+    setShowCropper(false);
+  };
+
+  const iconBtnCls = 'relative flex items-center justify-center rounded-[500px] size-[44px] cursor-pointer hover:bg-[rgba(255,255,255,0.15)] transition-colors shrink-0';
+
+
+
   return (
-    <div className="content-stretch flex flex-col items-center relative shrink-0 w-full mb-[8px]" data-name="採購角色">
-      <Avatar />
-      <div className="content-stretch flex flex-col gap-[8px] items-center pb-[16px] pt-[12px] px-0 relative shrink-0 w-full" data-name="stack">
-        <p className="css-ew64yg font-['Inter:Medium','Noto_Sans_JP:Medium',sans-serif] font-medium leading-[20px] not-italic overflow-hidden relative shrink-0 text-[rgb(255,255,255)] text-[14px] text-center text-ellipsis">{currentUserRole}</p>
-        <p className="css-ew64yg font-['Public_Sans:Regular',sans-serif] font-normal leading-[22px] overflow-hidden relative shrink-0 text-white text-[14px] text-center text-ellipsis">{currentUserEmail}</p>
-        
-        {/* 兩個按鈕容器 */}
-        <div className="content-stretch flex flex-row gap-[8px] items-center relative shrink-0 w-[176px]">
-          {/* My Setting 按鈕 - 白底黑色圖標 */}
-          <button 
-            onClick={() => onPageChange('personal-settings')}
-            className="flex-1 min-h-px min-w-px relative rounded-[8px] cursor-pointer bg-white hover:bg-[#f0f0f0] transition-colors border border-white border-solid py-[6px] px-[12px] flex items-center justify-center"
-          >
-            <div className="size-[20px]">
-              <Settings />
+    <>
+      <div className="flex flex-col w-full mb-[8px] gap-[8px]" data-name="UserInfo">
+
+        {/* ── 上排：頭像（左）+ 4 icon（右側均分）── */}
+        <div className="flex flex-row items-center w-full gap-[4px]">
+          <UserAvatar
+            name={currentUserName || currentUserRole}
+            onClick={() => setShowCropper(true)}
+          />
+
+          {/* 4 icons 均分剩餘空間 */}
+          <div className="flex-1 flex items-center justify-around">
+
+            {/* 設定 */}
+            <button
+              id="user-card-settings-btn"
+              className={iconBtnCls}
+              onClick={() => onPageChange('personal-settings')}
+              title="個人設定"
+            >
+              <SettingsIcon size={22} strokeWidth={1.6} className="text-white" />
+            </button>
+
+            {/* 公布欄 */}
+            <button
+              id="user-card-announcement-btn"
+              className={iconBtnCls}
+              onClick={() => onPageChange('announcement')}
+              title="公佈欄"
+            >
+              <Megaphone size={22} strokeWidth={1.6} className="text-white" />
+              {notifications.announcement > 0 && (
+                <span className="absolute top-[-2px] right-[-2px] min-w-[16px] h-[16px] rounded-[500px] bg-[#ff5630] flex items-center justify-center px-[2px]">
+                  <span className="font-['Public_Sans:Bold',sans-serif] font-bold text-white text-[9px] leading-none">
+                    {notifications.announcement > 99 ? '99+' : notifications.announcement}
+                  </span>
+                </span>
+              )}
+            </button>
+
+            {/* 語言（地球） */}
+            <div className="relative">
+              <button
+                id="user-card-language-btn"
+                className={iconBtnCls}
+                onClick={() => setLangOpen(v => !v)}
+                title="語言設定"
+              >
+                <Globe size={22} strokeWidth={1.6} className="text-white" />
+              </button>
+              <LanguageDropdown isOpen={langOpen} onClose={() => setLangOpen(false)} />
             </div>
-          </button>
-          
-          {/* 語言選擇器按鈕 - 白框白字 */}
-          <div className="flex-1">
-            <LanguageSelector />
+
+            {/* Online Chat */}
+            <button
+              id="user-card-chat-btn"
+              className={iconBtnCls}
+              onClick={() => onPageChange('online-chat')}
+              title="Online Chat"
+            >
+              <MessageCircle size={22} strokeWidth={1.6} className="text-white" />
+              {notifications.chat > 0 && (
+                <span className="absolute top-[-2px] right-[-2px] min-w-[16px] h-[16px] rounded-[500px] bg-[#ff5630] flex items-center justify-center px-[2px]">
+                  <span className="font-['Public_Sans:Bold',sans-serif] font-bold text-white text-[9px] leading-none">
+                    {notifications.chat > 99 ? '99+' : notifications.chat}
+                  </span>
+                </span>
+              )}
+            </button>
           </div>
         </div>
+
+        {/* ── 下排：系統角色 + Email ── */}
+        <div className="flex flex-col gap-[2px] w-full pb-[8px]">
+          <p
+            className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[18px] text-white text-[12px] overflow-hidden text-ellipsis whitespace-nowrap"
+            title={[typeLabel, currentUserName].filter(Boolean).join(' ')}
+          >
+            <span className="text-white">{typeLabel}</span>
+            {currentUserName && (
+              <span className="ml-[6px]">{currentUserName}</span>
+            )}
+          </p>
+          <p
+            className="font-['Public_Sans:Regular',sans-serif] font-normal leading-[16px] text-[rgba(255,255,255,0.55)] text-[12px] overflow-hidden text-ellipsis whitespace-nowrap"
+            title={currentUserEmail}
+          >
+            {currentUserEmail}
+          </p>
+        </div>
       </div>
-    </div>
+
+      {/* 頭像裁切 Overlay */}
+      {showCropper && (
+        <AvatarCropOverlay onClose={() => setShowCropper(false)} onSave={handleAvatarSave} />
+      )}
+
+    </>
   );
 }
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Icon 元件（v2 規範：Lucide React Outline，24×24 viewBox，pure stroke，stroke-width 2）
@@ -723,20 +1020,8 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
         isActive={currentPage === 'dashboard'}
         onClick={() => onPageChange('dashboard')}
       />
-      <NavItem 
-        icon={<AnnouncementIcon />} 
-        label="公佈欄" 
-        badge="32+" 
-        isActive={currentPage === 'announcement'}
-        onClick={() => onPageChange('announcement')}
-      />
-      <NavItem 
-        icon={<ChatIcon />} 
-        label="online chat" 
-        badge="32+" 
-        isActive={currentPage === 'online-chat'}
-        onClick={() => onPageChange('online-chat')}
-      />
+
+
       
       {/* 新增：收料查詢 */}
       <NavItem 

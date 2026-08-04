@@ -1,5 +1,4 @@
 import { NavigationList } from './NavigationList';
-import imgStack from "figma:asset/1a64bb29b96d52f74d342ea173c7a5a5756e6710.png";
 import svgPaths from "@/imports/svg-d84x18jyny";
 import { useState } from 'react';
 
@@ -42,12 +41,16 @@ interface MainLayoutProps {
   onLogout?: () => void;
 }
 
-// 頂部Stack組件（GIANT GROUP Logo）
+// 頂部 Logo 文字區塊
 function Stack() {
   return (
-    <div className="h-[80px] relative shrink-0 w-full" data-name="stack">
-      <img alt="" className="absolute inset-0 max-w-none object-cover pointer-events-none size-full" src={imgStack} />
-      <div className="size-full" />
+    <div className="flex flex-col justify-center px-[20px] h-[72px] shrink-0 w-full" data-name="stack">
+      <p className="font-['Public_Sans:Bold',sans-serif] font-bold leading-none text-white text-[18px] tracking-[0.04em] uppercase">
+        Giant Group
+      </p>
+      <p className="font-['Public_Sans:Regular',sans-serif] font-normal leading-[16px] text-[rgba(255,255,255,0.55)] text-[11px] mt-[4px]">
+        vendor online operation platform
+      </p>
     </div>
   );
 }

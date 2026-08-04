@@ -1,16 +1,19 @@
 import { NavigationList } from './NavigationList';
-import imgStack from "@/assets/giant-logo-white.png";
 import imgAvatar from "@/assets/267fe8c99db3e57af5fb08e1bedfbdb0788f011c.png";
 import type { PageType } from './MainLayout';
 import { useSidebar } from './SidebarContext';
 import { useRef, useLayoutEffect } from 'react';
 
-// Giant GROUP Logo — full banner
+// Giant Group Logo — 純文字版
 function Stack() {
   return (
-    <div className="h-[80px] relative shrink-0 w-full" data-name="stack">
-      <img alt="" className="absolute inset-0 max-w-none object-cover pointer-events-none size-full" src={imgStack} />
-      <div className="size-full" />
+    <div className="flex flex-col justify-center px-[4px] h-[72px] shrink-0 w-full" data-name="stack">
+      <p className="font-['Public_Sans:Bold',sans-serif] font-bold leading-none text-white text-[18px] tracking-[0.04em] uppercase">
+        Giant Group
+      </p>
+      <p className="font-['Public_Sans:Regular',sans-serif] font-normal leading-[20px] text-white text-[16px] mt-[2px]">
+        vendor online operation platform
+      </p>
     </div>
   );
 }
