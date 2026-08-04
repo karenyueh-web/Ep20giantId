@@ -4,14 +4,19 @@ import type { PageType } from './MainLayout';
 import { useSidebar } from './SidebarContext';
 import { useRef, useLayoutEffect } from 'react';
 
-// Giant Group Logo — 純文字版
-function Stack() {
+// Giant Group Logo — 純文字版（點擊回 Dashboard）
+function Stack({ onClick }: { onClick: () => void }) {
   return (
-    <div className="flex flex-col justify-center px-[4px] h-[72px] shrink-0 w-full" data-name="stack">
-      <p className="font-['Public_Sans:Bold',sans-serif] font-bold leading-none text-white text-[18px] tracking-[0.04em] uppercase">
+    <div
+      className="flex flex-col justify-center px-[4px] h-[72px] shrink-0 w-full cursor-pointer select-none group"
+      onClick={onClick}
+      title="回到 Dashboard"
+      data-name="stack"
+    >
+      <p className="font-['Public_Sans:Bold',sans-serif] font-bold leading-none text-white text-[18px] tracking-[0.04em] uppercase group-hover:text-[rgba(255,255,255,0.8)] transition-colors">
         Giant Group
       </p>
-      <p className="font-['Public_Sans:Regular',sans-serif] font-normal leading-[20px] text-white text-[16px] mt-[2px]">
+      <p className="font-['Public_Sans:Regular',sans-serif] font-normal leading-[20px] text-white text-[16px] mt-[2px] group-hover:text-[rgba(255,255,255,0.8)] transition-colors">
         vendor online operation platform
       </p>
     </div>
@@ -94,7 +99,7 @@ export function NavVertical({ currentPage, onPageChange, onLogout, isMini = fals
         className="content-stretch flex flex-col items-center overflow-y-auto overflow-x-hidden custom-scrollbar pb-[40px] pt-0 relative rounded-[inherit] w-full h-full"
         style={{ paddingLeft: isMini ? '0' : '16px', paddingRight: isMini ? '0' : '16px' }}
       >
-        {isMini ? <StackMini onExpand={open} /> : <Stack />}
+        {isMini ? <StackMini onExpand={open} /> : <Stack onClick={() => handlePageChange('dashboard')} />}
         <NavigationList
           currentPage={currentPage}
           onPageChange={handlePageChange}

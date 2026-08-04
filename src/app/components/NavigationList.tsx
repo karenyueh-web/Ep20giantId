@@ -1013,16 +1013,8 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
         badge={vendorAccountReviewBadge}
       />
       
-      <NavItem 
-        icon={<DashboardIcon />} 
-        label="Dashboard" 
-        badge="32+" 
-        isActive={currentPage === 'dashboard'}
-        onClick={() => onPageChange('dashboard')}
-      />
 
 
-      
       {/* 新增：收料查詢 */}
       <NavItem 
         icon={<ReceivingIcon />} 
