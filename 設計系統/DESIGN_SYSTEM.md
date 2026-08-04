@@ -27,7 +27,7 @@
 |------|---|
 | CSS 框架 | Tailwind CSS v4（inline arbitrary values） |
 | 字型 | Public Sans（英數）、Noto Sans JP（中文）、Inter |
-| 圖示 | 自製 SVG（無 icon library） |
+| 圖示 | Lucide React Outline 風格（24×24 viewBox，純 stroke 無填色，stroke-width 2） |
 | 框架 | React + TypeScript (Vite) |
 | DnD | react-dnd + HTML5Backend |
 | 欄寬調整 | re-resizable |

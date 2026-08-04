@@ -93,6 +93,7 @@ const FEATURE_TREE: FeatureNode[] = [
           },
         ],
       },
+      { id: 'overview-vendor-eval', label: '廠商評價' },
     ],
   },
   {
@@ -349,7 +350,6 @@ const FEATURE_TREE: FeatureNode[] = [
         ],
       },
       { id: 'mgmt-insurance', label: '產險資料維護' },
-      { id: 'mgmt-vendor-eval', label: '廠商評價' },
       {
         id: 'mgmt-esg',
         label: 'ESG',

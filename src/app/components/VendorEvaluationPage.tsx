@@ -1014,9 +1014,10 @@ function calcMaterialScore(rateStr: string | null | undefined): number {
 interface EvaluationSheetDetailDialogProps {
   row: EvaluationSheetRow;
   onClose: () => void;
+  onSave: (updated: EvaluationSheetRow) => void;
 }
 
-function EvaluationSheetDetailDialog({ row, onClose }: EvaluationSheetDetailDialogProps) {
+function EvaluationSheetDetailDialog({ row, onClose, onSave }: EvaluationSheetDetailDialogProps) {
   const [materialScore,   setMaterialScore]   = useState(String(row.qualityScore));
   const [qualityAbnormal, setQualityAbnormal] = useState(String(row.qualityAbnormal));
   const [freeInspect,     setFreeInspect]     = useState(String(row.freeInspect));
@@ -1059,14 +1060,14 @@ function EvaluationSheetDetailDialog({ row, onClose }: EvaluationSheetDetailDial
 
           {/* Header */}
           <div className="flex items-center gap-[12px] shrink-0 flex-wrap">
-            <div className="bg-[rgba(0,94,184,0.16)] h-[24px] min-w-[24px] rounded-[6px] flex items-center justify-center px-[6px]">
-              <p className="font-['Public_Sans:Bold',sans-serif] font-bold leading-[20px] text-[12px] text-center whitespace-nowrap text-[#005eb8]">{row.period}</p>
+            <div className="bg-[rgba(0,94,184,0.16)] h-[26px] min-w-[26px] rounded-[6px] flex items-center justify-center px-[6px]">
+              <p className="font-['Public_Sans:Bold',sans-serif] font-bold leading-[22px] text-[13px] text-center whitespace-nowrap text-[#005eb8]">{row.period}</p>
             </div>
             <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[18px] leading-[28px] text-[#1c252e]">廠商評價分數</p>
-            <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[14px] text-[#637381] leading-[22px]">{row.vendorDisplay}</p>
+            <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[14px] text-[#637381] leading-[22px] whitespace-nowrap">{row.vendorDisplay}</p>
             {/* 即時總分 */}
             <div className="ml-auto flex items-center gap-[8px]">
-              <p className="font-['Public_Sans:Regular',sans-serif] font-normal text-[13px] text-[#637381] whitespace-nowrap">總分</p>
+              <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[14px] text-[#637381] leading-[22px] whitespace-nowrap">總分</p>
               <div className="flex items-center justify-center rounded-[10px] px-[14px] py-[4px] bg-[rgba(0,94,184,0.08)]">
                 <p className="font-['Public_Sans:Bold',sans-serif] font-bold text-[20px] leading-none text-[#005eb8]">{liveTotal}</p>
               </div>
@@ -1144,7 +1145,20 @@ function EvaluationSheetDetailDialog({ row, onClose }: EvaluationSheetDetailDial
           <button
             className="shrink-0 w-full h-[36px] rounded-[8px] flex items-center justify-center hover:bg-[#004680] transition-colors mt-auto"
             style={{ backgroundColor: '#00559c' }}
-            onClick={onClose}
+            onClick={() => {
+              onSave({
+                ...row,
+                qualityScore:    parseInt(materialScore)   || 0,
+                qualityAbnormal: parseInt(qualityAbnormal) || 0,
+                freeInspect:     parseInt(freeInspect)     || 0,
+                leadtimeScore:   parseInt(leadtimeScore)   || 0,
+                deliveryScore:   autoDeliveryScore,
+                arrivalScore:    autoArrivalScore,
+                totalScore:      liveTotal,
+                remark,
+              });
+              onClose();
+            }}
           >
             <p className="font-['Public_Sans:Bold',sans-serif] font-bold leading-[24px] text-white text-[14px]">儲存</p>
           </button>
@@ -1164,8 +1178,13 @@ function EvaluationSheetTab() {
   const [vendorFilter, setVendorFilter] = useState('');
   const [periodFilter, setPeriodFilter] = useState('');
   const [detailRow,    setDetailRow]    = useState<EvaluationSheetRow | null>(null);
+  const [rows,         setRows]         = useState<EvaluationSheetRow[]>(MOCK_EVALUATION_ROWS);
 
-  const filtered = MOCK_EVALUATION_ROWS.filter(r => {
+  function handleSave(updated: EvaluationSheetRow) {
+    setRows(prev => prev.map(r => r.id === updated.id ? updated : r));
+  }
+
+  const filtered = rows.filter(r => {
     if (orgFilter    && r.purchaseOrg   !== orgFilter)                              return false;
     if (vendorFilter && !r.vendorDisplay.toLowerCase().includes(vendorFilter.toLowerCase())) return false;
     if (periodFilter && !r.period.includes(periodFilter))                           return false;
@@ -1206,6 +1225,17 @@ function EvaluationSheetTab() {
         </span>
       ),
     },
+    {
+      key: 'remark',
+      label: '備註',
+      width: 160,
+      minWidth: 120,
+      renderCell: (val) => (
+        <span className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[22px] text-[14px] text-[#1c252e]">
+          {(val as string) || '—'}
+        </span>
+      ),
+    },
   ];
 
   return (
@@ -1235,7 +1265,11 @@ function EvaluationSheetTab() {
       </div>
 
       {detailRow && (
-        <EvaluationSheetDetailDialog row={detailRow} onClose={() => setDetailRow(null)} />
+        <EvaluationSheetDetailDialog
+          row={detailRow}
+          onClose={() => setDetailRow(null)}
+          onSave={handleSave}
+        />
       )}
     </>
   );

@@ -1,4 +1,4 @@
-# Giant Group Software Design System
+# Giant Group Software Design System (v2)
 
 供全公司開發人員於各系統開發時共同遵循的 UI 規範。請查閱對應章節，不自行定義顏色、間距、字型或圓角值和元件。
 
@@ -126,7 +126,7 @@ display:flex; align-items:center; justify-content:center; padding:20px
 
 ## 6. 圖示庫 Icon Library
 
-17 個標準圖示，涵蓋導覽圖示與編輯/刪除/返回/關閉等操作圖示。secondary shape 用 opacity 0.4 疊加 primary shape，色彩依原始用途保留（灰階為預設可主題化，紅色/藍色為固定語意色）。Edit/Delete 為系統標準操作按鈕，禁止另行繪製。新增圖示請比照相同結構（secondary/primary 分層、24×24 viewBox、fill 使用 var(--fill-0, #637381) 可被主題覆蓋）。
+17 個標準圖示，採用 Lucide React Outline 風格：純線條、無填色背景與方塊，24×24 viewBox，stroke-width 2。色彩依語意保留（灰階為預設可主題化，紅色/藍色為固定語意色）。Edit/Delete 為系統標準操作按鈕，禁止另行繪製。新增圖示請沿用 Lucide Outline 結構（24×24 viewBox、純 stroke 無填色，stroke 使用 var(--stroke-0, #637381) 可被主題覆蓋）。
 
 圖示清單：Dashboard, Announcement, Order, CorrectOrder, Shipping, Invoice, Account, SystemSettings, Parts, Insurance, Quality, ArrowDown, ArrowRight, Delete/Trash, Back/返回, Edit/編輯, Close/關閉。
 

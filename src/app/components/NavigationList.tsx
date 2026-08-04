@@ -1,4 +1,10 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import {
+  LayoutDashboard, Megaphone, ClipboardList, FilePen, Truck,
+  Receipt, Users, Settings as SettingsIcon, UserCheck, Component,
+  Shield, ShieldCheck, PackageCheck, CalendarDays,
+  ChevronDown, ChevronRight, MessageCircle,
+} from 'lucide-react';
 import { createPortal } from 'react-dom';
 import svgPaths from "@/imports/svg-d84x18jyny";
 import type { PageType } from './MainLayout';
@@ -135,236 +141,32 @@ function UserInfo({ onPageChange }: UserInfoProps) {
   );
 }
 
-// 基礎Icon組件
-function DashboardIcon() {
-  return (
-    <div className="relative shrink-0 size-[24px]" data-name="icon">
-      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 24 24">
-        <g id="icon">
-          <g id="secondary-shape" opacity="0.4">
-            <path d={svgPaths.p221baf80} fill="var(--fill-0, #637381)" />
-            <path d={svgPaths.p1ed75400} fill="var(--fill-0, #637381)" />
-            <path d={svgPaths.p2e5eca80} fill="var(--fill-0, #637381)" />
-          </g>
-          <path d={svgPaths.p355b77f0} fill="var(--fill-0, #637381)" id="primary-shape" />
-        </g>
-      </svg>
-    </div>
-  );
-}
+// ─────────────────────────────────────────────────────────────────────────────
+// Icon 元件（v2 規範：Lucide React Outline，24×24 viewBox，pure stroke，stroke-width 2）
+// ─────────────────────────────────────────────────────────────────────────────
 
-function AnnouncementIcon() {
-  return (
-    <div className="relative shrink-0 size-[24px]" data-name="icon">
-      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 24 24">
-        <g id="icon">
-          <path clipRule="evenodd" d={svgPaths.p1708dd00} fill="var(--fill-0, #637381)" fillRule="evenodd" id="secondary-shape" opacity="0.4" />
-          <g id="primary-shape">
-            <path d={svgPaths.p2026eb00} fill="var(--fill-0, #637381)" />
-            <path d={svgPaths.p1460cf80} fill="var(--fill-0, #637381)" />
-            <path d={svgPaths.pd033800} fill="var(--fill-0, #637381)" />
-          </g>
-        </g>
-      </svg>
-    </div>
-  );
-}
+const ICON_CLS = 'size-[24px] shrink-0 text-[var(--icon-color,#637381)]';
+const ICON_PROPS = { size: 24, strokeWidth: 2 } as const;
 
-function OrderIcon() {
-  return (
-    <div className="relative shrink-0 size-[24px]" data-name="icon">
-      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 24 24">
-        <g id="icon">
-          <path d={svgPaths.p30038d00} fill="var(--fill-0, #637381)" id="secondary-shape" opacity="0.4" />
-          <path d={svgPaths.p24a8a480} fill="var(--fill-0, #637381)" id="primary-shape" />
-        </g>
-      </svg>
-    </div>
-  );
-}
+function DashboardIcon()     { return <LayoutDashboard  {...ICON_PROPS} className={ICON_CLS} />; }
+function AnnouncementIcon()  { return <Megaphone        {...ICON_PROPS} className={ICON_CLS} />; }
+function ChatIcon()          { return <MessageCircle    {...ICON_PROPS} className={ICON_CLS} />; }
+function OrderIcon()         { return <ClipboardList    {...ICON_PROPS} className={ICON_CLS} />; }
+function CorrectOrderIcon()  { return <FilePen          {...ICON_PROPS} className={ICON_CLS} />; }
+function ShippingIcon()      { return <Truck            {...ICON_PROPS} className={ICON_CLS} />; }
+function InvoiceIcon()       { return <Receipt          {...ICON_PROPS} className={ICON_CLS} />; }
+function AccountIcon()       { return <Users            {...ICON_PROPS} className={ICON_CLS} />; }
+function SystemSettingsIcon(){ return <SettingsIcon     {...ICON_PROPS} className={ICON_CLS} />; }
+function VendorApprovalIcon(){ return <UserCheck        {...ICON_PROPS} className={ICON_CLS} />; }
+function PartsIcon()         { return <Component        {...ICON_PROPS} className={ICON_CLS} />; }
+function InsuranceIcon()     { return <Shield           {...ICON_PROPS} className={ICON_CLS} />; }
+function QualityIcon()       { return <ShieldCheck      {...ICON_PROPS} className={ICON_CLS} />; }
+function ReceivingIcon()     { return <PackageCheck     {...ICON_PROPS} className={ICON_CLS} />; }
+function ScheduleIcon()      { return <CalendarDays     {...ICON_PROPS} className={ICON_CLS} />; }
 
-function CorrectOrderIcon() {
-  return (
-    <div className="relative shrink-0 size-[24px]" data-name="icon">
-      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 24 24">
-        <g id="icon">
-          <path d={svgPaths.pfe11980} fill="var(--fill-0, #637381)" id="secondary-shape" opacity="0.4" />
-          <g id="primary-shape">
-            <path d={svgPaths.p20335180} fill="var(--fill-0, #637381)" />
-            <path d={svgPaths.p262dc180} fill="var(--fill-0, #637381)" />
-            <path d={svgPaths.p30de4e00} fill="var(--fill-0, #637381)" />
-            <path d={svgPaths.p3193ba00} fill="var(--fill-0, #637381)" />
-          </g>
-        </g>
-      </svg>
-    </div>
-  );
-}
+function ArrowDownIcon()  { return <ChevronDown  size={16} strokeWidth={2} className="size-[16px] shrink-0 text-[var(--icon-color,#637381)]" />; }
+function ArrowRightIcon() { return <ChevronRight size={16} strokeWidth={2} className="size-[16px] shrink-0 text-[var(--icon-color,#637381)]" />; }
 
-function ShippingIcon() {
-  return (
-    <div className="relative shrink-0 size-[24px]" data-name="icon">
-      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 24 24">
-        <g id="icon">
-          <path clipRule="evenodd" d={svgPaths.p371b4a80} fill="var(--fill-0, #637381)" fillRule="evenodd" id="secondary-shape" opacity="0.4" />
-          <g id="primary-shape">
-            <path d={svgPaths.p2619b700} fill="var(--fill-0, #637381)" />
-            <path d={svgPaths.p18478a00} fill="var(--fill-0, #637381)" />
-            <path d={svgPaths.p7a25e80} fill="var(--fill-0, #637381)" />
-          </g>
-        </g>
-      </svg>
-    </div>
-  );
-}
-
-function InvoiceIcon() {
-  return (
-    <div className="relative shrink-0 size-[24px]" data-name="icon">
-      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 24 24">
-        <g id="icon">
-          <path clipRule="evenodd" d={svgPaths.p17dbb400} fill="var(--fill-0, #637381)" fillRule="evenodd" id="secondary-shape" opacity="0.4" />
-          <g id="primary-shape">
-            <path d={svgPaths.p3aaaa000} fill="var(--fill-0, #637381)" />
-            <path d={svgPaths.p1607c00} fill="var(--fill-0, #637381)" />
-          </g>
-        </g>
-      </svg>
-    </div>
-  );
-}
-
-function AccountIcon() {
-  return (
-    <div className="relative shrink-0 size-[24px]" data-name="icon">
-      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 24 24">
-        <g id="icon">
-          <g id="secondary-shape" opacity="0.4">
-            <path d={svgPaths.p2081df40} fill="var(--fill-0, #637381)" />
-            <path d={svgPaths.p13464000} fill="var(--fill-0, #637381)" />
-          </g>
-          <rect fill="var(--fill-0, #637381)" height="8" id="primary-shape" rx="2" width="8" x="2" y="4" />
-        </g>
-      </svg>
-    </div>
-  );
-}
-
-function SystemSettingsIcon() {
-  return (
-    <div className="relative shrink-0 size-[24px]" data-name="icon">
-      <svg className="block size-full" fill="none" viewBox="0 0 24 24">
-        <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.63-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1115.6 12 3.611 3.611 0 0112 15.6z" fill="var(--fill-0, #637381)" opacity="0.4"/>
-        <circle cx="12" cy="12" r="2.5" fill="var(--fill-0, #637381)"/>
-      </svg>
-    </div>
-  );
-}
-
-function VendorApprovalIcon() {
-  return (
-    <div className="relative shrink-0 size-[24px]" data-name="icon">
-      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 24 24">
-        <g id="icon">
-          <g id="secondary-shape" opacity="0.4">
-            <path d={svgPaths.p2081df40} fill="var(--fill-0, #637381)" />
-            <path d={svgPaths.p13464000} fill="var(--fill-0, #637381)" />
-          </g>
-          <rect fill="var(--fill-0, #637381)" height="8" id="primary-shape" rx="2" width="8" x="2" y="4" />
-        </g>
-      </svg>
-    </div>
-  );
-}
-
-function PartsIcon() {
-  return (
-    <div className="relative shrink-0 size-[24px]" data-name="icon">
-      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 24 24">
-        <g id="icon">
-          <path d={svgPaths.p13c08680} fill="var(--fill-0, #637381)" id="secondary-shape" opacity="0.4" />
-          <path d={svgPaths.p3ff3d80} fill="var(--fill-0, #637381)" id="primary-shape" />
-        </g>
-      </svg>
-    </div>
-  );
-}
-
-function InsuranceIcon() {
-  return (
-    <div className="relative shrink-0 size-[24px]" data-name="icon">
-      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 24 24">
-        <g id="icon">
-          <path d={svgPaths.p2089f300} fill="var(--fill-0, #637381)" id="secondary-shape" opacity="0.4" />
-          <path d={svgPaths.p15dd3c80} fill="var(--fill-0, #637381)" id="primary-shape" />
-        </g>
-      </svg>
-    </div>
-  );
-}
-
-function QualityIcon() {
-  return (
-    <div className="relative shrink-0 size-[24px]" data-name="icon">
-      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 24 24">
-        <g id="icon">
-          <path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3z" fill="var(--fill-0, #637381)" opacity="0.4" />
-          <path d="M10.5 13l-2-2-1.41 1.41L10.5 15.83l6-6L15.09 8.41z" fill="var(--fill-0, #637381)" />
-        </g>
-      </svg>
-    </div>
-  );
-}
-
-function ReceivingIcon() {
-  return (
-    <div className="relative shrink-0 size-[24px]" data-name="icon">
-      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 24 24">
-        <g id="icon">
-          <path d={svgPaths.p30038d00} fill="var(--fill-0, #637381)" id="secondary-shape" opacity="0.4" />
-          <path d={svgPaths.p24a8a480} fill="var(--fill-0, #637381)" id="primary-shape" />
-        </g>
-      </svg>
-    </div>
-  );
-}
-
-function ScheduleIcon() {
-  return (
-    <div className="relative shrink-0 size-[24px]" data-name="icon">
-      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 24 24">
-        <g id="icon">
-          <path d={svgPaths.p30038d00} fill="var(--fill-0, #637381)" id="secondary-shape" opacity="0.4" />
-          <path d={svgPaths.p24a8a480} fill="var(--fill-0, #637381)" id="primary-shape" />
-        </g>
-      </svg>
-    </div>
-  );
-}
-
-function ArrowDownIcon() {
-  return (
-    <div className="relative shrink-0 size-[16px]" data-name="icons/solid/ic-eva:arrow-ios-downward-fill">
-      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
-        <g id="icons/solid/ic-eva:arrow-ios-downward-fill">
-          <path d={svgPaths.p2b32f00} fill="var(--fill-0, #637381)" id="primary-shape" />
-        </g>
-      </svg>
-    </div>
-  );
-}
-
-function ArrowRightIcon() {
-  return (
-    <div className="relative shrink-0 size-[16px]" data-name="icons/solid/ic-eva:arrow-ios-forward-fill">
-      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
-        <g id="icons/solid/ic-eva:arrow-ios-forward-fill">
-          <path d={svgPaths.p30b81800} fill="var(--fill-0, #637381)" id="primary-shape" />
-        </g>
-      </svg>
-    </div>
-  );
-}
 
 // 選單項目組件
 interface NavItemProps {
@@ -386,7 +188,7 @@ function NavItem({ icon, label, badge, hasSubmenu, isActive, isExpanded, onClick
       data-name="NavVertical/Item"
       onClick={onClick}
       style={{
-        ['--fill-0' as any]: '#FFB800'
+        ['--icon-color' as any]: isActive ? '#ffb800' : '#637381',
       }}
     >
       <div className="flex flex-row items-center min-h-[inherit] size-full">
@@ -433,9 +235,7 @@ function SubMenuItem({ label, isActive, onClick, page, onNavigate, badge }: SubM
   const handleClick = onClick ?? (page && onNavigate ? () => onNavigate(page) : undefined);
   return (
     <div 
-      className={`min-h-[40px] relative rounded-[8px] shrink-0 w-full cursor-pointer transition-colors ${
-        isActive ? 'bg-[rgba(255,184,0,0.12)]' : 'bg-[rgba(255,255,255,0)] hover:bg-[rgba(255,184,0,0.05)]'
-      }`}
+      className="min-h-[40px] relative rounded-[8px] shrink-0 w-full cursor-pointer transition-colors bg-[rgba(255,255,255,0)] hover:bg-[rgba(255,184,0,0.05)]"
       onClick={handleClick}
     >
       <div className="flex flex-row items-center min-h-[inherit] size-full">
@@ -443,7 +243,7 @@ function SubMenuItem({ label, isActive, onClick, page, onNavigate, badge }: SubM
           <div className="flex-[1_0_0] min-h-px min-w-px relative">
             <div className="flex flex-col items-center justify-center size-full">
               <div className="content-stretch flex flex-col items-center justify-center pl-0 pr-[16px] py-0 relative w-full">
-                <div className={`css-g0mm18 flex flex-col font-['Public_Sans:${isActive ? 'SemiBold' : 'Regular'}',sans-serif] ${isActive ? 'font-semibold' : 'font-normal'} justify-center leading-[0] overflow-hidden relative shrink-0 ${isActive ? 'text-[#ffc933]' : 'text-[#8a9099]'} hover:text-white text-[13px] text-ellipsis w-full transition-colors`}>
+                <div className={`css-g0mm18 flex flex-col font-['Public_Sans:${isActive ? 'SemiBold' : 'Regular'}',sans-serif] ${isActive ? 'font-semibold' : 'font-normal'} justify-center leading-[0] overflow-hidden relative shrink-0 ${isActive ? 'text-[#ffc933] hover:text-[#ffc933]' : 'text-[#8a9099] hover:text-[#ffd666]'} text-[13px] text-ellipsis w-full transition-colors`}>
                   <p className="css-g0mm18 leading-[20px] overflow-hidden">{label}</p>
                 </div>
               </div>
@@ -726,9 +526,10 @@ function MiniNavLayout({ currentPage, onPageChange, onLogout }: MiniNavLayoutPro
       <NavItemMini icon={<VendorApprovalIcon />} label="廠商審核" isActive={currentPage === 'vendor-account-review'} onClick={() => onPageChange('vendor-account-review')} />
       <NavItemMini icon={<DashboardIcon />} label="Dashboard" isActive={currentPage === 'dashboard'} onClick={() => onPageChange('dashboard')} />
       <NavItemMini icon={<AnnouncementIcon />} label="公佈欄" isActive={currentPage === 'announcement'} onClick={() => onPageChange('announcement')} />
-      <NavItemMini icon={<AnnouncementIcon />} label="Online Chat" isActive={currentPage === 'online-chat'} onClick={() => onPageChange('online-chat')} />
+      <NavItemMini icon={<ChatIcon />} label="Online Chat" isActive={currentPage === 'online-chat'} onClick={() => onPageChange('online-chat')} />
       <NavItemMini icon={<ReceivingIcon />} label="收料查詢" isActive={currentPage === 'receiving-inquiry'} onClick={() => onPageChange('receiving-inquiry')} />
       <NavItemMini icon={<ScheduleIcon />} label="排程總表" isActive={currentPage === 'schedule-inquiry'} onClick={() => onPageChange('schedule-inquiry')} />
+      <NavItemMini icon={<QualityIcon />} label="廠商評價" isActive={currentPage === 'vendor-evaluation'} onClick={() => onPageChange('vendor-evaluation')} />
 
       <div className="w-full h-px bg-[rgba(145,158,171,0.12)] my-[4px]" />
 
@@ -742,7 +543,6 @@ function MiniNavLayout({ currentPage, onPageChange, onLogout }: MiniNavLayoutPro
       <MiniSubmenuItem menuId="invoice" icon={<InvoiceIcon />} label="發票作業" onShow={showFlyout} onHide={startHide} />
       <NavItemMini icon={<InsuranceIcon />} label="產險維護" onClick={() => {}} />
       <MiniSubmenuItem menuId="esg" icon={<InsuranceIcon />} label="ESG" onShow={showFlyout} onHide={startHide} />
-      <NavItemMini icon={<QualityIcon />} label="廠商評價" onClick={() => {}} />
       <MiniSubmenuItem menuId="shipment-tw" icon={<ShippingIcon />} label="出貨台灣" onShow={showFlyout} onHide={startHide} />
       <MiniSubmenuItem menuId="account" icon={<AccountIcon />} label="帳號管理" isActive={['vendor-account-management','giant-account-management'].includes(currentPage)} onShow={showFlyout} onHide={startHide} />
       <MiniSubmenuItem menuId="system" icon={<SystemSettingsIcon />} label="系統設定" isActive={['permission-settings','schedule-settings'].includes(currentPage)} onShow={showFlyout} onHide={startHide} />
@@ -813,6 +613,9 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
     if (['esg-material', 'esg-maintain'].includes(currentPage)) {
       autoExpanded.push('esg');
     }
+    if (['shipment-tw-order', 'shipment-tw-shipping', 'shipment-tw-print'].includes(currentPage)) {
+      autoExpanded.push('shipment-tw');
+    }
     if (['permission-settings', 'schedule-settings'].includes(currentPage)) {
       autoExpanded.push('system');
     }
@@ -823,8 +626,8 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
   const toggleMenu = (menuId: string) => {
     setExpandedMenus(prev => 
       prev.includes(menuId) 
-        ? prev.filter(id => id !== menuId)
-        : [...prev, menuId]
+        ? prev.filter(id => id !== menuId)   // 再點一次 → 收合
+        : [menuId]                             // 點新的 → 只保留這一個（其他全收合）
     );
   };
 
@@ -928,7 +731,7 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
         onClick={() => onPageChange('announcement')}
       />
       <NavItem 
-        icon={<AnnouncementIcon />} 
+        icon={<ChatIcon />} 
         label="online chat" 
         badge="32+" 
         isActive={currentPage === 'online-chat'}
@@ -951,6 +754,14 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
         onClick={() => onPageChange('schedule-inquiry')}
       />
 
+      {/* 廠商評價（移至 overview 排程總表查詢後） */}
+      <NavItem 
+        icon={<QualityIcon />} 
+        label="廠商評價"
+        isActive={currentPage === 'vendor-evaluation'}
+        onClick={() => onPageChange('vendor-evaluation')}
+      />
+
       {/* MANAGEMENT 區塊 */}
       <div className="relative shrink-0 w-full" data-name="subheader">
         <div className="flex flex-row items-center size-full">
@@ -967,6 +778,7 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
           label="零件/索樣" 
           hasSubmenu 
           isExpanded={expandedMenus.includes('parts')}
+          isActive={expandedMenus.includes('parts')}
           onClick={() => toggleMenu('parts')}
           badge={partsAndSampleBadge}
         />
@@ -990,6 +802,7 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
           label="訂單管理" 
           hasSubmenu 
           isExpanded={expandedMenus.includes('order')}
+          isActive={expandedMenus.includes('order')}
           onClick={() => toggleMenu('order')}
         />
         {expandedMenus.includes('order') && (
@@ -1027,7 +840,7 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
           label="修正單管理" 
           hasSubmenu 
           isExpanded={expandedMenus.includes('correction')}
-          isActive={['correction-create', 'correction-list', 'correction-history'].includes(currentPage) && !expandedMenus.includes('correction')}
+          isActive={expandedMenus.includes('correction')}
           onClick={() => toggleMenu('correction')}
         />
         {expandedMenus.includes('correction') && (
@@ -1046,7 +859,7 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
           label="出貨單" 
           hasSubmenu 
           isExpanded={expandedMenus.includes('shipping')}
-          isActive={['shipping-create', 'shipping-list', 'shipping-packing', 'shipping-print', 'shipping-settings'].includes(currentPage) && !expandedMenus.includes('shipping')}
+          isActive={expandedMenus.includes('shipping')}
           onClick={() => toggleMenu('shipping')}
         />
         {expandedMenus.includes('shipping') && (
@@ -1067,6 +880,7 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
           label="品保作業" 
           hasSubmenu 
           isExpanded={expandedMenus.includes('quality')}
+          isActive={expandedMenus.includes('quality')}
           onClick={() => toggleMenu('quality')}
         />
         {expandedMenus.includes('quality') && (
@@ -1091,6 +905,7 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
           label="發票作業" 
           hasSubmenu 
           isExpanded={expandedMenus.includes('invoice')}
+          isActive={expandedMenus.includes('invoice')}
           onClick={() => toggleMenu('invoice')}
         />
         {expandedMenus.includes('invoice') && (
@@ -1117,6 +932,7 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
           label="ESG" 
           hasSubmenu 
           isExpanded={expandedMenus.includes('esg')}
+          isActive={expandedMenus.includes('esg')}
           onClick={() => toggleMenu('esg')}
         />
         {expandedMenus.includes('esg') && (
@@ -1127,13 +943,6 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
         )}
       </div>
 
-      {/* 10. 廠商評價 */}
-      <NavItem 
-        icon={<QualityIcon />} 
-        label="廠商評價"
-        isActive={currentPage === 'vendor-evaluation'}
-        onClick={() => onPageChange('vendor-evaluation')}
-      />
 
       {/* 11. 出貨台灣捷安特 */}
       <div className="w-full">
@@ -1142,6 +951,7 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
           label="出貨台灣捷安特" 
           hasSubmenu 
           isExpanded={expandedMenus.includes('shipment-tw')}
+          isActive={expandedMenus.includes('shipment-tw')}
           onClick={() => toggleMenu('shipment-tw')}
         />
         {expandedMenus.includes('shipment-tw') && (
@@ -1160,6 +970,7 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
           label="帳號管理" 
           hasSubmenu 
           isExpanded={expandedMenus.includes('account')}
+          isActive={expandedMenus.includes('account')}
           onClick={() => toggleMenu('account')}
         />
         {expandedMenus.includes('account') && (
@@ -1187,6 +998,7 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
           label="系統設定" 
           hasSubmenu 
           isExpanded={expandedMenus.includes('system')}
+          isActive={expandedMenus.includes('system')}
           onClick={() => toggleMenu('system')}
         />
         {expandedMenus.includes('system') && (
