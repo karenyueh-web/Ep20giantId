@@ -8,6 +8,7 @@ import { MailSettingsTabContent } from './MailSettingsTabContent';
 import { ResponsivePageLayout } from './ResponsivePageLayout';
 import { getGiantRoles } from '@/app/config/roleStore';
 import { updateOrCreateUserRoles, getUsersByRole } from '@/app/config/userRoleStore';
+import { useActionPermission } from '@/app/hooks/useActionPermission';
 
 interface EmployeeAccountSettingPageProps {
   currentPage: PageType;
@@ -158,6 +159,9 @@ export function EmployeeAccountSettingPage({
       prev.includes(roleLabel) ? prev.filter(r => r !== roleLabel) : [...prev, roleLabel]
     );
   };
+
+  // ---- Action 權限：巨大帳號管理 ------------------------------------
+  const { can } = useActionPermission(userRole, 'mgmt-account-vendor');
 
   // 儲存角色到 userRoleStore
   const handleSave = () => {
@@ -453,7 +457,8 @@ export function EmployeeAccountSettingPage({
                                 </div>
                               </div>
 
-                              {/* 操作按鈕 */}
+                              {/* 操作按鈕（需 edit_purchase_group 權限） */}
+                              {can('edit_purchase_group') && (
                               <div className={`flex gap-[8px] items-end pb-[5px] ${index === 0 ? '' : 'mt-[26px]'}`}>
                                 {index > 0 && (
                                   <div
@@ -470,6 +475,7 @@ export function EmployeeAccountSettingPage({
                                   <Plus className="size-full text-[#1D7BF5]" strokeWidth={2} />
                                 </div>
                               </div>
+                              )}
                             </div>
                           </div>
                         </div>

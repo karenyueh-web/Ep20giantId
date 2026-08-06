@@ -426,7 +426,8 @@ export function AdvancedForecastTable({
               {selectedIds.size} selected
             </span>
 
-            {/* 右側：刪除按鈕 */}
+            {/* 右側：刪除按鈕（僅當 onDeleteRows 存在，即有 delete 權限時顯示） */}
+            {onDeleteRows && (
             <button
               data-is-checkbox="true"
               onClick={handleDeleteSelected}
@@ -438,6 +439,7 @@ export function AdvancedForecastTable({
                 <path clipRule="evenodd" d={svgTrash.p27d3c500} fill="#004680" fillRule="evenodd" />
               </svg>
             </button>
+            )}
           </div>
         )}
 

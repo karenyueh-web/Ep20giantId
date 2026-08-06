@@ -9,6 +9,7 @@ import { ForecastUploadOverlay } from './ForecastUploadOverlay';
 import { ForecastDeleteDeniedOverlay } from './ForecastDeleteDeniedOverlay';
 import { exportForecastExcel, exportForecastCsv } from './OrderCsvManager';
 import svgRefresh from '@/imports/svg-xqdbomdz5p';
+import { useActionPermission } from '@/app/hooks/useActionPermission';
 
 // ── Mock 當前登入者資訊（實際應從 AuthContext 取得）──────────────────────────
 // purchaseOrgs: 登入者在【巨大帳號管理 > 採購組織設定】所屬的採購組織清單
@@ -26,7 +27,11 @@ const PURCHASE_GROUP_OPTIONS = [
 ];
 
 // ── 主元件 ────────────────────────────────────────────────────────────────────
-export function ForecastOrderListWithTabs() {
+interface ForecastOrderListProps {
+  userRole?: string;
+}
+
+export function ForecastOrderListWithTabs({ userRole }: ForecastOrderListProps) {
   const [currentUserEmail] = useState<string>(() =>
     localStorage.getItem('currentUserEmail') || 'default'
   );
@@ -85,6 +90,9 @@ export function ForecastOrderListWithTabs() {
       showToast('資料已更新');
     }, 1000);
   };
+
+  // ── Action 權限：預測訂單 ────────────────────────────────────────
+  const { can } = useActionPermission(userRole, 'mgmt-order-forecast');
 
   // ── 搜尋過濾資料 ──
   const searchFilteredData = useMemo(() => {
@@ -289,7 +297,8 @@ export function ForecastOrderListWithTabs() {
               </div>
             </button>
 
-            {/* 新增 */}
+            {/* 新增（有 create 權限才顯示） */}
+            {can('create') && (
             <button
               onClick={handleAdd}
               className="flex items-center gap-[6px] h-[36px] px-[14px] rounded-[8px] bg-[#1c252e] hover:bg-[#2c3540] transition-colors shrink-0"
@@ -298,6 +307,7 @@ export function ForecastOrderListWithTabs() {
                 新增
               </span>
             </button>
+            )}
           </div>
         }
       />
@@ -309,7 +319,7 @@ export function ForecastOrderListWithTabs() {
         onColumnsChange={handleColumnsChange}
         columnsVersion={columnsVersion}
         appliedFilters={appliedFilters}
-        onDeleteRows={handleDeleteRows}
+        onDeleteRows={can('delete') ? handleDeleteRows : undefined}
         updateTime={lastUpdated}
       />
 

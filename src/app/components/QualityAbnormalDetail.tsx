@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { BaseOverlay } from './BaseOverlay';
 import { type HistoryEntry } from './AdvancedQualityTable';
 import { OrderHistory } from './OrderHistory';
+import { useActionPermission } from '@/app/hooks/useActionPermission';
 
 // ─── 檔案資料型別 ────────────────────────────────────────────────────
 export interface UploadedImage {
@@ -91,7 +92,7 @@ function Lightbox({ images, currentIndex, onClose, onPrev, onNext }: LightboxPro
 interface ThumbnailProps {
   image: UploadedImage;
   onClick: () => void;
-  onDelete: () => void;
+  onDelete?: () => void; // optional: undefined = 沒有刪除權限
 }
 
 function Thumbnail({ image, onClick, onDelete }: ThumbnailProps) {
@@ -126,7 +127,8 @@ function Thumbnail({ image, onClick, onDelete }: ThumbnailProps) {
         )}
       </div>
 
-      {/* 刪除按鈕 */}
+      {/* 刪除按鈕（僅有 onDelete 時顯示） */}
+      {onDelete && (
       <button
         className="absolute -top-[6px] -right-[6px] w-[18px] h-[18px] rounded-full bg-[#ff5630] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#cc3d1f] z-10"
         onClick={(e) => { e.stopPropagation(); onDelete(); }}
@@ -136,6 +138,7 @@ function Thumbnail({ image, onClick, onDelete }: ThumbnailProps) {
           <path clipRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" fill="white" fillRule="evenodd" />
         </svg>
       </button>
+      )}
     </div>
   );
 }
@@ -149,6 +152,7 @@ function IssueSection({
   initialImages,
   onImagesChange,
   isReadOnly,
+  canDeleteAttachment = true,
 }: {
   defectType: string;
   emergencyAction: string;
@@ -157,6 +161,7 @@ function IssueSection({
   initialImages?: UploadedImage[];
   onImagesChange?: (images: UploadedImage[]) => void;
   isReadOnly?: boolean;
+  canDeleteAttachment?: boolean;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [images, setImages] = useState<UploadedImage[]>(initialImages ?? []);
@@ -318,7 +323,7 @@ function IssueSection({
                           key={img.id}
                           image={img}
                           onClick={() => setLightboxIndex(idx)}
-                          onDelete={isReadOnly ? undefined : () => handleDelete(img.id)}
+                          onDelete={isReadOnly || !canDeleteAttachment ? undefined : () => handleDelete(img.id)}
                         />
                       ))}
 
@@ -542,6 +547,7 @@ function VendorReply({
   onAttachmentDelete,
   initialImages,
   onImagesChange,
+  canDeleteAttachment = true,
 }: {
   status: string;
   initialData?: VendorReplyData;
@@ -551,6 +557,7 @@ function VendorReply({
   onAttachmentDelete?: (filename: string) => void;
   initialImages?: UploadedImage[];
   onImagesChange?: (images: UploadedImage[]) => void;
+  canDeleteAttachment?: boolean;
 }) {
   const isReadOnly = status !== '廠商確認中';
 
@@ -876,7 +883,7 @@ function VendorReply({
                           key={img.id}
                           image={img}
                           onClick={() => setLightboxIndex(idx)}
-                          onDelete={isReadOnly ? undefined : () => handleDelete(img.id)}
+                          onDelete={isReadOnly || !canDeleteAttachment ? undefined : () => handleDelete(img.id)}
                         />
                       ))}
                     </div>
@@ -1337,9 +1344,14 @@ interface QualityAbnormalDetailProps {
   onClose?: () => void;
   /** 點擊列印 icon 時觸發 */
   onPrint?: () => void;
+  /** 登入者角色 id（用於 action 權限判斷） */
+  userRole?: string;
 }
 
-export function QualityAbnormalDetail({ abnormalNumber, status: initialStatus, row, onVendorReplySubmit, onReturn, onCancel, onSettle, onAttachmentAdd, onAttachmentDelete, initialFiles, onFilesChange, onClose, onPrint }: QualityAbnormalDetailProps) {
+export function QualityAbnormalDetail({ abnormalNumber, status: initialStatus, row, onVendorReplySubmit, onReturn, onCancel, onSettle, onAttachmentAdd, onAttachmentDelete, initialFiles, onFilesChange, onClose, onPrint, userRole }: QualityAbnormalDetailProps) {
+  // ── Action 權限：品質異常單 ─────────────────────────────────────────
+  const { can } = useActionPermission(userRole, 'mgmt-quality-abnormal');
+
   const [localStatus, setLocalStatus] = useState(initialStatus);
   const [returnReason, setReturnReason] = useState(row?.returnReason ?? '');
   const [cancelReason, setCancelReason] = useState('');
@@ -1411,6 +1423,7 @@ export function QualityAbnormalDetail({ abnormalNumber, status: initialStatus, r
           initialImages={initialFiles?.basic}
           onImagesChange={onFilesChange ? (imgs) => onFilesChange('basic', imgs) : undefined}
           isReadOnly={localStatus === '取消' || localStatus === '已結案'}
+          canDeleteAttachment={can('delete_attachment')}
         />
       </div>
 
@@ -1429,6 +1442,7 @@ export function QualityAbnormalDetail({ abnormalNumber, status: initialStatus, r
         onAttachmentDelete={onAttachmentDelete ? (fn) => onAttachmentDelete('vendor', fn) : undefined}
         initialImages={initialFiles?.vendor}
         onImagesChange={onFilesChange ? (imgs) => onFilesChange('vendor', imgs) : undefined}
+        canDeleteAttachment={can('delete_attachment')}
       />
 
       {/* 巨大回覆區 */}

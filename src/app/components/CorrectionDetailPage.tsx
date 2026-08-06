@@ -8,6 +8,7 @@ import type { OrderRow } from './AdvancedOrderTable';
 import { useOrderStore, nowDateStr, operatorByRole } from './OrderStoreContext';
 import type { HistoryEntry, SavedDeliveryRow } from './OrderStoreContext';
 import { OrderHistory } from './OrderHistory';
+import { useActionPermission } from '@/app/hooks/useActionPermission';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface DeliveryRow {
@@ -302,6 +303,9 @@ export function CorrectionDetailPage({
   const order = orders[currentIndex];
   const total = orders.length;
   const { addCorrectionHistory, getCorrectionHistory } = useOrderStore();
+
+  // ── Action 權限：修正單管理 ──────────────────────────────────────────
+  const { can } = useActionPermission(userRole, 'mgmt-correction');
 
   /**
    * 批次開立時，每張訂單的本機操作狀態（不依賴 viewMode/correctionStatusCode）
@@ -1020,7 +1024,7 @@ export function CorrectionDetailPage({
           {/* 歷程 + 刪單 + 關閉 + 抽單 */}
           <div className="ml-auto flex items-center gap-[16px] relative">
             {/* 刪單按鈕：僅 edit 模式、未提交、非拆單時顯示 */}
-            {viewMode === 'edit' && !isLocallySubmitted && !isSplitMode && (
+            {viewMode === 'edit' && !isLocallySubmitted && !isSplitMode && can('submit_delete') && (
               <button
                 onClick={e => { e.stopPropagation(); handleToggleDeleteMode(); }}
                 className={`flex items-center gap-[6px] h-[36px] px-[14px] rounded-[8px] border transition-colors font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] ${
@@ -1035,7 +1039,7 @@ export function CorrectionDetailPage({
                 {isDeleteMode ? '取消刪單' : '刪單'}
               </button>
             )}
-            {/* 關閉按鈕：僅 purchaserReview (B) 模式顯示 */}
+            {/* 關閉按鈕：僅 purchaserReview (B) 模式顯示（不需 action 權限） */}
             {viewMode === 'purchaserReview' && (
               <button
                 onClick={e => { e.stopPropagation(); onCloseToCL?.(); }}
@@ -2018,12 +2022,14 @@ export function CorrectionDetailPage({
                     <p className="font-['Public_Sans:Bold',sans-serif] font-bold leading-[24px] shrink-0 text-[14px] text-center text-white whitespace-nowrap px-[12px]">修正確認</p>
                   </button>
                 </div>
-                {/* 退回廠商 */}
+                {/* 退回廠商（需 return 權限） */}
+                {can('return') && (
                 <div className="flex-[1_0_0] h-[36px] min-h-px min-w-[64px] relative rounded-[8px] bg-white">
                   <button onClick={() => { setReturnReason(''); setShowReturnForm(true); }} className="flex items-center justify-center min-w-[inherit] size-full">
                     <p className="font-['Public_Sans:Bold',sans-serif] font-bold leading-[24px] shrink-0 text-[#118d57] text-[14px] text-center whitespace-nowrap px-[12px]">退回廠商</p>
                   </button>
                 </div>
+                )}
               </>
             ) : (
               /* 'edit' (DR) — 原有按鈕 */

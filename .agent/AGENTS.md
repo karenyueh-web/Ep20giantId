@@ -108,6 +108,33 @@ EP 專案規範（DESIGN_SYSTEM.md）
 - ✅ 正確：兩個檔案一起改
 - ❌ 錯誤：只改 NavigationList，忘記同步 PermissionSettingsPage
 
+### ⭐ 新增功能的 Action 權限評估規則
+新增任何頁面或功能時，**必須對每個「操作按鈕」評估以下問題**，再決定是否加入 `FEATURE_ACTION_CONFIG`：
+
+> **「這個操作，是不是所有能進入這個模組的角色都應該可以執行？」**
+
+| 答案 | 處理方式 |
+|------|---------|
+| **是**（所有人都能做） | 不需加入 `FEATURE_ACTION_CONFIG`，有模組存取權限即可操作 |
+| **否**（只有部分角色能做） | **必須加入 `FEATURE_ACTION_CONFIG`**，定義對應的 `action id` |
+
+#### 實作規則
+- `FEATURE_ACTION_CONFIG` 位於 `src/app/config/actionPermissionConfig.ts`
+- 前端用 `useActionPermission(featureId, action)` 判斷，沒有權限的按鈕**完全隱藏**（不顯示 disabled）
+- `IT` 與 `admin` 角色預設擁有所有 action 權限，不受設定限制
+- 此規則適用於**任何行為類型**（刪除、退回、新增、審核等），不限於特定動作
+
+#### 已設定 Action 控制的模組（開發時參考）
+| featureId | 模組 | actions |
+|-----------|------|---------|
+| `overview-announcement` | 公佈欄 | `create` / `edit` / `delete` |
+| `mgmt-order-forecast` | 預測訂單 | `create` / `delete` |
+| `mgmt-correction` | 修正單管理 | `return` / `submit_delete` |
+| `mgmt-invoice` | 發票作業 | `delete` / `return` |
+| `mgmt-quality-abnormal` | 品質異常單 | `delete_attachment` |
+| `mgmt-account-vendor` | 廠商帳號管理 | `edit_purchase_group` |
+
+
 
 ### 表格標題列 Checkbox 顯示規則
 - 表格有 Selection Bar（批次操作列）的頁面，標題列 checkbox 必須在有列被選取時隱藏

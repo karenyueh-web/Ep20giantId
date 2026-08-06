@@ -8,13 +8,14 @@
  *   ─────────────────────────────────────────
  *   左側 40% 卡片列表 | 右側 60% 預覽面板
  */
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Eye, Paperclip, Download, Pencil, Trash2 } from 'lucide-react';
 import { SearchField } from './SearchField';
 import { DropdownSelect } from './DropdownSelect';
 import { ResponsivePageLayout } from './ResponsivePageLayout';
 import { BaseOverlay } from './BaseOverlay';
 import type { PageType } from './MainLayout';
+import { useActionPermission } from '@/app/hooks/useActionPermission';
 import {
   loadAnnouncements,
   saveAnnouncements,
@@ -433,19 +434,23 @@ export function AnnouncementPage({
     [announcements, readIds],
   );
 
+  // ── Action 權限：公佈欄 ───────────────────────────────────────────────────────────
+  const { can } = useActionPermission(userRole, 'overview-announcement');
+
   // ── 編輯 / 刪除權限判斷 ──────────────────────────────────────────────────────
   const currentUserEmail = localStorage.getItem('currentUserEmail') ?? '';
   const currentUserName  = localStorage.getItem('currentUserName')  ?? '';
   // 最高管理層：後端對接時改為 API 權限判斷
   const isSuperAdmin = localStorage.getItem('currentUserPermission') === 'admin';
-  const canModifyRecord = useCallback((record: AnnouncementRecord | null): boolean => {
+  const canModifyRecord = useCallback((record: AnnouncementRecord | null, mode: 'edit' | 'delete' = 'edit'): boolean => {
     if (!record) return false;
     if (!isGiant) return false; // 只有巨大帳號有操作權
+    if (!can(mode)) return false;             // Action 權限檢查
     if (record.publisherEmail === currentUserEmail) return true; // 自己發的
     if (record.publisherName  === currentUserName)  return true; // 語名同步判斷
     if (isSuperAdmin) return true;                               // 最高管理層
     return false;
-  }, [isGiant, currentUserEmail, currentUserName, isSuperAdmin]);
+  }, [isGiant, currentUserEmail, currentUserName, isSuperAdmin, can]);
 
   // ── 刪除確認狀態 ──────────────────────────────────────────────────────────
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -564,8 +569,8 @@ export function AnnouncementPage({
             全部已讀
           </button>
 
-          {/* 新增公告（僅巨大帳號）*/}
-          {isGiant && (
+          {/* 新增公告（僅巨大帳號，且有 create 權限）*/}
+          {isGiant && can('create') && (
             <button
               type="button"
               onClick={() => onPageChange('announcement-create' as PageType)}
@@ -614,7 +619,7 @@ export function AnnouncementPage({
               <PreviewPanel
                 record={selectedRecord}
                 isRead={selectedRecord ? readIds.has(selectedRecord.id) : false}
-                canModify={canModifyRecord(selectedRecord)}
+                canModify={canModifyRecord(selectedRecord, 'edit')}
                 onEdit={() => selectedRecord && handleEditClick(selectedRecord.id)}
                 onDelete={() => selectedRecord && handleDeleteClick(selectedRecord.id)}
               />

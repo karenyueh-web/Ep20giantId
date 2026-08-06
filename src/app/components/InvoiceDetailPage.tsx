@@ -14,6 +14,7 @@ import { DropdownSelect } from './DropdownSelect';
 import { SimpleDatePicker } from './SimpleDatePicker';
 import { invoiceMockData } from './invoiceCreateData';
 import IconsSolidIcSolarMultipleForwardLeftBroken from '@/imports/IconsSolidIcSolarMultipleForwardLeftBroken';
+import { useActionPermission } from '@/app/hooks/useActionPermission';
 import {
   type InvoiceDetailRow, type InvoiceDetailPageProps,
   TAX_RATE_OPTIONS, INVOICE_TYPE_OPTIONS, TAX_CODE_OPTIONS,
@@ -171,6 +172,9 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
 
   // ── 是否為檢視既有發票模式 ──
   const isViewMode = !!existingRecord;
+
+  // ── Action 權限：發票作業 ────────────────────────────────────────
+  const { can } = useActionPermission(userRole, 'mgmt-invoice');
 
   // ── 初始化 invoice store（若 localStorage 無資料則寫入 mock）──
   initInvoiceStore();
@@ -690,7 +694,7 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
             {/* ── DR 草稿：廠商可執行 ── */}
             {(!currentStatus || currentStatus === 'DR') && (
               <>
-                {existingRecord && (
+                {existingRecord && can('delete') && (
                   <button
                     onClick={() => setShowDeleteConfirm(true)}
                     className="h-[40px] min-w-[88px] px-[16px] rounded-[8px] bg-[#ff5630] hover:bg-[#b71d18] text-white font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
@@ -714,7 +718,7 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
             )}
 
             {/* ── B 採購確認中：採購可執行 ── */}
-            {currentStatus === 'B' && (
+            {currentStatus === 'B' && can('return') && (
               <>
                 <button
                   onClick={handleOffline}
@@ -732,7 +736,7 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
             )}
 
             {/* ── S 轉發票成功：僅巨大角色可刪除（TODO: 上線前加回 userRole === 'giant' 條件）── */}
-            {currentStatus === 'S' && (
+            {currentStatus === 'S' && can('delete') && (
               <button
                 onClick={() => setShowDeleteConfirm(true)}
                 className="h-[40px] min-w-[88px] px-[16px] rounded-[8px] bg-[#ff5630] hover:bg-[#b71d18] text-white font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] transition-colors whitespace-nowrap"
@@ -742,7 +746,7 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
             )}
 
             {/* ── F 轉發票失敗：採購可執行重拋／線下處理；廠商可刪除發票（TODO: 上線前加回角色判斷）── */}
-            {currentStatus === 'F' && (
+            {currentStatus === 'F' && can('delete') && (
               <>
                 <button
                   onClick={handleRetry}
@@ -1146,7 +1150,7 @@ export function InvoiceDetailPage({ selectedRows, onClose, bondedType, currency,
                   </div>
                   {/* 刪除（僅可編輯時顯示） */}
                   <div style={{ width: 50, minWidth: 50 }} className="px-[4px] shrink-0 flex justify-center">
-                    {isEditable && <DeleteButton onClick={() => deleteRow(row.id)} />}
+                    {isEditable && can('delete') && <DeleteButton onClick={() => deleteRow(row.id)} />}
                   </div>
                 </div>
               ))}

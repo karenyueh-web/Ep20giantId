@@ -42,7 +42,7 @@ export function OrderManagementPage({ currentPage, onPageChange, onLogout, userR
           : currentPage === 'order-history'
             ? <HistoryOrderListWithTabs />
             : currentPage === 'order-forecast'
-              ? <ForecastOrderListWithTabs />
+              ? <ForecastOrderListWithTabs userRole={userRole} />
               : currentPage === 'order-schedule-change'
                 ? <ScheduleChangeListWithTabs userRole={userRole} />
                 : <OrderListWithTabs userRole={userRole} />

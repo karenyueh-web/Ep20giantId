@@ -29,6 +29,16 @@ import {
   type SyncAlert,
 } from '@/app/config/userRoleStore';
 import { setPendingNavUser } from '@/app/config/pendingNavigation';
+import {
+  FEATURE_ACTION_CONFIG,
+  type FeatureActionConfig,
+} from '@/app/config/actionPermissionConfig';
+import {
+  loadActionPermissionsSync,
+  saveActionPermissions,
+  updateFeatureActions,
+  type ActionPermissionEntry,
+} from '@/app/config/actionPermissionStore';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -605,6 +615,9 @@ interface TreeNodeProps {
   expandedSet: Set<string>;
   onToggleCheck: (node: FeatureNode) => void;
   onToggleExpand: (nodeId: string) => void;
+  // 行為操作權限
+  actionPermissions: ActionPermissionEntry[];
+  onActionToggle: (featureId: string, actionId: string, checked: boolean) => void;
 }
 
 function TreeNode({
@@ -614,16 +627,25 @@ function TreeNode({
   expandedSet,
   onToggleCheck,
   onToggleExpand,
+  actionPermissions,
+  onActionToggle,
 }: TreeNodeProps) {
   const hasChildren = node.children && node.children.length > 0;
   const isExpanded = expandedSet.has(node.id);
   const state = getNodeState(node, checkedSet);
+  const isChecked = state === 'checked';
+
+  // 查找該節點是否有 action 配置
+  const actionFeature = FEATURE_ACTION_CONFIG.find(f => f.featureId === node.id);
+  const enabledActions = new Set(
+    actionPermissions.find(p => p.featureId === node.id)?.actions ?? []
+  );
 
   return (
     <div>
       {/* Row */}
       <div
-        className="flex items-center h-[36px] hover:bg-[rgba(145,158,171,0.04)] transition-colors rounded-[4px] group"
+        className="flex items-center min-h-[36px] hover:bg-[rgba(145,158,171,0.04)] transition-colors rounded-[4px] group flex-wrap gap-y-[4px] py-[2px]"
         style={{ paddingLeft: depth * 24 }}
       >
         {/* Expand/Collapse arrow */}
@@ -663,7 +685,7 @@ function TreeNode({
 
         {/* Label */}
         <span
-          className={`text-[14px] leading-[22px] select-none truncate ${
+          className={`text-[14px] leading-[22px] select-none ${
             depth === 0
               ? "font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[#1c252e]"
               : "font-['Public_Sans:Medium','Noto_Sans_JP:Medium',sans-serif] font-medium text-[#454f5b]"
@@ -671,6 +693,29 @@ function TreeNode({
         >
           {node.label}
         </span>
+
+        {/* 行為 action Tags（模組已勾選且有 action 配置時顯示） */}
+        {actionFeature && isChecked && (
+          <div className="flex items-center gap-[6px] ml-[8px] flex-wrap">
+            {actionFeature.actions.map(action => {
+              const enabled = enabledActions.has(action.id);
+              return (
+                <button
+                  key={action.id}
+                  type="button"
+                  onClick={e => { e.stopPropagation(); onActionToggle(node.id, action.id, !enabled); }}
+                  className={`px-[8px] h-[22px] rounded-[6px] text-[12px] font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[20px] whitespace-nowrap transition-colors select-none ${
+                    enabled
+                      ? 'bg-[#004680] text-white hover:bg-[#002d5a]'
+                      : 'bg-[rgba(145,158,171,0.12)] text-[#919eab] hover:bg-[rgba(145,158,171,0.2)]'
+                  }`}
+                >
+                  {action.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Children */}
@@ -685,6 +730,8 @@ function TreeNode({
               expandedSet={expandedSet}
               onToggleCheck={onToggleCheck}
               onToggleExpand={onToggleExpand}
+              actionPermissions={actionPermissions}
+              onActionToggle={onActionToggle}
             />
           ))}
         </div>
@@ -909,33 +956,53 @@ export function PermissionSettingsPage({
     });
   }, []);
 
-  // Save to localStorage
-  const handleSave = useCallback(() => {
+  // 行為操作權限 state
+  const [actionPermissions, setActionPermissions] = useState<ActionPermissionEntry[]>(
+    () => loadActionPermissionsSync(loadRoleSections()[0].roles[0].id)
+  );
+
+  // 切換角色時重載 action permissions
+  useEffect(() => {
+    setActionPermissions(loadActionPermissionsSync(selectedRoleId));
+  }, [selectedRoleId]);
+
+  const handleActionToggle = useCallback((featureId: string, actionId: string, checked: boolean) => {
+    setActionPermissions(prev => {
+      const entry = prev.find(p => p.featureId === featureId);
+      const currentActions = entry?.actions ?? [];
+      const nextActions = checked
+        ? [...new Set([...currentActions, actionId])]
+        : currentActions.filter(a => a !== actionId);
+      return updateFeatureActions(prev, featureId, nextActions);
+    });
+  }, []);
+
+  const handleSave = useCallback(async () => {
+    // 儲存模組存取權限
     const key = `permission-settings-${selectedRoleId}`;
-    const arr = Array.from(checkedSet);
-    localStorage.setItem(key, JSON.stringify(arr));
+    localStorage.setItem(key, JSON.stringify([...checkedSet]));
+    // 儲存行為操作權限
+    await saveActionPermissions(selectedRoleId, actionPermissions);
     setSaveMessage('儲存成功');
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => setSaveMessage(''), 2000);
-  }, [selectedRoleId, checkedSet]);
+  }, [selectedRoleId, checkedSet, actionPermissions]);
 
-  // Reset from localStorage
   const handleReset = useCallback(() => {
+    // 還原模組存取權限
     const key = `permission-settings-${selectedRoleId}`;
     try {
       const stored = localStorage.getItem(key);
-      if (stored) {
-        const parsed = JSON.parse(stored) as string[];
-        setCheckedSet(new Set(parsed));
-      } else {
-        setCheckedSet(new Set());
-      }
+      setCheckedSet(stored ? new Set(JSON.parse(stored) as string[]) : new Set());
     } catch {
       setCheckedSet(new Set());
     }
+    // 還原行為操作權限
+    setActionPermissions(loadActionPermissionsSync(selectedRoleId));
   }, [selectedRoleId]);
 
-  // All leaf count for header info
+  // 標頭計數資訊
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const allLeafIds = useMemo(() => collectLeafIds(FEATURE_TREE), []);
   const checkedCount = checkedSet.size;
   const totalCount = allLeafIds.length;
@@ -1061,7 +1128,7 @@ export function PermissionSettingsPage({
         </div>
 
 
-        {/* ── RIGHT PANEL: Permission Tree ── */}
+          {/* ── RIGHT PANEL: Permission Tree ── */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* Header bar */}
           <div className="shrink-0 min-h-[56px] flex items-center justify-between px-[24px] border-b border-[rgba(145,158,171,0.12)]">
@@ -1072,18 +1139,16 @@ export function PermissionSettingsPage({
               <span className="font-['Public_Sans:Medium','Noto_Sans_JP:Medium',sans-serif] font-medium text-[13px] text-[#919eab] shrink-0">
                 {checkedCount} / {totalCount}
               </span>
-              {/* Save feedback - 移至頁面頂端 Banner，不在 header 內顯示 */}
             </div>
 
-            <div className="flex items-center gap-[8px] shrink-0">
-              {/* Reset button */}
+            <div className="flex items-center gap-[12px] shrink-0">
+              {/* Reset / Save 按鈕 */}
               <button
                 onClick={handleReset}
                 className="border border-[rgba(145,158,171,0.32)] text-[#637381] hover:bg-[rgba(145,158,171,0.08)] rounded-[8px] h-[32px] px-[16px] font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[13px] leading-none transition-colors cursor-pointer"
               >
                 重置
               </button>
-              {/* Save button */}
               <button
                 onClick={handleSave}
                 className="bg-[#1c252e] hover:bg-[#2c3540] text-white rounded-[8px] h-[32px] px-[16px] font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[13px] leading-none transition-colors cursor-pointer"
@@ -1110,7 +1175,7 @@ export function PermissionSettingsPage({
             </div>
           </div>
 
-          {/* Tree content */}
+          {/* 模組權限樹 */}
           <div className="flex-1 overflow-y-auto custom-scrollbar px-[16px] py-[8px]">
             {FEATURE_TREE.map((node) => (
               <TreeNode
@@ -1121,6 +1186,8 @@ export function PermissionSettingsPage({
                 expandedSet={expandedSet}
                 onToggleCheck={handleToggleCheck}
                 onToggleExpand={handleToggleExpand}
+                actionPermissions={actionPermissions}
+                onActionToggle={handleActionToggle}
               />
             ))}
           </div>
