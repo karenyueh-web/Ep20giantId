@@ -17,24 +17,62 @@ import { getSampleOrders } from './sampleOrderData';
 import { getParts } from './partsMaintenanceData';
 
 
-// ── 通知數量（預留後端對接端點）────────────────────────────────────────────────
-// TODO: 對接後端 API 時，將 fetchNotificationCounts 替換為真實呼叫
-// 範例：const res = await fetch('/api/notifications/counts'); return res.json();
-async function fetchNotificationCounts(): Promise<{ announcement: number; chat: number }> {
-  // 目前回傳 0；待功能上線後改為實際 API 回傳
-  return { announcement: 0, chat: 0 };
+// ── 通知數量（從 localStorage 讀取未讀公告數，後端對接時替換）────────────────────
+const ANNOUNCEMENT_MOCK_VERSION = 'v2'; // 需與 announcementData.ts 的 MOCK_VERSION 一致
+
+function getAnnouncementUnreadCount(): number {
+  try {
+    const version = localStorage.getItem('announcementMockVersion');
+    const announcementsRaw = localStorage.getItem('announcements');
+    const readIdsRaw = localStorage.getItem('announcementReadIds');
+
+    const totalIds: string[] = announcementsRaw
+      ? (JSON.parse(announcementsRaw) as { id: string }[]).map(a => a.id)
+      : ['ann-001', 'ann-002', 'ann-003', 'ann-004']; // mock 預設 4 筆
+
+    // 版本不符（含首次載入、mock 資料更新後尚未進入公佈欄）
+    // → readIds 尚未被 loadAnnouncements() 重置，一律視為「全部未讀」
+    if (version !== ANNOUNCEMENT_MOCK_VERSION) {
+      return totalIds.length;
+    }
+
+    const readIds: string[] = readIdsRaw ? JSON.parse(readIdsRaw) : [];
+    const readSet = new Set(readIds);
+    return totalIds.filter(id => !readSet.has(id)).length;
+  } catch {
+    return 0;
+  }
 }
 
 function useNotificationCounts() {
-  const [counts, setCounts] = useState({ announcement: 0, chat: 0 });
+  const [counts, setCounts] = useState(() => ({
+    announcement: getAnnouncementUnreadCount(),
+    chat: 0,
+  }));
+
   useEffect(() => {
-    fetchNotificationCounts().then(setCounts);
-    // 可開啟定時輪詢（每 30 秒）：
-    // const id = setInterval(() => fetchNotificationCounts().then(setCounts), 30000);
-    // return () => clearInterval(id);
+    // 監聽 localStorage 變更（同頁 setItem 不會觸發 storage 事件，改用 custom event）
+    const refresh = () => {
+      setCounts(prev => ({
+        ...prev,
+        announcement: getAnnouncementUnreadCount(),
+      }));
+    };
+
+    // 跨分頁同步
+    window.addEventListener('storage', refresh);
+    // 同頁點擊卡片後通知更新（AnnouncementPage 內會 dispatch 此事件）
+    window.addEventListener('announcementReadUpdated', refresh);
+
+    return () => {
+      window.removeEventListener('storage', refresh);
+      window.removeEventListener('announcementReadUpdated', refresh);
+    };
   }, []);
+
   return counts;
 }
+
 
 // ── 大頭像元件 ─────────────────────────────────────────────────────────────────
 interface UserAvatarProps {
@@ -368,8 +406,8 @@ function UserInfo({ onPageChange }: UserInfoProps) {
             >
               <Megaphone size={22} strokeWidth={1.6} className="text-white" />
               {notifications.announcement > 0 && (
-                <span className="absolute top-[-2px] right-[-2px] min-w-[16px] h-[16px] rounded-[500px] bg-[#ff5630] flex items-center justify-center px-[2px]">
-                  <span className="font-['Public_Sans:Bold',sans-serif] font-bold text-white text-[9px] leading-none">
+                <span className="absolute top-[-4px] right-[-4px] min-w-[18px] h-[18px] rounded-[500px] bg-[#ff5630] flex items-center justify-center px-[3px]">
+                  <span className="font-['Public_Sans:Regular',sans-serif] text-white text-[11px] leading-none">
                     {notifications.announcement > 99 ? '99+' : notifications.announcement}
                   </span>
                 </span>
@@ -398,8 +436,8 @@ function UserInfo({ onPageChange }: UserInfoProps) {
             >
               <MessageCircle size={22} strokeWidth={1.6} className="text-white" />
               {notifications.chat > 0 && (
-                <span className="absolute top-[-2px] right-[-2px] min-w-[16px] h-[16px] rounded-[500px] bg-[#ff5630] flex items-center justify-center px-[2px]">
-                  <span className="font-['Public_Sans:Bold',sans-serif] font-bold text-white text-[9px] leading-none">
+                <span className="absolute top-[-4px] right-[-4px] min-w-[18px] h-[18px] rounded-[500px] bg-[#ff5630] flex items-center justify-center px-[3px]">
+                  <span className="font-['Public_Sans:Regular',sans-serif] text-white text-[11px] leading-none">
                     {notifications.chat > 99 ? '99+' : notifications.chat}
                   </span>
                 </span>

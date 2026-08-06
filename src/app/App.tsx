@@ -7,6 +7,8 @@ import { VendorAccountReviewPageNew } from "@/app/components/VendorAccountReview
 import { GiantAccountManagementPageNew } from "@/app/components/GiantAccountManagementPageNew";
 import { PermissionSettingsPage } from "@/app/components/PermissionSettingsPage";
 import { UnderConstructionPage } from "@/app/components/UnderConstructionPage";
+import { AnnouncementPage } from "@/app/components/AnnouncementPage";
+import { AnnouncementCreatePage } from "@/app/components/AnnouncementCreatePage";
 import { InsuranceMaintenancePage } from "@/app/components/InsuranceMaintenancePage";
 import { ShippingBasicSettingsPage } from "@/app/components/ShippingBasicSettingsPage";
 import { ShipmentCreatePage } from "@/app/components/ShipmentCreatePage";
@@ -142,6 +144,11 @@ export default function App() {
 
   const renderPage = () => {
     switch (currentPage) {
+      // ── 公佈欄 ──
+      case 'announcement':
+        return <AnnouncementPage currentPage={currentPage} onPageChange={handlePageChange} onLogout={handleLogout} userRole={userRole} />;
+      case 'announcement-create':
+        return <AnnouncementCreatePage currentPage={currentPage} onPageChange={handlePageChange} onLogout={handleLogout} userRole={userRole} />;
       case 'online-chat':
         return <ChatPageNew currentPage={currentPage} onPageChange={handlePageChange} onLogout={handleLogout} userRole={userRole} initialChatId={selectedChatId} />;
       case 'order-list':

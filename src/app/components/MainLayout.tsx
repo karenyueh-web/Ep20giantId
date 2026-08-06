@@ -32,7 +32,9 @@ export type PageType =
   // ── MANAGEMENT > 系統設定 ──
   | 'permission-settings' | 'schedule-settings'
   // ── 個人設定 ──
-  | 'personal-settings';
+  | 'personal-settings'
+  // ── 公佈欄子頁 ──
+  | 'announcement-create';
 
 // MainLayout組件
 interface MainLayoutProps {

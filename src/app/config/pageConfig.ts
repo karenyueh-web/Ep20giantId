@@ -267,4 +267,12 @@ export const pageConfig: Record<PageType, PageConfig> = {
     title: '個人設定',
     breadcrumb: '個人設定',
   },
+
+  // ── 公佈欄子頁 ─────────────────────────────────────────────────────────────
+  'announcement-create': {
+    navLabel: '新增公告',
+    title: '新增公告',
+    breadcrumb: '公佈欄 • 新增公告',
+  },
 };
+
