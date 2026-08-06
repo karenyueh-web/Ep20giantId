@@ -318,7 +318,7 @@ export function ChatPageNew({ currentPage, onPageChange, initialChatId, onLogout
       onLogout={onLogout}
       userRole={userRole}
       title="Chat"
-      breadcrumb=""
+      breadcrumb="Online Chat"
     >
       {/* 用明確高度容器包裹，確保 ChatArea 在 flex 內容區能正確填滿 */}
       <div className="h-[calc(100vh-124px)] min-h-[500px]">

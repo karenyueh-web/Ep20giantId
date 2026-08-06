@@ -493,7 +493,7 @@ export function AnnouncementPage({
       onLogout={onLogout}
       userRole={userRole}
       title="公佈欄"
-      breadcrumb="系統設定"
+      breadcrumb="公佈欄"
     >
       {/* ── 白色卡片 wrapper ── */}
       <div className="bg-white flex flex-col h-full relative rounded-[16px] shadow-[0px_0px_2px_0px_rgba(145,158,171,0.2),0px_12px_24px_-4px_rgba(145,158,171,0.12)] overflow-hidden">
