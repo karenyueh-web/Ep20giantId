@@ -60,10 +60,12 @@ function useNotificationCounts() {
       }));
     };
 
-    const refreshChat = () => {
+    const refreshChat = (e: Event) => {
+      // OnlineChatPage dispatch 時會帶入即時總未讀數
+      const count = (e as CustomEvent<{ count: number }>).detail?.count;
       setCounts(prev => ({
         ...prev,
-        chat: getChatUnreadCount(),
+        chat: count ?? getChatUnreadCount(),
       }));
     };
 

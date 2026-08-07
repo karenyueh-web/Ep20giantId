@@ -5,6 +5,28 @@ import { SearchField } from './SearchField';
 import { BaseOverlay } from './BaseOverlay';
 import type { PageType } from './MainLayout';
 
+// ── 工具：關鍵字黃底高亮 ────────────────────────────────────────────────────────
+function HighlightText({ text, keyword }: { text: string; keyword: string }) {
+  if (!keyword || !keyword.trim() || !text) return <>{text}</>;
+  try {
+    const escaped = keyword.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+    const regex = new RegExp(escaped, 'gi');
+    const result: JSX.Element[] = [];
+    let last = 0;
+    let match: RegExpExecArray | null;
+    while ((match = regex.exec(text)) !== null) {
+      if (match.index > last) result.push(<span key={`t${last}`}>{text.slice(last, match.index)}</span>);
+      result.push(<mark key={`m${match.index}`} className="bg-[#fef08a] text-inherit rounded-[2px] px-[1px] not-italic">{match[0]}</mark>);
+      last = match.index + match[0].length;
+      if (match[0].length === 0) break; // 防止無限迴圈
+    }
+    if (last < text.length) result.push(<span key={`t${last}`}>{text.slice(last)}</span>);
+    return <>{result}</>;
+  } catch {
+    return <>{text}</>;
+  }
+}
+
 // ── Props ──────────────────────────────────────────────────────────────────────
 interface OnlineChatPageProps {
   currentPage: PageType;
@@ -44,7 +66,7 @@ function RoleBadge({ member }: { member: ChatMember }) {
 // 群組 Badge：綠色
 function GroupBadge() {
   return (
-    <span className="shrink-0 inline-flex items-center h-[18px] px-[6px] rounded-[4px] font-['Public_Sans:Bold',sans-serif] font-bold text-[11px] leading-none whitespace-nowrap bg-[rgba(34,197,94,0.15)] text-[#16a34a]">
+    <span className="shrink-0 inline-flex items-center justify-center h-[18px] px-[6px] rounded-[4px] font-['Public_Sans:Bold',sans-serif] font-bold text-[11px] leading-none whitespace-nowrap bg-[rgba(55,65,81,0.12)] text-[#374151]">
       group
     </span>
   );
@@ -137,23 +159,27 @@ function Avatar({
   );
 }
 
+// ── 右鍵選單 ─────────────────────────────────────────────────────────────────
+interface ContextMenuState { roomId: string; x: number; y: number; }
+
 // ── 聊天室列表項目 ────────────────────────────────────────────────────────────
 function ChatListItem({
-  room, isSelected, onClick,
+  room, isSelected, isPinned, keyword, onClick, onContextMenu,
 }: {
-  room: ChatRoom; isSelected: boolean; onClick: () => void;
+  room: ChatRoom; isSelected: boolean; isPinned: boolean; keyword: string;
+  onClick: () => void; onContextMenu: (e: React.MouseEvent) => void;
 }) {
-  // 一對一時的唯一 member（用於 badge）
   const primaryMember = room.type === 'direct' ? room.members[0] : null;
 
   return (
     <div
       onClick={onClick}
-      className={`flex items-center gap-[12px] px-[20px] py-[12px] cursor-pointer transition-colors ${
+      onContextMenu={onContextMenu}
+      className={`relative flex items-center gap-[12px] px-[20px] py-[12px] cursor-pointer transition-colors select-none ${
         isSelected ? 'bg-[rgba(0,94,184,0.06)]' : 'hover:bg-[#f9fafb]'
       }`}
     >
-      {/* 頭像：群組用 GroupAvatar，一對一用 Avatar */}
+      {/* 頭像 */}
       {room.type === 'group'
         ? <GroupAvatar size={48} />
         : <Avatar src={room.avatar} bg={room.avatarBg} name={room.name} size={48} online={primaryMember?.isOnline} />
@@ -163,13 +189,10 @@ function ChatListItem({
       <div className="flex-1 min-w-0 flex flex-col gap-[4px]">
         {/* 第一行：Badge + 名稱 + 時間 */}
         <div className="flex items-center gap-[6px]">
-          {/* Badge */}
           {room.type === 'group' ? <GroupBadge /> : (primaryMember && <RoleBadge member={primaryMember} />)}
-          {/* 名稱 */}
           <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] text-[#1c252e] truncate leading-[22px] flex-1 min-w-0">
-            {room.name}
+            <HighlightText text={room.name} keyword={keyword} />
           </p>
-          {/* 時間 */}
           <span className="shrink-0 font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#919eab] leading-[18px]">
             {room.lastTime}
           </span>
@@ -178,7 +201,7 @@ function ChatListItem({
         {/* 第二行：最後訊息 + 未讀數 */}
         <div className="flex items-center justify-between gap-[8px]">
           <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] text-[14px] text-[#637381] truncate leading-[22px]">
-            {room.lastMessage}
+            <HighlightText text={room.lastMessage} keyword={keyword} />
           </p>
           {room.unreadCount > 0 && (
             <div className="shrink-0 flex items-center justify-center bg-[#22c55e] rounded-full min-w-[20px] h-[20px] px-[5px]">
@@ -189,9 +212,17 @@ function ChatListItem({
           )}
         </div>
       </div>
+
+      {/* 已釘住標示（小釘子圖，常駐顯示） */}
+      {isPinned && (
+        <svg width="11" height="11" viewBox="0 0 16 16" fill="#e11d48" className="shrink-0 opacity-70">
+          <path d="M9.828.722a.5.5 0 01.354.146l4.95 4.95a.5.5 0 010 .707c-.48.48-1.072.588-1.503.588-.177 0-.335-.018-.46-.039l-3.134 3.134a5.927 5.927 0 01.16 1.013c.046.702-.032 1.687-.72 2.375a.5.5 0 01-.707 0l-2.829-2.828-3.182 3.182c-.195.195-1.219.902-1.414.707-.195-.195.512-1.22.707-1.414l3.182-3.182-2.828-2.829a.5.5 0 010-.707c.688-.688 1.673-.767 2.375-.72a5.922 5.922 0 011.013.16l3.134-3.133a2.772 2.772 0 01-.04-.461c0-.43.108-1.022.589-1.503a.5.5 0 01.353-.146z" />
+        </svg>
+      )}
     </div>
   );
 }
+
 
 // ── 圖片訊息氣泡（含下載按鈕）───────────────────────────────────────────────
 function ImageMessage({ imageUrl, onPreview }: { imageUrl: string; onPreview: () => void }) {
@@ -247,9 +278,9 @@ function ImageMessage({ imageUrl, onPreview }: { imageUrl: string; onPreview: ()
 
 // ── 訊息氣泡 ──────────────────────────────────────────────────────────────────
 function MessageBubble({
-  message, room, onImageClick,
+  message, room, keyword, onImageClick,
 }: {
-  message: ChatMessage; room: ChatRoom; onImageClick: (url: string) => void;
+  message: ChatMessage; room: ChatRoom; keyword: string; onImageClick: (url: string) => void;
 }) {
   const isMe = message.senderId === 'me';
   const senderName = !isMe && room.type === 'group' ? getSenderName(room, message.senderId) : '';
@@ -277,7 +308,7 @@ function MessageBubble({
         {message.type === 'text' && (
           <div className="w-full px-[16px] py-[12px] rounded-[10px] bg-[rgba(0,94,184,0.07)] border border-[rgba(0,94,184,0.15)]">
             <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] text-[14px] text-[#1c252e] leading-[22px] whitespace-pre-wrap">
-              {message.text}
+              <HighlightText text={message.text ?? ''} keyword={keyword} />
               <span className="inline-block ml-[10px] font-['Public_Sans:Regular',sans-serif] text-[11px] text-[#919eab] align-bottom">
                 {message.time}
               </span>
@@ -324,7 +355,7 @@ function MessageBubble({
         {message.type === 'text' && (
           <div className="px-[16px] py-[10px] rounded-[12px] rounded-tl-[4px] bg-white border border-[rgba(145,158,171,0.2)]">
             <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] text-[14px] text-[#1c252e] leading-[22px] whitespace-pre-wrap">
-              {message.text}
+              <HighlightText text={message.text ?? ''} keyword={keyword} />
             </p>
           </div>
         )}
@@ -676,27 +707,73 @@ export function OnlineChatPage({ currentPage, onPageChange, onLogout, userRole }
   const [showCreateOverlay, setShowCreateOverlay] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
-  const [pendingImages, setPendingImages] = useState<string[]>([]); // 图片暂存區
+  const [pendingImages, setPendingImages] = useState<string[]>([]);
+
+  // 釘選狀態（localStorage 持久化）
+  const [pinnedIds, setPinnedIds] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem('chat_pinned_ids');
+      return new Set(raw ? JSON.parse(raw) : []);
+    } catch { return new Set(); }
+  });
+
+  // 右鍵選單狀態
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+
+  const togglePin = (roomId: string) => {
+    setPinnedIds(prev => {
+      const next = new Set(prev);
+      next.has(roomId) ? next.delete(roomId) : next.add(roomId);
+      localStorage.setItem('chat_pinned_ids', JSON.stringify([...next]));
+      return next;
+    });
+    setContextMenu(null);
+  };
+
+  // 點外部關閉右鍵選單
+  useEffect(() => {
+    if (!contextMenu) return;
+    const close = () => setContextMenu(null);
+    document.addEventListener('click', close);
+    return () => {
+      document.removeEventListener('click', close);
+    };
+  }, [contextMenu]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatAreaRef = useRef<HTMLDivElement>(null);
 
-  const selectedRoom = rooms.find(r => r.id === selectedRoomId) ?? null;
+  // 過濾 + 排序（釘選區由新到舊、一般區由新到舊）
+  const sortByLatest = (a: ChatRoom, b: ChatRoom) => {
+    const aTime = a.messages.at(-1)?.time ?? '';
+    const bTime = b.messages.at(-1)?.time ?? '';
+    if (!aTime && !bTime) return 0;
+    if (!aTime) return 1;
+    if (!bTime) return -1;
+    return bTime.localeCompare(aTime);
+  };
 
-  // 過濾聊天室列表
-  const filteredRooms = rooms.filter(r => {
+  const allFiltered = rooms.filter(r => {
     const q = listSearch.toLowerCase();
     if (!q) return true;
+    // 搜尋：房間名稱、成員姓名/公司/email、訊息內文
     return (
       r.name.toLowerCase().includes(q) ||
       r.members.some(m =>
         m.name.toLowerCase().includes(q) ||
         m.company.toLowerCase().includes(q) ||
         m.email.toLowerCase().includes(q)
-      )
+      ) ||
+      r.messages.some(msg => msg.text?.toLowerCase().includes(q))
     );
   });
+
+  // selectedRoom 只從過濾結果中取，搜尋時若該房間不在結果內則右側自動清空
+  const selectedRoom = allFiltered.find(r => r.id === selectedRoomId) ?? null;
+
+  const pinnedRooms   = allFiltered.filter(r =>  pinnedIds.has(r.id)).sort(sortByLatest);
+  const unpinnedRooms = allFiltered.filter(r => !pinnedIds.has(r.id)).sort(sortByLatest);
 
   // 顯示所有訊息
   const filteredMessages = selectedRoom ? selectedRoom.messages : [];
@@ -706,13 +783,15 @@ export function OnlineChatPage({ currentPage, onPageChange, onLogout, userRole }
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [selectedRoomId, filteredMessages.length]);
 
-  // 進入聊天室 → 清除未讀
+  // 進入聊天室 → 清除未讀，並通知 NavigationList 更新 badge
   const handleSelectRoom = useCallback((roomId: string) => {
     setSelectedRoomId(roomId);
-    setRooms(prev => prev.map(r =>
-      r.id === roomId ? { ...r, unreadCount: 0 } : r
-    ));
-    window.dispatchEvent(new CustomEvent('chatReadUpdated'));
+    setRooms(prev => {
+      const updated = prev.map(r => r.id === roomId ? { ...r, unreadCount: 0 } : r);
+      const totalUnread = updated.reduce((sum, r) => sum + r.unreadCount, 0);
+      window.dispatchEvent(new CustomEvent('chatReadUpdated', { detail: { count: totalUnread } }));
+      return updated;
+    });
   }, []);
 
   // 將 File[] 轉為 object URL 并加入暂存區（不直接送出）
@@ -867,17 +946,43 @@ export function OnlineChatPage({ currentPage, onPageChange, onLogout, userRole }
               className="shrink-0 flex flex-col border-r border-[rgba(145,158,171,0.2)] overflow-y-auto custom-scrollbar py-[8px]"
               style={{ width: panelWidth }}
             >
-              {filteredRooms.length === 0 ? (
+              {allFiltered.length === 0 ? (
                 <p className="text-center text-[14px] text-[#919eab] py-[32px]">找不到相關對話</p>
               ) : (
-                filteredRooms.map(room => (
-                  <ChatListItem
-                    key={room.id}
-                    room={room}
-                    isSelected={selectedRoomId === room.id}
-                    onClick={() => handleSelectRoom(room.id)}
-                  />
-                ))
+                <>
+                  {/* 釘選區 */}
+                  {pinnedRooms.length > 0 && (
+                    <>
+                      {pinnedRooms.map(room => (
+                        <ChatListItem
+                          key={room.id}
+                          room={room}
+                          isSelected={selectedRoomId === room.id}
+                          isPinned={true}
+                          keyword={listSearch}
+                          onClick={() => handleSelectRoom(room.id)}
+                          onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setContextMenu({ roomId: room.id, x: e.clientX, y: e.clientY }); }}
+                        />
+                      ))}
+                      {unpinnedRooms.length > 0 && (
+                        <div className="mx-[20px] my-[2px] border-t border-[rgba(145,158,171,0.15)]" />
+                      )}
+                    </>
+                  )}
+
+                  {/* 一般對話區 */}
+                  {unpinnedRooms.map(room => (
+                    <ChatListItem
+                      key={room.id}
+                      room={room}
+                      isSelected={selectedRoomId === room.id}
+                      isPinned={false}
+                      keyword={listSearch}
+                      onClick={() => handleSelectRoom(room.id)}
+                      onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setContextMenu({ roomId: room.id, x: e.clientX, y: e.clientY }); }}
+                    />
+                  ))}
+                </>
               )}
             </div>
 
@@ -994,6 +1099,7 @@ export function OnlineChatPage({ currentPage, onPageChange, onLogout, userRole }
                       key={msg.id}
                       message={msg}
                       room={selectedRoom}
+                      keyword={listSearch}
                       onImageClick={url => setPreviewImage(url)}
                     />
                   ))}
@@ -1098,6 +1204,29 @@ export function OnlineChatPage({ currentPage, onPageChange, onLogout, userRole }
           onClose={() => setPreviewImage(null)}
         />
       )}
+
+      {/* 右鍵選單 */}
+      {contextMenu && (() => {
+        const isCurrentlyPinned = pinnedIds.has(contextMenu.roomId);
+        return (
+          <div
+            className="fixed z-[500] bg-white rounded-[8px] shadow-[0_4px_20px_rgba(0,0,0,0.15)] border border-[rgba(145,158,171,0.15)] p-[4px]"
+            style={{ top: contextMenu.y, left: contextMenu.x }}
+            onClick={e => e.stopPropagation()}
+          >
+            <button
+              onClick={() => togglePin(contextMenu.roomId)}
+              title={isCurrentlyPinned ? '取消釘住' : '釘住對話'}
+              className="flex items-center justify-center w-[36px] h-[36px] hover:bg-[#f9fafb] transition-colors rounded-[6px]"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill={isCurrentlyPinned ? '#919eab' : '#e11d48'}>
+                <path d="M9.828.722a.5.5 0 01.354.146l4.95 4.95a.5.5 0 010 .707c-.48.48-1.072.588-1.503.588-.177 0-.335-.018-.46-.039l-3.134 3.134a5.927 5.927 0 01.16 1.013c.046.702-.032 1.687-.72 2.375a.5.5 0 01-.707 0l-2.829-2.828-3.182 3.182c-.195.195-1.219.902-1.414.707-.195-.195.512-1.22.707-1.414l3.182-3.182-2.828-2.829a.5.5 0 010-.707c.688-.688 1.673-.767 2.375-.72a5.922 5.922 0 011.013.16l3.134-3.133a2.772 2.772 0 01-.04-.461c0-.43.108-1.022.589-1.503a.5.5 0 01.353-.146z" />
+              </svg>
+            </button>
+          </div>
+        );
+      })()}
+
     </ResponsivePageLayout>
   );
 }
