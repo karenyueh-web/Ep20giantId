@@ -871,6 +871,8 @@ export function OrderListWithTabs({ defaultTab = 'NP', userRole }: OrderListWith
             orderNo: activeOrder.orderNo,
             orderSeq: activeOrder.orderSeq,
             vendor: activeOrder.vendorName,
+            vendorCode: activeOrder.vendorCode,
+            purchaser: activeOrder.purchaser,
             status: activeOrder.status,
             vendorDeliveryDate: activeOrder.vendorDeliveryDate,
             scheduleLines: activeOrder.scheduleLines,

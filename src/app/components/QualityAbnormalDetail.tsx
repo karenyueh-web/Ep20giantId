@@ -392,44 +392,13 @@ function IconsSolidIcSolarPrinterMinimalisticBold() {
   );
 }
 
-// 聊天圖標
-function Stack() {
-  return (
-    <div className="absolute inset-[0.17%_0_3.69%_0]">
-      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 36.0001 34.6104">
-        <g>
-          <path clipRule="evenodd" d={svgPaths.p394a5c00} fill="url(#paint0_linear_87_21242)" fillRule="evenodd" />
-          <path clipRule="evenodd" d={svgPaths.p24400500} fill="url(#paint1_linear_87_21242)" fillRule="evenodd" />
-          <g opacity="0.48">
-            <path clipRule="evenodd" d={svgPaths.p9c7a500} fill="var(--fill-0, #006C9C)" fillRule="evenodd" />
-            <path clipRule="evenodd" d={svgPaths.p93aab80} fill="var(--fill-0, #006C9C)" fillRule="evenodd" />
-            <path clipRule="evenodd" d={svgPaths.p824e980} fill="var(--fill-0, #006C9C)" fillRule="evenodd" />
-          </g>
-          <g>
-            <path d={svgPaths.p3cf27300} fill="var(--fill-0, white)" />
-            <path d={svgPaths.p34712180} fill="var(--fill-0, white)" />
-            <path d={svgPaths.p3c272500} fill="var(--fill-0, white)" />
-          </g>
-        </g>
-        <defs>
-          <linearGradient gradientUnits="userSpaceOnUse" id="paint0_linear_87_21242" x1="12.2341" x2="36.0001" y1="10.8444" y2="34.6104">
-            <stop stopColor="#77ED8B" />
-            <stop offset="1" stopColor="#22C55E" />
-          </linearGradient>
-          <linearGradient gradientUnits="userSpaceOnUse" id="paint1_linear_87_21242" x1="0" x2="28.9534" y1="0.00021312" y2="28.9537">
-            <stop stopColor="#00B8D9" />
-            <stop offset="1" stopColor="#006C9C" />
-          </linearGradient>
-        </defs>
-      </svg>
-    </div>
-  );
-}
-
+// 聊天圖標（Lucide Outline 風格）
 function IconsNotificationsIcChat() {
   return (
-    <div className="relative shrink-0 size-[36px] cursor-pointer hover:opacity-80">
-      <Stack />
+    <div className="flex items-center justify-center shrink-0 size-[36px] cursor-pointer hover:opacity-80">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#637381" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
+      </svg>
     </div>
   );
 }

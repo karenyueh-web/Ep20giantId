@@ -9,6 +9,8 @@ import type { CorrectionOrderRow } from './OrderStoreContext';
 import type { ScheduleLine } from './AdvancedOrderTable';
 import { CorrectionDetailPage } from './CorrectionDetailPage';
 import warnSvgPaths from '@/imports/svg-1p5cfw3cmy';
+import { useChatStore, getChatCandidates, type ChatRoom } from './ChatStoreContext';
+import { ChatSelectOverlay, FloatingChatPanel } from './FloatingChatPanel';
 
 const STATUS_LABEL_MAP: Record<string, string> = {
   'NP': '未處理(NP)',
@@ -210,32 +212,9 @@ function AdjustOrderForm({ onCancel, onConfirm, orderSeq, defaultDate, hideRejec
       <div className="flex justify-between items-center mb-[16px] flex-shrink-0">
         <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[28px] text-[#1c252e] text-[18px]">請選擇異動原因</p>
         <div className="flex gap-[12px] items-center cursor-pointer hover:opacity-70">
-          <div className="relative size-[36px]">
-            <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 36.0001 34.6104">
-              <g>
-                <path clipRule="evenodd" d={adjustSvgPaths.p394a5c00} fill="url(#paint0_linear_41_6249)" fillRule="evenodd" />
-                <path clipRule="evenodd" d={adjustSvgPaths.p24400500} fill="url(#paint1_linear_41_6249)" fillRule="evenodd" />
-                <g opacity="0.48">
-                  <path clipRule="evenodd" d={adjustSvgPaths.p9c7a500} fill="#006C9C" fillRule="evenodd" />
-                  <path clipRule="evenodd" d={adjustSvgPaths.p93aab80} fill="#006C9C" fillRule="evenodd" />
-                  <path clipRule="evenodd" d={adjustSvgPaths.p824e980} fill="#006C9C" fillRule="evenodd" />
-                </g>
-                <g>
-                  <path d={adjustSvgPaths.p3cf27300} fill="white" />
-                  <path d={adjustSvgPaths.p34712180} fill="white" />
-                  <path d={adjustSvgPaths.p3c272500} fill="white" />
-                </g>
-              </g>
-              <defs>
-                <linearGradient gradientUnits="userSpaceOnUse" id="paint0_linear_41_6249" x1="12.2341" x2="36.0001" y1="10.8444" y2="34.6104">
-                  <stop stopColor="#77ED8B" />
-                  <stop offset="1" stopColor="#22C55E" />
-                </linearGradient>
-                <linearGradient gradientUnits="userSpaceOnUse" id="paint1_linear_41_6249" x1="0" x2="28.9534" y1="0.000213118" y2="28.9537">
-                  <stop stopColor="#00B8D9" />
-                  <stop offset="1" stopColor="#006C9C" />
-                </linearGradient>
-              </defs>
+          <div className="flex items-center justify-center size-[36px]">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#637381" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
             </svg>
           </div>
           <p className="[text-decoration-skip-ink:none] decoration-solid font-['Roboto:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[32px] text-[#005eb8] text-[16px] underline" style={{ fontVariationSettings: "'wdth' 100" }}>
@@ -670,6 +649,7 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
   const [showForceCloseConfirm, setShowForceCloseConfirm] = useState(false); // 二次確認彈窗
   const [showOrderHistory, setShowOrderHistory] = useState(false);
   const [showSelectPerson, setShowSelectPerson] = useState(false); // 控制是否顯示選擇人員彈出框
+  const [showMore, setShowMore] = useState(false); // 控制 more 展開
 
   // ► 單據在提交採購(NP/V→B)或退回廠商(B→V)後開啟時，自動展開歷程面板
   // V 狀態：最新歷程含「退回廠商」→ 採購退回，廠商需看原因
@@ -717,11 +697,33 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
   const [showAddLineWarning, setShowAddLineWarning] = useState(false);
   const [pendingAddUid, setPendingAddUid] = useState<number | null>(null);
 
-  // 點擊聊天icon（待重建 Chat 功能後重接）
+  // ── 聊天串通 ──────────────────────────────────────────────────────────────────
+  const chatStore = useChatStore();
+  const [showChatSelect, setShowChatSelect] = useState(false);
+
   const handleChatIconClick = () => {
-    if (chatIconRef.current) {
-      setShowSelectPerson(true);
+    // 直接用 orderData（prop）取 vendorCode / purchaser，確保有值
+    const candidates = getChatCandidates(
+      userRole,
+      orderData?.vendorCode,
+      orderData?.purchaser,
+    );
+    // 若已有與預帶第一位的現有對話，直接開啟
+    if (candidates.length > 0) {
+      const existingRoom = chatStore.rooms.find(
+        r => r.type === 'direct' && r.members[0]?.id === candidates[0].id
+      );
+      if (existingRoom) {
+        chatStore.openFloating(existingRoom.id);
+        return;
+      }
     }
+    setShowChatSelect(true);
+  };
+
+  const handleChatCreateRoom = (room: ChatRoom) => {
+    chatStore.addRoom(room);
+    chatStore.openFloating(room.id);
   };
 
   // ── 可編輯排程：初始化（當訂單切換時重設）────────────────────────────────────
@@ -1066,34 +1068,11 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
                     {/* 聊天Icon */}
                     <div
                       ref={chatIconRef}
-                      className="relative size-[36px] cursor-pointer hover:opacity-70 transition-opacity"
+                      className="flex items-center justify-center size-[36px] cursor-pointer hover:opacity-70 transition-opacity"
                       onClick={handleChatIconClick}
                     >
-                      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 36.0001 34.6104">
-                        <g>
-                          <path clipRule="evenodd" d={svgPaths.p394a5c00} fill="url(#paint0_linear_chat_ret)" fillRule="evenodd" />
-                          <path clipRule="evenodd" d={svgPaths.p24400500} fill="url(#paint1_linear_chat_ret)" fillRule="evenodd" />
-                          <g opacity="0.48">
-                            <path clipRule="evenodd" d={svgPaths.p9c7a500} fill="#006C9C" fillRule="evenodd" />
-                            <path clipRule="evenodd" d={svgPaths.p93aab80} fill="#006C9C" fillRule="evenodd" />
-                            <path clipRule="evenodd" d={svgPaths.p824e980} fill="#006C9C" fillRule="evenodd" />
-                          </g>
-                          <g>
-                            <path d={svgPaths.p3cf27300} fill="white" />
-                            <path d={svgPaths.p34712180} fill="white" />
-                            <path d={svgPaths.p3c272500} fill="white" />
-                          </g>
-                        </g>
-                        <defs>
-                          <linearGradient gradientUnits="userSpaceOnUse" id="paint0_linear_chat_ret" x1="12.2341" x2="36.0001" y1="10.8444" y2="34.6104">
-                            <stop stopColor="#77ED8B" />
-                            <stop offset="1" stopColor="#22C55E" />
-                          </linearGradient>
-                          <linearGradient gradientUnits="userSpaceOnUse" id="paint1_linear_chat_ret" x1="0" x2="28.9534" y1="0.00021312" y2="28.9537">
-                            <stop stopColor="#00B8D9" />
-                            <stop offset="1" stopColor="#006C9C" />
-                          </linearGradient>
-                        </defs>
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#637381" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
                       </svg>
                     </div>
                     {/* 歷程 */}
@@ -1152,34 +1131,11 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
                     {/* 聊天Icon */}
                     <div
                       ref={chatIconRef}
-                      className="relative size-[36px] cursor-pointer hover:opacity-70 transition-opacity"
+                      className="flex items-center justify-center size-[36px] cursor-pointer hover:opacity-70 transition-opacity"
                       onClick={handleChatIconClick}
                     >
-                      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 36.0001 34.6104">
-                        <g>
-                          <path clipRule="evenodd" d={svgPaths.p394a5c00} fill="url(#paint0_linear_chat_fc)" fillRule="evenodd" />
-                          <path clipRule="evenodd" d={svgPaths.p24400500} fill="url(#paint1_linear_chat_fc)" fillRule="evenodd" />
-                          <g opacity="0.48">
-                            <path clipRule="evenodd" d={svgPaths.p9c7a500} fill="#006C9C" fillRule="evenodd" />
-                            <path clipRule="evenodd" d={svgPaths.p93aab80} fill="#006C9C" fillRule="evenodd" />
-                            <path clipRule="evenodd" d={svgPaths.p824e980} fill="#006C9C" fillRule="evenodd" />
-                          </g>
-                          <g>
-                            <path d={svgPaths.p3cf27300} fill="white" />
-                            <path d={svgPaths.p34712180} fill="white" />
-                            <path d={svgPaths.p3c272500} fill="white" />
-                          </g>
-                        </g>
-                        <defs>
-                          <linearGradient gradientUnits="userSpaceOnUse" id="paint0_linear_chat_fc" x1="12.2341" x2="36.0001" y1="10.8444" y2="34.6104">
-                            <stop stopColor="#77ED8B" />
-                            <stop offset="1" stopColor="#22C55E" />
-                          </linearGradient>
-                          <linearGradient gradientUnits="userSpaceOnUse" id="paint1_linear_chat_fc" x1="0" x2="28.9534" y1="0.00021312" y2="28.9537">
-                            <stop stopColor="#00B8D9" />
-                            <stop offset="1" stopColor="#006C9C" />
-                          </linearGradient>
-                        </defs>
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#637381" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
                       </svg>
                     </div>
                     {/* 歷程 */}
@@ -1338,34 +1294,11 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
                     {!hideChatIcon && !isReadOnly && (
                       <div
                         ref={chatIconRef}
-                        className="relative size-[36px] cursor-pointer hover:opacity-70 transition-opacity"
+                        className="flex items-center justify-center size-[36px] cursor-pointer hover:opacity-70 transition-opacity"
                         onClick={handleChatIconClick}
                       >
-                        <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 36.0001 34.6104">
-                          <g>
-                            <path clipRule="evenodd" d={svgPaths.p394a5c00} fill="url(#paint0_linear_chat)" fillRule="evenodd" />
-                            <path clipRule="evenodd" d={svgPaths.p24400500} fill="url(#paint1_linear_chat)" fillRule="evenodd" />
-                            <g opacity="0.48">
-                              <path clipRule="evenodd" d={svgPaths.p9c7a500} fill="#006C9C" fillRule="evenodd" />
-                              <path clipRule="evenodd" d={svgPaths.p93aab80} fill="#006C9C" fillRule="evenodd" />
-                              <path clipRule="evenodd" d={svgPaths.p824e980} fill="#006C9C" fillRule="evenodd" />
-                            </g>
-                            <g>
-                              <path d={svgPaths.p3cf27300} fill="white" />
-                              <path d={svgPaths.p34712180} fill="white" />
-                              <path d={svgPaths.p3c272500} fill="white" />
-                            </g>
-                          </g>
-                          <defs>
-                            <linearGradient gradientUnits="userSpaceOnUse" id="paint0_linear_chat" x1="12.2341" x2="36.0001" y1="10.8444" y2="34.6104">
-                              <stop stopColor="#77ED8B" />
-                              <stop offset="1" stopColor="#22C55E" />
-                            </linearGradient>
-                            <linearGradient gradientUnits="userSpaceOnUse" id="paint1_linear_chat" x1="0" x2="28.9534" y1="0.00021312" y2="28.9537">
-                              <stop stopColor="#00B8D9" />
-                              <stop offset="1" stopColor="#006C9C" />
-                            </linearGradient>
-                          </defs>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#637381" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
                         </svg>
                       </div>
                     )}
@@ -1893,6 +1826,18 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
           </div>
         );
       })()}
+
+      {/* 聊天選人 Overlay */}
+      {showChatSelect && (
+        <ChatSelectOverlay
+          candidates={getChatCandidates(userRole, orderData?.vendorCode, orderData?.purchaser)}
+          userRole={userRole}
+          currentVendorCode={orderData?.vendorCode}
+          onClose={() => setShowChatSelect(false)}
+          onCreateRoom={handleChatCreateRoom}
+        />
+      )}
+
     </>
   );
 }

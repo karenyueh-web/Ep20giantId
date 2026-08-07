@@ -47,6 +47,8 @@ import { pageConfig } from '@/app/config/pageConfig';
 import { SidebarProvider } from '@/app/components/SidebarContext';
 import { LanguageProvider } from '@/app/components/LanguageContext';
 import { OrderStoreProvider } from '@/app/components/OrderStoreContext';
+import { ChatStoreProvider } from '@/app/components/ChatStoreContext';
+import { FloatingChatPanel } from '@/app/components/FloatingChatPanel';
 
 export type UserRole = 'vendor' | 'procurement' | 'giant';
 
@@ -560,19 +562,21 @@ export default function App() {
     return (
       <LanguageProvider>
         <OrderStoreProvider>
-          <div className="flex items-center justify-center min-h-screen bg-[#f9fafb]">
-            <div className="w-full h-full min-h-screen bg-white overflow-hidden">
-              {showRegisterSuccess ? (
-                <RegisterSuccessPage onBackToLogin={handleBackToLogin} />
-              ) : showRegister ? (
-                <RegisterPage onBackToLogin={handleBackToLogin} onRegisterSuccess={handleRegisterSuccess} />
-              ) : showForgotPassword ? (
-                <ForgotPasswordPage onBackToLogin={handleBackToLogin} onGoToRegister={handleGoToRegisterFromForgot} />
-              ) : (
-                <LoginPage onLoginSuccess={handleLoginSuccess} onRegisterClick={handleRegisterClick} onForgotPassword={handleForgotPasswordClick} />
-              )}
+          <ChatStoreProvider>
+            <div className="flex items-center justify-center min-h-screen bg-[#f9fafb]">
+              <div className="w-full h-full min-h-screen bg-white overflow-hidden">
+                {showRegisterSuccess ? (
+                  <RegisterSuccessPage onBackToLogin={handleBackToLogin} />
+                ) : showRegister ? (
+                  <RegisterPage onBackToLogin={handleBackToLogin} onRegisterSuccess={handleRegisterSuccess} />
+                ) : showForgotPassword ? (
+                  <ForgotPasswordPage onBackToLogin={handleBackToLogin} onGoToRegister={handleGoToRegisterFromForgot} />
+                ) : (
+                  <LoginPage onLoginSuccess={handleLoginSuccess} onRegisterClick={handleRegisterClick} onForgotPassword={handleForgotPasswordClick} />
+                )}
+              </div>
             </div>
-          </div>
+          </ChatStoreProvider>
         </OrderStoreProvider>
       </LanguageProvider>
     );
@@ -581,11 +585,15 @@ export default function App() {
   return (
     <LanguageProvider>
       <OrderStoreProvider>
-        <SidebarProvider>
-          <div className={`w-full min-h-screen ${userRole === 'procurement' ? 'procurement-theme bg-white' : 'bg-[#f9fafb]'}`}>
-            {renderPage()}
-          </div>
-        </SidebarProvider>
+        <ChatStoreProvider>
+          <SidebarProvider>
+            <div className={`w-full min-h-screen ${userRole === 'procurement' ? 'procurement-theme bg-white' : 'bg-[#f9fafb]'}`}>
+              {renderPage()}
+              {/* 全局浮動聊天 Panel（任何頁面都能顯示）*/}
+              <FloatingChatPanel onPageChange={handlePageChange} userRole={userRole} />
+            </div>
+          </SidebarProvider>
+        </ChatStoreProvider>
       </OrderStoreProvider>
     </LanguageProvider>
   );

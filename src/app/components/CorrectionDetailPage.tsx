@@ -9,6 +9,8 @@ import { useOrderStore, nowDateStr, operatorByRole } from './OrderStoreContext';
 import type { HistoryEntry, SavedDeliveryRow } from './OrderStoreContext';
 import { OrderHistory } from './OrderHistory';
 import { useActionPermission } from '@/app/hooks/useActionPermission';
+import { useChatStore, getChatCandidates, type ChatRoom } from './ChatStoreContext';
+import { ChatSelectOverlay, FloatingChatPanel } from './FloatingChatPanel';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface DeliveryRow {
@@ -141,28 +143,11 @@ function makeInitialSplitRows(order: OrderRow): DeliveryRow[] {
   ];
 }
 
-// ── Gradient chat icon ─────────────────────────────────────────────────────────
+// ── Chat icon (Lucide Outline 風格) ─────────────────────────────────────────────────────
 function ChatIcon() {
   return (
-    <svg width="36" height="35" viewBox="0 0 24 23.0734" fill="none">
-      <defs>
-        <linearGradient id="cdp1" x1="8.156" x2="24" y1="7.229" y2="23.073" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#77ED8B" /><stop offset="1" stopColor="#22C55E" />
-        </linearGradient>
-        <linearGradient id="cdp2" x1="0" x2="19.302" y1="0" y2="19.302" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#00B8D9" /><stop offset="1" stopColor="#006C9C" />
-        </linearGradient>
-      </defs>
-      <path clipRule="evenodd" d={svgRao.p3a4a2480} fill="url(#cdp1)" fillRule="evenodd" />
-      <path clipRule="evenodd" d={svgRao.p24d6df00} fill="url(#cdp2)" fillRule="evenodd" />
-      <g opacity="0.48">
-        <path clipRule="evenodd" d={svgRao.p1c344620} fill="#006C9C" fillRule="evenodd" />
-        <path clipRule="evenodd" d={svgRao.p356ce880} fill="#006C9C" fillRule="evenodd" />
-        <path clipRule="evenodd" d={svgRao.p1f1f1b00} fill="#006C9C" fillRule="evenodd" />
-      </g>
-      <path d={svgRao.p2d7e32c0} fill="white" />
-      <path d={svgRao.p26d26b00} fill="white" />
-      <path d={svgRao.p355dbd80} fill="white" />
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#637381" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
     </svg>
   );
 }
@@ -1064,8 +1049,8 @@ export function CorrectionDetailPage({
               onClick={e => { e.stopPropagation(); setShowHistory(true); }}
               className="content-stretch flex gap-[12px] items-center relative shrink-0 hover:opacity-80 transition-opacity"
             >
-              <div className="relative shrink-0 size-[36px]">
-                <div className="absolute inset-[0.17%_0_3.69%_0]"><ChatIcon /></div>
+              <div className="flex items-center justify-center shrink-0 size-[36px]">
+                <ChatIcon />
               </div>
               <p className="font-['Roboto:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[32px] relative shrink-0 text-[#005eb8] text-[16px] underline whitespace-nowrap" style={{ fontVariationSettings: "'wdth' 100" }}>歷程</p>
             </button>

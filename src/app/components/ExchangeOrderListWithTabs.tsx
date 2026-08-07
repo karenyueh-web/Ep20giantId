@@ -510,7 +510,10 @@ export function ExchangeOrderListWithTabs({ userRole }: { userRole?: string }) {
           onClose={handleCloseDetail}
           orderData={selectedOrder ? {
             orderNo: selectedOrder.orderNo, orderSeq: selectedOrder.orderSeq,
-            vendor: selectedOrder.vendorName, status: selectedOrder.status,
+            vendor: selectedOrder.vendorName,
+            vendorCode: selectedOrder.vendorCode,
+            purchaser: selectedOrder.purchaser,
+            status: selectedOrder.status,
             orderQty: selectedOrder.orderQty,
             comparePrice: selectedOrder.comparePrice,
             unit: selectedOrder.unit,

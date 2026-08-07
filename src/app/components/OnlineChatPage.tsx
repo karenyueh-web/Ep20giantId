@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { chatRooms, availableMembers, type ChatRoom, type ChatMessage, type ChatMember } from '@/app/data/chatData';
+import { type ChatRoom, type ChatMessage, type ChatMember, availableMembers } from '@/app/data/chatData';
+import { useChatStore } from './ChatStoreContext';
 import { ResponsivePageLayout } from './ResponsivePageLayout';
 import { SearchField } from './SearchField';
 import { BaseOverlay } from './BaseOverlay';
@@ -27,7 +28,6 @@ function HighlightText({ text, keyword }: { text: string; keyword: string }) {
   }
 }
 
-// ── Props ──────────────────────────────────────────────────────────────────────
 interface OnlineChatPageProps {
   currentPage: PageType;
   onPageChange: (page: PageType) => void;
@@ -841,8 +841,10 @@ function createImageMessage(file: File): Promise<ChatMessage> {
 
 // ── 主元件 ────────────────────────────────────────────────────────────────────
 export function OnlineChatPage({ currentPage, onPageChange, onLogout, userRole }: OnlineChatPageProps) {
-  const [rooms, setRooms] = useState<ChatRoom[]>(chatRooms);
-  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
+  const chatStore = useChatStore();
+  const allRooms = chatStore.rooms;
+
+  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(() => chatStore.activeRoomId);
   const [listSearch, setListSearch] = useState('');
   const [panelWidth, setPanelWidth] = useState(300);
   const isResizing = useRef(false);
@@ -853,24 +855,22 @@ export function OnlineChatPage({ currentPage, onPageChange, onLogout, userRole }
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [pendingImages, setPendingImages] = useState<string[]>([]);
 
-  // 釘選狀態（localStorage 持久化）
-  const [pinnedIds, setPinnedIds] = useState<Set<string>>(() => {
-    try {
-      const raw = localStorage.getItem('chat_pinned_ids');
-      return new Set(raw ? JSON.parse(raw) : []);
-    } catch { return new Set(); }
-  });
+  // 釘選狀態（來自 ChatStoreContext）
+  const pinnedIds = chatStore.pinnedIds;
 
   // 右鍵選單狀態
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
 
+  // 進入頁面時：自動選中 activeRoomId（從浮動 panel 跳過來）
+  useEffect(() => {
+    if (chatStore.activeRoomId) {
+      setSelectedRoomId(chatStore.activeRoomId);
+      chatStore.setActiveRoomId(null);
+    }
+  }, [chatStore.activeRoomId]);
+
   const togglePin = (roomId: string) => {
-    setPinnedIds(prev => {
-      const next = new Set(prev);
-      next.has(roomId) ? next.delete(roomId) : next.add(roomId);
-      localStorage.setItem('chat_pinned_ids', JSON.stringify([...next]));
-      return next;
-    });
+    chatStore.togglePin(roomId);
     setContextMenu(null);
   };
 
@@ -898,10 +898,9 @@ export function OnlineChatPage({ currentPage, onPageChange, onLogout, userRole }
     return bTime.localeCompare(aTime);
   };
 
-  const allFiltered = rooms.filter(r => {
+  const allFiltered = allRooms.filter(r => {
     const q = listSearch.toLowerCase();
     if (!q) return true;
-    // 搜尋：房間名稱、成員姓名/公司/email、訊息內文
     return (
       r.name.toLowerCase().includes(q) ||
       r.members.some(m =>
@@ -927,16 +926,11 @@ export function OnlineChatPage({ currentPage, onPageChange, onLogout, userRole }
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [selectedRoomId, filteredMessages.length]);
 
-  // 進入聊天室 → 清除未讀，並通知 NavigationList 更新 badge
+  // 進入聊天室 → 清除未讀
   const handleSelectRoom = useCallback((roomId: string) => {
     setSelectedRoomId(roomId);
-    setRooms(prev => {
-      const updated = prev.map(r => r.id === roomId ? { ...r, unreadCount: 0 } : r);
-      const totalUnread = updated.reduce((sum, r) => sum + r.unreadCount, 0);
-      window.dispatchEvent(new CustomEvent('chatReadUpdated', { detail: { count: totalUnread } }));
-      return updated;
-    });
-  }, []);
+    chatStore.markRead(roomId);
+  }, [chatStore]);
 
   // 將 File[] 轉為 object URL 并加入暂存區（不直接送出）
   const stageImages = useCallback((files: File[]) => {
@@ -946,44 +940,13 @@ export function OnlineChatPage({ currentPage, onPageChange, onLogout, userRole }
     setPendingImages(prev => [...prev, ...urls]);
   }, []);
 
-  // 發送訊息（文字 + 暂存圖片一起送出）
+  // 發送訊息（文字 + 暫存圖片一起送出）
   const handleSend = () => {
     if (!selectedRoom) return;
     const hasText = messageText.trim().length > 0;
     const hasImages = pendingImages.length > 0;
     if (!hasText && !hasImages) return;
-
-    const time = new Date().toLocaleString('zh-TW', {
-      year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit',
-    });
-    const newMessages: ChatMessage[] = [];
-
-    if (hasImages) {
-      newMessages.push({
-        id: `m-${Date.now()}-img`,
-        senderId: 'me',
-        type: 'image',
-        imageUrls: [...pendingImages],
-        time,
-      });
-    }
-    if (hasText) {
-      newMessages.push({
-        id: `m-${Date.now()}-txt`,
-        senderId: 'me',
-        type: 'text',
-        text: messageText.trim(),
-        time,
-      });
-    }
-
-    const lastMsg = hasText ? messageText.trim() : `[圖片 ${pendingImages.length} 張]`;
-    setRooms(prev => prev.map(r =>
-      r.id === selectedRoom.id
-        ? { ...r, messages: [...r.messages, ...newMessages], lastMessage: lastMsg, lastTime: '剛剛' }
-        : r
-    ));
+    chatStore.sendMessage(selectedRoom.id, messageText.trim(), hasImages ? pendingImages : undefined);
     setMessageText('');
     setPendingImages([]);
   };
@@ -1040,7 +1003,7 @@ export function OnlineChatPage({ currentPage, onPageChange, onLogout, userRole }
 
   // 建立新聊天室
   const handleCreateRoom = (room: ChatRoom) => {
-    setRooms(prev => [room, ...prev]);
+    chatStore.addRoom(room);
     setSelectedRoomId(room.id);
   };
 
