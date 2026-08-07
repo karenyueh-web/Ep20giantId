@@ -445,46 +445,121 @@ function EmptyState() {
 
 // ── CreateChatOverlay（建立新對話 / 群組）────────────────────────────────────
 function CreateChatOverlay({
-  onClose, onCreateRoom,
+  onClose, onCreateRoom, userRole, currentVendorCode,
 }: {
   onClose: () => void;
   onCreateRoom: (room: ChatRoom) => void;
+  /** 登入者身份：'giant' 可見所有人；'vendor' 只能見巨大＋自家廠商 */
+  userRole?: string;
+  /** 廠商帳號的自家廠商編號（vendorCode），用來過濾同廠商人員 */
+  currentVendorCode?: string;
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMembers, setSelectedMembers] = useState<ChatMember[]>([]);
+  /** 群組名稱確認彈窗（按下「建立群組」才顯示） */
+  const [showGroupNameStep, setShowGroupNameStep] = useState(false);
   const [groupName, setGroupName] = useState('');
-
-  const filtered = availableMembers.filter(m => {
-    const q = searchQuery.toLowerCase();
-    return (
-      m.name.toLowerCase().includes(q) ||
-      m.company.toLowerCase().includes(q) ||
-      m.email.toLowerCase().includes(q)
-    );
-  });
-
-  const toggleMember = (member: ChatMember) => {
-    setSelectedMembers(prev =>
-      prev.find(m => m.id === member.id)
-        ? prev.filter(m => m.id !== member.id)
-        : [...prev, member]
-    );
-  };
-
   const [groupNameError, setGroupNameError] = useState(false);
 
-  const handleCreate = () => {
+  // ── 人員清單過濾 ──
+  // 搜尋框為空時不顯示清單（需先輸入才出現結果）
+  const filtered = searchQuery.trim()
+    ? availableMembers.filter(m => {
+        // 角色可見範圍過濾
+        if (userRole === 'vendor') {
+          const isSameVendor = currentVendorCode ? m.vendorCode === currentVendorCode : false;
+          if (m.role !== 'giant' && !isSameVendor) return false;
+        }
+        // 關鍵字過濾
+        const q = searchQuery.toLowerCase();
+        return (
+          m.name.toLowerCase().includes(q) ||
+          m.company.toLowerCase().includes(q) ||
+          m.email.toLowerCase().includes(q)
+        );
+      })
+    : [];
+
+  const [vendorConflictMsg, setVendorConflictMsg] = useState<string | null>(null);
+
+  /** 取得目前已選清單中唯一的廠商 vendorCode（若有廠商成員）*/
+  const selectedVendorCode = selectedMembers.find(m => m.role === 'vendor')?.vendorCode ?? null;
+
+  /**
+   * 判斷某成員是否因廠商衝突而不可選：
+   * - 自己是廠商 AND 目前已有另一家廠商的成員在選單中
+   */
+  const isVendorConflict = (member: ChatMember) =>
+    member.role === 'vendor' &&
+    selectedVendorCode !== null &&
+    member.vendorCode !== selectedVendorCode;
+
+  const toggleMember = (member: ChatMember) => {
+    // 已選取 → 直接取消選取
+    if (selectedMembers.find(m => m.id === member.id)) {
+      setSelectedMembers(prev => prev.filter(m => m.id !== member.id));
+      setVendorConflictMsg(null);
+      return;
+    }
+    // 廠商衝突 → 阻止並顯示提示
+    if (isVendorConflict(member)) {
+      setVendorConflictMsg('一個群組只能包含同一家廠商的成員');
+      setTimeout(() => setVendorConflictMsg(null), 3000);
+      return;
+    }
+    setSelectedMembers(prev => [...prev, member]);
+    setVendorConflictMsg(null);
+  };
+
+  /** 取得 chip 顯示文字：巨大-XXX 或 廠商簡稱-XXX */
+  const getChipLabel = (m: ChatMember) => {
+    if (m.role === 'giant') return `巨大-${m.name}`;
+    const shortCompany = m.company.length > 6 ? m.company.slice(0, 6) : m.company;
+    return `${shortCompany}-${m.name}`;
+  };
+
+  /** chip 配色：巨大→藍色、廠商→紫色 */
+  const getChipStyle = (m: ChatMember) => m.role === 'giant'
+    ? { bg: 'rgba(0,94,184,0.08)', border: 'rgba(0,94,184,0.2)', text: '#005eb8', hover: 'rgba(0,94,184,0.15)', stroke: '#005eb8' }
+    : { bg: 'rgba(107,70,193,0.08)', border: 'rgba(107,70,193,0.2)', text: '#6b46c1', hover: 'rgba(107,70,193,0.15)', stroke: '#6b46c1' };
+
+  const isGroup = selectedMembers.length > 1;
+
+  /** 按下底部按鈕 */
+  const handleClickAction = () => {
     if (selectedMembers.length === 0) return;
-    const isGroup = selectedMembers.length > 1;
-    // 群組名稱必填
-    if (isGroup && !groupName.trim()) {
+    if (isGroup) {
+      // 多選 → 跳出群組名稱輸入步驟
+      setShowGroupNameStep(true);
+    } else {
+      // 單選 → 直接建立一對一對話
+      const newRoom: ChatRoom = {
+        id: `room-${Date.now()}`,
+        type: 'direct',
+        name: selectedMembers[0].name,
+        avatar: selectedMembers[0].avatar,
+        avatarBg: selectedMembers[0].avatarBg,
+        members: selectedMembers,
+        lastMessage: '',
+        lastTime: '剛剛',
+        unreadCount: 0,
+        messages: [],
+      };
+      onCreateRoom(newRoom);
+      onClose();
+    }
+  };
+
+  /** 群組名稱步驟：確認建立 */
+  const handleConfirmGroup = () => {
+    if (!groupName.trim()) {
       setGroupNameError(true);
       return;
     }
     const newRoom: ChatRoom = {
       id: `room-${Date.now()}`,
-      type: isGroup ? 'group' : 'direct',
-      name: isGroup ? groupName.trim() : selectedMembers[0].name,
+      type: 'group',
+      name: groupName.trim(),
       avatar: selectedMembers[0].avatar,
       avatarBg: selectedMembers[0].avatarBg,
       members: selectedMembers,
@@ -497,7 +572,64 @@ function CreateChatOverlay({
     onClose();
   };
 
-  const isGroup = selectedMembers.length > 1;
+  // ── 群組名稱輸入步驟（覆蓋在同一個 overlay 上）──
+  if (showGroupNameStep) {
+    return (
+      <BaseOverlay onClose={onClose} maxWidth="520px" maxHeight="360px">
+        <div className="relative flex flex-col h-full">
+          {/* 返回按鈕 */}
+          <button
+            className="absolute left-[20px] top-[20px] z-10 cursor-pointer hover:opacity-70 transition-opacity flex items-center gap-[6px]"
+            onClick={() => { setShowGroupNameStep(false); setGroupNameError(false); }}
+          >
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path d="M12 4l-6 6 6 6" stroke="#637381" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+
+          <div className="shrink-0 pt-[58px] px-[32px] pb-[20px]">
+            <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[18px] text-[#1c252e] leading-[28px] mb-[4px]">
+              設定群組名稱
+            </p>
+            <p className="text-[13px] text-[#637381]">已選擇 {selectedMembers.length} 位成員</p>
+          </div>
+
+          {/* 群組名稱輸入 */}
+          <div className="shrink-0 px-[32px] pb-[16px]">
+            <label className="block mb-[6px] text-[12px] font-semibold" style={{ color: groupNameError ? '#ef4444' : '#637381' }}>
+              群組名稱（必填）
+            </label>
+            <input
+              autoFocus
+              type="text"
+              value={groupName}
+              onChange={e => { setGroupName(e.target.value); setGroupNameError(false); }}
+              onKeyDown={e => { if (e.key === 'Enter') handleConfirmGroup(); }}
+              placeholder="輸入群組名稱"
+              className={`w-full rounded-[8px] px-[14px] py-[12px] text-[14px] text-[#1c252e] outline-none bg-transparent placeholder:text-[#919eab] border ${groupNameError ? 'border-red-400' : 'border-[rgba(145,158,171,0.3)]'} focus:border-[#005eb8] transition-colors`}
+            />
+            {groupNameError && (
+              <p className="mt-[6px] text-[12px] text-red-500">請輸入群組名稱</p>
+            )}
+          </div>
+
+
+          {/* 確認建立按鈕 */}
+          <div className="shrink-0 px-[32px] pb-[24px] mt-auto">
+            <button
+              onClick={handleConfirmGroup}
+              className="w-full h-[44px] rounded-[8px] flex items-center justify-center font-['Public_Sans:Bold',sans-serif] font-bold text-[14px] text-white transition-colors"
+              style={{ backgroundColor: '#00559c' }}
+              onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#004680'; }}
+              onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#00559c'; }}
+            >
+              確認建立群組
+            </button>
+          </div>
+        </div>
+      </BaseOverlay>
+    );
+  }
 
   return (
     <BaseOverlay onClose={onClose} maxWidth="520px" maxHeight="600px">
@@ -521,23 +653,33 @@ function CreateChatOverlay({
           </p>
         </div>
 
-        {/* 已選成員 Tag chips */}
+        {/* 已選成員 Tag chips（帶身分識別） */}
         {selectedMembers.length > 0 && (
           <div className="shrink-0 px-[32px] pb-[12px] flex flex-wrap gap-[8px]">
             {selectedMembers.map(m => (
               <div
                 key={m.id}
-                className="flex items-center gap-[6px] bg-[rgba(0,94,184,0.08)] border border-[rgba(0,94,184,0.2)] rounded-[20px] pl-[10px] pr-[6px] h-[28px]"
+                style={{
+                  backgroundColor: getChipStyle(m).bg,
+                  borderColor: getChipStyle(m).border,
+                }}
+                className="flex items-center gap-[6px] border rounded-[20px] pl-[10px] pr-[6px] h-[28px]"
               >
-                <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-[#005eb8] leading-none">
-                  {m.name}
+                <span
+                  style={{ color: getChipStyle(m).text }}
+                  className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] leading-none"
+                >
+                  {getChipLabel(m)}
                 </span>
                 <button
                   onClick={() => toggleMember(m)}
-                  className="flex items-center justify-center w-[16px] h-[16px] rounded-full hover:bg-[rgba(0,94,184,0.15)] transition-colors"
+                  className="flex items-center justify-center w-[16px] h-[16px] rounded-full transition-colors"
+                  style={{ '--hover-bg': getChipStyle(m).hover } as React.CSSProperties}
+                  onMouseEnter={e => { e.currentTarget.style.backgroundColor = getChipStyle(m).hover; }}
+                  onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
                 >
                   <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                    <path d="M1 1l8 8M9 1L1 9" stroke="#005eb8" strokeWidth="1.5" strokeLinecap="round" />
+                    <path d="M1 1l8 8M9 1L1 9" stroke={getChipStyle(m).stroke} strokeWidth="1.5" strokeLinecap="round" />
                   </svg>
                 </button>
               </div>
@@ -554,39 +696,39 @@ function CreateChatOverlay({
           />
         </div>
 
-        {/* 群組名稱（選 2+ 人時顯示，必填）*/}
-        {isGroup && (
-          <div className="shrink-0 px-[32px] pb-[12px]">
-            <div className="relative w-full" style={{ minHeight: '54px' }}>
-              <div className={`absolute inset-0 pointer-events-none rounded-[8px] border border-solid ${groupNameError ? 'border-red-400' : 'border-[rgba(145,158,171,0.2)]'}`} />
-              <div className="absolute flex items-center left-[14px] px-[2px] top-[-5px] z-10">
-                <div className="absolute bg-white h-[2px] left-0 right-0 top-[5px]" />
-                <p style={{ fontSize: '12px', fontWeight: 600, color: groupNameError ? '#ef4444' : '#637381' }}>群組名稱（必填）</p>
-              </div>
-              <input
-                type="text"
-                value={groupName}
-                onChange={e => setGroupName(e.target.value)}
-                placeholder="輸入群組名稱"
-                className="w-full rounded-[8px] px-[14px] pt-[18px] pb-[10px] text-[14px] text-[#1c252e] outline-none bg-transparent placeholder:text-[#919eab]"
-              />
-            </div>
-          </div>
-        )}
-
-        {/* 人員列表 */}
+        {/* 人員列表：搜尋前顯示提示，搜尋後顯示結果 */}
         <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-[16px]">
-          {filtered.length === 0 ? (
+          {!searchQuery.trim() ? null : filtered.length === 0 ? (
             <p className="text-center text-[14px] text-[#919eab] py-[20px]">找不到相關人員</p>
           ) : (
-            filtered.map(member => {
+            <>
+              <p className="px-[16px] py-[8px] text-[12px] text-[#919eab] font-['Public_Sans:Regular',sans-serif]">
+                共 {filtered.length} 位
+              </p>
+              {/* 廠商衝突提示 */}
+              {vendorConflictMsg && (
+                <div className="mx-[16px] mb-[8px] px-[12px] py-[8px] rounded-[8px] bg-[#fff3cd] border border-[#ffc107] flex items-center gap-[8px]">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M8 1.5L1 14h14L8 1.5z" stroke="#d97706" strokeWidth="1.5" strokeLinejoin="round" />
+                    <path d="M8 6v4M8 11.5v.5" stroke="#d97706" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                  <span className="text-[12px] text-[#92400e] font-['Public_Sans:Regular',sans-serif]">{vendorConflictMsg}</span>
+                </div>
+              )}
+              {filtered.map(member => {
               const isSelected = !!selectedMembers.find(m => m.id === member.id);
+              const disabled = isVendorConflict(member);
               return (
                 <div
                   key={member.id}
-                  onClick={() => toggleMember(member)}
-                  className={`flex items-center gap-[12px] px-[16px] py-[12px] rounded-[8px] cursor-pointer transition-colors ${
-                    isSelected ? 'bg-[rgba(0,94,184,0.06)]' : 'hover:bg-[#f9fafb]'
+                  onClick={() => !disabled && toggleMember(member)}
+                  title={disabled ? '此群組已包含其他廠商成員，無法加入' : undefined}
+                  className={`flex items-center gap-[12px] px-[16px] py-[12px] rounded-[8px] transition-colors ${
+                    disabled
+                      ? 'opacity-40 cursor-not-allowed'
+                      : isSelected
+                        ? 'bg-[rgba(0,94,184,0.06)] cursor-pointer'
+                        : 'hover:bg-[#f9fafb] cursor-pointer'
                   }`}
                 >
                   <Avatar src={member.avatar} bg={member.avatarBg} name={member.name} size={44} online={member.isOnline} />
@@ -598,7 +740,7 @@ function CreateChatOverlay({
                       </p>
                     </div>
                     <p className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#637381] leading-[20px] truncate">
-                      {member.company} · {member.email}
+                      {member.email}
                     </p>
                   </div>
                   {/* 勾選 */}
@@ -608,19 +750,20 @@ function CreateChatOverlay({
                     {isSelected && (
                       <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                         <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
+                     </svg>
                     )}
                   </div>
                 </div>
               );
-            })
+              })}
+            </>
           )}
         </div>
 
         {/* 底部按鈕 */}
         <div className="shrink-0 px-[32px] py-[20px]">
           <button
-            onClick={handleCreate}
+            onClick={handleClickAction}
             disabled={selectedMembers.length === 0}
             className="w-full h-[44px] rounded-[8px] flex items-center justify-center font-['Public_Sans:Bold',sans-serif] font-bold text-[14px] text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             style={{ backgroundColor: '#00559c' }}
@@ -634,6 +777,7 @@ function CreateChatOverlay({
     </BaseOverlay>
   );
 }
+
 
 // ── 圖片放大 Overlay（含下載按鈕）────────────────────────────────────────────
 function ImagePreviewOverlay({ imageUrls, onClose }: { imageUrls: string[]; onClose: () => void }) {
@@ -1196,6 +1340,12 @@ export function OnlineChatPage({ currentPage, onPageChange, onLogout, userRole }
         <CreateChatOverlay
           onClose={() => setShowCreateOverlay(false)}
           onCreateRoom={handleCreateRoom}
+          userRole={userRole}
+          // 廠商帳號 mock 示範：以廠商編號 '0001000001'（久廣實業）為例
+          // 實際上線時應從登入 context 取得廠商編號
+          currentVendorCode={
+            userRole === 'vendor' ? '0001000001' : undefined
+          }
         />
       )}
       {previewImage && (

@@ -3,6 +3,8 @@ import imgAvatar1 from 'figma:asset/d7c38e4c2ec5583f5bcb8f33bbcadbadf4ceed61.png
 import imgAvatar2 from 'figma:asset/ba1f925e57c8f297bb26a2475302e1c715c37494.png';
 import imgAvatar3 from 'figma:asset/32f05a467d0a075d730fcf6e4e2e9902b921e1ea.png';
 import imgAvatar4 from 'figma:asset/267fe8c99db3e57af5fb08e1bedfbdb0788f011c.png';
+import { mockGiantAccounts } from './giantAccountData';
+import { MOCK_VENDORS } from './vendorData';
 
 // ── 型別定義 ──────────────────────────────────────────────────────────────────
 
@@ -12,6 +14,11 @@ export interface ChatMember {
   company: string;
   email: string;
   role: 'vendor' | 'giant';
+  /**
+   * 廠商帳號專用：所屬廠商編號（vendorCode），用於「自家廠商」過濾。
+   * 廠商帳號登入時，只能看到 role==='giant' 的人員 + vendorCode 與自身相同的廠商人員。
+   */
+  vendorCode?: string;
   avatar: string;
   avatarBg: string;
   isOnline: boolean;
@@ -59,49 +66,50 @@ export interface ChatConversation {
 }
 
 // ── 可搜尋人員清單（建立新對話用）────────────────────────────────────────────
+// 資料來源：mockGiantAccounts（巨大員工帳號）+ MOCK_VENDORS（廠商業務帳號）
+// giant 帳號可見：所有巨大員工 + 所有廠商的業務人員
+// vendor 帳號可見：所有巨大員工 + 同廠商編號(vendorCode)的業務人員
 
-export const availableMembers: ChatMember[] = [
-  {
-    id: 'giant-001',
-    name: '王小明',
-    company: '巨大機械',
-    email: 'ming.wang@giant.com.tw',
-    role: 'giant',
-    avatar: imgAvatar1,
-    avatarBg: '#ffdbde',
-    isOnline: true,
-  },
-  {
-    id: 'giant-002',
-    name: '李美玲',
-    company: '巨大機械',
-    email: 'meiling.li@giant.com.tw',
-    role: 'giant',
-    avatar: imgAvatar2,
-    avatarBg: '#f6d3bd',
-    isOnline: true,
-  },
-  {
-    id: 'giant-003',
-    name: '陳志豪',
-    company: '巨大機械',
-    email: 'zhihao.chen@giant.com.tw',
-    role: 'giant',
-    avatar: imgAvatar3,
-    avatarBg: '#fff2b9',
-    isOnline: false,
-  },
-  {
-    id: 'giant-004',
-    name: '張雅婷',
-    company: '巨大機械',
-    email: 'yating.chang@giant.com.tw',
-    role: 'giant',
-    avatar: imgAvatar4,
-    avatarBg: '#d6f5d6',
-    isOnline: true,
-  },
+// Avatar 輪替池（僅用於 mock 視覺展示）
+const AVATAR_POOL = [imgAvatar1, imgAvatar2, imgAvatar3, imgAvatar4];
+const BG_POOL = [
+  '#ffdbde', '#f6d3bd', '#fff2b9', '#d6f5d6',
+  '#dbeafe', '#fce7f3', '#ede9fe', '#d1fae5',
+  '#fef9c3', '#fee2e2', '#e0f2fe', '#cffafe',
 ];
+
+// 巨大員工 → ChatMember
+const giantMembers: ChatMember[] = mockGiantAccounts.map((acc, i) => ({
+  id: `giant-${acc.id}`,
+  name: acc.name,
+  company: '巨大機械',
+  email: acc.email,
+  role: 'giant' as const,
+  avatar: AVATAR_POOL[i % AVATAR_POOL.length],
+  avatarBg: BG_POOL[i % BG_POOL.length],
+  isOnline: acc.status === 'active',
+}));
+
+// 廠商業務人員 → ChatMember（依 MOCK_VENDORS 展開 salesNames）
+// 同一人名可能出現在多家廠商，以 `${vendor.code}-${idx}` 作為唯一 id
+const vendorMembers: ChatMember[] = MOCK_VENDORS.flatMap(vendor =>
+  vendor.salesNames.map((salesName, idx) => ({
+    id: `vendor-${vendor.code}-${idx}`,
+    name: salesName,
+    company: vendor.fullName,
+    email: `${salesName.toLowerCase().replace(/\s+/g, '.')}@${vendor.code}.ep`,
+    role: 'vendor' as const,
+    vendorCode: vendor.code,
+    avatar: AVATAR_POOL[(vendor.id + idx) % AVATAR_POOL.length],
+    avatarBg: BG_POOL[(vendor.id + idx) % BG_POOL.length],
+    isOnline: idx % 2 === 0,
+  }))
+);
+
+export const availableMembers: ChatMember[] = [...giantMembers, ...vendorMembers];
+
+
+
 
 // ── Mock 聊天室資料 ────────────────────────────────────────────────────────────
 

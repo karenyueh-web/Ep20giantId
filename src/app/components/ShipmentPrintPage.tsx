@@ -11,7 +11,7 @@ import QRCode from 'qrcode';
 import IconsSolidIcSolarMultipleForwardLeftBroken from '@/imports/IconsSolidIcSolarMultipleForwardLeftBroken';
 import type { ShipmentRow, ShipmentDetailItem } from './ShipmentListPage';
 import type { BoxLineRow } from './ShipmentShippingInquiryPage';
-import { MOCK_VENDORS } from './VendorManagementTable';
+import { MOCK_VENDORS } from '@/app/data/vendorData';
 import { INSPECTION_PART_SET } from './QualityOtherSettingsPage';
 
 // ── TAB 定義 ─────────────────────────────────────────────────────────────────

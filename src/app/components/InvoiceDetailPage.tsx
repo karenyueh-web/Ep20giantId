@@ -28,7 +28,7 @@ import {
 } from './invoiceStore';
 import { OrderHistory } from './OrderHistory';
 import type { HistoryEntry as OrderHistoryEntry } from './OrderStoreContext';
-import { MOCK_VENDORS } from './VendorManagementTable';
+import { MOCK_VENDORS } from '@/app/data/vendorData';
 import { TRACK_DATA } from './invoiceSettingsStore';
 
 // ── 從工廠稅率設定查詢適用稅率 ──────────────────────────────────────────────

@@ -11,7 +11,7 @@
 import { useState } from 'react';
 import IconsSolidIcSolarMultipleForwardLeftBroken from '@/imports/IconsSolidIcSolarMultipleForwardLeftBroken';
 import type { PartRecord, BrandSetting } from '@/app/components/partsMaintenanceData';
-import { MOCK_VENDORS } from '@/app/components/VendorManagementTable';
+import { MOCK_VENDORS } from '@/app/data/vendorData';
 import giantGroupLogo from '@/assets/giant-group-logo.png';
 
 // ── Giant Group Logo（使用真實圖片）─────────────────────────────────────────

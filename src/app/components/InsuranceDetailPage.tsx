@@ -11,7 +11,7 @@ import type { PageType } from './MainLayout';
 import type { UserRole } from '../App';
 import type { InsuranceRecord, InsuranceStatus, HistoryEntry } from './insuranceData';
 import { insuranceMockData } from './insuranceData';
-import { MOCK_VENDORS } from './VendorManagementTable';
+import { MOCK_VENDORS } from '@/app/data/vendorData';
 
 interface InsuranceDetailPageProps {
   record: InsuranceRecord;

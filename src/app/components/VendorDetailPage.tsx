@@ -6,7 +6,7 @@ import { SalesAccountForm } from './SalesAccountForm';
 import { SalesAccountDetailOverlay } from './SalesAccountDetailOverlay';
 import { VendorContactsForm } from './VendorContactsForm';
 import { ResponsivePageLayout } from './ResponsivePageLayout';
-import type { VendorData } from './VendorManagementTable';
+import type { VendorData } from '@/app/data/vendorData';
 
 interface VendorDetailPageProps {
   currentPage: PageType;

@@ -20,7 +20,7 @@ import {
   PURCHASE_ORG_OPTIONS,
   type PartRecord,
 } from './partsMaintenanceData';
-import { MOCK_VENDORS } from './VendorManagementTable';
+import { MOCK_VENDORS } from '@/app/data/vendorData';
 
 // ── 展開後的列資料型別（需有 id: number 供 StandardDataTable 使用）───────────
 interface QuoteFlatRow {
