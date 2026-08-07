@@ -6,8 +6,8 @@
 //   {can('create') && <button>新增公告</button>}
 //   {can('delete') && <Trash2 onClick={handleDelete} />}
 //
-// 特殊規則：
-//   - IT（giant-it）與 admin 角色 → 自動全開，不查任何設定
+// 機制：
+//   - 所有角色（包含 IT）一律查詢角色權限設定頁的設定
 //   - 不在 FEATURE_ACTION_CONFIG 的功能 → can() 永遠回傳 true（不需 action 控制）
 //   - 沒有 roleId → can() 回傳 false（防禦性預設）
 
@@ -19,18 +19,19 @@ import {
 } from '../config/actionPermissionStore';
 import { getFeatureActionConfig } from '../config/actionPermissionConfig';
 
-// ─── 預設全開的角色 id（不受設定限制）─────────────────────────────────────────
-const UNRESTRICTED_ROLE_IDS: string[] = [
-  'giant-it',
-  'giant-developer',
-];
+// ─── 大類型識別（非實際角色 id）────────────────────────────────────────────────
+const GENERIC_ROLE_TYPES = new Set(['giant', 'vendor', 'procurement']);
 
-function isUnrestrictedRole(roleId: string): boolean {
-  // 支援精確比對與前綴比對（如 admin-xxx）
-  return (
-    UNRESTRICTED_ROLE_IDS.includes(roleId) ||
-    roleId.startsWith('admin')
-  );
+/**
+ * 當傳入的是大類型（'giant'、'vendor'、'procurement'）而非實際角色 id 時，
+ * 從 localStorage 的 currentUserRoleId 取得當前登入者的實際角色 id。
+ * 若 localStorage 也無資料，原樣返回 roleId（保持向後相容）。
+ */
+function resolveRoleId(roleId: string): string {
+  if (GENERIC_ROLE_TYPES.has(roleId)) {
+    return localStorage.getItem('currentUserRoleId') ?? roleId;
+  }
+  return roleId;
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
@@ -71,11 +72,8 @@ export function useActionPermission(
       return;
     }
 
-    // IT / admin 角色不需查詢
-    if (isUnrestrictedRole(roleId)) {
-      setLoading(false);
-      return;
-    }
+    // 將大類型轉為實際角色 id
+    const resolvedId = resolveRoleId(roleId);
 
     // 不受控制的功能不需查詢
     if (!isControlled) {
@@ -86,7 +84,7 @@ export function useActionPermission(
     let cancelled = false;
     setLoading(true);
 
-    loadActionPermissions(roleId).then(perms => {
+    loadActionPermissions(resolvedId).then(perms => {
       if (!cancelled) {
         setPermissions(perms);
         setLoading(false);
@@ -100,13 +98,10 @@ export function useActionPermission(
     // 無 roleId → 拒絕
     if (!roleId) return false;
 
-    // IT / admin → 全開
-    if (isUnrestrictedRole(roleId)) return true;
-
     // 功能不在 FEATURE_ACTION_CONFIG → 全開（有模組權限即可操作）
     if (!isControlled) return true;
 
-    // 查詢已載入的權限
+    // 查詢已載入的角色權限設定
     return canPerformAction(permissions, featureId, action);
   };
 

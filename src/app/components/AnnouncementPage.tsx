@@ -368,9 +368,11 @@ export function AnnouncementPage({
     return list;
   }, [announcements, activeTab, unitFilter, keyword, readIds]);
 
-  // 若 filtered 改變，確保 selectedId 有效
+  // 若 filtered 改變，確保 selectedId 有效；若無結果則清空
   useEffect(() => {
-    if (filtered.length > 0 && !filtered.find(a => a.id === selectedId)) {
+    if (filtered.length === 0) {
+      setSelectedId('');
+    } else if (!filtered.find(a => a.id === selectedId)) {
       setSelectedId(filtered[0].id);
     }
   }, [filtered, selectedId]);
@@ -416,10 +418,10 @@ export function AnnouncementPage({
     });
   }, [filtered]);
 
-  // ── 選中公告物件 ─────────────────────────────────────────────────────────────
+  // ── 選中公告物件（僅從當前 filtered 中取，避免無公告時仍顯示舊預覽）──────────
   const selectedRecord = useMemo(
-    () => filtered.find(a => a.id === selectedId) ?? announcements.find(a => a.id === selectedId) ?? null,
-    [filtered, selectedId, announcements],
+    () => filtered.find(a => a.id === selectedId) ?? null,
+    [filtered, selectedId],
   );
 
   // ── 下拉選單選項 ─────────────────────────────────────────────────────────────

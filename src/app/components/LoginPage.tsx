@@ -4,6 +4,36 @@ import imgImage from "@/assets/login-bg.png";
 import img02GiantGroupLogoWhite2 from "@/assets/giant-logo-white.png";
 import type { UserRole } from '@/app/App';
 import { useLanguage, type Language } from './LanguageContext';
+import { getUsersByRole } from '@/app/config/userRoleStore';
+
+// 登入成功後，將帳號對應的第一個角色 id 存入 localStorage
+function storeCurrentUserRoleId(email: string): void {
+  // 尋找 MOCK_USERS 中帳號匹配的使用者
+  // MOCK_USERS 被分散在各角色下，透過所有角色取集合找出帳號匹配的
+  // 簡化同步：由於目前 MOCK_USERS 是静態記憶體變數，我們從 known roles 逐一查找
+  const knownRoleIds = [
+    'giant-it', 'giant-developer', 'giant-finance', 'giant-sales',
+    'giant-design', 'giant-supervisor', 'giant-gtm-sales', 'giant-gtm-order',
+    'giant-sales-support', 'giant-dynamic-purchase', 'giant-other-test', 'giant-qa',
+    'vendor-sales', 'vendor-qa', 'vendor-developer', 'vendor-subcontractor',
+  ];
+  for (const rid of knownRoleIds) {
+    const users = getUsersByRole(rid);
+    // 帳號欄位支援兩種格式：
+    //   巨大：account = 'G00106917'，email = 'g00106917@giant.com' → 需比對 email prefix
+    //   廠商：account = 'sales@vendor.com'        → 直接比對
+    const emailPrefix = email.split('@')[0].toUpperCase();
+    if (users.some(u =>
+      u.account === email ||
+      u.account.toUpperCase() === emailPrefix
+    )) {
+      localStorage.setItem('currentUserRoleId', rid);
+      return;
+    }
+  }
+  // 找不到則清除（防止舊資料殘留）
+  localStorage.removeItem('currentUserRoleId');
+}
 
 interface LoginPageProps {
   onLoginSuccess: (role: UserRole) => void;
@@ -146,17 +176,19 @@ function Auth({ onLoginSuccess, onRegisterClick, onForgotPassword }: AuthProps) 
 
   const handleLogin = () => {
     // Validate credentials
-    if (email === 'vendor@vendor.com' && password === '12345') {
+    if (email === 'sales@vendor.com' && password === '12345') {
       setHasError(false);
-      localStorage.setItem('currentUserEmail', 'vendor@vendor.com');
+      localStorage.setItem('currentUserEmail', 'sales@vendor.com');
       localStorage.setItem('currentUserType', 'vendor');
-      localStorage.setItem('currentUserName', '張淑玲'); // 廠商業務姓名
+      localStorage.setItem('currentUserName', '張淡玲'); // 廠商業務姓名
+      storeCurrentUserRoleId('sales@vendor.com'); // 查 userRoleStore → vendor-sales
       onLoginSuccess('vendor');
     } else if (email === 'g00106917@giant.com' && password === '12345') {
       setHasError(false);
       localStorage.setItem('currentUserEmail', 'g00106917@giant.com');
       localStorage.setItem('currentUserType', 'giant');
       localStorage.setItem('currentUserName', '李宜瑾-Evelyn Lee'); // 員工姓名（來自 GiantAccount 資料）
+      storeCurrentUserRoleId('g00106917@giant.com');
       onLoginSuccess('giant');
     } else {
       setHasError(true);
@@ -251,6 +283,8 @@ function Auth({ onLoginSuccess, onRegisterClick, onForgotPassword }: AuthProps) 
             localStorage.setItem('currentUserEmail', 'g00106917@giant.com');
             localStorage.setItem('currentUserType', 'giant');
             localStorage.setItem('currentUserName', '李宜瑾-Evelyn Lee');
+            // 快速登入 = 開發用最高權限帳號，直接賦予 IT 角色（全功能開放）
+            localStorage.setItem('currentUserRoleId', 'giant-it');
             onLoginSuccess('giant');
           }}
           className="w-full h-[38px] rounded-[8px] border border-dashed border-[#f59e0b] bg-[#fffbeb] hover:bg-[#fef3c7] transition-colors flex items-center justify-center gap-[6px]"

@@ -38,12 +38,14 @@ let MOCK_USERS: UserRoleRecord[] = [
   { userId: 'g011', userName: '劉雅雯', account: 'wen011',   type: 'giant',  roleIds: [],                       status: 'active' },  // 未設定角色
   { userId: 'g012', userName: '楊偉誠', account: 'cheng012', type: 'giant',  roleIds: [],                       status: 'active' },  // 未設定角色
   // 廠商使用者
-  { userId: 'v001', userName: 'Amy Chen',   account: 'amy@jk.com',    companyName: '久鑫實業', type: 'vendor', roleIds: ['vendor-sales'],           status: 'active' },
-  { userId: 'v002', userName: 'Bob Lin',    account: 'bob@jk.com',    companyName: '久鑫實業', type: 'vendor', roleIds: ['vendor-qa'],              status: 'active' },
-  { userId: 'v003', userName: 'Carol Wu',   account: 'carol@abc.com', companyName: 'ABC科技',  type: 'vendor', roleIds: ['vendor-developer'],       status: 'active' },
-  { userId: 'v004', userName: 'David Kao',  account: 'david@abc.com', companyName: 'ABC科技',  type: 'vendor', roleIds: [],                         status: 'active' },  // 未設定角色
-  { userId: 'v005', userName: 'Eva Tsai',   account: 'eva@xyz.com',   companyName: 'XYZ零件',  type: 'vendor', roleIds: ['vendor-subcontractor'],   status: 'inactive' },
+  { userId: 'v001', userName: 'Amy Chen',   account: 'amy@jk.com',      companyName: '久鑫實業', type: 'vendor', roleIds: ['vendor-sales'],           status: 'active' },
+  { userId: 'v002', userName: 'Bob Lin',    account: 'bob@jk.com',      companyName: '久鑫實業', type: 'vendor', roleIds: ['vendor-qa'],              status: 'active' },
+  { userId: 'v003', userName: 'Carol Wu',   account: 'carol@abc.com',   companyName: 'ABC科技',  type: 'vendor', roleIds: ['vendor-developer'],       status: 'active' },
+  { userId: 'v004', userName: 'David Kao',  account: 'david@abc.com',   companyName: 'ABC科技',  type: 'vendor', roleIds: [],                         status: 'active' },  // 未設定角色
+  { userId: 'v005', userName: 'Eva Tsai',   account: 'eva@xyz.com',     companyName: 'XYZ零件',  type: 'vendor', roleIds: ['vendor-subcontractor'],   status: 'inactive' },
+  { userId: 'v006', userName: '張淡玲',      account: 'sales@vendor.com', companyName: 'Jogon山叶',type: 'vendor', roleIds: ['vendor-sales'],           status: 'active' },  // 廠商测試登入帳號
 ];
+
 
 // ─── Sync Alert Storage ───────────────────────────────────────────────────────
 

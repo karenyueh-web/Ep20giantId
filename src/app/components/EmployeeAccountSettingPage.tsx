@@ -146,11 +146,32 @@ export function EmployeeAccountSettingPage({
   // 巨大角色選取狀態 - 從 userRoleStore 預載已有角色
   const [selectedGiantRoles, setSelectedGiantRoles] = useState<string[]>(() => {
     const allGiantRoles = getGiantRoles();
-    // 找出所有巨大角色中此帳號已擁有的，轉成 label 清單
+
+    // 优先從 userRoleStore 查找（account 完全相等）
     const ownedLabels = allGiantRoles
       .filter(role => getUsersByRole(role.id).some(u => u.account === employeeAccount))
       .map(role => role.label);
-    return ownedLabels;
+    if (ownedLabels.length > 0) return ownedLabels;
+
+    // Fallback：若此帳號是目前登入者，從 localStorage('currentUserRoleId') 預載
+    // （適用於快速登入或 MOCK_USERS 尚未建立該帳號資料的情況）
+    const currentEmail = localStorage.getItem('currentUserEmail') ?? '';
+    const emailPrefix  = currentEmail.split('@')[0];
+    const currentName  = localStorage.getItem('currentUserName')  ?? '';
+    const isCurrentUser =
+      employeeAccount.toLowerCase() === currentEmail.toLowerCase() ||
+      employeeAccount.toLowerCase() === emailPrefix.toLowerCase()  ||
+      employeeName === currentName;
+
+    if (isCurrentUser) {
+      const currentRoleId = localStorage.getItem('currentUserRoleId');
+      if (currentRoleId) {
+        const role = allGiantRoles.find(r => r.id === currentRoleId);
+        if (role) return [role.label];
+      }
+    }
+
+    return [];
   });
 
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -171,6 +192,27 @@ export function EmployeeAccountSettingPage({
       .map(label => allGiantRoles.find(r => r.label === label)?.id)
       .filter((id): id is string => !!id);
     updateOrCreateUserRoles(employeeAccount, employeeName, 'giant', roleIds);
+
+    // 若修改的是目前登入帳號，同步更新 currentUserRoleId（讓 useActionPermission 即時生效）
+    const currentEmail = localStorage.getItem('currentUserEmail') ?? '';
+    const currentName  = localStorage.getItem('currentUserName')  ?? '';
+    // 比對方式（三選一）：
+    //   1. employeeAccount 直接等於 email（舊格式相容）
+    //   2. employeeAccount 等於 email 的 @ 前綴（如 G00106917 ↔ g00106917@giant.com）
+    //   3. 姓名相符（顯示名稱完全一致）
+    const emailPrefix = currentEmail.split('@')[0]; // e.g. 'g00106917'
+    const isCurrentUser =
+      employeeAccount.toLowerCase() === currentEmail.toLowerCase() ||
+      employeeAccount.toLowerCase() === emailPrefix.toLowerCase() ||
+      employeeName === currentName;
+    if (isCurrentUser) {
+      if (roleIds.length > 0) {
+        localStorage.setItem('currentUserRoleId', roleIds[0]);
+      } else {
+        localStorage.removeItem('currentUserRoleId');
+      }
+    }
+
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 2000);
   };

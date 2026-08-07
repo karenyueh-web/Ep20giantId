@@ -527,17 +527,12 @@ function DraggableRoleItem({ role, index, sectionTitle, isSelected, onSelect, on
   return (
     <div
       ref={ref}
-      className={`w-full flex items-center h-[40px] transition-colors group/role ${
+      className={`w-full flex items-center h-[40px] group/role ${
         isDragging ? 'opacity-40' : ''
       } ${
         isOver ? 'bg-[rgba(0,94,184,0.04)]' : ''
-      } ${
-        isSelected
-          ? 'bg-[rgba(0,94,184,0.08)] border-l-[3px] border-l-[#005eb8]'
-          : 'border-l-[3px] border-l-transparent hover:bg-[rgba(145,158,171,0.06)]'
       }`}
       onClick={onSelect}
-      style={{ cursor: 'pointer' }}
     >
       {/* Drag handle */}
       <div
@@ -906,20 +901,52 @@ export function PermissionSettingsPage({
 
 
 
-  // Load permissions from localStorage when role changes
+  // IT 預設角色 - 若從未儲存過，初始化時預設全勾（之後由管理員自行調整）
+  const DEFAULT_FULL_ROLE_IDS = ['giant-it'];
+
+  // 切換角色時載入設定
   useEffect(() => {
     const key = `permission-settings-${selectedRoleId}`;
+    const actionKey = `action-perm-${selectedRoleId}`;
+
     try {
       const stored = localStorage.getItem(key);
       if (stored) {
+        // 已有儲存的設定 → 直接讀取（IT 也一樣）
         const parsed = JSON.parse(stored) as string[];
         setCheckedSet(new Set(parsed));
+      } else if (DEFAULT_FULL_ROLE_IDS.includes(selectedRoleId)) {
+        // 從未設定過的 IT → 預設全勾，並存入 localStorage
+        const allIds = collectLeafIds(FEATURE_TREE);
+        setCheckedSet(new Set(allIds));
+        localStorage.setItem(key, JSON.stringify(allIds));
       } else {
         setCheckedSet(new Set());
       }
     } catch {
       setCheckedSet(new Set());
     }
+
+    // action permissions 同樣邏輯
+    try {
+      const storedAction = localStorage.getItem(actionKey);
+      if (storedAction) {
+        setActionPermissions(JSON.parse(storedAction) as ActionPermissionEntry[]);
+      } else if (DEFAULT_FULL_ROLE_IDS.includes(selectedRoleId)) {
+        // 從未設定過的 IT → 所有 action 全開，並存入 localStorage
+        const fullActionPerms: ActionPermissionEntry[] = FEATURE_ACTION_CONFIG.map(fc => ({
+          featureId: fc.featureId,
+          actions: fc.actions.map(a => a.id),
+        }));
+        setActionPermissions(fullActionPerms);
+        saveActionPermissions(selectedRoleId, fullActionPerms);
+      } else {
+        setActionPermissions(loadActionPermissionsSync(selectedRoleId));
+      }
+    } catch {
+      setActionPermissions([]);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedRoleId]);
 
   // Toggle check on a node
@@ -961,10 +988,8 @@ export function PermissionSettingsPage({
     () => loadActionPermissionsSync(loadRoleSections()[0].roles[0].id)
   );
 
-  // 切換角色時重載 action permissions
-  useEffect(() => {
-    setActionPermissions(loadActionPermissionsSync(selectedRoleId));
-  }, [selectedRoleId]);
+
+
 
   const handleActionToggle = useCallback((featureId: string, actionId: string, checked: boolean) => {
     setActionPermissions(prev => {
@@ -1075,33 +1100,44 @@ export function PermissionSettingsPage({
               .map(section =>
                 section.roles.map((role, rIdx) => {
                   const count = getRoleUserCount(role.id);
+                  const isSelected = role.id === selectedRoleId;
                   return (
-                    <div key={role.id} className="flex items-center pr-[8px]">
+                    <div
+                      key={role.id}
+                      className={`flex items-center pr-[8px] transition-colors cursor-pointer ${
+                        isSelected
+                          ? 'bg-[rgba(0,94,184,0.08)] border-l-[3px] border-l-[#005eb8]'
+                          : 'border-l-[3px] border-l-transparent hover:bg-[rgba(145,158,171,0.06)]'
+                      }`}
+                      onClick={() => setSelectedRoleId(role.id)}
+                    >
                       <div className="flex-1 min-w-0">
                         <DraggableRoleItem
                           role={role}
                           index={rIdx}
                           sectionTitle={section.title}
-                          isSelected={role.id === selectedRoleId}
+                          isSelected={isSelected}
                           onSelect={() => setSelectedRoleId(role.id)}
                           onMoveRole={handleMoveRole}
                         />
                       </div>
                       {count > 0 && (
                         <button
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             const users = getUsersByRole(role.id);
                             const hasGiant = users.some(u => u.type === 'giant');
                             setRoleUserModal({ roleId: role.id, roleLabel: role.label });
                             setRoleModalTab(hasGiant ? 'giant' : 'vendor');
                           }}
-                          className="shrink-0 min-w-[32px] h-[24px] flex items-center justify-center text-[13px] font-semibold text-[#005eb8] hover:underline hover:bg-[#e8f4fd] rounded-[4px] px-[4px] transition-colors"
+                          className="shrink-0 min-w-[32px] h-[24px] flex items-center justify-center text-[13px] font-semibold text-[#005eb8] hover:underline hover:bg-[#e8f4fd] rounded-[4px] px-[4px] transition-colors cursor-pointer"
                         >
                           {count}
                         </button>
                       )}
                     </div>
                   );
+
                 })
               )
             }
