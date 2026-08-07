@@ -14,6 +14,7 @@ import { mockVendorsSuccess, mockVendorsFail } from '@/imports/廠商帳號審�
 import { useLanguage, type Language } from './LanguageContext';
 import { useSidebar } from './SidebarContext';
 import { getSampleOrders } from './sampleOrderData';
+import { getChatUnreadCount } from '@/app/data/chatData';
 import { getParts } from './partsMaintenanceData';
 
 
@@ -47,26 +48,36 @@ function getAnnouncementUnreadCount(): number {
 function useNotificationCounts() {
   const [counts, setCounts] = useState(() => ({
     announcement: getAnnouncementUnreadCount(),
-    chat: 0,
+    chat: getChatUnreadCount(),
   }));
 
   useEffect(() => {
     // 監聽 localStorage 變更（同頁 setItem 不會觸發 storage 事件，改用 custom event）
-    const refresh = () => {
+    const refreshAnnouncement = () => {
       setCounts(prev => ({
         ...prev,
         announcement: getAnnouncementUnreadCount(),
       }));
     };
 
+    const refreshChat = () => {
+      setCounts(prev => ({
+        ...prev,
+        chat: getChatUnreadCount(),
+      }));
+    };
+
     // 跨分頁同步
-    window.addEventListener('storage', refresh);
+    window.addEventListener('storage', refreshAnnouncement);
     // 同頁點擊卡片後通知更新（AnnouncementPage 內會 dispatch 此事件）
-    window.addEventListener('announcementReadUpdated', refresh);
+    window.addEventListener('announcementReadUpdated', refreshAnnouncement);
+    // Chat 未讀更新（OnlineChatPage 內會 dispatch 此事件）
+    window.addEventListener('chatReadUpdated', refreshChat);
 
     return () => {
-      window.removeEventListener('storage', refresh);
-      window.removeEventListener('announcementReadUpdated', refresh);
+      window.removeEventListener('storage', refreshAnnouncement);
+      window.removeEventListener('announcementReadUpdated', refreshAnnouncement);
+      window.removeEventListener('chatReadUpdated', refreshChat);
     };
   }, []);
 

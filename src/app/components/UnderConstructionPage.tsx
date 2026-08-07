@@ -6,6 +6,7 @@ const PAGE_META: Partial<Record<string, { title: string; breadcrumb: string }>> 
   // OVERVIEW
   'dashboard':              { title: 'Dashboard',       breadcrumb: '首頁 • Dashboard' },
   'announcement':           { title: '公佈欄',          breadcrumb: '首頁 • 公佈欄' },
+  'online-chat':            { title: 'Online Chat',     breadcrumb: 'Online Chat' },
   'personal-settings':      { title: '個人設定',        breadcrumb: '個人設定' },
   'receiving-inquiry':      { title: '收料查詢',        breadcrumb: '管理作業 • 收料查詢' },
   'schedule-inquiry':       { title: '排程總表查詢',    breadcrumb: '' },

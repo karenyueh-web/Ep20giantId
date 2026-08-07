@@ -1,6 +1,6 @@
 // @refresh reset
-import { ChatPageNew } from "@/app/components/ChatPageNew";
 import { OrderManagementPage } from "@/app/components/OrderManagementPage";
+import { OnlineChatPage } from "@/app/components/OnlineChatPage";
 import { QualityAbnormalFullPage } from "@/app/components/QualityAbnormalFullPage";
 import VendorAccountManagementPageNew from "@/app/components/VendorAccountManagementPageNew";
 import { VendorAccountReviewPageNew } from "@/app/components/VendorAccountReviewPageNew";
@@ -57,7 +57,6 @@ export default function App() {
   const [showRegisterSuccess, setShowRegisterSuccess] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [currentPage, setCurrentPage] = useState<PageType>('dashboard');
-  const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [pendingVendorApproval, setPendingVendorApproval] = useState<{
     name: string;
     email: string;
@@ -131,10 +130,6 @@ export default function App() {
     setCurrentPage(page);
   };
 
-  const handleChatSelect = (chatId: string) => {
-    setSelectedChatId(chatId);
-    setCurrentPage('online-chat');
-  };
 
   const handleVendorApproval = (vendorInfo: { name: string; email: string; company: string; epCode: string; roles: string[] }) => {
     console.log('處理廠商審核通過:', vendorInfo);
@@ -150,7 +145,7 @@ export default function App() {
       case 'announcement-create':
         return <AnnouncementCreatePage currentPage={currentPage} onPageChange={handlePageChange} onLogout={handleLogout} userRole={userRole} />;
       case 'online-chat':
-        return <ChatPageNew currentPage={currentPage} onPageChange={handlePageChange} onLogout={handleLogout} userRole={userRole} initialChatId={selectedChatId} />;
+        return <OnlineChatPage currentPage={currentPage} onPageChange={handlePageChange} onLogout={handleLogout} userRole={userRole} />;
       case 'order-list':
       case 'order-forecast':
       case 'order-exchange':

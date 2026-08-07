@@ -1,12 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import IconsSolidIcSolarMultipleForwardLeftBroken from '@/imports/IconsSolidIcSolarMultipleForwardLeftBroken';
-import { chatData, type ChatConversation } from '@/app/data/chatData';
 import svgPaths from '@/imports/svg-gcyyqek0b9';
 import adjustSvgPaths from '@/imports/svg-ymkervaun9';
 import { SimpleDatePicker } from './SimpleDatePicker';
 import { OrderHistory } from './OrderHistory';
-import { SelectChatPerson } from './SelectChatPerson';
-import { ChatOverlay } from './ChatOverlay';
 import { useOrderStore, type HistoryEntry, nowDateStr, operatorByRole } from './OrderStoreContext';
 import type { CorrectionOrderRow } from './OrderStoreContext';
 import type { ScheduleLine } from './AdvancedOrderTable';
@@ -673,7 +670,6 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
   const [showForceCloseConfirm, setShowForceCloseConfirm] = useState(false); // 二次確認彈窗
   const [showOrderHistory, setShowOrderHistory] = useState(false);
   const [showSelectPerson, setShowSelectPerson] = useState(false); // 控制是否顯示選擇人員彈出框
-  const [showChatOverlay, setShowChatOverlay] = useState(false); // 控制是否顯示聊天對話框
 
   // ► 單據在提交採購(NP/V→B)或退回廠商(B→V)後開啟時，自動展開歷程面板
   // V 狀態：最新歷程含「退回廠商」→ 採購退回，廠商需看原因
@@ -696,9 +692,6 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const [selectedChat, setSelectedChat] = useState<ChatConversation | null>(null); // 選中的聊天對話
-  const [chatIconPosition, setChatIconPosition] = useState({ top: 0, right: 0 }); // 聊天icon位置
-  const [showMore, setShowMore] = useState(false); // 控制 more 展開
   const chatIconRef = useRef<HTMLDivElement>(null);
 
   // ── 可編輯交貨排程 ───────────────────────────────────────────────────────────
@@ -724,27 +717,10 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
   const [showAddLineWarning, setShowAddLineWarning] = useState(false);
   const [pendingAddUid, setPendingAddUid] = useState<number | null>(null);
 
-  // 點擊聊天icon
+  // 點擊聊天icon（待重建 Chat 功能後重接）
   const handleChatIconClick = () => {
     if (chatIconRef.current) {
-      const rect = chatIconRef.current.getBoundingClientRect();
-      // 彈出框顯示在icon左側
-      setChatIconPosition({
-        top: rect.top,
-        right: window.innerWidth - rect.left + 10 // 10px 間距
-      });
       setShowSelectPerson(true);
-    }
-  };
-
-  // 選擇人員後的處理
-  const handleSelectPerson = (personName: string) => {
-    setShowSelectPerson(false);
-    // 找到對應的聊天對話
-    const chatConversation = chatData.find(chat => chat.name === personName);
-    if (chatConversation) {
-      setSelectedChat(chatConversation);
-      setShowChatOverlay(true);
     }
   };
 
@@ -1838,22 +1814,6 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
         />
       )}
 
-      {/* 選擇人員彈出框 */}
-      {showSelectPerson && (
-        <SelectChatPerson
-          onClose={() => setShowSelectPerson(false)}
-          onSelect={handleSelectPerson}
-          position={chatIconPosition}
-        />
-      )}
-
-      {/* 聊天對話框 */}
-      {showChatOverlay && selectedChat && (
-        <ChatOverlay
-          onClose={() => setShowChatOverlay(false)}
-          chatConversation={selectedChat}
-        />
-      )}
 
       {/* 交貨排程日期選擇器（固定定位） */}
       {activeDp !== null && (

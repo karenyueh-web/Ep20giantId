@@ -30,9 +30,9 @@ export const pageConfig: Record<PageType, PageConfig> = {
     breadcrumb: 'Overview • 公佈欄',
   },
   'online-chat': {
-    navLabel: '線上客服',
-    title: '線上客服',
-    breadcrumb: 'Overview • 線上客服',
+    navLabel: 'Online Chat',
+    title: 'Online Chat',
+    breadcrumb: 'Online Chat',
   },
   'receiving-inquiry': {
     navLabel: '收料查詢',
