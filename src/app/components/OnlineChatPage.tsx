@@ -103,10 +103,16 @@ function MeAvatar({ size = 44 }: { size?: number }) {
     return () => window.removeEventListener('userAvatarChanged', handler);
   }, []);
 
+  const userName = localStorage.getItem('currentUserName') || '';
+  const userType = localStorage.getItem('currentUserType') || 'giant';
+  const firstChar = userName.charAt(0) || '我';
+  const bgColor = userType === 'vendor' ? '#5b21b6' : '#00559c';
+
   return (
     <div className="relative shrink-0" style={{ width: size, height: size }}>
       <div
-        className="absolute inset-0 rounded-full flex items-center justify-center overflow-hidden bg-[#f0f0f0]"
+        className="absolute inset-0 rounded-full flex items-center justify-center overflow-hidden"
+        style={{ backgroundColor: avatarSrc ? undefined : bgColor }}
       >
         {avatarSrc ? (
           <img src={avatarSrc} alt="avatar" className="w-full h-full object-cover" />
@@ -115,7 +121,7 @@ function MeAvatar({ size = 44 }: { size?: number }) {
             className="font-['Public_Sans:Bold','Noto_Sans_JP:Bold',sans-serif] font-bold text-white select-none"
             style={{ fontSize: size * 0.38 }}
           >
-            我
+            {firstChar}
           </span>
         )}
       </div>

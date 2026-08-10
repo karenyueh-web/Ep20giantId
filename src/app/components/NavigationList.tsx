@@ -90,10 +90,11 @@ function useNotificationCounts() {
 // ── 大頭像元件 ─────────────────────────────────────────────────────────────────
 interface UserAvatarProps {
   name: string;
+  role?: string; // 'giant' | 'vendor'
   onClick: () => void;
 }
 
-function UserAvatar({ name, onClick }: UserAvatarProps) {
+function UserAvatar({ name, role, onClick }: UserAvatarProps) {
   const [avatarSrc, setAvatarSrc] = useState<string | null>(() =>
     localStorage.getItem('userAvatar')
   );
@@ -121,7 +122,7 @@ function UserAvatar({ name, onClick }: UserAvatarProps) {
       ) : (
         <div
           className="size-full rounded-[500px] flex items-center justify-center"
-          style={{ backgroundColor: '#00559c' }}
+          style={{ backgroundColor: role === 'vendor' ? '#5b21b6' : '#00559c' }}
         >
           <span className="font-['Public_Sans:Bold','Noto_Sans_JP:Bold',sans-serif] font-bold text-white text-[17px] leading-none select-none">
             {firstChar}
@@ -143,7 +144,7 @@ function UserAvatar({ name, onClick }: UserAvatarProps) {
 const CROP_CANVAS_SIZE = 280;
 const CROP_RADIUS = 120;
 
-function AvatarCropOverlay({ onClose, onSave }: { onClose: () => void; onSave: (dataUrl: string) => void }) {
+function AvatarCropOverlay({ onClose, onSave, name, role }: { onClose: () => void; onSave: (dataUrl: string) => void; name?: string; role?: string }) {
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
@@ -153,6 +154,39 @@ function AvatarCropOverlay({ onClose, onSave }: { onClose: () => void; onSave: (
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const previewImgRef = useRef<HTMLImageElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isNewImage, setIsNewImage] = useState(false);
+
+  // 掛載時：優先載入 userAvatarRaw（原始圖）+ 上次裁切參數
+  // 若無原始圖（舊版資料），不顯示任何圖（避免拿裁切後的圓形圖再次裁切）
+  useEffect(() => {
+    const rawSrc = localStorage.getItem('userAvatarRaw');
+    if (!rawSrc) return; // 沒有原始圖 → 等使用者選新圖
+    const savedScale  = parseFloat(localStorage.getItem('userAvatarCropScale')  ?? '0') || null;
+    const savedOffX   = parseFloat(localStorage.getItem('userAvatarCropOffsetX') ?? '0');
+    const savedOffY   = parseFloat(localStorage.getItem('userAvatarCropOffsetY') ?? '0');
+    const img = new Image();
+    img.onload = () => {
+      previewImgRef.current = img;
+      if (savedScale) {
+        // 還原上次的裁切參數
+        setScale(savedScale);
+        setOffset({ x: savedOffX, y: savedOffY });
+        offsetRef.current = { x: savedOffX, y: savedOffY };
+      } else {
+        // 首次載入：自動 fitScale
+        const fitScale = Math.max(
+          (CROP_RADIUS * 2) / img.naturalWidth,
+          (CROP_RADIUS * 2) / img.naturalHeight
+        ) * 1.1;
+        setScale(fitScale);
+        setOffset({ x: 0, y: 0 });
+        offsetRef.current = { x: 0, y: 0 };
+      }
+    };
+    img.src = rawSrc;
+    setImageSrc(rawSrc);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -167,6 +201,21 @@ function AvatarCropOverlay({ onClose, onSave }: { onClose: () => void; onSave: (
       const w = img.naturalWidth * scale;
       const h = img.naturalHeight * scale;
       ctx.drawImage(img, CROP_CANVAS_SIZE / 2 - w / 2 + offset.x, CROP_CANVAS_SIZE / 2 - h / 2 + offset.y, w, h);
+    } else {
+      // 無圖時：繪製預設頭像（色彩同 UserAvatar）
+      const bg = role === 'vendor' ? '#5b21b6' : '#00559c';
+      const firstChar = name?.charAt(0) || '?';
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(CROP_CANVAS_SIZE / 2, CROP_CANVAS_SIZE / 2, CROP_RADIUS, 0, Math.PI * 2);
+      ctx.fillStyle = bg;
+      ctx.fill();
+      ctx.fillStyle = 'white';
+      ctx.font = `bold ${CROP_RADIUS * 0.75}px 'Public Sans', sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(firstChar, CROP_CANVAS_SIZE / 2, CROP_CANVAS_SIZE / 2 + 2);
+      ctx.restore();
     }
 
     // 暗色遮罩（evenodd 保留圓形透明區）
@@ -184,7 +233,7 @@ function AvatarCropOverlay({ onClose, onSave }: { onClose: () => void; onSave: (
     ctx.beginPath();
     ctx.arc(CROP_CANVAS_SIZE / 2, CROP_CANVAS_SIZE / 2, CROP_RADIUS, 0, Math.PI * 2);
     ctx.stroke();
-  }, [scale, offset]);
+  }, [scale, offset, name, role]);
 
   useEffect(() => { draw(); }, [draw]);
 
@@ -195,6 +244,12 @@ function AvatarCropOverlay({ onClose, onSave }: { onClose: () => void; onSave: (
     reader.onload = (ev) => {
       const src = ev.target?.result as string;
       setImageSrc(src);
+      // 儲存原始圖（供下次開啟 editor 使用）
+      localStorage.setItem('userAvatarRaw', src);
+      // 重置裁切參數（新圖從頭裁）
+      localStorage.removeItem('userAvatarCropScale');
+      localStorage.removeItem('userAvatarCropOffsetX');
+      localStorage.removeItem('userAvatarCropOffsetY');
       const img = new Image();
       img.onload = () => {
         previewImgRef.current = img;
@@ -207,6 +262,7 @@ function AvatarCropOverlay({ onClose, onSave }: { onClose: () => void; onSave: (
         offsetRef.current = { x: 0, y: 0 };
       };
       img.src = src;
+      setIsNewImage(true);
     };
     reader.readAsDataURL(file);
   };
@@ -224,15 +280,22 @@ function AvatarCropOverlay({ onClose, onSave }: { onClose: () => void; onSave: (
   };
   const handleMouseUp = () => { isDraggingRef.current = false; };
 
-  const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
-    e.preventDefault();
-    const delta = e.deltaY > 0 ? -0.06 : 0.06;
-    setScale(s => Math.max(0.2, Math.min(6, s + delta)));
-  };
+  // 使用 useEffect 手動連結 non-passive wheel，讓 preventDefault 能正常運作
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.06 : 0.06;
+      setScale(s => Math.max(0.2, Math.min(6, s + delta)));
+    };
+    canvas.addEventListener('wheel', onWheel, { passive: false });
+    return () => canvas.removeEventListener('wheel', onWheel);
+  }, []);
 
   const handleSave = () => {
     const img = previewImgRef.current;
-    if (!img) return;
+    if (!img) return; // canvas 沒有圖 → 不做任何事
     const OUTPUT = 220;
     const offCanvas = document.createElement('canvas');
     offCanvas.width = OUTPUT;
@@ -246,11 +309,15 @@ function AvatarCropOverlay({ onClose, onSave }: { onClose: () => void; onSave: (
     const w = img.naturalWidth * scale * ratio;
     const h = img.naturalHeight * scale * ratio;
     ctx.drawImage(img, OUTPUT / 2 - w / 2 + offset.x * ratio, OUTPUT / 2 - h / 2 + offset.y * ratio, w, h);
+    // 同步儲存裁切參數，供下次開啟 editor 時還原
+    localStorage.setItem('userAvatarCropScale',   String(scale));
+    localStorage.setItem('userAvatarCropOffsetX', String(offset.x));
+    localStorage.setItem('userAvatarCropOffsetY', String(offset.y));
     onSave(offCanvas.toDataURL('image/png'));
   };
 
   return (
-    <BaseOverlay onClose={onClose} maxWidth="420px" maxHeight="540px">
+    <BaseOverlay onClose={onClose} maxWidth="420px" maxHeight="580px">
       <div className="relative w-full h-full">
         {/* 關閉按鈕 */}
         <button
@@ -279,7 +346,6 @@ function AvatarCropOverlay({ onClose, onSave }: { onClose: () => void; onSave: (
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
               onMouseLeave={handleMouseUp}
-              onWheel={handleWheel}
             />
             {imageSrc && (
               <p className="text-[12px] text-[#919eab] text-center">拖拉移動位置・滾輪縮放大小</p>
@@ -394,6 +460,7 @@ function UserInfo({ onPageChange }: UserInfoProps) {
         <div className="flex flex-row items-center w-full gap-[4px]">
           <UserAvatar
             name={currentUserName || currentUserRole}
+            role={currentUserType}
             onClick={() => setShowCropper(true)}
           />
 
@@ -481,7 +548,7 @@ function UserInfo({ onPageChange }: UserInfoProps) {
 
       {/* 頭像裁切 Overlay */}
       {showCropper && (
-        <AvatarCropOverlay onClose={() => setShowCropper(false)} onSave={handleAvatarSave} />
+        <AvatarCropOverlay onClose={() => setShowCropper(false)} onSave={handleAvatarSave} name={currentUserName} role={currentUserType} />
       )}
 
     </>
