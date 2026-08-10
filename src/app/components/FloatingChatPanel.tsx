@@ -1,6 +1,6 @@
 // FloatingChatPanel.tsx
 // 右下角浮動聊天視窗，點訂單頁的氣泡 icon 後顯示
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useChatStore, getChatCandidates, type ChatRoom, type ChatMember } from './ChatStoreContext';
 import { availableMembers } from '@/app/data/chatData';
 import { SearchField } from './SearchField';
@@ -13,6 +13,17 @@ function MiniAvatar({ src, bg, name, size = 32 }: { src?: string; bg: string; na
         ? <img src={src} alt={name} className="w-full h-full object-cover" />
         : <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[#1c252e] select-none" style={{ fontSize: size * 0.38 }}>{name.charAt(0)}</span>
       }
+    </div>
+  );
+}
+
+// ── 上一次閱讀位置分隔線 ──────────────────────────────────────────────────
+function UnreadDivider({ divRef }: { divRef?: React.RefObject<HTMLDivElement> }) {
+  return (
+    <div ref={divRef} className="flex items-center gap-[8px] py-[4px]">
+      <div className="flex-1 h-[1px] bg-[rgba(0,94,184,0.25)]" />
+      <p className="shrink-0 font-['Public_Sans:Regular',sans-serif] text-[11px] text-[#005eb8] whitespace-nowrap">上一次的閱讀位置</p>
+      <div className="flex-1 h-[1px] bg-[rgba(0,94,184,0.25)]" />
     </div>
   );
 }
@@ -32,6 +43,44 @@ function Bubble({ msg, room }: { msg: ChatRoom['messages'][0]; room: ChatRoom })
     );
   }
 
+  if (msg.type === 'context') {
+    // 單據資料卡片：獨立一區，極淡鵝黃底 + 鵝黃虛線框，與一般氣泡明顯區別
+    const fields = (msg.text ?? '').split(' | ');
+    return (
+      <div className="w-full rounded-[10px] border border-dashed border-[rgba(255,171,0,0.5)] bg-[rgba(255,171,0,0.06)] px-[12px] py-[10px]">
+        {/* 標題列 */}
+        <div className="flex items-center gap-[6px] mb-[8px]">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#b76e00" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+          </svg>
+          <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[11px] text-[#b76e00] leading-none tracking-wide uppercase">單據資料</p>
+          <div className="flex-1 h-[1px] bg-[rgba(255,171,0,0.3)]" />
+        </div>
+        {/* 各欄位：欄位名稱粗體，值正常 */}
+        <div className="flex flex-wrap gap-x-[12px] gap-y-[4px]">
+          {fields.map((field, i) => {
+            const colonIdx = field.indexOf('：');
+            if (colonIdx !== -1) {
+              const label = field.slice(0, colonIdx);   // 欄位名稱（不含：）
+              const value = field.slice(colonIdx + 1);  // 值
+              return (
+                <p key={i} className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] text-[12px] text-[#454f5b] leading-[18px]">
+                  <span className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold">{label}：</span>{value}
+                </p>
+              );
+            }
+            return (
+              <p key={i} className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] text-[12px] text-[#454f5b] leading-[18px]">
+                {field}
+              </p>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
   if (isMe) {
     return (
       <div className="w-full">
@@ -39,7 +88,7 @@ function Bubble({ msg, room }: { msg: ChatRoom['messages'][0]; room: ChatRoom })
           <div className="w-full px-[12px] py-[8px] rounded-[8px] bg-[rgba(0,94,184,0.07)] border border-[rgba(0,94,184,0.15)]">
             <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] text-[13px] text-[#1c252e] leading-[20px] whitespace-pre-wrap">
               {msg.text}
-              <span className="inline-block ml-[8px] text-[10px] text-[#919eab] align-bottom">{msg.time?.slice(-5)}</span>
+              <span className="inline-block ml-[8px] text-[10px] text-[#919eab] align-bottom">{msg.time}</span>
             </p>
           </div>
         )}
@@ -58,7 +107,7 @@ function Bubble({ msg, room }: { msg: ChatRoom['messages'][0]; room: ChatRoom })
     <div className="flex gap-[8px]">
       {member && <MiniAvatar src={member.avatar} bg={member.avatarBg} name={member.name} size={28} />}
       <div className="flex flex-col gap-[3px] max-w-[75%]">
-        <p className="text-[10px] text-[#919eab]">{msg.time?.slice(-5)}</p>
+        <p className="text-[10px] text-[#919eab]">{msg.time}</p>
         {msg.type === 'text' && (
           <div className="px-[12px] py-[8px] rounded-[10px] rounded-tl-[4px] bg-white border border-[rgba(145,158,171,0.2)]">
             <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] text-[13px] text-[#1c252e] leading-[20px] whitespace-pre-wrap">{msg.text}</p>
@@ -97,6 +146,7 @@ export function FloatingChatPanel({ onPageChange, userRole }: FloatingChatPanelP
   }, [roomId]);
   const [showSwitch, setShowSwitch] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const dividerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // 開啟時標記已讀
@@ -104,10 +154,16 @@ export function FloatingChatPanel({ onPageChange, userRole }: FloatingChatPanelP
     if (room && roomId) markRead(roomId);
   }, [roomId, room, markRead]);
 
-  // 自動捲底
+  // 自動捲動：有未讀分隔線時捲到分隔線，否則捲到底
   useEffect(() => {
     if (!minimized) {
-      setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+      setTimeout(() => {
+        if (dividerRef.current) {
+          dividerRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+          messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 50);
     }
   }, [room?.messages.length, minimized]);
 
@@ -217,8 +273,14 @@ export function FloatingChatPanel({ onPageChange, userRole }: FloatingChatPanelP
                 <p className="text-[12px] text-[#c4cdd5]">還沒有訊息，說聲哈囉吧！</p>
               </div>
             ) : (
-              room.messages.map(msg => (
-                <Bubble key={msg.id} msg={msg} room={room} />
+              room.messages.map((msg, i) => (
+                <React.Fragment key={msg.id}>
+                  {/* 在第一則未讀訊息前插入「上一次的閱讀位置」分隔線 */}
+                  {room.lastSeenCount != null && i === room.lastSeenCount && (
+                    <UnreadDivider divRef={dividerRef} />
+                  )}
+                  <Bubble msg={msg} room={room} />
+                </React.Fragment>
               ))
             )}
             <div ref={messagesEndRef} />
@@ -311,6 +373,11 @@ interface ChatSelectOverlayProps {
   subtitle?: string;
   /** 確認按鈕文字，預設「開始對話」 */
   actionLabel?: string;
+  /**
+   * 從單據明細開啟對話時傳入的單據資料文字。
+   * 使用者送出第一則訊息時，系統會自動將此文字拼接在訊息前面一起送出。
+   */
+  initialMessage?: string;
 }
 
 export function ChatSelectOverlay({
@@ -318,6 +385,7 @@ export function ChatSelectOverlay({
   title = '開始對話',
   subtitle,
   actionLabel = '開始對話',
+  initialMessage,
 }: ChatSelectOverlayProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selected, setSelected] = useState<ChatMember[]>([]);
@@ -355,6 +423,7 @@ export function ChatSelectOverlay({
       lastTime: '剛剛',
       unreadCount: 0,
       messages: [],
+      initialMessage,
     };
     onCreateRoom(newRoom);
     onClose();

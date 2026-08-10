@@ -548,6 +548,8 @@ export function CorrectionDetailPage({
   }, [formMap[order.id]?.periodInput, order.id, isSplitMode]);
 
   const [showHistory, setShowHistory] = useState(false);
+  const [showChatSelect, setShowChatSelect] = useState(false);
+  const chatStore = useChatStore();
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -1049,7 +1051,10 @@ export function CorrectionDetailPage({
               onClick={e => { e.stopPropagation(); setShowHistory(true); }}
               className="content-stretch flex gap-[12px] items-center relative shrink-0 hover:opacity-80 transition-opacity"
             >
-              <div className="flex items-center justify-center shrink-0 size-[36px]">
+              <div
+                onClick={e => { e.stopPropagation(); setShowChatSelect(true); }}
+                className="flex items-center justify-center shrink-0 size-[36px] cursor-pointer"
+              >
                 <ChatIcon />
               </div>
               <p className="font-['Roboto:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[32px] relative shrink-0 text-[#005eb8] text-[16px] underline whitespace-nowrap" style={{ fontVariationSettings: "'wdth' 100" }}>歷程</p>
@@ -2073,6 +2078,33 @@ export function CorrectionDetailPage({
           docSeqNo={(order.orderNo || '') + (order.orderSeq || '')}
         />
       )}
+
+      {/* ── 聊天選人 Overlay ────────────────────────────────────────────────── */}
+      {showChatSelect && (() => {
+        // 組合修正單訊息預設文字
+        const parts = [
+          correctionDocNo ? `修正單：${correctionDocNo}` : null,
+          order.orderNo && order.orderSeq ? `訂單：${order.orderNo}${order.orderSeq}` : null,
+          correctionType ? `修正類型：${correctionType}` : null,
+          order.materialNo ? `料號：${order.materialNo}` : null,
+          order.productName ? `品名：${order.productName}` : null,
+        ].filter(Boolean);
+        const chatInitialMessage = parts.length > 0 ? parts.join(' | ') : undefined;
+        return (
+          <ChatSelectOverlay
+            candidates={getChatCandidates(userRole, order.vendorCode, order.purchaser)}
+            userRole={userRole}
+            currentVendorCode={order.vendorCode}
+            onClose={() => setShowChatSelect(false)}
+            onCreateRoom={room => {
+              chatStore.addRoom(room);
+              chatStore.openFloating(room.id);
+              setShowChatSelect(false);
+            }}
+            initialMessage={chatInitialMessage}
+          />
+        );
+      })()}
     </div>
   );
 }

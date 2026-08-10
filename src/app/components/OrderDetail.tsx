@@ -1828,15 +1828,30 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
       })()}
 
       {/* 聊天選人 Overlay */}
-      {showChatSelect && (
-        <ChatSelectOverlay
-          candidates={getChatCandidates(userRole, orderData?.vendorCode, orderData?.purchaser)}
-          userRole={userRole}
-          currentVendorCode={orderData?.vendorCode}
-          onClose={() => setShowChatSelect(false)}
-          onCreateRoom={handleChatCreateRoom}
-        />
-      )}
+      {showChatSelect && (() => {
+        // 組合訂單訊息預設文字
+        const parts = [
+          orderData?.orderNo && orderData?.orderSeq
+            ? `單號序號：${orderData.orderNo}${orderData.orderSeq}`
+            : null,
+          orderData?.orderQty != null ? `訂購量：${orderData.orderQty}` : null,
+          liveOrder?.materialNo ? `料號：${liveOrder.materialNo}` : null,
+          orderData?.expectedDelivery ? `預計交期：${orderData.expectedDelivery}` : null,
+          liveOrder?.productName ? `品名：${liveOrder.productName}` : null,
+        ].filter(Boolean);
+        const chatInitialMessage = parts.length > 0 ? parts.join(' | ') : undefined;
+        return (
+          <ChatSelectOverlay
+            candidates={getChatCandidates(userRole, orderData?.vendorCode, orderData?.purchaser)}
+            userRole={userRole}
+            currentVendorCode={orderData?.vendorCode}
+            onClose={() => setShowChatSelect(false)}
+            onCreateRoom={handleChatCreateRoom}
+            initialMessage={chatInitialMessage}
+          />
+        );
+      })()}
+
 
     </>
   );

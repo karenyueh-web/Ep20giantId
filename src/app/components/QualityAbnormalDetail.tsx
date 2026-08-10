@@ -5,6 +5,8 @@ import { BaseOverlay } from './BaseOverlay';
 import { type HistoryEntry } from './AdvancedQualityTable';
 import { OrderHistory } from './OrderHistory';
 import { useActionPermission } from '@/app/hooks/useActionPermission';
+import { useChatStore, getChatCandidates } from './ChatStoreContext';
+import { ChatSelectOverlay } from './FloatingChatPanel';
 
 // ─── 檔案資料型別 ────────────────────────────────────────────────────
 export interface UploadedImage {
@@ -376,26 +378,29 @@ function IssueSection({
 
 // ─── 以下為原始元件，不變 ─────────────────────────────────────────
 
-// 打印機圖標
-function IconsSolidIcSolarPrinterMinimalisticBold() {
+// 打印機圖標（Lucide Outline 風格，對齊系統設計規範）
+function PrinterIcon({ onClick }: { onClick?: () => void }) {
   return (
-    <div className="relative shrink-0 size-[36px] cursor-pointer hover:opacity-80">
-      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 36 36">
-        <g>
-          <g>
-            <path d={svgPaths.p1db90400} fill="var(--fill-0, #1D7BF5)" />
-            <path d={svgPaths.p19b82c00} fill="var(--fill-0, #1D7BF5)" />
-          </g>
-        </g>
+    <div
+      onClick={onClick}
+      className="flex items-center justify-center shrink-0 size-[36px] cursor-pointer hover:opacity-80 transition-opacity"
+    >
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#637381" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="6 9 6 2 18 2 18 9" />
+        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+        <rect x="6" y="14" width="12" height="8" />
       </svg>
     </div>
   );
 }
 
 // 聊天圖標（Lucide Outline 風格）
-function IconsNotificationsIcChat() {
+function IconsNotificationsIcChat({ onClick }: { onClick?: () => void }) {
   return (
-    <div className="flex items-center justify-center shrink-0 size-[36px] cursor-pointer hover:opacity-80">
+    <div
+      onClick={onClick}
+      className="flex items-center justify-center shrink-0 size-[36px] cursor-pointer hover:opacity-80 transition-opacity"
+    >
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#637381" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
       </svg>
@@ -404,13 +409,11 @@ function IconsNotificationsIcChat() {
 }
 
 // 頂部操作區
-function TopActions({ onHistoryOpen, onPrint }: { onHistoryOpen?: () => void; onPrint?: () => void }) {
+function TopActions({ onHistoryOpen, onPrint, onChatClick }: { onHistoryOpen?: () => void; onPrint?: () => void; onChatClick?: () => void }) {
   return (
     <div className="content-stretch flex gap-[12px] items-center">
-      <div onClick={onPrint}>
-        <IconsSolidIcSolarPrinterMinimalisticBold />
-      </div>
-      <IconsNotificationsIcChat />
+      <PrinterIcon onClick={onPrint} />
+      <IconsNotificationsIcChat onClick={onChatClick} />
       <p
         onClick={onHistoryOpen}
         className="[text-decoration-skip-ink:none] css-ew64yg decoration-solid font-['Roboto:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal leading-[32px] text-[#005eb8] text-[16px] underline cursor-pointer hover:text-[#003d73]"
@@ -1325,6 +1328,8 @@ export function QualityAbnormalDetail({ abnormalNumber, status: initialStatus, r
   const [returnReason, setReturnReason] = useState(row?.returnReason ?? '');
   const [cancelReason, setCancelReason] = useState('');
   const [showHistory, setShowHistory] = useState(false);
+  const [showChatSelect, setShowChatSelect] = useState(false);
+  const chatStore = useChatStore();
 
   // 當外部 status prop 改變時（例如廠商送出後 V→G），同步更新 localStatus
   useEffect(() => {
@@ -1369,7 +1374,11 @@ export function QualityAbnormalDetail({ abnormalNumber, status: initialStatus, r
           <TopHeader abnormalNumber={abnormalNumber} status={localStatus} />
         </div>
         {/* 右側：列印、訊息、歷程 */}
-        <TopActions onHistoryOpen={() => setShowHistory(true)} onPrint={onPrint} />
+        <TopActions
+          onHistoryOpen={() => setShowHistory(true)}
+          onPrint={onPrint}
+          onChatClick={() => setShowChatSelect(true)}
+        />
       </div>
 
       {/* 灰色背景區域（基本資訊 + 不良情形卡片） */}
@@ -1444,6 +1453,35 @@ export function QualityAbnormalDetail({ abnormalNumber, status: initialStatus, r
           }))}
         />
       )}
+
+      {/* 聊天選人 Overlay */}
+      {showChatSelect && (() => {
+        // 組合品質異常單訊息預設文字
+        const parts = [
+          abnormalNumber ? `品質異常單：${abnormalNumber}` : null,
+          row?.orderNumber ? `訂單：${row.orderNumber}` : null,
+          row?.partNumber ? `料號：${row.partNumber}` : null,
+          row?.quantity != null ? `數量：${row.quantity}` : null,
+        ].filter(Boolean);
+        const chatInitialMessage = parts.length > 0 ? parts.join(' | ') : undefined;
+        // 從 row.vendor 格式（如：'速聯(000100463)'）解析括號內的廠商編號
+        const vendorCodeMatch = row?.vendor?.match(/\(([^)]+)\)/);
+        const vendorCode = vendorCodeMatch ? vendorCodeMatch[1] : undefined;
+        return (
+          <ChatSelectOverlay
+            candidates={getChatCandidates(userRole, vendorCode, undefined)}
+            userRole={userRole}
+            currentVendorCode={vendorCode}
+            onClose={() => setShowChatSelect(false)}
+            onCreateRoom={room => {
+              chatStore.addRoom(room);
+              chatStore.openFloating(room.id);
+              setShowChatSelect(false);
+            }}
+            initialMessage={chatInitialMessage}
+          />
+        );
+      })()}
     </div>
   );
 }

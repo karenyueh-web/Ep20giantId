@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { type ChatRoom, type ChatMessage, type ChatMember, availableMembers } from '@/app/data/chatData';
 import { useChatStore } from './ChatStoreContext';
 import { ResponsivePageLayout } from './ResponsivePageLayout';
@@ -289,6 +289,45 @@ function MessageBubble({
           {message.text}
         </p>
         <div className="flex-1 h-[1px] bg-[rgba(145,158,171,0.15)]" />
+      </div>
+    );
+  }
+
+  // ── 單據資料卡片（context）：鵜黃底 + 鵜黃虛線框 ──────────────────────────
+  if (message.type === 'context') {
+    const fields = (message.text ?? '').split(' | ');
+    return (
+      <div className="w-full rounded-[10px] border border-dashed border-[rgba(255,171,0,0.5)] bg-[rgba(255,171,0,0.06)] px-[14px] py-[12px]">
+        {/* 標題列 */}
+        <div className="flex items-center gap-[6px] mb-[8px]">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#b76e00" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+          </svg>
+          <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[11px] text-[#b76e00] leading-none tracking-wide uppercase">單據資料</p>
+          <div className="flex-1 h-[1px] bg-[rgba(255,171,0,0.3)]" />
+        </div>
+        {/* 各欄位：欄位名稱粗體，値正常 */}
+        <div className="flex flex-wrap gap-x-[16px] gap-y-[4px]">
+          {fields.map((field, i) => {
+            const colonIdx = field.indexOf('：');
+            if (colonIdx !== -1) {
+              const label = field.slice(0, colonIdx);
+              const value = field.slice(colonIdx + 1);
+              return (
+                <p key={i} className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] text-[13px] text-[#454f5b] leading-[20px]">
+                  <span className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold">{label}：</span>
+                  <HighlightText text={value} keyword={keyword} />
+                </p>
+              );
+            }
+            return (
+              <p key={i} className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] text-[13px] text-[#454f5b] leading-[20px]">
+                <HighlightText text={field} keyword={keyword} />
+              </p>
+            );
+          })}
+        </div>
       </div>
     );
   }
@@ -810,7 +849,7 @@ function ImagePreviewOverlay({ imageUrls, onClose }: { imageUrls: string[]; onCl
           </svg>
           <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-white leading-none">下載</span>
         </button>
-        <img src={imageUrl} alt="圖片預覽" className="max-w-full max-h-full object-contain rounded-[8px]" />
+        <img src={imageUrls[0]} alt="圖片預覽" className="max-w-full max-h-full object-contain rounded-[8px]" />
       </div>
     </BaseOverlay>
   );
@@ -824,7 +863,7 @@ function createImageMessage(file: File): Promise<ChatMessage> {
       id: `m-${Date.now()}-${Math.random()}`,
       senderId: 'me',
       type: 'image',
-      imageUrl: url,
+      imageUrls: [url],
       time: new Date().toLocaleString('zh-TW', {
         year: 'numeric', month: '2-digit', day: '2-digit',
         hour: '2-digit', minute: '2-digit',
@@ -879,6 +918,7 @@ export function OnlineChatPage({ currentPage, onPageChange, onLogout, userRole }
   }, [contextMenu]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const dividerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatAreaRef = useRef<HTMLDivElement>(null);
 
@@ -915,14 +955,21 @@ export function OnlineChatPage({ currentPage, onPageChange, onLogout, userRole }
   // 顯示所有訊息
   const filteredMessages = selectedRoom ? selectedRoom.messages : [];
 
-  // 自動捲到底部
+  // 自動捲動：有未讀分隔線時捲到分隔線，否則捲到底部
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    setTimeout(() => {
+      if (dividerRef.current) {
+        dividerRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } else {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 50);
   }, [selectedRoomId, filteredMessages.length]);
 
-  // 進入聊天室 → 清除未讀
+  // 進入聊天室 → 先記錄上次閱讀位置，再清除未讀
   const handleSelectRoom = useCallback((roomId: string) => {
     setSelectedRoomId(roomId);
+    chatStore.recordLastSeen(roomId);
     chatStore.markRead(roomId);
   }, [chatStore]);
 
@@ -1147,10 +1194,27 @@ export function OnlineChatPage({ currentPage, onPageChange, onLogout, userRole }
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-[8px]">
-                      {/* Badge */}
+                      {/* Badge（右側 Header 用較大尺寸，對齊姓名字級） */}
                       {selectedRoom.type === 'group'
-                        ? <GroupBadge />
-                        : (selectedRoom.members[0] && <RoleBadge member={selectedRoom.members[0]} />)
+                        ? (
+                          <span className="shrink-0 inline-flex items-center h-[24px] px-[8px] rounded-[4px] font-['Public_Sans:Bold',sans-serif] font-bold text-[14px] leading-none whitespace-nowrap bg-[rgba(55,65,81,0.12)] text-[#374151]">
+                            group
+                          </span>
+                        )
+                        : selectedRoom.members[0] && (
+                          selectedRoom.members[0].role === 'giant'
+                            ? (
+                              <span className="shrink-0 inline-flex items-center h-[24px] px-[8px] rounded-[4px] font-['Public_Sans:Bold',sans-serif] font-bold text-[14px] leading-none whitespace-nowrap bg-[rgba(0,94,184,0.12)] text-[#005eb8]">
+                                巨大
+                              </span>
+                            ) : (
+                              <span className="shrink-0 inline-flex items-center h-[24px] px-[8px] rounded-[4px] font-['Public_Sans:Bold',sans-serif] font-bold text-[14px] leading-none whitespace-nowrap bg-[rgba(107,70,193,0.12)] text-[#6b21a8]">
+                                {selectedRoom.members[0].company.length > 6
+                                  ? selectedRoom.members[0].company.slice(0, 6)
+                                  : selectedRoom.members[0].company}
+                              </span>
+                            )
+                        )
                       }
 
                       {/* 群組：可編輯名稱 */}
@@ -1195,14 +1259,23 @@ export function OnlineChatPage({ currentPage, onPageChange, onLogout, userRole }
 
                 {/* 訊息串 */}
                 <div className="flex-1 overflow-y-auto custom-scrollbar px-[20px] py-[20px] flex flex-col gap-[16px] bg-[#f9fafb]">
-                  {filteredMessages.map(msg => (
-                    <MessageBubble
-                      key={msg.id}
-                      message={msg}
-                      room={selectedRoom}
-                      keyword={listSearch}
-                      onImageClick={url => setPreviewImage(url)}
-                    />
+                  {filteredMessages.map((msg, i) => (
+                    <React.Fragment key={msg.id}>
+                      {/* 在第一則未讀訊息前插入「上一次的閱讀位置」分隔線 */}
+                      {selectedRoom?.lastSeenCount != null && i === selectedRoom.lastSeenCount && (
+                        <div ref={dividerRef} className="flex items-center gap-[8px] py-[4px]">
+                          <div className="flex-1 h-[1px] bg-[rgba(0,94,184,0.25)]" />
+                          <p className="shrink-0 font-['Public_Sans:Regular',sans-serif] text-[12px] text-[#005eb8] whitespace-nowrap">上一次的閱讀位置</p>
+                          <div className="flex-1 h-[1px] bg-[rgba(0,94,184,0.25)]" />
+                        </div>
+                      )}
+                      <MessageBubble
+                        message={msg}
+                        room={selectedRoom!}
+                        keyword={listSearch}
+                        onImageClick={url => setPreviewImage(url)}
+                      />
+                    </React.Fragment>
                   ))}
                   <div ref={messagesEndRef} />
                 </div>

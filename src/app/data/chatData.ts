@@ -27,7 +27,7 @@ export interface ChatMember {
 export interface ChatMessage {
   id: string;
   senderId: string; // 'me' 或 member.id
-  type: 'text' | 'image' | 'system';
+  type: 'text' | 'image' | 'system' | 'context';
   text?: string;
   imageUrls?: string[];  // 支援多張圖片批次上傳
   time: string;     // 顯示用
@@ -44,6 +44,18 @@ export interface ChatRoom {
   lastTime: string;
   unreadCount: number;
   messages: ChatMessage[];
+  /**
+   * 從單據明細開啟對話時，自動帶入的單據資料文字。
+   * 第一則訊息送出時，系統會自動將此文字拼接在訊息最前面（換行分隔）。
+   * 送出後清空，後續訊息不再帶入。
+   */
+  initialMessage?: string;
+  /**
+   * 上次開啟浮動面板時，已讀到的訊息數量（messages 陣列的 index 邊界）。
+   * 用於在第一則未讀訊息前顯示「上一次的閱讀位置」分隔線。
+   * 關閉面板後清空。
+   */
+  lastSeenCount?: number;
 }
 
 // 舊型別（向後相容，供 Dashboard 使用）

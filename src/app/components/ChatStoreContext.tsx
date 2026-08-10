@@ -24,6 +24,8 @@ interface ChatStore {
   openFloating: (roomId: string) => void;
   closeFloating: () => void;
   setActiveRoomId: (roomId: string | null) => void;
+  /** 在 markRead 之前呼叫，記錄上次閱讀位置，供全頁 OnlineChatPage 使用 */
+  recordLastSeen: (roomId: string) => void;
 }
 
 // ── Context ──────────────────────────────────────────────────────────────────
@@ -61,34 +63,60 @@ export function ChatStoreProvider({ children }: { children: ReactNode }) {
       year: 'numeric', month: '2-digit', day: '2-digit',
       hour: '2-digit', minute: '2-digit',
     });
-    const newMessages: ChatMessage[] = [];
 
-    if (imageUrls && imageUrls.length > 0) {
-      newMessages.push({
-        id: 'm-' + Date.now() + '-img',
-        senderId: 'me',
-        type: 'image',
-        imageUrls,
-        time,
-      });
-    }
-    if (text.trim()) {
-      newMessages.push({
-        id: 'm-' + Date.now() + '-txt',
-        senderId: 'me',
-        type: 'text',
-        text: text.trim(),
-        time,
-      });
-    }
-    if (newMessages.length === 0) return;
+    setRooms(prev => {
+      const room = prev.find(r => r.id === roomId);
+      if (!room) return prev;
 
-    const lastMsg = text.trim() || '[圖片 ' + (imageUrls?.length ?? 0) + ' 張]';
-    setRooms(prev => prev.map(r =>
-      r.id === roomId
-        ? { ...r, messages: [...r.messages, ...newMessages], lastMessage: lastMsg, lastTime: '剛剛' }
-        : r
-    ));
+      const isFirstMessage = room.messages.length === 0;
+      const newMessages: ChatMessage[] = [];
+
+      // 若為第一則訊息且 room 有 initialMessage，
+      // 先插入一則 'context' 類型的單據資料卡片（獨立訊息，視覺與一般氣泡不同）
+      if (isFirstMessage && room.initialMessage) {
+        newMessages.push({
+          id: 'm-' + Date.now() + '-ctx',
+          senderId: 'me',
+          type: 'context',
+          text: room.initialMessage,
+          time,
+        });
+      }
+
+      if (imageUrls && imageUrls.length > 0) {
+        newMessages.push({
+          id: 'm-' + (Date.now() + 1) + '-img',
+          senderId: 'me',
+          type: 'image',
+          imageUrls,
+          time,
+        });
+      }
+      if (text.trim()) {
+        newMessages.push({
+          id: 'm-' + (Date.now() + 2) + '-txt',
+          senderId: 'me',
+          type: 'text',
+          text: text.trim(),
+          time,
+        });
+      }
+      if (newMessages.length === 0) return prev;
+
+      const lastMsg = text.trim() || '[圖片 ' + (imageUrls?.length ?? 0) + ' 張]';
+      return prev.map(r =>
+        r.id === roomId
+          ? {
+              ...r,
+              messages: [...r.messages, ...newMessages],
+              lastMessage: lastMsg,
+              lastTime: '剛剛',
+              // 第一則送出後清空 initialMessage
+              initialMessage: isFirstMessage ? undefined : r.initialMessage,
+            }
+          : r
+      );
+    });
   }, []);
 
   const markRead = useCallback((roomId: string) => {
@@ -110,15 +138,44 @@ export function ChatStoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const openFloating = useCallback((roomId: string) => {
+    setRooms(prev => {
+      const room = prev.find(r => r.id === roomId);
+      // 只有在有未讀訊息時才記錄上次閱讀位置
+      if (!room || room.unreadCount === 0) return prev;
+      const lastSeenCount = room.messages.length - room.unreadCount;
+      return prev.map(r => r.id === roomId ? { ...r, lastSeenCount } : r);
+    });
     setFloatingRoomId(roomId);
   }, []);
 
   const closeFloating = useCallback(() => {
     setFloatingRoomId(null);
+    // 關閉面板時清除閱讀位置標記（下次開啟時重新計算）
+    setRooms(prev => prev.map(r =>
+      r.lastSeenCount !== undefined ? { ...r, lastSeenCount: undefined } : r
+    ));
   }, []);
 
   const setActiveRoomId = useCallback((roomId: string | null) => {
     setActiveRoomIdState(roomId);
+  }, []);
+
+  /** 在 markRead 之前呼叫，記錄上次閱讀位置（供全頁 OnlineChatPage 使用） */
+  const recordLastSeen = useCallback((roomId: string) => {
+    setRooms(prev => {
+      const room = prev.find(r => r.id === roomId);
+      const hasUnread = room && room.unreadCount > 0;
+      return prev.map(r => {
+        if (r.id === roomId) {
+          // 目標 room：若有未讀則記錄位置，否則清除
+          return hasUnread
+            ? { ...r, lastSeenCount: r.messages.length - r.unreadCount }
+            : { ...r, lastSeenCount: undefined };
+        }
+        // 其他 room：清除舊的分隔線
+        return r.lastSeenCount !== undefined ? { ...r, lastSeenCount: undefined } : r;
+      });
+    });
   }, []);
 
   return (
@@ -134,6 +191,7 @@ export function ChatStoreProvider({ children }: { children: ReactNode }) {
       openFloating,
       closeFloating,
       setActiveRoomId,
+      recordLastSeen,
     }}>
       {children}
     </ChatStoreContext.Provider>
@@ -186,7 +244,8 @@ export function getChatCandidates(
   const vendor = MOCK_VENDORS.find(v => v.code === vendorCode);
 
   if (!vendor || vendor.salesNames.length === 0) {
-    return availableMembers.filter(m => m.role === 'vendor');
+    // vendorCode 在 MOCK_VENDORS 找不到 → 不洩漏其他廠商，回傳空陣列
+    return [];
   }
 
   // 將廠商的 salesNames 轉為 ChatMember（company 用廠商簡稱）

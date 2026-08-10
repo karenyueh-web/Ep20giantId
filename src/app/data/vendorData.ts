@@ -33,4 +33,12 @@ export const MOCK_VENDORS: VendorData[] = [
   { id: 17, code: '00010046', name: '速聯國際',   fullName: '速聯國際股份有限公司',         phone: '+886-3-77777777', address: '桃園市龜山區文化二路29號',         salesCount: 1, mainProducts: '零件',                        salesNames: ['李四'] },
   { id: 18, code: '00010463', name: '速聯',       fullName: '速聯(股)公司',                 phone: '+886-3-88888888', address: '桃園市龜山區工業三路99號',         salesCount: 1, mainProducts: '變速器/零件',                 salesNames: ['王小明'] },
   { id: 19, code: '00010099', name: 'ABC科技',    fullName: 'ABC科技股份有限公司',           phone: '+886-2-27001234', address: '台北市中山區南京東路三段168號',    salesCount: 1, mainProducts: '資訊軟體/系統整合/技術服務', salesNames: ['David Kao'] },
+  { id: 20, code: '0001000734', name: 'SHIMANO', fullName: 'SHIMANO SIC',                  phone: '+886-2-88001234', address: '台北市中山區北安路600號',          salesCount: 2, mainProducts: '變速器/剎車/傳動系統',       salesNames: ['Kenji Tanaka', 'Yuki Sato'] },
+  // ── 品質異常單 mock data 使用的廠商（9位 code 格式）────────────────────────
+  { id: 21, code: '000100463', name: '速聯',     fullName: '速聯股份有限公司',               phone: '+886-3-88888888', address: '桃園市龜山區工業三路99號',         salesCount: 2, mainProducts: '變速器/零件',                 salesNames: ['王小明', '陳品保'] },
+  { id: 22, code: '000100531', name: '久廣',     fullName: '久廣精密工業股份有限公司',         phone: '+886-7-44444444', address: '高雄市前鎮區中山三路12號',         salesCount: 2, mainProducts: '精密零件',                    salesNames: ['林業務', '張淑玲'] },
+  { id: 23, code: '000100597', name: '金盛元',   fullName: '金盛元工業股份有限公司',           phone: '+886-4-55555555', address: '彰化縣員林市員東路一段500號',      salesCount: 1, mainProducts: '零件',                        salesNames: ['王小明'] },
+  { id: 24, code: '000100458', name: '佳承',     fullName: '佳承精密工業股份有限公司',         phone: '+886-2-33333333', address: '新北市新店區北新路三段200號',      salesCount: 1, mainProducts: '精密零件',                    salesNames: ['李四'] },
+  { id: 25, code: '000100123', name: '台灣製造', fullName: '台灣製造工業股份有限公司',         phone: '+886-4-66666666', address: '台中市西屯區工業區一路100號',      salesCount: 1, mainProducts: '零件',                        salesNames: ['陳品保'] },
+  { id: 26, code: '000100456', name: '精密工業', fullName: '精密工業股份有限公司',             phone: '+886-4-77777777', address: '台中市大甲區工業路50號',           salesCount: 1, mainProducts: '精密零件',                    salesNames: ['林業務'] },
 ];
