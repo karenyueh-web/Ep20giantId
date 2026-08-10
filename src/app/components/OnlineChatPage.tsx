@@ -130,9 +130,9 @@ function MeAvatar({ size = 44 }: { size?: number }) {
 
 // ── Avatar 元件（對方）────────────────────────────────────────────────────────
 function Avatar({
-  src, bg, name, size = 40, online,
+  src, bg, name, size = 40,
 }: {
-  src?: string; bg: string; name: string; size?: number; online?: boolean;
+  src?: string; bg: string; name: string; size?: number;
 }) {
   return (
     <div className="relative shrink-0" style={{ width: size, height: size }}>
@@ -149,12 +149,6 @@ function Avatar({
           </span>
         )}
       </div>
-      {online !== undefined && (
-        <div
-          className={`absolute rounded-full border-[1.5px] border-white ${online ? 'bg-[#22c55e]' : 'bg-[#919eab]'}`}
-          style={{ width: size * 0.26, height: size * 0.26, bottom: 0, right: 0 }}
-        />
-      )}
     </div>
   );
 }
@@ -182,7 +176,7 @@ function ChatListItem({
       {/* 頭像 */}
       {room.type === 'group'
         ? <GroupAvatar size={48} />
-        : <Avatar src={room.avatar} bg={room.avatarBg} name={room.name} size={48} online={primaryMember?.isOnline} />
+        : <Avatar src={room.avatar} bg={room.avatarBg} name={room.name} size={48} />
       }
 
       {/* 文字資訊 */}
@@ -731,7 +725,7 @@ function CreateChatOverlay({
                         : 'hover:bg-[#f9fafb] cursor-pointer'
                   }`}
                 >
-                  <Avatar src={member.avatar} bg={member.avatarBg} name={member.name} size={44} online={member.isOnline} />
+                  <Avatar src={member.avatar} bg={member.avatarBg} name={member.name} size={44} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-[6px] mb-[2px]">
                       <RoleBadge member={member} />
@@ -1148,7 +1142,7 @@ export function OnlineChatPage({ currentPage, onPageChange, onLogout, userRole }
                   {/* 頭像：群組用 GroupAvatar */}
                   {selectedRoom.type === 'group'
                     ? <GroupAvatar size={44} />
-                    : <Avatar src={selectedRoom.avatar} bg={selectedRoom.avatarBg} name={selectedRoom.name} size={44} online={selectedRoom.members[0]?.isOnline} />
+                    : <Avatar src={selectedRoom.avatar} bg={selectedRoom.avatarBg} name={selectedRoom.name} size={44} />
                   }
 
                   <div className="flex-1 min-w-0">

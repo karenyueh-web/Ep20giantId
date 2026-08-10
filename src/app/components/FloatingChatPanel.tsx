@@ -169,12 +169,8 @@ export function FloatingChatPanel({ onPageChange, userRole }: FloatingChatPanelP
                 : room.name}
             </p>
           </div>
-          {/* 第二行：在線狀態 */}
-          {room.type === 'direct' && primaryMember ? (
-            primaryMember.isOnline
-              ? <span className="text-[11px] text-[#22c55e] leading-none mt-[3px] block">在線</span>
-              : <span className="text-[11px] text-[#919eab] leading-none mt-[3px] block">離線</span>
-          ) : (
+          {/* 群組顯示成員數 */}
+          {room.type === 'group' && (
             <p className="text-[11px] text-[#919eab] leading-none mt-[2px]">{room.members.length} 位成員</p>
           )}
         </div>
@@ -459,7 +455,6 @@ export function ChatSelectOverlay({
                 >
                   <div className="relative shrink-0">
                     <MiniAvatar src={m.avatar} bg={m.avatarBg} name={m.name} size={40} />
-                    <div className={`absolute bottom-0 right-0 w-[10px] h-[10px] rounded-full border-[1.5px] border-white ${m.isOnline ? 'bg-[#22c55e]' : 'bg-[#919eab]'}`} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-[5px] mb-[1px]">
