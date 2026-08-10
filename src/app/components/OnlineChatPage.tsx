@@ -125,14 +125,10 @@ function MeAvatar({ size = 44 }: { size?: number }) {
           </span>
         )}
       </div>
-      {/* 在線狀態 */}
-      <div
-        className="absolute rounded-full border-[1.5px] border-white bg-[#22c55e]"
-        style={{ width: size * 0.26, height: size * 0.26, bottom: 0, right: 0 }}
-      />
     </div>
   );
 }
+
 
 // ── Avatar 元件（對方）────────────────────────────────────────────────────────
 function Avatar({
