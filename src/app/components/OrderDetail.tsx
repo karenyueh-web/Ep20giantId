@@ -708,18 +708,33 @@ export function OrderDetail({ onClose, orderData, onStatusChange, isReadOnly, us
       orderData?.vendorCode,
       orderData?.purchaser,
     );
-    // 若已有與預帶第一位的現有對話，直接開啟
+
+    // 組合本次單據資料（每次點開都重新組，不管是新/舊對話都要帶入）
+    const parts = [
+      orderData?.orderNo && orderData?.orderSeq
+        ? `單號序號：${orderData.orderNo}${orderData.orderSeq}`
+        : null,
+      orderData?.orderQty != null ? `訂購量：${orderData.orderQty}` : null,
+      liveOrder?.materialNo ? `料號：${liveOrder.materialNo}` : null,
+      orderData?.expectedDelivery ? `預計交期：${orderData.expectedDelivery}` : null,
+      liveOrder?.productName ? `品名：${liveOrder.productName}` : null,
+    ].filter(Boolean);
+    const chatInitialMessage = parts.length > 0 ? parts.join(' | ') : undefined;
+
+    // 若已有與預帶第一位的現有對話，直接開啟並注入本次單據資料
     if (candidates.length > 0) {
       const existingRoom = chatStore.rooms.find(
         r => r.type === 'direct' && r.members[0]?.id === candidates[0].id
       );
       if (existingRoom) {
+        chatStore.setRoomInitialMessage(existingRoom.id, chatInitialMessage);
         chatStore.openFloating(existingRoom.id);
         return;
       }
     }
     setShowChatSelect(true);
   };
+
 
   const handleChatCreateRoom = (room: ChatRoom) => {
     chatStore.addRoom(room);

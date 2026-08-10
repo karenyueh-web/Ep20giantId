@@ -26,6 +26,8 @@ interface ChatStore {
   setActiveRoomId: (roomId: string | null) => void;
   /** 在 markRead 之前呼叫，記錄上次閱讀位置，供全頁 OnlineChatPage 使用 */
   recordLastSeen: (roomId: string) => void;
+  /** 開啟既有對話時注入本次單據資料，下一則訊息送出時自動插入 context 卡片 */
+  setRoomInitialMessage: (roomId: string, message: string | undefined) => void;
 }
 
 // ── Context ──────────────────────────────────────────────────────────────────
@@ -68,12 +70,11 @@ export function ChatStoreProvider({ children }: { children: ReactNode }) {
       const room = prev.find(r => r.id === roomId);
       if (!room) return prev;
 
-      const isFirstMessage = room.messages.length === 0;
       const newMessages: ChatMessage[] = [];
 
-      // 若為第一則訊息且 room 有 initialMessage，
-      // 先插入一則 'context' 類型的單據資料卡片（獨立訊息，視覺與一般氣泡不同）
-      if (isFirstMessage && room.initialMessage) {
+      // room.initialMessage 有值時（從單據開啟聊天），
+      // 先插入一則 'context' 類型的單據資料卡片，插入後清空
+      if (room.initialMessage) {
         newMessages.push({
           id: 'm-' + Date.now() + '-ctx',
           senderId: 'me',
@@ -111,8 +112,8 @@ export function ChatStoreProvider({ children }: { children: ReactNode }) {
               messages: [...r.messages, ...newMessages],
               lastMessage: lastMsg,
               lastTime: '剛剛',
-              // 第一則送出後清空 initialMessage
-              initialMessage: isFirstMessage ? undefined : r.initialMessage,
+              // 送出後清空 initialMessage（下次從單據重新開啟時再注入）
+              initialMessage: undefined,
             }
           : r
       );
@@ -178,6 +179,12 @@ export function ChatStoreProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const setRoomInitialMessage = useCallback((roomId: string, message: string | undefined) => {
+    setRooms(prev =>
+      prev.map(r => r.id === roomId ? { ...r, initialMessage: message } : r)
+    );
+  }, []);
+
   return (
     <ChatStoreContext.Provider value={{
       rooms,
@@ -192,6 +199,7 @@ export function ChatStoreProvider({ children }: { children: ReactNode }) {
       closeFloating,
       setActiveRoomId,
       recordLastSeen,
+      setRoomInitialMessage,
     }}>
       {children}
     </ChatStoreContext.Provider>

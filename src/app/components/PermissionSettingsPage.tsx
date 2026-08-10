@@ -74,7 +74,6 @@ const FEATURE_TREE: FeatureNode[] = [
     label: 'OVERVIEW',
     children: [
       { id: 'overview-vendor-review', label: '廠商帳號審核' },
-      { id: 'overview-dashboard', label: 'Dashboard' },
       { id: 'overview-announcement', label: '公佈欄' },
       { id: 'overview-chat', label: 'Online Chat' },
       {

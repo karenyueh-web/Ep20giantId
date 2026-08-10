@@ -287,13 +287,34 @@ function Auth({ onLoginSuccess, onRegisterClick, onForgotPassword }: AuthProps) 
             localStorage.setItem('currentUserRoleId', 'giant-it');
             onLoginSuccess('giant');
           }}
-          className="w-full h-[38px] rounded-[8px] border border-dashed border-[#f59e0b] bg-[#fffbeb] hover:bg-[#fef3c7] transition-colors flex items-center justify-center gap-[6px]"
+          className="w-full h-[38px] rounded-[8px] border border-dashed border-[#3b82f6] bg-[#eff6ff] hover:bg-[#dbeafe] transition-colors flex items-center justify-center gap-[6px]"
         >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <path d="M7 1.167L8.75 5.25l4.083.583-2.916 2.834.666 4.083L7 10.5l-3.583 2.25.666-4.083L1.167 5.833 5.25 5.25 7 1.167z" fill="#f59e0b" stroke="#f59e0b" strokeWidth="1" strokeLinejoin="round"/>
+            <path d="M7 1.167L8.75 5.25l4.083.583-2.916 2.834.666 4.083L7 10.5l-3.583 2.25.666-4.083L1.167 5.833 5.25 5.25 7 1.167z" fill="#3b82f6" stroke="#3b82f6" strokeWidth="1" strokeLinejoin="round"/>
           </svg>
-          <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#92400e]">
+          <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#1e3a8a]">
             快速登入（Dev）g00106917@giant.com
+          </span>
+        </button>
+
+        {/* ── 快速登入（廠商-業務）────────────────────────────────────────── */}
+        <button
+          type="button"
+          onClick={() => {
+            localStorage.setItem('currentUserEmail', 'sales@vendor.com');
+            localStorage.setItem('currentUserType', 'vendor');
+            localStorage.setItem('currentUserName', '張淑玲');
+            // 廠商業務角色（nine@jogon-pak.com / 張淑玲 的模擬帳號）
+            localStorage.setItem('currentUserRoleId', 'vendor-sales');
+            onLoginSuccess('vendor');
+          }}
+          className="w-full h-[38px] rounded-[8px] border border-dashed border-[#8b5cf6] bg-[#f5f3ff] hover:bg-[#ede9fe] transition-colors flex items-center justify-center gap-[6px]"
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M7 1.167L8.75 5.25l4.083.583-2.916 2.834.666 4.083L7 10.5l-3.583 2.25.666-4.083L1.167 5.833 5.25 5.25 7 1.167z" fill="#8b5cf6" stroke="#8b5cf6" strokeWidth="1" strokeLinejoin="round"/>
+          </svg>
+          <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[12px] text-[#3b0764]">
+            快速登入（廠商-業務）張淑玲
           </span>
         </button>
 

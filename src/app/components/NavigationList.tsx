@@ -998,6 +998,29 @@ interface NavigationListProps {
   isMini?: boolean;
 }
 
+// ─── Nav Permission Helper ───────────────────────────────────────────────────
+// 讀取角色的模組存取設定（permission-settings-{roleId}）
+// IT 角色永遠全開；其他角色依勾選清單決定可見性
+function useNavPermission() {
+  const roleId = localStorage.getItem('currentUserRoleId') ?? '';
+  // IT 角色不受限制
+  if (roleId === 'giant-it') return () => true;
+  // 未設定任何角色 → 全開（防禦性預設，例如 Dev 帳號直接設 giant-it 不受影響）
+  const key = `permission-settings-${roleId}`;
+  const raw = localStorage.getItem(key);
+  if (!raw) return () => true;
+  try {
+    const allowed = JSON.parse(raw) as string[];
+    // PermissionSettingsPage 儲存的是「葉節點 id」（最細層）
+    // 例如勾選「訂單管理」會存入 mgmt-order-general-list-all 等葉節點
+    // hasNav('mgmt-order') 需比對「allowed 中有任何 id 以 featureId 開頭」
+    return (featureId: string) =>
+      allowed.some(id => id === featureId || id.startsWith(featureId + '-'));
+  } catch {
+    return () => true;
+  }
+}
+
 export function NavigationList({ currentPage, onPageChange, onLogout, isMini = false }: NavigationListProps) {
   const { open } = useSidebar();
   const [expandedMenus, setExpandedMenus] = useState<string[]>(() => {
@@ -1053,6 +1076,10 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
       prev.includes(menuId) ? prev : [...prev, menuId]
     );
   };
+
+  // ── 模組存取權限 ──────────────────────────────────────────────────────────
+  // hasNav(featureId) → 此角色是否可看到該功能入口
+  const hasNav = useNavPermission();
 
   // 計算廠商帳號審核的總數量
   const vendorAccountReviewCount = mockVendorsSuccess.length + mockVendorsFail.length;
@@ -1113,306 +1140,295 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
       {/* 用戶信息區塊 - 包含頭像、角色、email和語言選擇器 */}
       <UserInfo onPageChange={onPageChange} />
       
-      {/* OVERVIEW 區塊 */}
-      <div className="relative shrink-0 w-full" data-name="subheader">
-        <div className="flex flex-row items-center size-full">
-          <div className="content-stretch flex items-center pb-[8px] pl-[12px] pr-0 pt-[16px] relative w-full">
-            <p className="css-ew64yg font-['Public_Sans:Bold',sans-serif] font-bold leading-[18px] relative shrink-0 text-[#919eab] text-[11px] uppercase">OVERVIEW</p>
+      {/* OVERVIEW 區塊 - 只判斷實際出現在 nav 的項目（公佈欄/Chat 已移至上方 icon 列） */}
+      {(['overview-vendor-review','overview-receiving','overview-schedule','overview-vendor-eval'].some(id => hasNav(id))) && (
+        <div className="relative shrink-0 w-full" data-name="subheader">
+          <div className="flex flex-row items-center size-full">
+            <div className="content-stretch flex items-center pb-[8px] pl-[12px] pr-0 pt-[16px] relative w-full">
+              <p className="css-ew64yg font-['Public_Sans:Bold',sans-serif] font-bold leading-[18px] relative shrink-0 text-[#919eab] text-[11px] uppercase">OVERVIEW</p>
+            </div>
           </div>
         </div>
-      </div>
-      
-      {/* 新增：廠商帳號審核 */}
-      <NavItem 
-        icon={<VendorApprovalIcon />} 
-        label="廠商帳號審核" 
-        isActive={currentPage === 'vendor-account-review'}
-        onClick={() => onPageChange('vendor-account-review')}
-        badge={vendorAccountReviewBadge}
-      />
+      )}
       
 
+      {/* 廠商帳號審核 */}
+      {hasNav('overview-vendor-review') && (
+        <NavItem
+          icon={<VendorApprovalIcon />}
+          label="廠商帳號審核"
+          isActive={currentPage === 'vendor-account-review'}
+          onClick={() => onPageChange('vendor-account-review')}
+          badge={vendorAccountReviewBadge}
+        />
+      )}
 
-      {/* 新增：收料查詢 */}
-      <NavItem 
-        icon={<ReceivingIcon />} 
-        label="收料查詢" 
-        isActive={currentPage === 'receiving-inquiry'}
-        onClick={() => onPageChange('receiving-inquiry')}
-      />
-      
-      {/* 新增：排程總表查詢 */}
-      <NavItem 
-        icon={<ScheduleIcon />} 
-        label="排程總表查詢" 
-        isActive={currentPage === 'schedule-inquiry'}
-        onClick={() => onPageChange('schedule-inquiry')}
-      />
 
-      {/* 廠商評價（移至 overview 排程總表查詢後） */}
-      <NavItem 
-        icon={<QualityIcon />} 
-        label="廠商評價"
-        isActive={currentPage === 'vendor-evaluation'}
-        onClick={() => onPageChange('vendor-evaluation')}
-      />
+      {/* 收料查詢 */}
+      {hasNav('overview-receiving') && (
+        <NavItem
+          icon={<ReceivingIcon />}
+          label="收料查詢"
+          isActive={currentPage === 'receiving-inquiry'}
+          onClick={() => onPageChange('receiving-inquiry')}
+        />
+      )}
 
-      {/* MANAGEMENT 區塊 */}
-      <div className="relative shrink-0 w-full" data-name="subheader">
-        <div className="flex flex-row items-center size-full">
-          <div className="content-stretch flex items-center pb-[8px] pl-[12px] pr-0 pt-[16px] relative w-full">
-            <p className="css-ew64yg font-['Public_Sans:Bold',sans-serif] font-bold leading-[18px] relative shrink-0 text-[#919eab] text-[11px] uppercase">Management</p>
+      {/* 排程總表查詢 */}
+      {hasNav('overview-schedule') && (
+        <NavItem
+          icon={<ScheduleIcon />}
+          label="排程總表查詢"
+          isActive={currentPage === 'schedule-inquiry'}
+          onClick={() => onPageChange('schedule-inquiry')}
+        />
+      )}
+
+      {/* 廠商評價 */}
+      {hasNav('overview-vendor-eval') && (
+        <NavItem
+          icon={<QualityIcon />}
+          label="廠商評價"
+          isActive={currentPage === 'vendor-evaluation'}
+          onClick={() => onPageChange('vendor-evaluation')}
+        />
+      )}
+
+      {/* MANAGEMENT 區塊 - 只要有任一 management 功能有權限才顯示標題 */}
+      {(['mgmt-parts','mgmt-order','mgmt-correction','mgmt-shipping','mgmt-quality','mgmt-invoice','mgmt-insurance','mgmt-esg','mgmt-ship-tw','mgmt-account','mgmt-system'].some(id => hasNav(id))) && (
+        <div className="relative shrink-0 w-full" data-name="subheader">
+          <div className="flex flex-row items-center size-full">
+            <div className="content-stretch flex items-center pb-[8px] pl-[12px] pr-0 pt-[16px] relative w-full">
+              <p className="css-ew64yg font-['Public_Sans:Bold',sans-serif] font-bold leading-[18px] relative shrink-0 text-[#919eab] text-[11px] uppercase">Management</p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* 1. 零件/索樣 */}
-      <div className="w-full">
-        <NavItem 
-          icon={<PartsIcon />} 
-          label="零件/索樣" 
-          hasSubmenu 
-          isExpanded={expandedMenus.includes('parts')}
-          isActive={expandedMenus.includes('parts')}
-          onClick={() => toggleMenu('parts')}
-          badge={partsAndSampleBadge}
-        />
-        {expandedMenus.includes('parts') && (
-          <div className="w-full">
-            <SubMenuItem label="零件資訊" page="parts-maintain" onNavigate={onPageChange} isActive={currentPage === 'parts-maintain'}
-              badge={partsPendingBadge}
-            />
-            <SubMenuItem label="列印報價單" page="parts-quote" onNavigate={onPageChange} isActive={currentPage === 'parts-quote'} />
-            <SubMenuItem label="索樣單" page="parts-sample" onNavigate={onPageChange} isActive={currentPage === 'parts-sample'}
-              badge={sampleOrderBadge}
-            />
-          </div>
-        )}
-      </div>
+      {hasNav('mgmt-parts') && (
+        <div className="w-full">
+          <NavItem
+            icon={<PartsIcon />}
+            label="零件/索樣"
+            hasSubmenu
+            isExpanded={expandedMenus.includes('parts')}
+            isActive={expandedMenus.includes('parts')}
+            onClick={() => toggleMenu('parts')}
+            badge={partsAndSampleBadge}
+          />
+          {expandedMenus.includes('parts') && (
+            <div className="w-full">
+              {hasNav('mgmt-parts-info') && <SubMenuItem label="零件資訊" page="parts-maintain" onNavigate={onPageChange} isActive={currentPage === 'parts-maintain'} badge={partsPendingBadge} />}
+              {hasNav('mgmt-parts-print-quote') && <SubMenuItem label="列印報價單" page="parts-quote" onNavigate={onPageChange} isActive={currentPage === 'parts-quote'} />}
+              {hasNav('mgmt-parts-sample') && <SubMenuItem label="索樣單" page="parts-sample" onNavigate={onPageChange} isActive={currentPage === 'parts-sample'} badge={sampleOrderBadge} />}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 3. 訂單管理 */}
-      <div className="w-full">
-        <NavItem 
-          icon={<OrderIcon />} 
-          label="訂單管理" 
-          hasSubmenu 
-          isExpanded={expandedMenus.includes('order')}
-          isActive={expandedMenus.includes('order')}
-          onClick={() => toggleMenu('order')}
-        />
-        {expandedMenus.includes('order') && (
-          <div className="w-full">
-            <SubMenuItem 
-              label="一般訂單查詢" 
-              isActive={currentPage === 'order-list'}
-              onClick={() => onPageChange('order-list')} 
-            />
-            <SubMenuItem 
-              label="換貨(J)單據查詢" 
-              isActive={currentPage === 'order-exchange'}
-              onClick={() => onPageChange('order-exchange')} 
-            />
-            <SubMenuItem 
-              label="退貨單據查詢" 
-              isActive={currentPage === 'order-return'}
-              onClick={() => onPageChange('order-return')} 
-            />
-            <SubMenuItem 
-              label="預測訂單查詢" 
-              isActive={currentPage === 'order-forecast'}
-              onClick={() => onPageChange('order-forecast')} 
-            />
-            <SubMenuItem label="變更生管排程" page="order-schedule-change" onNavigate={onPageChange} isActive={currentPage === 'order-schedule-change'} />
-            <SubMenuItem label="歷史訂單查詢" isActive={currentPage === 'order-history'} onClick={() => onPageChange('order-history')} />
-          </div>
-        )}
-      </div>
+      {hasNav('mgmt-order') && (
+        <div className="w-full">
+          <NavItem
+            icon={<OrderIcon />}
+            label="訂單管理"
+            hasSubmenu
+            isExpanded={expandedMenus.includes('order')}
+            isActive={expandedMenus.includes('order')}
+            onClick={() => toggleMenu('order')}
+          />
+          {expandedMenus.includes('order') && (
+            <div className="w-full">
+              {hasNav('mgmt-order-general') && <SubMenuItem label="一般訂單查詢" isActive={currentPage === 'order-list'} onClick={() => onPageChange('order-list')} />}
+              {hasNav('mgmt-order-exchange') && <SubMenuItem label="換貨(J)單據查詢" isActive={currentPage === 'order-exchange'} onClick={() => onPageChange('order-exchange')} />}
+              {hasNav('mgmt-order-return') && <SubMenuItem label="退貨單據查詢" isActive={currentPage === 'order-return'} onClick={() => onPageChange('order-return')} />}
+              {hasNav('mgmt-order-forecast') && <SubMenuItem label="預測訂單查詢" isActive={currentPage === 'order-forecast'} onClick={() => onPageChange('order-forecast')} />}
+              {hasNav('mgmt-order-schedule-change') && <SubMenuItem label="變更生管排程" page="order-schedule-change" onNavigate={onPageChange} isActive={currentPage === 'order-schedule-change'} />}
+              {hasNav('mgmt-order-history') && <SubMenuItem label="歷史訂單查詢" isActive={currentPage === 'order-history'} onClick={() => onPageChange('order-history')} />}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 4. 修正單管理 */}
-      <div className="w-full">
-        <NavItem 
-          icon={<CorrectOrderIcon />} 
-          label="修正單管理" 
-          hasSubmenu 
-          isExpanded={expandedMenus.includes('correction')}
-          isActive={expandedMenus.includes('correction')}
-          onClick={() => toggleMenu('correction')}
-        />
-        {expandedMenus.includes('correction') && (
-          <div className="w-full">
-            <SubMenuItem label="建立修正單" page="correction-create" onNavigate={onPageChange} isActive={currentPage === 'correction-create'} />
-            <SubMenuItem label="修正單查詢" page="correction-list" onNavigate={onPageChange} isActive={currentPage === 'correction-list'} />
-            <SubMenuItem label="歷史修正單" page="correction-history" onNavigate={onPageChange} isActive={currentPage === 'correction-history'} />
-          </div>
-        )}
-      </div>
+      {hasNav('mgmt-correction') && (
+        <div className="w-full">
+          <NavItem
+            icon={<CorrectOrderIcon />}
+            label="修正單管理"
+            hasSubmenu
+            isExpanded={expandedMenus.includes('correction')}
+            isActive={expandedMenus.includes('correction')}
+            onClick={() => toggleMenu('correction')}
+          />
+          {expandedMenus.includes('correction') && (
+            <div className="w-full">
+              {hasNav('mgmt-correction-create') && <SubMenuItem label="建立修正單" page="correction-create" onNavigate={onPageChange} isActive={currentPage === 'correction-create'} />}
+              {hasNav('mgmt-correction-list') && <SubMenuItem label="修正單查詢" page="correction-list" onNavigate={onPageChange} isActive={currentPage === 'correction-list'} />}
+              {hasNav('mgmt-correction-history') && <SubMenuItem label="歷史修正單" page="correction-history" onNavigate={onPageChange} isActive={currentPage === 'correction-history'} />}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 5. 出貨單 */}
-      <div className="w-full">
-        <NavItem 
-          icon={<ShippingIcon />} 
-          label="出貨單" 
-          hasSubmenu 
-          isExpanded={expandedMenus.includes('shipping')}
-          isActive={expandedMenus.includes('shipping')}
-          onClick={() => toggleMenu('shipping')}
-        />
-        {expandedMenus.includes('shipping') && (
-          <div className="w-full">
-            <SubMenuItem label="建立出貨單" page="shipping-create" onNavigate={onPageChange} isActive={currentPage === 'shipping-create'} />
-            <SubMenuItem label="出貨單查詢" page="shipping-list" onNavigate={onPageChange} isActive={currentPage === 'shipping-list'} />
-            <SubMenuItem label="出貨/裝箱明細" page="shipping-packing" onNavigate={onPageChange} isActive={currentPage === 'shipping-packing'} />
-            <SubMenuItem label="列印單據" page="shipping-print" onNavigate={onPageChange} isActive={currentPage === 'shipping-print'} />
-            <SubMenuItem label="基本設定" page="shipping-settings" onNavigate={onPageChange} isActive={currentPage === 'shipping-settings'} />
-          </div>
-        )}
-      </div>
+      {hasNav('mgmt-shipping') && (
+        <div className="w-full">
+          <NavItem
+            icon={<ShippingIcon />}
+            label="出貨單"
+            hasSubmenu
+            isExpanded={expandedMenus.includes('shipping')}
+            isActive={expandedMenus.includes('shipping')}
+            onClick={() => toggleMenu('shipping')}
+          />
+          {expandedMenus.includes('shipping') && (
+            <div className="w-full">
+              {hasNav('mgmt-shipping-create') && <SubMenuItem label="建立出貨單" page="shipping-create" onNavigate={onPageChange} isActive={currentPage === 'shipping-create'} />}
+              {hasNav('mgmt-shipping-list') && <SubMenuItem label="出貨單查詢" page="shipping-list" onNavigate={onPageChange} isActive={currentPage === 'shipping-list'} />}
+              {hasNav('mgmt-shipping-packing') && <SubMenuItem label="出貨/裝箱明細" page="shipping-packing" onNavigate={onPageChange} isActive={currentPage === 'shipping-packing'} />}
+              {hasNav('mgmt-shipping-print') && <SubMenuItem label="列印單據" page="shipping-print" onNavigate={onPageChange} isActive={currentPage === 'shipping-print'} />}
+              {hasNav('mgmt-shipping-settings') && <SubMenuItem label="基本設定" page="shipping-settings" onNavigate={onPageChange} isActive={currentPage === 'shipping-settings'} />}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 6. 品保作業 */}
-      <div className="w-full">
-        <NavItem 
-          icon={<QualityIcon />} 
-          label="品保作業" 
-          hasSubmenu 
-          isExpanded={expandedMenus.includes('quality')}
-          isActive={expandedMenus.includes('quality')}
-          onClick={() => toggleMenu('quality')}
-        />
-        {expandedMenus.includes('quality') && (
-          <div className="w-full">
-            <SubMenuItem 
-              label="品質異常單" 
-              isActive={currentPage === 'quality-abnormal'}
-              onClick={() => onPageChange('quality-abnormal')}
-              page="quality-abnormal"
-            />
-            <SubMenuItem label="檢驗/測試報告" page="quality-report" onNavigate={onPageChange} isActive={currentPage === 'quality-report'} />
-            <SubMenuItem label="危害物質管理" page="quality-hazard" onNavigate={onPageChange} isActive={currentPage === 'quality-hazard'} />
-            <SubMenuItem label="其他設定" page="quality-other" onNavigate={onPageChange} isActive={currentPage === 'quality-other'} />
-          </div>
-        )}
-      </div>
+      {hasNav('mgmt-quality') && (
+        <div className="w-full">
+          <NavItem
+            icon={<QualityIcon />}
+            label="品保作業"
+            hasSubmenu
+            isExpanded={expandedMenus.includes('quality')}
+            isActive={expandedMenus.includes('quality')}
+            onClick={() => toggleMenu('quality')}
+          />
+          {expandedMenus.includes('quality') && (
+            <div className="w-full">
+              {hasNav('mgmt-quality-abnormal') && <SubMenuItem label="品質異常單" page="quality-abnormal" onNavigate={onPageChange} isActive={currentPage === 'quality-abnormal'} />}
+              {hasNav('mgmt-quality-report') && <SubMenuItem label="檢驗/測試報告" page="quality-report" onNavigate={onPageChange} isActive={currentPage === 'quality-report'} />}
+              {hasNav('mgmt-quality-hazard') && <SubMenuItem label="危害物質管理" page="quality-hazard" onNavigate={onPageChange} isActive={currentPage === 'quality-hazard'} />}
+              {hasNav('mgmt-quality-other') && <SubMenuItem label="其他設定" page="quality-other" onNavigate={onPageChange} isActive={currentPage === 'quality-other'} />}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 7. 發票作業 */}
-      <div className="w-full">
-        <NavItem 
-          icon={<InvoiceIcon />} 
-          label="發票作業" 
-          hasSubmenu 
-          isExpanded={expandedMenus.includes('invoice')}
-          isActive={expandedMenus.includes('invoice')}
-          onClick={() => toggleMenu('invoice')}
-        />
-        {expandedMenus.includes('invoice') && (
-          <div className="w-full">
-            <SubMenuItem label="開立發票" page="invoice-create" onNavigate={onPageChange} isActive={currentPage === 'invoice-create'} />
-            <SubMenuItem label="發票查詢" page="invoice-list" onNavigate={onPageChange} isActive={currentPage === 'invoice-list'} />
-            <SubMenuItem label="發票設定" page="invoice-settings" onNavigate={onPageChange} isActive={currentPage === 'invoice-settings'} />
-          </div>
-        )}
-      </div>
+      {hasNav('mgmt-invoice') && (
+        <div className="w-full">
+          <NavItem
+            icon={<InvoiceIcon />}
+            label="發票作業"
+            hasSubmenu
+            isExpanded={expandedMenus.includes('invoice')}
+            isActive={expandedMenus.includes('invoice')}
+            onClick={() => toggleMenu('invoice')}
+          />
+          {expandedMenus.includes('invoice') && (
+            <div className="w-full">
+              {hasNav('mgmt-invoice-create') && <SubMenuItem label="開立發票" page="invoice-create" onNavigate={onPageChange} isActive={currentPage === 'invoice-create'} />}
+              {hasNav('mgmt-invoice-list') && <SubMenuItem label="發票查詢" page="invoice-list" onNavigate={onPageChange} isActive={currentPage === 'invoice-list'} />}
+              {hasNav('mgmt-invoice-settings') && <SubMenuItem label="發票設定" page="invoice-settings" onNavigate={onPageChange} isActive={currentPage === 'invoice-settings'} />}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 8. 產險資料維護 */}
-      <NavItem 
-        icon={<InsuranceIcon />} 
-        label="產險資料維護"
-        isActive={currentPage === 'insurance-maintain'}
-        onClick={() => onPageChange('insurance-maintain')}
-      />
+      {hasNav('mgmt-insurance') && (
+        <NavItem
+          icon={<InsuranceIcon />}
+          label="產險資料維護"
+          isActive={currentPage === 'insurance-maintain'}
+          onClick={() => onPageChange('insurance-maintain')}
+        />
+      )}
 
       {/* 9. ESG */}
-      <div className="w-full">
-        <NavItem 
-          icon={<InsuranceIcon />} 
-          label="ESG" 
-          hasSubmenu 
-          isExpanded={expandedMenus.includes('esg')}
-          isActive={expandedMenus.includes('esg')}
-          onClick={() => toggleMenu('esg')}
-        />
-        {expandedMenus.includes('esg') && (
-          <div className="w-full">
-            <SubMenuItem label="物料成分總檔" page="esg-material" onNavigate={onPageChange} isActive={currentPage === 'esg-material'} />
-            <SubMenuItem label="材料維護" page="esg-maintain" onNavigate={onPageChange} isActive={currentPage === 'esg-maintain'} />
-          </div>
-        )}
-      </div>
+      {hasNav('mgmt-esg') && (
+        <div className="w-full">
+          <NavItem
+            icon={<InsuranceIcon />}
+            label="ESG"
+            hasSubmenu
+            isExpanded={expandedMenus.includes('esg')}
+            isActive={expandedMenus.includes('esg')}
+            onClick={() => toggleMenu('esg')}
+          />
+          {expandedMenus.includes('esg') && (
+            <div className="w-full">
+              {hasNav('mgmt-esg-material') && <SubMenuItem label="物料成分總檔" page="esg-material" onNavigate={onPageChange} isActive={currentPage === 'esg-material'} />}
+              {hasNav('mgmt-esg-maintain') && <SubMenuItem label="材料維護" page="esg-maintain" onNavigate={onPageChange} isActive={currentPage === 'esg-maintain'} />}
+            </div>
+          )}
+        </div>
+      )}
 
 
       {/* 11. 出貨台灣捷安特 */}
-      <div className="w-full">
-        <NavItem 
-          icon={<ShippingIcon />} 
-          label="出貨台灣捷安特" 
-          hasSubmenu 
-          isExpanded={expandedMenus.includes('shipment-tw')}
-          isActive={expandedMenus.includes('shipment-tw')}
-          onClick={() => toggleMenu('shipment-tw')}
-        />
-        {expandedMenus.includes('shipment-tw') && (
-          <div className="w-full">
-            <SubMenuItem label="訂單查詢" page="shipment-tw-order" onNavigate={onPageChange} isActive={currentPage === 'shipment-tw-order'} />
-            <SubMenuItem label="出貨單查詢" page="shipment-tw-shipping" onNavigate={onPageChange} isActive={currentPage === 'shipment-tw-shipping'} />
-            <SubMenuItem label="列印外箱貼紙" page="shipment-tw-print" onNavigate={onPageChange} isActive={currentPage === 'shipment-tw-print'} />
-          </div>
-        )}
-      </div>
+      {hasNav('mgmt-ship-tw') && (
+        <div className="w-full">
+          <NavItem
+            icon={<ShippingIcon />}
+            label="出貨台灣捷安特"
+            hasSubmenu
+            isExpanded={expandedMenus.includes('shipment-tw')}
+            isActive={expandedMenus.includes('shipment-tw')}
+            onClick={() => toggleMenu('shipment-tw')}
+          />
+          {expandedMenus.includes('shipment-tw') && (
+            <div className="w-full">
+              {hasNav('mgmt-ship-tw-order') && <SubMenuItem label="訂單查詢" page="shipment-tw-order" onNavigate={onPageChange} isActive={currentPage === 'shipment-tw-order'} />}
+              {hasNav('mgmt-ship-tw-shipping') && <SubMenuItem label="出貨單查詢" page="shipment-tw-shipping" onNavigate={onPageChange} isActive={currentPage === 'shipment-tw-shipping'} />}
+              {hasNav('mgmt-ship-tw-print') && <SubMenuItem label="列印外箱貼紙" page="shipment-tw-print" onNavigate={onPageChange} isActive={currentPage === 'shipment-tw-print'} />}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 12. 帳號管理 */}
-      <div className="w-full">
-        <NavItem 
-          icon={<AccountIcon />} 
-          label="帳號管理" 
-          hasSubmenu 
-          isExpanded={expandedMenus.includes('account')}
-          isActive={expandedMenus.includes('account')}
-          onClick={() => toggleMenu('account')}
-        />
-        {expandedMenus.includes('account') && (
-          <div className="w-full">
-            <SubMenuItem 
-              label="廠商帳號管理" 
-              isActive={currentPage === 'vendor-account-management'}
-              onClick={() => onPageChange('vendor-account-management')}
-              page="vendor-account-management"
-            />
-            <SubMenuItem 
-              label="巨大帳號管理" 
-              isActive={currentPage === 'giant-account-management'}
-              onClick={() => onPageChange('giant-account-management')}
-              page="giant-account-management"
-            />
-          </div>
-        )}
-      </div>
+      {hasNav('mgmt-account') && (
+        <div className="w-full">
+          <NavItem
+            icon={<AccountIcon />}
+            label="帳號管理"
+            hasSubmenu
+            isExpanded={expandedMenus.includes('account')}
+            isActive={expandedMenus.includes('account')}
+            onClick={() => toggleMenu('account')}
+          />
+          {expandedMenus.includes('account') && (
+            <div className="w-full">
+              {hasNav('mgmt-account-vendor') && <SubMenuItem label="廠商帳號管理" isActive={currentPage === 'vendor-account-management'} onClick={() => onPageChange('vendor-account-management')} page="vendor-account-management" />}
+              {hasNav('mgmt-account-giant') && <SubMenuItem label="巨大帳號管理" isActive={currentPage === 'giant-account-management'} onClick={() => onPageChange('giant-account-management')} page="giant-account-management" />}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 13. 系統設定 */}
-      <div className="w-full">
-        <NavItem 
-          icon={<SystemSettingsIcon />} 
-          label="系統設定" 
-          hasSubmenu 
-          isExpanded={expandedMenus.includes('system')}
-          isActive={expandedMenus.includes('system')}
-          onClick={() => toggleMenu('system')}
-        />
-        {expandedMenus.includes('system') && (
-          <div className="w-full">
-            <SubMenuItem 
-              label="角色權限設定" 
-              isActive={currentPage === 'permission-settings'}
-              onClick={() => onPageChange('permission-settings')}
-              page="permission-settings"
-            />
-            <SubMenuItem 
-              label="排程設定" 
-              isActive={currentPage === 'schedule-settings'}
-              onClick={() => onPageChange('schedule-settings')}
-              page="schedule-settings"
-            />
-          </div>
-        )}
-      </div>
+      {hasNav('mgmt-system') && (
+        <div className="w-full">
+          <NavItem
+            icon={<SystemSettingsIcon />}
+            label="系統設定"
+            hasSubmenu
+            isExpanded={expandedMenus.includes('system')}
+            isActive={expandedMenus.includes('system')}
+            onClick={() => toggleMenu('system')}
+          />
+          {expandedMenus.includes('system') && (
+            <div className="w-full">
+              {hasNav('mgmt-system-permission') && <SubMenuItem label="角色權限設定" isActive={currentPage === 'permission-settings'} onClick={() => onPageChange('permission-settings')} page="permission-settings" />}
+              {hasNav('mgmt-system-schedule') && <SubMenuItem label="排程設定" isActive={currentPage === 'schedule-settings'} onClick={() => onPageChange('schedule-settings')} page="schedule-settings" />}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 登出按鈕 */}
       {onLogout && (
