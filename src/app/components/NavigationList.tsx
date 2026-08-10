@@ -13,6 +13,7 @@ import { BaseOverlay } from './BaseOverlay';
 import { mockVendorsSuccess, mockVendorsFail } from '@/imports/廠商帳號審核-4007-9767';
 import { useLanguage, type Language } from './LanguageContext';
 import { useSidebar } from './SidebarContext';
+import { useNavTheme } from './NavThemeContext';
 import { getSampleOrders } from './sampleOrderData';
 import { getChatUnreadCount } from '@/app/data/chatData';
 import { getParts } from './partsMaintenanceData';
@@ -595,26 +596,32 @@ interface NavItemProps {
 }
 
 function NavItem({ icon, label, badge, hasSubmenu, isActive, isExpanded, onClick }: NavItemProps) {
+  const { theme } = useNavTheme();
   return (
     <div 
-      className={`min-h-[44px] relative rounded-[8px] shrink-0 w-full cursor-pointer transition-colors ${
-        isActive ? 'bg-[rgba(255,184,0,0.15)]' : 'bg-[rgba(255,255,255,0)] hover:bg-[rgba(255,184,0,0.08)]'
-      }`}
+      className="min-h-[44px] relative rounded-[8px] shrink-0 w-full cursor-pointer transition-colors"
+      style={{ backgroundColor: isActive ? theme.activeBg : undefined }}
       data-name="NavVertical/Item"
       onClick={onClick}
-      style={{
-        ['--icon-color' as any]: isActive ? '#ffb800' : '#637381',
-      }}
+      onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLDivElement).style.backgroundColor = theme.hoverBg; }}
+      onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLDivElement).style.backgroundColor = ''; }}
     >
       <div className="flex flex-row items-center min-h-[inherit] size-full">
         <div className="content-stretch flex items-center min-h-[inherit] pl-[12px] pr-[8px] py-[4px] relative w-full">
-          <div className="content-stretch flex items-center justify-center pl-0 pr-[12px] py-0 relative shrink-0" data-name="item-icon">
+          <div
+            className="content-stretch flex items-center justify-center pl-0 pr-[12px] py-0 relative shrink-0"
+            data-name="item-icon"
+            style={{ ['--icon-color' as any]: isActive ? theme.activeText : theme.inactiveIcon }}
+          >
             {icon}
           </div>
           <div className="flex-[1_0_0] min-h-px min-w-px relative" data-name="item-text">
             <div className="flex flex-col items-center justify-center size-full">
               <div className="content-stretch flex flex-col items-center justify-center pl-0 pr-[16px] py-0 relative w-full">
-                <div className={`css-g0mm18 flex flex-col font-['Public_Sans:${isActive ? 'SemiBold' : 'Medium'}',sans-serif] ${isActive ? 'font-semibold' : 'font-medium'} justify-center leading-[0] overflow-hidden relative shrink-0 ${isActive ? 'text-[#ffb800]' : 'text-[#a8aeb3]'} text-[14px] text-ellipsis w-full`}>
+                <div
+                  className={`css-g0mm18 flex flex-col font-['Public_Sans:${isActive ? 'SemiBold' : 'Medium'}',sans-serif] ${isActive ? 'font-semibold' : 'font-medium'} justify-center leading-[0] overflow-hidden relative shrink-0 text-[14px] text-ellipsis w-full`}
+                  style={{ color: isActive ? theme.activeText : theme.inactiveText }}
+                >
                   <p className="css-g0mm18 leading-[22px] overflow-hidden">{label}</p>
                 </div>
               </div>
@@ -626,7 +633,11 @@ function NavItem({ icon, label, badge, hasSubmenu, isActive, isExpanded, onClick
             </div>
           )}
           {hasSubmenu && (
-            <div className="content-stretch flex items-center justify-center pl-[8px] pr-0 py-0 relative shrink-0" data-name="arrow">
+            <div
+              className="content-stretch flex items-center justify-center pl-[8px] pr-0 py-0 relative shrink-0"
+              data-name="arrow"
+              style={{ ['--icon-color' as any]: isActive ? theme.activeText : theme.inactiveIcon }}
+            >
               {isExpanded ? <ArrowDownIcon /> : <ArrowRightIcon />}
             </div>
           )}
@@ -647,18 +658,24 @@ interface SubMenuItemProps {
 }
 
 function SubMenuItem({ label, isActive, onClick, page, onNavigate, badge }: SubMenuItemProps) {
+  const { theme } = useNavTheme();
   const handleClick = onClick ?? (page && onNavigate ? () => onNavigate(page) : undefined);
   return (
     <div 
-      className="min-h-[40px] relative rounded-[8px] shrink-0 w-full cursor-pointer transition-colors bg-[rgba(255,255,255,0)] hover:bg-[rgba(255,184,0,0.05)]"
+      className="min-h-[40px] relative rounded-[8px] shrink-0 w-full cursor-pointer transition-colors"
       onClick={handleClick}
+      onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.backgroundColor = theme.hoverBg; }}
+      onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.backgroundColor = ''; }}
     >
       <div className="flex flex-row items-center min-h-[inherit] size-full">
         <div className="content-stretch flex items-center min-h-[inherit] pl-[48px] pr-[8px] py-[4px] relative w-full">
           <div className="flex-[1_0_0] min-h-px min-w-px relative">
             <div className="flex flex-col items-center justify-center size-full">
               <div className="content-stretch flex flex-col items-center justify-center pl-0 pr-[16px] py-0 relative w-full">
-                <div className={`css-g0mm18 flex flex-col font-['Public_Sans:${isActive ? 'SemiBold' : 'Regular'}',sans-serif] ${isActive ? 'font-semibold' : 'font-normal'} justify-center leading-[0] overflow-hidden relative shrink-0 ${isActive ? 'text-[#ffc933] hover:text-[#ffc933]' : 'text-[#8a9099] hover:text-[#ffd666]'} text-[13px] text-ellipsis w-full transition-colors`}>
+                <div
+                  className={`css-g0mm18 flex flex-col font-['Public_Sans:${isActive ? 'SemiBold' : 'Regular'}',sans-serif] ${isActive ? 'font-semibold' : 'font-normal'} justify-center leading-[0] overflow-hidden relative shrink-0 text-[13px] text-ellipsis w-full transition-colors`}
+                  style={{ color: isActive ? theme.submenuActiveText : theme.inactiveText }}
+                >
                   <p className="css-g0mm18 leading-[20px] overflow-hidden">{label}</p>
                 </div>
               </div>
@@ -685,32 +702,37 @@ interface NavItemMiniProps {
 }
 
 function NavItemMini({ icon, label, isActive, hasSubmenu, onClick }: NavItemMiniProps) {
+  const { theme } = useNavTheme();
   return (
     <div
-      className={`relative flex flex-col items-center gap-[5px] h-[58px] justify-end pb-[6px] pt-[8px] rounded-[8px] w-full cursor-pointer transition-colors ${
-        isActive ? 'bg-[rgba(255,184,0,0.15)]' : 'hover:bg-[rgba(255,184,0,0.08)]'
-      }`}
+      className="relative flex flex-col items-center gap-[5px] h-[58px] justify-end pb-[6px] pt-[8px] rounded-[8px] w-full cursor-pointer transition-colors"
       onClick={onClick}
-      style={{ ['--fill-0' as any]: isActive ? '#FFB800' : '#637381' }}
+      style={{
+        backgroundColor: isActive ? theme.miniItemActiveBg : undefined,
+        ['--fill-0' as any]: isActive ? theme.activeText : theme.inactiveIcon,
+      }}
+      onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLDivElement).style.backgroundColor = theme.miniItemHoverBg; }}
+      onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLDivElement).style.backgroundColor = ''; }}
     >
       {/* Submenu arrow indicator */}
       {hasSubmenu && (
         <div className="absolute top-[7px] right-[6px]">
           <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-            <path d="M3.5 2.5L6.5 5L3.5 7.5" stroke="#637381" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M3.5 2.5L6.5 5L3.5 7.5" stroke={theme.inactiveIcon} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </div>
       )}
       {/* Icon */}
-      <div className="shrink-0">
+      <div
+        className="shrink-0"
+        style={{ ['--icon-color' as any]: isActive ? theme.activeText : theme.inactiveIcon }}
+      >
         {icon}
       </div>
       {/* Label */}
       <span
-        className={`text-[10px] text-center leading-[14px] overflow-hidden text-ellipsis whitespace-nowrap w-full px-[4px] ${
-          isActive ? 'text-[#ffb800]' : 'text-[#8a9099]'
-        }`}
-        style={{ fontFamily: "'Public_Sans:Medium', sans-serif", fontWeight: 500 }}
+        className="text-[10px] text-center leading-[14px] overflow-hidden text-ellipsis whitespace-nowrap w-full px-[4px]"
+        style={{ fontFamily: "'Public_Sans:Medium', sans-serif", fontWeight: 500, color: isActive ? theme.activeText : theme.inactiveText }}
       >
         {label}
       </span>
@@ -794,6 +816,7 @@ interface MiniNavFlyoutProps {
 }
 
 function MiniNavFlyout({ menuId, label, top, currentPage, onNavigate, onMouseEnter, onMouseLeave }: MiniNavFlyoutProps) {
+  const { theme } = useNavTheme();
   const items = MINI_SUBMENUS[menuId] ?? [];
   return createPortal(
     <div
@@ -804,14 +827,17 @@ function MiniNavFlyout({ menuId, label, top, currentPage, onNavigate, onMouseEnt
     >
       {/* Card */}
       <div
-        className="bg-[#1a2230] rounded-[10px] shadow-[0_8px_40px_rgba(0,0,0,0.55)] border border-[rgba(255,255,255,0.07)] overflow-hidden"
-        style={{ minWidth: 196 }}
+        className="rounded-[10px] shadow-[0_8px_40px_rgba(0,0,0,0.55)] overflow-hidden"
+        style={{ minWidth: 196, backgroundColor: theme.flyoutBg, border: `1px solid ${theme.borderColor}` }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-[14px] pt-[11px] pb-[10px] border-b border-[rgba(255,255,255,0.07)]">
+        <div
+          className="flex items-center justify-between px-[14px] pt-[11px] pb-[10px]"
+          style={{ borderBottom: `1px solid ${theme.borderColor}` }}
+        >
           <p
-            className="text-white text-[13px] leading-[18px]"
-            style={{ fontFamily: "'Public_Sans:SemiBold',sans-serif", fontWeight: 600 }}
+            className="text-[13px] leading-[18px]"
+            style={{ fontFamily: "'Public_Sans:SemiBold',sans-serif", fontWeight: 600, color: theme.flyoutActiveText }}
           >
             {label}
           </p>
@@ -828,24 +854,24 @@ function MiniNavFlyout({ menuId, label, top, currentPage, onNavigate, onMouseEnt
             <div
               key={idx}
               className={`flex items-center gap-[10px] px-[14px] py-[9px] transition-colors ${
-                isActive
-                  ? 'bg-[rgba(255,184,0,0.13)]'
-                  : clickable
-                    ? 'cursor-pointer hover:bg-[rgba(255,255,255,0.06)]'
-                    : 'opacity-40 cursor-not-allowed'
+                !isActive && clickable ? 'cursor-pointer' : !clickable ? 'opacity-40 cursor-not-allowed' : ''
               }`}
+              style={{ backgroundColor: isActive ? theme.flyoutActiveBg : undefined }}
+              onMouseEnter={e => { if (!isActive && clickable) (e.currentTarget as HTMLDivElement).style.backgroundColor = 'rgba(255,255,255,0.06)'; }}
+              onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLDivElement).style.backgroundColor = ''; }}
               onClick={() => clickable && onNavigate(item.page!)}
             >
               <div
-                className={`size-[5px] rounded-full shrink-0 transition-colors ${
-                  isActive ? 'bg-[#FFB800]' : 'bg-[#4a5568]'
-                }`}
+                className="size-[5px] rounded-full shrink-0 transition-colors"
+                style={{ backgroundColor: isActive ? theme.flyoutActiveText : '#4a5568' }}
               />
               <p
-                className={`text-[13px] leading-[20px] transition-colors ${
-                  isActive ? 'text-[#FFB800]' : 'text-[#a8aeb3] hover:text-white'
-                }`}
-                style={{ fontFamily: isActive ? "'Public_Sans:SemiBold',sans-serif" : "'Public_Sans:Regular',sans-serif", fontWeight: isActive ? 600 : 400 }}
+                className="text-[13px] leading-[20px] transition-colors"
+                style={{
+                  fontFamily: isActive ? "'Public_Sans:SemiBold',sans-serif" : "'Public_Sans:Regular',sans-serif",
+                  fontWeight: isActive ? 600 : 400,
+                  color: isActive ? theme.flyoutActiveText : theme.inactiveText,
+                }}
               >
                 {item.label}
               </p>
@@ -859,7 +885,7 @@ function MiniNavFlyout({ menuId, label, top, currentPage, onNavigate, onMouseEnt
         style={{
           borderTop: '7px solid transparent',
           borderBottom: '7px solid transparent',
-          borderRight: '7px solid rgba(255,255,255,0.07)',
+          borderRight: `7px solid ${theme.borderColor}`,
         }}
       />
       <div
@@ -867,7 +893,7 @@ function MiniNavFlyout({ menuId, label, top, currentPage, onNavigate, onMouseEnt
         style={{
           borderTop: '6px solid transparent',
           borderBottom: '6px solid transparent',
-          borderRight: '6px solid #1a2230',
+          borderRight: `6px solid ${theme.flyoutBg}`,
         }}
       />
     </div>,
@@ -1023,6 +1049,7 @@ function useNavPermission() {
 
 export function NavigationList({ currentPage, onPageChange, onLogout, isMini = false }: NavigationListProps) {
   const { open } = useSidebar();
+  const navTheme = useNavTheme().theme;
   const [expandedMenus, setExpandedMenus] = useState<string[]>(() => {
     // 根據當前頁面自動展開相應的菜單
     const autoExpanded: string[] = [];
@@ -1145,7 +1172,10 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
         <div className="relative shrink-0 w-full" data-name="subheader">
           <div className="flex flex-row items-center size-full">
             <div className="content-stretch flex items-center pb-[8px] pl-[12px] pr-0 pt-[16px] relative w-full">
-              <p className="css-ew64yg font-['Public_Sans:Bold',sans-serif] font-bold leading-[18px] relative shrink-0 text-[#919eab] text-[11px] uppercase">OVERVIEW</p>
+              <p
+                className="css-ew64yg font-['Public_Sans:Bold',sans-serif] font-bold leading-[18px] relative shrink-0 text-[11px] uppercase"
+                style={{ color: navTheme.sectionLabel }}
+              >OVERVIEW</p>
             </div>
           </div>
         </div>
@@ -1199,7 +1229,10 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
         <div className="relative shrink-0 w-full" data-name="subheader">
           <div className="flex flex-row items-center size-full">
             <div className="content-stretch flex items-center pb-[8px] pl-[12px] pr-0 pt-[16px] relative w-full">
-              <p className="css-ew64yg font-['Public_Sans:Bold',sans-serif] font-bold leading-[18px] relative shrink-0 text-[#919eab] text-[11px] uppercase">Management</p>
+              <p
+                className="css-ew64yg font-['Public_Sans:Bold',sans-serif] font-bold leading-[18px] relative shrink-0 text-[11px] uppercase"
+                style={{ color: navTheme.sectionLabel }}
+              >Management</p>
             </div>
           </div>
         </div>
@@ -1430,19 +1463,6 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
         </div>
       )}
 
-      {/* 登出按鈕 */}
-      {onLogout && (
-        <div className="mt-[16px] w-full">
-          <button
-            onClick={onLogout}
-            className="w-full h-[48px] bg-[#ffe5e5] hover:bg-[#ffcccc] rounded-[8px] transition-colors cursor-pointer"
-          >
-            <p className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[14px] text-[#b71d18] leading-[22px]">
-              Logout
-            </p>
-          </button>
-        </div>
-      )}
     </div>
   );
 }

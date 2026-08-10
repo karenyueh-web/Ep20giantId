@@ -1,7 +1,9 @@
 import { NavVertical } from './NavVertical';
+import { NavTopBar } from './NavTopBar';
 import { PageHeaderB } from './PageHeaderB';
 import type { PageType } from './MainLayout';
 import { useSidebar } from './SidebarContext';
+import { useNavTheme } from './NavThemeContext';
 
 interface ResponsivePageLayoutProps {
   currentPage: PageType;
@@ -29,10 +31,41 @@ export function ResponsivePageLayout({
   overlays
 }: ResponsivePageLayoutProps) {
   const { isOpen, isMobile, isTablet, toggle, close } = useSidebar();
+  const { navLayout } = useNavTheme();
   const showOverlay = (isMobile || isTablet) && isOpen;
   // Desktop collapsed = mini sidebar (88px), mobile/tablet collapsed = fully hidden
   const isDesktopMini = !isOpen && !isMobile && !isTablet;
 
+  // ── Top Nav 模式 ────────────────────────────────────────────────────────────
+  if (navLayout === 'topnav') {
+    return (
+      <div className="relative w-full h-screen bg-[#f5f5f7] overflow-hidden flex flex-col">
+        {/* A: Top Navigation Bar */}
+        <NavTopBar
+          currentPage={currentPage}
+          onPageChange={onPageChange}
+          onLogout={onLogout}
+        />
+
+        {/* B: Page header */}
+        <div className="shrink-0 relative">
+          {customHeader || (
+            <PageHeaderB title={title} breadcrumb={breadcrumb} />
+          )}
+        </div>
+
+        {/* C: Content area */}
+        <div className="flex-1 min-h-0 px-[24px] pb-[10px] overflow-y-auto custom-scrollbar">
+          {children}
+        </div>
+
+        {/* Overlays */}
+        {overlays}
+      </div>
+    );
+  }
+
+  // ── Sidebar 模式（原有邏輯）────────────────────────────────────────────────
   return (
     <div className="relative w-full h-screen bg-[#f5f5f7] overflow-hidden flex">
       {/* Mobile overlay backdrop */}
@@ -46,7 +79,7 @@ export function ResponsivePageLayout({
       {/* A: Sidebar */}
       <div
         className={`
-          shrink-0 bg-[#2B2B2B] z-[199] transition-all duration-300 ease-in-out
+          shrink-0 z-[199] transition-all duration-300 ease-in-out
           ${isMobile || isTablet
             ? `fixed top-0 left-0 h-full w-[280px] ${isOpen ? 'translate-x-0' : '-translate-x-full'}`
             : `relative ${isOpen ? 'w-[280px]' : 'w-[88px]'}`

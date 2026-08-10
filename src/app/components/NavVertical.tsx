@@ -2,6 +2,7 @@ import { NavigationList } from './NavigationList';
 import imgAvatar from "@/assets/267fe8c99db3e57af5fb08e1bedfbdb0788f011c.png";
 import type { PageType } from './MainLayout';
 import { useSidebar } from './SidebarContext';
+import { useNavTheme } from './NavThemeContext';
 import { useRef, useLayoutEffect } from 'react';
 
 // Giant Group Logo — 純文字版（點擊回 Dashboard）
@@ -65,6 +66,7 @@ const NAV_SCROLL_KEY = 'nav-sidebar-scrollTop';
 // Responsive sidebar - fills parent container
 export function NavVertical({ currentPage, onPageChange, onLogout, isMini = false }: NavVerticalProps) {
   const { open } = useSidebar();
+  const { theme, navLayout, toggleLayout, canUseTopNav } = useNavTheme();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // mount 時從 sessionStorage 還原捲動位置
@@ -92,11 +94,12 @@ export function NavVertical({ currentPage, onPageChange, onLogout, isMini = fals
 
 
   return (
-    <div className="bg-[#2B2B2B] w-full h-full" data-name="NavVertical">
+    <div className="w-full h-full flex flex-col" data-name="NavVertical" style={{ backgroundColor: theme.bg }}>
+      {/* 捲動內容區 */}
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="content-stretch flex flex-col items-center overflow-y-auto overflow-x-hidden custom-scrollbar pb-[40px] pt-0 relative rounded-[inherit] w-full h-full"
+        className="flex-1 min-h-0 flex flex-col items-center overflow-y-auto overflow-x-hidden custom-scrollbar pt-0"
         style={{ paddingLeft: isMini ? '0' : '16px', paddingRight: isMini ? '0' : '16px' }}
       >
         {isMini ? <StackMini onExpand={open} /> : <Stack onClick={() => handlePageChange('dashboard')} />}
@@ -107,7 +110,50 @@ export function NavVertical({ currentPage, onPageChange, onLogout, isMini = fals
           isMini={isMini}
         />
       </div>
-      <div aria-hidden="true" className="absolute border-[rgba(145,158,171,0.12)] border-r border-solid inset-0 pointer-events-none" />
+
+      {/* ── 底部工具列：Logout + 版面切換（並排，固定不捲動）── */}
+      <div
+        className="shrink-0 flex items-center justify-center gap-[8px] h-[64px]"
+        style={{ borderTop: `1px solid ${theme.borderColor}` }}
+      >
+        {/* Logout */}
+        {onLogout && (
+          <button
+            onClick={onLogout}
+            title="Logout"
+            className="relative flex items-center justify-center rounded-[500px] size-[44px] cursor-pointer hover:bg-[rgba(255,255,255,0.15)] transition-colors shrink-0"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-white">
+              <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+              <polyline points="16 17 21 12 16 7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+              <line x1="21" y1="12" x2="9" y2="12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        )}
+
+        {/* 版面切換（僅在選單 ≤ 10 個時顯示） */}
+        {canUseTopNav && (
+          <button
+            onClick={toggleLayout}
+            title={navLayout === 'sidebar' ? '切換為頂部導覽列' : '切換為側邊導覽列'}
+            className="relative flex items-center justify-center rounded-[500px] size-[44px] cursor-pointer hover:bg-[rgba(255,255,255,0.15)] transition-colors shrink-0"
+          >
+            {navLayout === 'sidebar' ? (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-white">
+                <rect x="3" y="3" width="18" height="4" rx="1" stroke="currentColor" strokeWidth="1.8"/>
+                <path d="M3 11h18M3 16h12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+              </svg>
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-white">
+                <rect x="3" y="3" width="5" height="18" rx="1" stroke="currentColor" strokeWidth="1.8"/>
+                <path d="M11 6h10M11 10h10M11 14h7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+              </svg>
+            )}
+          </button>
+        )}
+      </div>
+
+      <div aria-hidden="true" className="absolute border-r border-solid inset-0 pointer-events-none" style={{ borderColor: theme.borderColor }} />
     </div>
   );
-}
+}

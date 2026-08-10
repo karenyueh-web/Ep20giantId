@@ -49,6 +49,7 @@ import { LanguageProvider } from '@/app/components/LanguageContext';
 import { OrderStoreProvider } from '@/app/components/OrderStoreContext';
 import { ChatStoreProvider } from '@/app/components/ChatStoreContext';
 import { FloatingChatPanel } from '@/app/components/FloatingChatPanel';
+import { NavThemeProvider } from '@/app/components/NavThemeContext';
 
 export type UserRole = 'vendor' | 'procurement' | 'giant';
 
@@ -587,11 +588,13 @@ export default function App() {
       <OrderStoreProvider>
         <ChatStoreProvider>
           <SidebarProvider>
-            <div className={`w-full min-h-screen ${userRole === 'procurement' ? 'procurement-theme bg-white' : 'bg-[#f9fafb]'}`}>
-              {renderPage()}
-              {/* 全局浮動聊天 Panel（任何頁面都能顯示）*/}
-              <FloatingChatPanel onPageChange={handlePageChange} userRole={userRole} />
-            </div>
+            <NavThemeProvider userType={userRole}>
+              <div className={`w-full min-h-screen ${userRole === 'procurement' ? 'procurement-theme bg-white' : 'bg-[#f9fafb]'}`}>
+                {renderPage()}
+                {/* 全局浮動聊天 Panel（任何頁面都能顯示）*/}
+                <FloatingChatPanel onPageChange={handlePageChange} userRole={userRole} />
+              </div>
+            </NavThemeProvider>
           </SidebarProvider>
         </ChatStoreProvider>
       </OrderStoreProvider>
