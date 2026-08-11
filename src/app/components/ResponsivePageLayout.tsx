@@ -97,32 +97,39 @@ export function ResponsivePageLayout({
           userRole={userRole}
           isMini={isDesktopMini}
         />
+
+        {/* 收合 tab：浮在 sidebar 右側邊線上，desktop only */}
+        {!isMobile && !isTablet && (
+          <button
+            onClick={toggle}
+            title={isOpen ? '收合選單' : '展開選單'}
+            className="absolute right-0 top-[36px] translate-x-1/2 z-[201] bg-white rounded-full size-[22px] flex items-center justify-center cursor-pointer transition-colors hover:bg-[#f0f0f0] shadow-[0_1px_6px_rgba(0,0,0,0.18)]"
+          >
+            <svg
+              width="12" height="12" viewBox="0 0 24 24" fill="none"
+              className={`transition-transform duration-300 ${isOpen ? '' : 'rotate-180'}`}
+            >
+              <path d="M15 18L9 12L15 6" stroke="#637381" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* Main area: header + content */}
       <div className="flex-1 flex flex-col min-w-0 relative">
         {/* B: Header */}
         <div className="shrink-0 relative">
-          {/* Hamburger / toggle button */}
-          <button
-            onClick={toggle}
-            className="absolute left-[10px] top-[28px] z-50 bg-white rounded-full size-[32px] flex items-center justify-center shadow-[0px_1px_3px_0px_rgba(145,158,171,0.2)] hover:bg-[#f4f6f8] transition-colors cursor-pointer"
-          >
-            {(isMobile || isTablet) ? (
-              /* Hamburger icon */
+          {/* 漢堡選單：僅 mobile / tablet 顯示 */}
+          {(isMobile || isTablet) && (
+            <button
+              onClick={toggle}
+              className="absolute left-[10px] top-[28px] z-50 bg-white rounded-full size-[32px] flex items-center justify-center shadow-[0px_1px_3px_0px_rgba(145,158,171,0.2)] hover:bg-[#f4f6f8] transition-colors cursor-pointer"
+            >
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                 <path d="M3 5H17M3 10H17M3 15H17" stroke="#637381" strokeWidth="1.5" strokeLinecap="round" />
               </svg>
-            ) : (
-              /* Collapse arrow */
-              <svg
-                width="16" height="16" viewBox="0 0 16 16" fill="none"
-                className={`transition-transform duration-300 ${isOpen ? '' : 'rotate-180'}`}
-              >
-                <path d="M10.06 12L11 11.06L7.94667 8L11 4.94L10.06 4L6.06 8L10.06 12Z" fill="#919EAB" />
-              </svg>
-            )}
-          </button>
+            </button>
+          )}
 
           {customHeader || (
             <PageHeaderB title={title} breadcrumb={breadcrumb} />

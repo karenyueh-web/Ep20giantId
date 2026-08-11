@@ -88,6 +88,13 @@ function useNotificationCounts() {
 }
 
 
+// ── 帳號專屬頭像 localStorage key（以 email 區分，避免不同帳號共用同一圖片）──────
+export function getAvatarKey()       { return `userAvatar_${localStorage.getItem('currentUserEmail') || 'default'}`; }
+export function getAvatarRawKey()    { return `userAvatarRaw_${localStorage.getItem('currentUserEmail') || 'default'}`; }
+export function getAvatarScaleKey()  { return `userAvatarCropScale_${localStorage.getItem('currentUserEmail') || 'default'}`; }
+export function getAvatarOffXKey()   { return `userAvatarCropOffsetX_${localStorage.getItem('currentUserEmail') || 'default'}`; }
+export function getAvatarOffYKey()   { return `userAvatarCropOffsetY_${localStorage.getItem('currentUserEmail') || 'default'}`; }
+
 // ── 大頭像元件 ─────────────────────────────────────────────────────────────────
 interface UserAvatarProps {
   name: string;
@@ -97,11 +104,11 @@ interface UserAvatarProps {
 
 function UserAvatar({ name, role, onClick }: UserAvatarProps) {
   const [avatarSrc, setAvatarSrc] = useState<string | null>(() =>
-    localStorage.getItem('userAvatar')
+    localStorage.getItem(getAvatarKey())
   );
 
   useEffect(() => {
-    const handler = () => setAvatarSrc(localStorage.getItem('userAvatar'));
+    const handler = () => setAvatarSrc(localStorage.getItem(getAvatarKey()));
     window.addEventListener('userAvatarChanged', handler);
     return () => window.removeEventListener('userAvatarChanged', handler);
   }, []);
@@ -145,7 +152,7 @@ function UserAvatar({ name, role, onClick }: UserAvatarProps) {
 const CROP_CANVAS_SIZE = 280;
 const CROP_RADIUS = 120;
 
-function AvatarCropOverlay({ onClose, onSave, name, role }: { onClose: () => void; onSave: (dataUrl: string) => void; name?: string; role?: string }) {
+export function AvatarCropOverlay({ onClose, onSave, name, role }: { onClose: () => void; onSave: (dataUrl: string) => void; name?: string; role?: string }) {
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
@@ -160,11 +167,11 @@ function AvatarCropOverlay({ onClose, onSave, name, role }: { onClose: () => voi
   // 掛載時：優先載入 userAvatarRaw（原始圖）+ 上次裁切參數
   // 若無原始圖（舊版資料），不顯示任何圖（避免拿裁切後的圓形圖再次裁切）
   useEffect(() => {
-    const rawSrc = localStorage.getItem('userAvatarRaw');
+    const rawSrc = localStorage.getItem(getAvatarRawKey());
     if (!rawSrc) return; // 沒有原始圖 → 等使用者選新圖
-    const savedScale  = parseFloat(localStorage.getItem('userAvatarCropScale')  ?? '0') || null;
-    const savedOffX   = parseFloat(localStorage.getItem('userAvatarCropOffsetX') ?? '0');
-    const savedOffY   = parseFloat(localStorage.getItem('userAvatarCropOffsetY') ?? '0');
+    const savedScale  = parseFloat(localStorage.getItem(getAvatarScaleKey())  ?? '0') || null;
+    const savedOffX   = parseFloat(localStorage.getItem(getAvatarOffXKey()) ?? '0');
+    const savedOffY   = parseFloat(localStorage.getItem(getAvatarOffYKey()) ?? '0');
     const img = new Image();
     img.onload = () => {
       previewImgRef.current = img;
@@ -246,11 +253,11 @@ function AvatarCropOverlay({ onClose, onSave, name, role }: { onClose: () => voi
       const src = ev.target?.result as string;
       setImageSrc(src);
       // 儲存原始圖（供下次開啟 editor 使用）
-      localStorage.setItem('userAvatarRaw', src);
+      localStorage.setItem(getAvatarRawKey(), src);
       // 重置裁切參數（新圖從頭裁）
-      localStorage.removeItem('userAvatarCropScale');
-      localStorage.removeItem('userAvatarCropOffsetX');
-      localStorage.removeItem('userAvatarCropOffsetY');
+      localStorage.removeItem(getAvatarScaleKey());
+      localStorage.removeItem(getAvatarOffXKey());
+      localStorage.removeItem(getAvatarOffYKey());
       const img = new Image();
       img.onload = () => {
         previewImgRef.current = img;
@@ -311,9 +318,9 @@ function AvatarCropOverlay({ onClose, onSave, name, role }: { onClose: () => voi
     const h = img.naturalHeight * scale * ratio;
     ctx.drawImage(img, OUTPUT / 2 - w / 2 + offset.x * ratio, OUTPUT / 2 - h / 2 + offset.y * ratio, w, h);
     // 同步儲存裁切參數，供下次開啟 editor 時還原
-    localStorage.setItem('userAvatarCropScale',   String(scale));
-    localStorage.setItem('userAvatarCropOffsetX', String(offset.x));
-    localStorage.setItem('userAvatarCropOffsetY', String(offset.y));
+    localStorage.setItem(getAvatarScaleKey(),  String(scale));
+    localStorage.setItem(getAvatarOffXKey(), String(offset.x));
+    localStorage.setItem(getAvatarOffYKey(), String(offset.y));
     onSave(offCanvas.toDataURL('image/png'));
   };
 
@@ -444,7 +451,7 @@ function UserInfo({ onPageChange }: UserInfoProps) {
   const [langOpen, setLangOpen] = useState(false);
 
   const handleAvatarSave = (dataUrl: string) => {
-    localStorage.setItem('userAvatar', dataUrl);
+    localStorage.setItem(getAvatarKey(), dataUrl);
     window.dispatchEvent(new Event('userAvatarChanged'));
     setShowCropper(false);
   };
@@ -744,42 +751,42 @@ function NavItemMini({ icon, label, isActive, hasSubmenu, onClick }: NavItemMini
 
 // ─── Mini Flyout data ────────────────────────────────────────────────────────
 // label 由 pageConfig.navLabel 提供，改名時只需修改 pageConfig.ts
-const MINI_SUBMENUS: Record<string, { label: string; page?: PageType }[]> = {
+const MINI_SUBMENUS: Record<string, { label: string; page?: PageType; permId?: string }[]> = {
   order: [
-    { label: pageConfig['order-list'].navLabel,             page: 'order-list' },
-    { label: pageConfig['order-exchange'].navLabel,         page: 'order-exchange' },
-    { label: pageConfig['order-return'].navLabel,           page: 'order-return' },
-    { label: pageConfig['order-forecast'].navLabel,         page: 'order-forecast' },
-    { label: pageConfig['order-schedule-change'].navLabel,  page: 'order-schedule-change' },
-    { label: pageConfig['order-history'].navLabel,          page: 'order-history' },
+    { label: pageConfig['order-list'].navLabel,             page: 'order-list',            permId: 'mgmt-order-general' },
+    { label: pageConfig['order-exchange'].navLabel,         page: 'order-exchange',        permId: 'mgmt-order-exchange' },
+    { label: pageConfig['order-return'].navLabel,           page: 'order-return',          permId: 'mgmt-order-return' },
+    { label: pageConfig['order-forecast'].navLabel,         page: 'order-forecast',        permId: 'mgmt-order-forecast' },
+    { label: pageConfig['order-schedule-change'].navLabel,  page: 'order-schedule-change', permId: 'mgmt-order-schedule-change' },
+    { label: pageConfig['order-history'].navLabel,          page: 'order-history',         permId: 'mgmt-order-history' },
   ],
   correction: [
-    { label: pageConfig['correction-create'].navLabel,  page: 'correction-create' },
-    { label: pageConfig['correction-list'].navLabel,    page: 'correction-list' },
-    { label: pageConfig['correction-history'].navLabel, page: 'correction-history' },
+    { label: pageConfig['correction-create'].navLabel,  page: 'correction-create',  permId: 'mgmt-correction-create' },
+    { label: pageConfig['correction-list'].navLabel,    page: 'correction-list',    permId: 'mgmt-correction-list' },
+    { label: pageConfig['correction-history'].navLabel, page: 'correction-history', permId: 'mgmt-correction-history' },
   ],
   shipping: [
-    { label: pageConfig['shipping-create'].navLabel,   page: 'shipping-create' },
-    { label: pageConfig['shipping-list'].navLabel,     page: 'shipping-list' },
-    { label: pageConfig['shipping-packing'].navLabel,  page: 'shipping-packing' },
-    { label: pageConfig['shipping-print'].navLabel,    page: 'shipping-print' },
-    { label: pageConfig['shipping-settings'].navLabel, page: 'shipping-settings' },
+    { label: pageConfig['shipping-create'].navLabel,   page: 'shipping-create',   permId: 'mgmt-shipping-create' },
+    { label: pageConfig['shipping-list'].navLabel,     page: 'shipping-list',     permId: 'mgmt-shipping-list' },
+    { label: pageConfig['shipping-packing'].navLabel,  page: 'shipping-packing',  permId: 'mgmt-shipping-packing' },
+    { label: pageConfig['shipping-print'].navLabel,    page: 'shipping-print',    permId: 'mgmt-shipping-print' },
+    { label: pageConfig['shipping-settings'].navLabel, page: 'shipping-settings', permId: 'mgmt-shipping-settings' },
   ],
   invoice: [
-    { label: pageConfig['invoice-create'].navLabel,   page: 'invoice-create' },
-    { label: pageConfig['invoice-list'].navLabel,     page: 'invoice-list' },
-    { label: pageConfig['invoice-settings'].navLabel, page: 'invoice-settings' },
+    { label: pageConfig['invoice-create'].navLabel,   page: 'invoice-create',   permId: 'mgmt-invoice-create' },
+    { label: pageConfig['invoice-list'].navLabel,     page: 'invoice-list',     permId: 'mgmt-invoice-list' },
+    { label: pageConfig['invoice-settings'].navLabel, page: 'invoice-settings', permId: 'mgmt-invoice-settings' },
   ],
   parts: [
-    { label: pageConfig['parts-maintain'].navLabel, page: 'parts-maintain' },
-    { label: pageConfig['parts-quote'].navLabel,    page: 'parts-quote' },
-    { label: pageConfig['parts-sample'].navLabel,   page: 'parts-sample' },
+    { label: pageConfig['parts-maintain'].navLabel, page: 'parts-maintain', permId: 'mgmt-parts-info' },
+    { label: pageConfig['parts-quote'].navLabel,    page: 'parts-quote',    permId: 'mgmt-parts-print-quote' },
+    { label: pageConfig['parts-sample'].navLabel,   page: 'parts-sample',   permId: 'mgmt-parts-sample' },
   ],
   quality: [
-    { label: pageConfig['quality-abnormal'].navLabel, page: 'quality-abnormal' },
-    { label: pageConfig['quality-report'].navLabel,   page: 'quality-report' },
-    { label: pageConfig['quality-hazard'].navLabel,   page: 'quality-hazard' },
-    { label: pageConfig['quality-other'].navLabel,    page: 'quality-other' },
+    { label: pageConfig['quality-abnormal'].navLabel, page: 'quality-abnormal', permId: 'mgmt-quality-abnormal' },
+    { label: pageConfig['quality-report'].navLabel,   page: 'quality-report',   permId: 'mgmt-quality-report' },
+    { label: pageConfig['quality-hazard'].navLabel,   page: 'quality-hazard',   permId: 'mgmt-quality-hazard' },
+    { label: pageConfig['quality-other'].navLabel,    page: 'quality-other',    permId: 'mgmt-quality-other' },
   ],
   newparts: [
     { label: pageConfig['newparts-project'].navLabel,  page: 'newparts-project' },
@@ -795,12 +802,12 @@ const MINI_SUBMENUS: Record<string, { label: string; page?: PageType }[]> = {
     { label: pageConfig['shipment-tw-print'].navLabel,    page: 'shipment-tw-print' },
   ],
   account: [
-    { label: pageConfig['vendor-account-management'].navLabel, page: 'vendor-account-management' },
-    { label: pageConfig['giant-account-management'].navLabel,  page: 'giant-account-management' },
+    { label: pageConfig['vendor-account-management'].navLabel, page: 'vendor-account-management', permId: 'mgmt-account-vendor' },
+    { label: pageConfig['giant-account-management'].navLabel,  page: 'giant-account-management',  permId: 'mgmt-account-giant' },
   ],
   system: [
-    { label: pageConfig['permission-settings'].navLabel, page: 'permission-settings' },
-    { label: pageConfig['schedule-settings'].navLabel,   page: 'schedule-settings' },
+    { label: pageConfig['permission-settings'].navLabel, page: 'permission-settings', permId: 'mgmt-system-permission' },
+    { label: pageConfig['schedule-settings'].navLabel,   page: 'schedule-settings',   permId: 'mgmt-system-schedule' },
   ],
 };
 
@@ -817,7 +824,12 @@ interface MiniNavFlyoutProps {
 
 function MiniNavFlyout({ menuId, label, top, currentPage, onNavigate, onMouseEnter, onMouseLeave }: MiniNavFlyoutProps) {
   const { theme } = useNavTheme();
-  const items = MINI_SUBMENUS[menuId] ?? [];
+  const hasNav = useNavPermission();
+  // 依照角色權限過濾子選單項目（有 permId 的才過濾，無 permId 的照舊顯示）
+  const items = (MINI_SUBMENUS[menuId] ?? []).filter(
+    item => !item.permId || hasNav(item.permId)
+  );
+  if (!items.length) return null;
   return createPortal(
     <div
       className="fixed z-[500] overflow-hidden"
@@ -926,13 +938,8 @@ function MiniSubmenuItem({ menuId, icon, label, isActive, onShow, onHide }: Mini
 }
 
 // ─── Mini Nav Layout (manages flyout state) ───────────────────────────────────
-interface MiniNavLayoutProps {
-  currentPage: PageType;
-  onPageChange: (page: PageType) => void;
-  onLogout?: () => void;
-}
-
 function MiniNavLayout({ currentPage, onPageChange, onLogout }: MiniNavLayoutProps) {
+  const hasNav = useNavPermission();
   const [flyout, setFlyout] = useState<{ menuId: string; label: string; top: number } | null>(null);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -961,44 +968,31 @@ function MiniNavLayout({ currentPage, onPageChange, onLogout }: MiniNavLayoutPro
     setFlyout(null);
   }, [onPageChange]);
 
+  // 判斷是否有任何 OVERVIEW 項目（不含 Dashboard/公佈欄/Chat，這些已在 UserInfo icon 列）
+  const hasAnyOverview = ['overview-vendor-review','overview-receiving','overview-schedule','overview-vendor-eval'].some(id => hasNav(id));
+  const hasAnyMgmt = ['mgmt-parts','mgmt-order','mgmt-correction','mgmt-shipping','mgmt-quality','mgmt-invoice','mgmt-insurance','mgmt-account','mgmt-system'].some(id => hasNav(id));
+
   return (
     <div className="flex flex-col gap-[4px] items-center w-full px-[4px]" data-name="list-mini">
-      {/* Direct nav items (no submenu) */}
-      <NavItemMini icon={<VendorApprovalIcon />} label="廠商審核" isActive={currentPage === 'vendor-account-review'} onClick={() => onPageChange('vendor-account-review')} />
-      <NavItemMini icon={<DashboardIcon />} label="Dashboard" isActive={currentPage === 'dashboard'} onClick={() => onPageChange('dashboard')} />
-      <NavItemMini icon={<AnnouncementIcon />} label="公佈欄" isActive={currentPage === 'announcement'} onClick={() => onPageChange('announcement')} />
-      <NavItemMini icon={<ChatIcon />} label="Online Chat" isActive={currentPage === 'online-chat'} onClick={() => onPageChange('online-chat')} />
-      <NavItemMini icon={<ReceivingIcon />} label="收料查詢" isActive={currentPage === 'receiving-inquiry'} onClick={() => onPageChange('receiving-inquiry')} />
-      <NavItemMini icon={<ScheduleIcon />} label="排程總表" isActive={currentPage === 'schedule-inquiry'} onClick={() => onPageChange('schedule-inquiry')} />
-      <NavItemMini icon={<QualityIcon />} label="廠商評價" isActive={currentPage === 'vendor-evaluation'} onClick={() => onPageChange('vendor-evaluation')} />
+      {/* OVERVIEW — 只顯示有權限的項目，不含 Dashboard/公佈欄/Chat（已在 UserInfo icon 列） */}
+      {hasNav('overview-vendor-review') && <NavItemMini icon={<VendorApprovalIcon />} label="廠商審核"   isActive={currentPage === 'vendor-account-review'} onClick={() => onPageChange('vendor-account-review')} />}
+      {hasNav('overview-receiving')     && <NavItemMini icon={<ReceivingIcon />}      label="收料查詢"   isActive={currentPage === 'receiving-inquiry'}    onClick={() => onPageChange('receiving-inquiry')} />}
+      {hasNav('overview-schedule')      && <NavItemMini icon={<ScheduleIcon />}       label="排程總表"   isActive={currentPage === 'schedule-inquiry'}     onClick={() => onPageChange('schedule-inquiry')} />}
+      {hasNav('overview-vendor-eval')   && <NavItemMini icon={<QualityIcon />}        label="廠商評價"   isActive={currentPage === 'vendor-evaluation'}   onClick={() => onPageChange('vendor-evaluation')} />}
 
-      <div className="w-full h-px bg-[rgba(145,158,171,0.12)] my-[4px]" />
+      {/* 分隔線：有 overview 且有 mgmt 才顯示 */}
+      {hasAnyOverview && hasAnyMgmt && <div className="w-full h-px bg-[rgba(145,158,171,0.12)] my-[4px]" />}
 
-      {/* Submenu items — hover reveals flyout */}
-      <MiniSubmenuItem menuId="parts" icon={<PartsIcon />} label="零件維護" onShow={showFlyout} onHide={startHide} />
-      <MiniSubmenuItem menuId="newparts" icon={<PartsIcon />} label="新零件" onShow={showFlyout} onHide={startHide} />
-      <MiniSubmenuItem menuId="order" icon={<OrderIcon />} label="訂單管理" isActive={['order-list','order-forecast','order-exchange','order-return'].includes(currentPage)} onShow={showFlyout} onHide={startHide} />
-      <MiniSubmenuItem menuId="correction" icon={<CorrectOrderIcon />} label="修正單" onShow={showFlyout} onHide={startHide} />
-      <MiniSubmenuItem menuId="shipping" icon={<ShippingIcon />} label="出貨單" onShow={showFlyout} onHide={startHide} />
-      <MiniSubmenuItem menuId="quality" icon={<QualityIcon />} label="品保作業" isActive={currentPage === 'quality-abnormal'} onShow={showFlyout} onHide={startHide} />
-      <MiniSubmenuItem menuId="invoice" icon={<InvoiceIcon />} label="發票作業" onShow={showFlyout} onHide={startHide} />
-      <NavItemMini icon={<InsuranceIcon />} label="產險維護" onClick={() => {}} />
-      <MiniSubmenuItem menuId="esg" icon={<InsuranceIcon />} label="ESG" onShow={showFlyout} onHide={startHide} />
-      <MiniSubmenuItem menuId="shipment-tw" icon={<ShippingIcon />} label="出貨台灣" onShow={showFlyout} onHide={startHide} />
-      <MiniSubmenuItem menuId="account" icon={<AccountIcon />} label="帳號管理" isActive={['vendor-account-management','giant-account-management'].includes(currentPage)} onShow={showFlyout} onHide={startHide} />
-      <MiniSubmenuItem menuId="system" icon={<SystemSettingsIcon />} label="系統設定" isActive={['permission-settings','schedule-settings'].includes(currentPage)} onShow={showFlyout} onHide={startHide} />
-
-      {/* Logout */}
-      {onLogout && (
-        <div className="mt-[8px] w-full">
-          <button onClick={onLogout} className="w-full h-[40px] bg-[rgba(183,29,24,0.15)] hover:bg-[rgba(183,29,24,0.25)] rounded-[8px] transition-colors cursor-pointer flex items-center justify-center" title="Logout">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path d="M17 7L15.59 8.41L18.17 11H8V13H18.17L15.59 15.58L17 17L22 12L17 7Z" fill="#b71d18"/>
-              <path d="M4 5H12V3H4C2.9 3 2 3.9 2 5V19C2 20.1 2.9 21 4 21H12V19H4V5Z" fill="#b71d18" opacity="0.6"/>
-            </svg>
-          </button>
-        </div>
-      )}
+      {/* MANAGEMENT — 逐一用 hasNav 過濾，與 Sidebar 展開版保持一致 */}
+      {hasNav('mgmt-parts')      && <MiniSubmenuItem menuId="parts"      icon={<PartsIcon />}           label="零件/索樣" isActive={currentPage === 'parts-maintain'} onShow={showFlyout} onHide={startHide} />}
+      {hasNav('mgmt-order')      && <MiniSubmenuItem menuId="order"      icon={<OrderIcon />}           label="訂單管理" isActive={['order-list','order-forecast','order-exchange','order-return'].includes(currentPage)} onShow={showFlyout} onHide={startHide} />}
+      {hasNav('mgmt-correction') && <MiniSubmenuItem menuId="correction" icon={<CorrectOrderIcon />}   label="修正單"   onShow={showFlyout} onHide={startHide} />}
+      {hasNav('mgmt-shipping')   && <MiniSubmenuItem menuId="shipping"   icon={<ShippingIcon />}       label="出貨單"   onShow={showFlyout} onHide={startHide} />}
+      {hasNav('mgmt-quality')    && <MiniSubmenuItem menuId="quality"    icon={<QualityIcon />}        label="品保作業" isActive={currentPage === 'quality-abnormal'} onShow={showFlyout} onHide={startHide} />}
+      {hasNav('mgmt-invoice')    && <MiniSubmenuItem menuId="invoice"    icon={<InvoiceIcon />}        label="發票作業" onShow={showFlyout} onHide={startHide} />}
+      {hasNav('mgmt-insurance')  && <NavItemMini     icon={<InsuranceIcon />}   label="產險維護" isActive={currentPage === 'insurance-maintain'} onClick={() => onPageChange('insurance-maintain')} />}
+      {hasNav('mgmt-account')    && <MiniSubmenuItem menuId="account"    icon={<AccountIcon />}        label="帳號管理" isActive={['vendor-account-management','giant-account-management'].includes(currentPage)} onShow={showFlyout} onHide={startHide} />}
+      {hasNav('mgmt-system')     && <MiniSubmenuItem menuId="system"     icon={<SystemSettingsIcon />} label="系統設定" isActive={['permission-settings','schedule-settings'].includes(currentPage)} onShow={showFlyout} onHide={startHide} />}
 
       {/* Flyout portal */}
       {flyout && (

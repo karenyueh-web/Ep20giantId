@@ -1,9 +1,8 @@
-import { NavigationList } from './NavigationList';
-import imgAvatar from "@/assets/267fe8c99db3e57af5fb08e1bedfbdb0788f011c.png";
+import { NavigationList, getAvatarKey } from './NavigationList';
 import type { PageType } from './MainLayout';
 import { useSidebar } from './SidebarContext';
 import { useNavTheme } from './NavThemeContext';
-import { useRef, useLayoutEffect } from 'react';
+import { useRef, useLayoutEffect, useState, useEffect } from 'react';
 
 // Giant Group Logo — 純文字版（點擊回 Dashboard）
 function Stack({ onClick }: { onClick: () => void }) {
@@ -26,6 +25,20 @@ function Stack({ onClick }: { onClick: () => void }) {
 
 // Mini avatar — clickable to expand sidebar
 function StackMini({ onExpand }: { onExpand: () => void }) {
+  const [avatarSrc, setAvatarSrc] = useState<string | null>(
+    () => localStorage.getItem(getAvatarKey())
+  );
+  useEffect(() => {
+    const handler = () => setAvatarSrc(localStorage.getItem(getAvatarKey()));
+    window.addEventListener('userAvatarChanged', handler);
+    return () => window.removeEventListener('userAvatarChanged', handler);
+  }, []);
+
+  const currentUserName = localStorage.getItem('currentUserName') || '';
+  const currentUserType = localStorage.getItem('currentUserType') || 'giant';
+  const firstChar = currentUserName.charAt(0) || '?';
+  const avatarBg = currentUserType === 'vendor' ? '#5b21b6' : '#00559c';
+
   return (
     <div
       className="h-[72px] flex items-center justify-center shrink-0 w-full cursor-pointer group"
@@ -34,19 +47,14 @@ function StackMini({ onExpand }: { onExpand: () => void }) {
       data-name="stack-mini"
     >
       <div className="relative size-[44px]">
-        {/* Avatar ring that glows on hover */}
         <div className="size-full rounded-full overflow-hidden ring-2 ring-[rgba(255,255,255,0.18)] group-hover:ring-[rgba(255,184,0,0.7)] transition-all duration-200 shadow-[0_0_0_3px_rgba(255,255,255,0.06)]">
-          <img
-            alt="User Avatar"
-            className="w-full h-full object-cover"
-            src={imgAvatar}
-          />
-        </div>
-        {/* Expand hint arrow badge */}
-        <div className="absolute -bottom-[1px] -right-[1px] size-[16px] bg-[#FFB800] rounded-full flex items-center justify-center shadow-[0_1px_4px_rgba(0,0,0,0.4)] group-hover:scale-110 transition-transform duration-200">
-          <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
-            <path d="M2.5 1.5L5.5 4L2.5 6.5" stroke="#1c252e" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
+          {avatarSrc ? (
+            <img alt="avatar" className="w-full h-full object-cover" src={avatarSrc} />
+          ) : (
+            <div className="size-full rounded-full flex items-center justify-center" style={{ backgroundColor: avatarBg }}>
+              <span className="font-bold text-white text-[17px] leading-none select-none">{firstChar}</span>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -102,7 +110,11 @@ export function NavVertical({ currentPage, onPageChange, onLogout, isMini = fals
         className="flex-1 min-h-0 flex flex-col items-center overflow-y-auto overflow-x-hidden custom-scrollbar pt-0"
         style={{ paddingLeft: isMini ? '0' : '16px', paddingRight: isMini ? '0' : '16px' }}
       >
-        {isMini ? <StackMini onExpand={open} /> : <Stack onClick={() => handlePageChange('dashboard')} />}
+        {isMini ? (
+          <StackMini onExpand={open} />
+        ) : (
+          <Stack onClick={() => handlePageChange('dashboard')} />
+        )}
         <NavigationList
           currentPage={currentPage}
           onPageChange={handlePageChange}
@@ -111,9 +123,9 @@ export function NavVertical({ currentPage, onPageChange, onLogout, isMini = fals
         />
       </div>
 
-      {/* ── 底部工具列：Logout + 版面切換（並排，固定不捲動）── */}
+      {/* ── 底部工具列：Logout + 版面切換（mini 時垂直排，展開時水平排）── */}
       <div
-        className="shrink-0 flex items-center justify-center gap-[8px] h-[64px]"
+        className={`shrink-0 flex items-center justify-center ${isMini ? 'flex-col gap-[6px] py-[10px]' : 'flex-row gap-[8px] h-[64px]'}`}
         style={{ borderTop: `1px solid ${theme.borderColor}` }}
       >
         {/* Logout */}
@@ -121,7 +133,7 @@ export function NavVertical({ currentPage, onPageChange, onLogout, isMini = fals
           <button
             onClick={onLogout}
             title="Logout"
-            className="relative flex items-center justify-center rounded-[500px] size-[44px] cursor-pointer hover:bg-[rgba(255,255,255,0.15)] transition-colors shrink-0"
+            className={`relative flex items-center justify-center rounded-[500px] cursor-pointer hover:bg-[rgba(255,255,255,0.15)] transition-colors shrink-0 ${isMini ? 'size-[36px]' : 'size-[44px]'}`}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-white">
               <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
@@ -136,7 +148,7 @@ export function NavVertical({ currentPage, onPageChange, onLogout, isMini = fals
           <button
             onClick={toggleLayout}
             title={navLayout === 'sidebar' ? '切換為頂部導覽列' : '切換為側邊導覽列'}
-            className="relative flex items-center justify-center rounded-[500px] size-[44px] cursor-pointer hover:bg-[rgba(255,255,255,0.15)] transition-colors shrink-0"
+            className={`relative flex items-center justify-center rounded-[500px] cursor-pointer hover:bg-[rgba(255,255,255,0.15)] transition-colors shrink-0 ${isMini ? 'size-[36px]' : 'size-[44px]'}`}
           >
             {navLayout === 'sidebar' ? (
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-white">

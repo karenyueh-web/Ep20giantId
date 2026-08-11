@@ -4,6 +4,7 @@ import { useChatStore } from './ChatStoreContext';
 import { ResponsivePageLayout } from './ResponsivePageLayout';
 import { SearchField } from './SearchField';
 import { BaseOverlay } from './BaseOverlay';
+import { getAvatarKey } from './NavigationList';
 import type { PageType } from './MainLayout';
 
 // ── 工具：關鍵字黃底高亮 ────────────────────────────────────────────────────────
@@ -94,11 +95,11 @@ function GroupAvatar({ size = 48 }: { size?: number }) {
 // ── 登入者 Avatar（從 localStorage 讀取，與 NavigationList 一致）──────────────
 function MeAvatar({ size = 44 }: { size?: number }) {
   const [avatarSrc, setAvatarSrc] = useState<string | null>(() =>
-    localStorage.getItem('userAvatar')
+    localStorage.getItem(getAvatarKey())
   );
 
   useEffect(() => {
-    const handler = () => setAvatarSrc(localStorage.getItem('userAvatar'));
+    const handler = () => setAvatarSrc(localStorage.getItem(getAvatarKey()));
     window.addEventListener('userAvatarChanged', handler);
     return () => window.removeEventListener('userAvatarChanged', handler);
   }, []);
