@@ -8,6 +8,7 @@ import { GiantAccountManagementPageNew } from "@/app/components/GiantAccountMana
 import { PermissionSettingsPage } from "@/app/components/PermissionSettingsPage";
 import { UnderConstructionPage } from "@/app/components/UnderConstructionPage";
 import { AnnouncementPage } from "@/app/components/AnnouncementPage";
+import { DashboardPage } from "@/app/components/DashboardPage";
 import { AnnouncementCreatePage } from "@/app/components/AnnouncementCreatePage";
 import { InsuranceMaintenancePage } from "@/app/components/InsuranceMaintenancePage";
 import { ShippingBasicSettingsPage } from "@/app/components/ShippingBasicSettingsPage";
@@ -142,6 +143,20 @@ export default function App() {
 
   const renderPage = () => {
     switch (currentPage) {
+      // ── Dashboard ──
+      case 'dashboard':
+        return (
+          <ResponsivePageLayout
+            currentPage={currentPage}
+            onPageChange={handlePageChange}
+            onLogout={handleLogout}
+            userRole={userRole}
+            title="Dashboard"
+            breadcrumb="首頁 • Dashboard"
+          >
+            <DashboardPage onPageChange={handlePageChange} />
+          </ResponsivePageLayout>
+        );
       // ── 公佈欄 ──
       case 'announcement':
         return <AnnouncementPage currentPage={currentPage} onPageChange={handlePageChange} onLogout={handleLogout} userRole={userRole} />;

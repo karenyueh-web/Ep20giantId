@@ -127,15 +127,61 @@ export function operatorByRole(role?: string): string {
 }
 
 // ─── Helper: 初始化歷程 Map ────────────────────────────────────────────────────
+// V 狀態訂單的「採購回覆日期」取自歷程中最近一筆 event 含 'B→V' 的 date
+// 此處為每筆 V 狀態訂單預設補入完整流程歷程（NP→V、V→B、B→V），
+// 模擬廠商回覆後採購審核、退回再補件的真實流程。
+const V_ORDER_EXTRA_HISTORY: Record<number, HistoryEntry[]> = {
+  // id:4 空氣力學把手
+  4: [
+    { date: '2025/04/30 09:15', event: '採購退回廠商重新確認 (B→V)', operator: '巨大-黃雅琪', remark: '交期需調整' },
+    { date: '2025/04/25 14:30', event: '廠商回覆採購確認中 (V→B)',   operator: '廠商-佳承精密', remark: '確認可交貨' },
+    { date: '2025/04/15 10:00', event: '廠商確認訂單 (NP→V)',         operator: '廠商-佳承精密', remark: '' },
+  ],
+  // id:5 競賽座墊
+  5: [
+    { date: '2025/05/02 11:20', event: '採購退回廠商重新確認 (B→V)', operator: '巨大-王小明', remark: '數量需確認' },
+    { date: '2025/04/28 16:00', event: '廠商回覆採購確認中 (V→B)',   operator: '廠商-台灣製造', remark: '' },
+    { date: '2025/04/18 09:30', event: '廠商確認訂單 (NP→V)',         operator: '廠商-台灣製造', remark: '' },
+  ],
+  // id:6 碟煞系統
+  6: [
+    { date: '2025/05/01 15:45', event: '採購退回廠商重新確認 (B→V)', operator: '巨大-張嘉玲', remark: '規格確認中' },
+    { date: '2025/04/26 10:30', event: '廠商回覆採購確認中 (V→B)',   operator: '廠商-精密工業', remark: '' },
+    { date: '2025/04/16 08:00', event: '廠商確認訂單 (NP→V)',         operator: '廠商-精密工業', remark: '' },
+  ],
+  // id:14 握把套
+  14: [
+    { date: '2025/04/28 13:10', event: '採購退回廠商重新確認 (B→V)', operator: '巨大-張嘉玲', remark: '交貨地點調整' },
+    { date: '2025/04/23 09:00', event: '廠商回覆採購確認中 (V→B)',   operator: '廠商-久廣精密', remark: '' },
+    { date: '2025/04/14 14:00', event: '廠商確認訂單 (NP→V)',         operator: '廠商-久廣精密', remark: '' },
+  ],
+  // id:19 碳纖維把手（Z2HB）
+  19: [
+    { date: '2025/05/06 10:30', event: '採購退回廠商重新確認 (B→V)', operator: '巨大-張嘉玲', remark: '合約條款確認' },
+    { date: '2025/05/01 16:20', event: '廠商回覆採購確認中 (V→B)',   operator: '廠商-金盛元工業', remark: '' },
+    { date: '2025/04/20 09:00', event: '廠商確認訂單 (NP→V)',         operator: '廠商-金盛元工業', remark: '' },
+  ],
+  // id:20 碳纖維坐墊（Z2HB）
+  20: [
+    { date: '2025/05/05 14:00', event: '採購退回廠商重新確認 (B→V)', operator: '巨大-黃雅琪', remark: '單價需複核' },
+    { date: '2025/04/29 11:00', event: '廠商回覆採購確認中 (V→B)',   operator: '廠商-台灣製造', remark: '' },
+    { date: '2025/04/18 10:30', event: '廠商確認訂單 (NP→V)',         operator: '廠商-台灣製造', remark: '' },
+  ],
+};
+
 function buildInitialHistoryMap(data: OrderRow[]): Record<number, HistoryEntry[]> {
   const map: Record<number, HistoryEntry[]> = {};
   data.forEach(o => {
+    const extra = V_ORDER_EXTRA_HISTORY[o.id] ?? [];
+    // 歷程為新→舊排列（index 0 = 最新），訂單成立放最後
     map[o.id] = [
+      ...extra,
       { date: o.orderDate + ' 00:00', event: '訂單成立', operator: 'OOO', remark: '' },
     ];
   });
   return map;
 }
+
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 export function OrderStoreProvider({ children }: { children: ReactNode }) {

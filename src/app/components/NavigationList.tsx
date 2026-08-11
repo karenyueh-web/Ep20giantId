@@ -446,6 +446,8 @@ function UserInfo({ onPageChange }: UserInfoProps) {
   // 帳號類型前綴：giant → 巨大，vendor → 廠商
   const typeLabel = currentUserType === 'vendor' ? '廠商' : '巨大';
   const notifications    = useNotificationCounts();
+  // icon 列的功能按鈕依角色權限控管（個人設定、語言固定顯示；公佈欄、Chat 依權限決定）
+  const hasNav = useNavPermission();
 
   const [showCropper, setShowCropper] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
@@ -485,24 +487,26 @@ function UserInfo({ onPageChange }: UserInfoProps) {
               <SettingsIcon size={22} strokeWidth={1.6} className="text-white" />
             </button>
 
-            {/* 公布欄 */}
-            <button
-              id="user-card-announcement-btn"
-              className={iconBtnCls}
-              onClick={() => onPageChange('announcement')}
-              title="公佈欄"
-            >
-              <Megaphone size={22} strokeWidth={1.6} className="text-white" />
-              {notifications.announcement > 0 && (
-                <span className="absolute top-[-4px] right-[-4px] min-w-[18px] h-[18px] rounded-[500px] bg-[#ff5630] flex items-center justify-center px-[3px]">
-                  <span className="font-['Public_Sans:Regular',sans-serif] text-white text-[11px] leading-none">
-                    {notifications.announcement > 99 ? '99+' : notifications.announcement}
+            {/* 公布欄（有 overview-announcement 權限才顯示） */}
+            {hasNav('overview-announcement') && (
+              <button
+                id="user-card-announcement-btn"
+                className={iconBtnCls}
+                onClick={() => onPageChange('announcement')}
+                title="公佈欄"
+              >
+                <Megaphone size={22} strokeWidth={1.6} className="text-white" />
+                {notifications.announcement > 0 && (
+                  <span className="absolute top-[-4px] right-[-4px] min-w-[18px] h-[18px] rounded-[500px] bg-[#ff5630] flex items-center justify-center px-[3px]">
+                    <span className="font-['Public_Sans:Regular',sans-serif] text-white text-[11px] leading-none">
+                      {notifications.announcement > 99 ? '99+' : notifications.announcement}
+                    </span>
                   </span>
-                </span>
-              )}
-            </button>
+                )}
+              </button>
+            )}
 
-            {/* 語言（地球） */}
+            {/* 語言（地球）— 固定顯示 */}
             <div className="relative">
               <button
                 id="user-card-language-btn"
@@ -515,22 +519,24 @@ function UserInfo({ onPageChange }: UserInfoProps) {
               <LanguageDropdown isOpen={langOpen} onClose={() => setLangOpen(false)} />
             </div>
 
-            {/* Online Chat */}
-            <button
-              id="user-card-chat-btn"
-              className={iconBtnCls}
-              onClick={() => onPageChange('online-chat')}
-              title="Online Chat"
-            >
-              <MessageCircle size={22} strokeWidth={1.6} className="text-white" />
-              {notifications.chat > 0 && (
-                <span className="absolute top-[-4px] right-[-4px] min-w-[18px] h-[18px] rounded-[500px] bg-[#ff5630] flex items-center justify-center px-[3px]">
-                  <span className="font-['Public_Sans:Regular',sans-serif] text-white text-[11px] leading-none">
-                    {notifications.chat > 99 ? '99+' : notifications.chat}
+            {/* Online Chat（有 overview-chat 權限才顯示） */}
+            {hasNav('overview-chat') && (
+              <button
+                id="user-card-chat-btn"
+                className={iconBtnCls}
+                onClick={() => onPageChange('online-chat')}
+                title="Online Chat"
+              >
+                <MessageCircle size={22} strokeWidth={1.6} className="text-white" />
+                {notifications.chat > 0 && (
+                  <span className="absolute top-[-4px] right-[-4px] min-w-[18px] h-[18px] rounded-[500px] bg-[#ff5630] flex items-center justify-center px-[3px]">
+                    <span className="font-['Public_Sans:Regular',sans-serif] text-white text-[11px] leading-none">
+                      {notifications.chat > 99 ? '99+' : notifications.chat}
+                    </span>
                   </span>
-                </span>
-              )}
-            </button>
+                )}
+              </button>
+            )}
           </div>
         </div>
 
@@ -1021,7 +1027,7 @@ interface NavigationListProps {
 // ─── Nav Permission Helper ───────────────────────────────────────────────────
 // 讀取角色的模組存取設定（permission-settings-{roleId}）
 // IT 角色永遠全開；其他角色依勾選清單決定可見性
-function useNavPermission() {
+export function useNavPermission() {
   const roleId = localStorage.getItem('currentUserRoleId') ?? '';
   // IT 角色不受限制
   if (roleId === 'giant-it') return () => true;
