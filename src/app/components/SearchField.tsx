@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from 'react';
-import svgPaths from "@/imports/svg-imw9bns98t";
 import { SimpleDatePicker } from './SimpleDatePicker';
 
 interface SearchFieldProps {
@@ -35,12 +34,13 @@ export function SearchField({ label, value, onChange, placeholder = ' ', type = 
         <div className="absolute border border-[rgba(145,158,171,0.2)] border-solid inset-0 pointer-events-none rounded-[8px] z-[1]" />
         <div className="flex flex-row items-center size-full">
           <div className="flex items-center px-[14px] relative size-full">
-            {/* Search icon (left) */}
+            {/* Search icon (left) - stroke/outline 風格 */}
             {type === 'search' && (
               <div className="flex items-center pr-[8px] shrink-0">
-                <div className="relative shrink-0 size-[24px]">
-                  <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 24 24">
-                    <path d={svgPaths.p14834500} fill="#919EAB" />
+                <div className="relative shrink-0 size-[22px]">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#919EAB" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="11" cy="11" r="8"/>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
                   </svg>
                 </div>
               </div>
@@ -69,16 +69,17 @@ export function SearchField({ label, value, onChange, placeholder = ' ', type = 
                     </svg>
                   </div>
                 )}
-                {/* Calendar duotone icon */}
+                {/* Calendar icon - stroke/outline 風格，與系統 icon 規範一致 */}
                 <div
                   className="flex items-center justify-center shrink-0 rounded-[500px] size-[40px] cursor-pointer hover:bg-[rgba(145,158,171,0.08)] transition-colors"
                   onClick={() => setShowPicker(prev => !prev)}
                 >
-                  <div className="relative shrink-0 size-[24px]">
-                    <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 24 24">
-                      <path d={svgPaths.p33617100} fill="#637381" opacity="0.4" />
-                      <path d={svgPaths.pd51dc00} fill="#637381" />
-                      <path d={svgPaths.p3da10180} fill="#637381" />
+                  <div className="relative shrink-0 size-[20px]">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#637381" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                      <line x1="16" y1="2" x2="16" y2="6"/>
+                      <line x1="8" y1="2" x2="8" y2="6"/>
+                      <line x1="3" y1="10" x2="21" y2="10"/>
                     </svg>
                   </div>
                 </div>

@@ -925,7 +925,6 @@ export function OrderListWithTabs({ defaultTab = 'NP', userRole }: OrderListWith
             <div className="flex gap-[16px] items-center">
               <SearchField label="訂單日期(起)" value={orderDateFrom} onChange={setOrderDateFrom} type="date" />
               <SearchField label="訂單日期(迄)" value={orderDateTo} onChange={setOrderDateTo} type="date" />
-              <div className="flex-1" />
             </div>
           </div>
         ) : (
@@ -935,7 +934,7 @@ export function OrderListWithTabs({ defaultTab = 'NP', userRole }: OrderListWith
             <SearchField label="訂單日期(迄)" value={orderDateTo} onChange={setOrderDateTo} type="date" />
             {/* CL 頁籤：正常單 / 刪單 篩選下拉 */}
             {activeTab === 'CL' && (
-              <div className="w-[150px] shrink-0">
+              <div className="flex-1 min-w-0">
                 <DropdownSelect
                   label="單據類型"
                   value={deletionFilter}

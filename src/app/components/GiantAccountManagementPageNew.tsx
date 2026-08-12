@@ -157,7 +157,7 @@ export function GiantAccountManagementPageNew({
           <div className="flex flex-row items-center size-full">
             <div className="content-stretch flex flex-wrap gap-[16px] items-center pl-[20px] pr-[8px] py-[20px] relative w-full">
               {/* 員工姓名 */}
-              <div className="content-stretch flex flex-col items-start min-w-[180px] flex-1 relative">
+              <div className="content-stretch flex flex-col items-start flex-1 min-w-0 relative">
                 <div className="h-[54px] relative rounded-[8px] shrink-0 w-full">
                   <div aria-hidden="true" className="absolute border border-[rgba(145,158,171,0.2)] border-solid inset-0 pointer-events-none rounded-[8px]" />
                   <div className="flex flex-row items-center size-full">
@@ -185,7 +185,7 @@ export function GiantAccountManagementPageNew({
                 </div>
               </div>
               {/* 員工帳號 */}
-              <div className="content-stretch flex flex-col items-start min-w-[180px] flex-1 relative">
+              <div className="content-stretch flex flex-col items-start flex-1 min-w-0 relative">
                 <div className="h-[54px] relative rounded-[8px] shrink-0 w-full">
                   <div aria-hidden="true" className="absolute border border-[rgba(145,158,171,0.2)] border-solid inset-0 pointer-events-none rounded-[8px]" />
                   <div className="flex flex-row items-center size-full">
@@ -213,7 +213,7 @@ export function GiantAccountManagementPageNew({
                 </div>
               </div>
               {/* 角色 */}
-              <div className="min-w-[150px] flex-1">
+              <div className="flex-1 min-w-0">
                 <DropdownSelect
                   label="角色"
                   value={selectedRole}
@@ -222,7 +222,7 @@ export function GiantAccountManagementPageNew({
                 />
               </div>
               {/* 採購組織 */}
-              <div className="min-w-[180px] flex-1">
+              <div className="flex-1 min-w-0">
                 <DropdownSelect
                   label="採購組織"
                   value={selectedOrg}

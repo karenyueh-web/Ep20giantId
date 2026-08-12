@@ -538,7 +538,7 @@ function ItemInquiryTab({ shipments }: { shipments: ShipmentRow[] }) {
         <SearchField label="廠商出貨單" value={searchVendorShipNo} onChange={setSearchVendorShipNo} />
         <SearchField label="出貨單號" value={searchSapNo} onChange={setSearchSapNo} />
         <SearchField label="單號序號" value={searchDocSeq} onChange={setSearchDocSeq} />
-        <div className="flex-1 min-w-[180px] max-w-[260px]">
+        <div className="flex-1 min-w-0">
           <DropdownSelect
             label="廠商（編號）"
             value={searchVendor}
@@ -828,7 +828,7 @@ function BoxInquiryTab({ shipments, onPrint }: { shipments: ShipmentRow[]; onPri
         <SearchField label="廠商出貨單" value={searchVendorShipNo} onChange={setSearchVendorShipNo} />
         <SearchField label="出貨單號" value={searchSapNo} onChange={setSearchSapNo} />
         <SearchField label="單號序號" value={searchDocSeq} onChange={setSearchDocSeq} />
-        <div className="flex-1 min-w-[180px] max-w-[260px]">
+        <div className="flex-1 min-w-0">
           <DropdownSelect
             label="廠商（編號）"
             value={searchVendor}

@@ -476,16 +476,16 @@ export function OrderScheduleInquiryPage({ userRole: _userRole }: OrderScheduleI
 
       {/* ── C. 搜尋列 ─────────────────────────────────── */}
       <div className="shrink-0 flex gap-[12px] flex-wrap px-[20px] py-[16px]">
-        <div className="flex-1 min-w-[160px] max-w-[220px]">
+        <div className="flex-1 min-w-0">
           <SearchField label="預計交期(起)" value={deliveryDateFrom} onChange={v => { setDeliveryDateFrom(v); setPage(1); }} placeholder="Start date" type="date" />
         </div>
-        <div className="flex-1 min-w-[160px] max-w-[220px]">
+        <div className="flex-1 min-w-0">
           <SearchField label="預計交期(迄)" value={deliveryDateTo}   onChange={v => { setDeliveryDateTo(v);   setPage(1); }} placeholder="End date" type="date" />
         </div>
-        <div className="flex-1 min-w-[180px] max-w-[280px]">
+        <div className="flex-1 min-w-0">
           <SearchField label="單號序號" value={docSeqNoSearch} onChange={v => { setDocSeqNoSearch(v); setPage(1); }} type="search" />
         </div>
-        <div className="flex-1 min-w-[200px]">
+        <div className="flex-1 min-w-0">
           <SearchField label="廠商(編號)" value={vendorSearch} onChange={v => { setVendorSearch(v); setPage(1); }} type="search" placeholder="廠商名稱或代碼，多選請用逗號分隔" />
         </div>
       </div>

@@ -1522,13 +1522,15 @@ export function CorrectionListWithTabs({ userRole, historyMode = false }: Correc
         <div className="flex gap-[16px] items-center px-[20px] py-[20px] shrink-0">
           <SearchField label="單號序號" value={orderNoSearch} onChange={(v) => { setOrderNoSearch(v); setPage(1); }} />
           <SearchField label="修正單號" value={correctionDocNoSearch} onChange={(v) => { setCorrectionDocNoSearch(v); setPage(1); }} />
-          <DropdownSelect
-            label="修正類型"
-            value={correctionTypeSearch}
-            onChange={(v) => { setCorrectionTypeSearch(v); setPage(1); }}
-            options={correctionTypeOptions}
-            searchable
-          />
+          <div className="flex-1 min-w-0">
+            <DropdownSelect
+              label="修正類型"
+              value={correctionTypeSearch}
+              onChange={(v) => { setCorrectionTypeSearch(v); setPage(1); }}
+              options={correctionTypeOptions}
+              searchable
+            />
+          </div>
         </div>
 
         {/* ── Toolbar (Columns / Filters / Export) ────────────────────── */}

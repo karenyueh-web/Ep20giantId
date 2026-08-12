@@ -738,10 +738,10 @@ function ArrivalDetailDialog({ row, onClose }: ArrivalDetailDialogProps) {
 
           {/* 右側篩選器：僅訂單號碼 + 訂單序號（無是否準時） */}
           <div className="flex-1 flex items-center gap-[12px] justify-end">
-            <div className="flex-1 min-w-0" style={{ maxWidth: 200 }}>
+            <div className="flex-1 min-w-0">
               <SearchField label="訂單號碼" value={filterOrderNo} onChange={setFilterOrderNo} type="search" />
             </div>
-            <div className="flex-1 min-w-0" style={{ maxWidth: 200 }}>
+            <div className="flex-1 min-w-0">
               <SearchField label="訂單序號" value={filterOrderSeq} onChange={setFilterOrderSeq} type="search" />
             </div>
           </div>

@@ -524,7 +524,7 @@ export function VendorAccountReviewPageNew({
               {activeTab === 'success' && (
                 <SearchField label="公司名稱" value={companyNameFilter} onChange={setCompanyNameFilter} />
               )}
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <DropdownSelect 
                   label="申請角色"
                   value={selectedRole}

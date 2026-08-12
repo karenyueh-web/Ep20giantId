@@ -229,7 +229,7 @@ export function ForecastOrderListWithTabs({ userRole }: ForecastOrderListProps) 
             onChange={setVendorSearch}
             placeholder="廠商名稱或代碼，多選請用逗號分隔"
           />
-          <div className="flex-1 min-w-[150px]">
+          <div className="flex-1 min-w-0">
             <DropdownSelect
               label="採購群組"
               value={purchaseGroupSearch}

@@ -494,7 +494,7 @@ export default function PartsMaintenancePage({
       </div>
 
       {/* ── B. Filter area (no border-b) ── */}
-      <div className="shrink-0 grid grid-cols-4 gap-[16px] items-start px-[20px] py-[20px]">
+      <div className="shrink-0 flex gap-[16px] items-start px-[20px] py-[20px]">
         <DropdownSelect
           label="採購組織"
           value={filterPurchaseOrg}

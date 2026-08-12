@@ -531,7 +531,7 @@ export function HistoryOrderListWithTabs() {
         <SearchField label="單號序號" value={docSeqNoSearch} onChange={setDocSeqNoSearch} />
         <SearchField label="訂單日期(起)" value={orderDateFrom} onChange={setOrderDateFrom} type="date" />
         <SearchField label="訂單日期(迄)" value={orderDateTo} onChange={setOrderDateTo} type="date" />
-        <div className="flex-1 min-w-[180px]">
+        <div className="flex-1 min-w-0">
           <DropdownSelect
             label="訂單類型" value={orderTypeSearch} onChange={setOrderTypeSearch}
             options={ORDER_TYPE_OPTIONS} placeholder="全部" searchable={true}

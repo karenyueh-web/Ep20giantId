@@ -401,7 +401,7 @@ export default function SampleOrderListPage({ userRole: _userRole }: SampleOrder
       </div>
 
       {/* ── B. 篩選列（no border-b）── */}
-      <div className="shrink-0 grid grid-cols-4 gap-[16px] px-[20px] py-[16px]">
+      <div className="shrink-0 flex gap-[16px] px-[20px] py-[16px]">
         <SearchField
           label="索樣日期(起)"
           value={filterDateFrom}

@@ -853,7 +853,7 @@ export function ShipmentListPage() {
 
       {/* ── 搜尋列 ── */}
       <div className="shrink-0 flex gap-[16px] items-end flex-wrap pl-[20px] pr-[20px] pt-[20px] pb-[16px] border-b border-[rgba(145,158,171,0.08)]">
-        <div className="flex-1 min-w-[180px] max-w-[240px]">
+        <div className="flex-1 min-w-0">
           <DropdownSelect
             label="廠商"
             value={searchVendor}
