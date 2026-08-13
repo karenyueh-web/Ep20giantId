@@ -6,6 +6,7 @@ import { TableToolbar } from './TableToolbar';
 import { ColumnSelector } from './ColumnSelector';
 import { FilterDialog, type FilterCondition } from './FilterDialog';
 import { ForecastUploadOverlay } from './ForecastUploadOverlay';
+import { ForecastPivotOverlay } from './ForecastPivotOverlay';
 import { ForecastDeleteDeniedOverlay } from './ForecastDeleteDeniedOverlay';
 import { exportForecastExcel, exportForecastCsv } from './OrderCsvManager';
 import svgRefresh from '@/imports/svg-xqdbomdz5p';
@@ -66,6 +67,9 @@ export function ForecastOrderListWithTabs({ userRole }: ForecastOrderListProps) 
 
   // ── 上傳 Overlay 狀態 ──
   const [showUploadOverlay, setShowUploadOverlay] = useState(false);
+
+  // ── 樞紐分析 Overlay 狀態 ──
+  const [showPivotOverlay, setShowPivotOverlay] = useState(false);
 
   // ── 無權限 Overlay ──
   const [deniedRows, setDeniedRows] = useState<ForecastOrderRow[]>([]);
@@ -297,6 +301,16 @@ export function ForecastOrderListWithTabs({ userRole }: ForecastOrderListProps) 
               </div>
             </button>
 
+            {/* 樞紐分析按鈕 */}
+            <button
+              onClick={() => setShowPivotOverlay(true)}
+              className="flex items-center gap-[6px] h-[36px] px-[14px] rounded-[8px] bg-[#005eb8] hover:bg-[#004680] transition-colors shrink-0"
+            >
+              <span className="font-['Public_Sans:SemiBold',sans-serif] font-semibold text-[13px] text-white leading-none">
+                樞紐分析
+              </span>
+            </button>
+
             {/* 新增（有 create 權限才顯示） */}
             {can('create') && (
             <button
@@ -338,6 +352,14 @@ export function ForecastOrderListWithTabs({ userRole }: ForecastOrderListProps) 
           onConfirm={(file) => {
             showToast(`已接收檔案「${file.name}」，預測訂單更新中（Mock）`);
           }}
+        />
+      )}
+
+      {/* ── 樞紐分析 Overlay ─────────────────────────────────────────────── */}
+      {showPivotOverlay && (
+        <ForecastPivotOverlay
+          data={searchFilteredData}
+          onClose={() => setShowPivotOverlay(false)}
         />
       )}
 

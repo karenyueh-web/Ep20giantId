@@ -461,7 +461,9 @@ export function AdvancedForecastTable({
                 className="flex items-center justify-center shrink-0 bg-[#f4f6f8] border-r border-[rgba(145,158,171,0.08)]"
                 style={{ width: CHECKBOX_COL_W, minWidth: CHECKBOX_COL_W, height: 56, position: 'sticky', left: 0, zIndex: 20, boxShadow: '2px 0 4px -2px rgba(145,158,171,0.16)' }}
               >
-                <CheckboxIcon checked={isAllSelected} onChange={handleSelectAll} />
+                {selectedIds.size === 0 && (
+                  <CheckboxIcon checked={isAllSelected} onChange={handleSelectAll} />
+                )}
               </div>
               {/* 可拖拽/可調寬欄位 */}
               {visibleColumns.map((col, idx) => (
