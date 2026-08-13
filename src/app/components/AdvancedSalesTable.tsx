@@ -4,6 +4,8 @@ import { HTML5Backend } from 'react-dnd-html5-backend';
 import { useHorizontalDragScroll } from './useHorizontalDragScroll';
 import { DraggableColumnHeader } from './table/DraggableColumnHeader';
 import { measureTextWidth } from './table/tableUtils';
+import { MOCK_VENDORS } from '../data/vendorData';
+
 
 // 完全保留原有的 6 個欄位
 type SalesColumnKey = 'email' | 'name' | 'role' | 'purchaseOrg' | 'purchaseGroup' | 'proxyVendors' | 'status';
@@ -254,7 +256,10 @@ export function AdvancedSalesTable({
               key={i}
               className="inline-flex items-center h-[20px] px-[6px] rounded-[4px] bg-[rgba(0,94,184,0.1)] font-['Public_Sans:Medium',sans-serif] font-medium text-[11px] text-[#005eb8] whitespace-nowrap"
             >
-              {v}
+              {(() => {
+                const found = MOCK_VENDORS.find(mv => mv.code === v);
+                return found ? `${found.name}${v}` : v;
+              })()}
             </span>
           ))}
           {vendors.length > 2 && (
