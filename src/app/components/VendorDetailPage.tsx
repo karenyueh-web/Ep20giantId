@@ -531,11 +531,17 @@ export function VendorDetailPage({ currentPage, onPageChange, onLogout, onBack, 
   // 從 localStorage 讀取帳號設定
   const getAccountSettings = (accountId: string) => {
     const saved = localStorage.getItem(STORAGE_KEY);
+    const proxyKey = `sales_account_${accountId}_proxy_vendors`;
+    const savedProxy = localStorage.getItem(proxyKey);
+    const proxyVendorCodes: string[] = savedProxy ? JSON.parse(savedProxy) : [];
     if (saved) {
       const allSettings = JSON.parse(saved);
-      return allSettings[accountId];
+      const settings = allSettings[accountId];
+      if (settings) {
+        return { ...settings, proxyVendorCodes };
+      }
     }
-    return null;
+    return { proxyVendorCodes };
   };
   
   // 保存帳號設定到 localStorage
@@ -545,6 +551,7 @@ export function VendorDetailPage({ currentPage, onPageChange, onLogout, onBack, 
     allSettings[accountId] = settings;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(allSettings));
   };
+
 
   return (
     <ResponsivePageLayout
@@ -578,45 +585,33 @@ export function VendorDetailPage({ currentPage, onPageChange, onLogout, onBack, 
           initialData={getAccountSettings(selectedAccount.id)}
           onClose={() => setSelectedAccount(null)}
           onSave={(data) => {
-            // 保存設定到 localStorage
             saveAccountSettings(selectedAccount.id, data);
-            
-            // 更新業務帳號列表中的資料
             const accountsList = localStorage.getItem('sales_accounts_list');
             if (accountsList) {
               const accounts = JSON.parse(accountsList);
               const accountIndex = accounts.findIndex((acc: any) => acc.id === selectedAccount.id);
-              
               if (accountIndex !== -1) {
-                // 組合業務角色字串
                 const rolesStr = data.roles.join('、');
-                
-                // 組合採購組織字串
                 const orgsStr = data.organizations.join('、');
-                
-                // 組合採購群組字串
                 const groupsStr = data.purchaseGroups
                   .map((group: any) => group.groupCode)
                   .filter((g: string) => g)
                   .join('、');
-                
-                // 更新帳號資料
+                const proxyStr = (data.proxyVendorCodes || []).join('、');
                 accounts[accountIndex] = {
                   ...accounts[accountIndex],
                   role: rolesStr,
                   purchaseOrg: orgsStr,
-                  purchaseGroup: groupsStr
+                  purchaseGroup: groupsStr,
+                  proxyVendors: proxyStr,
                 };
-                
-                // 保存回 localStorage
                 localStorage.setItem('sales_accounts_list', JSON.stringify(accounts));
-                
-                // 觸發一個自訂事件來通知 SalesAccountForm 更新
+                const proxyKey = `sales_account_${selectedAccount.id}_proxy_vendors`;
+                localStorage.setItem(proxyKey, JSON.stringify(data.proxyVendorCodes || []));
                 window.dispatchEvent(new Event('salesAccountsUpdated'));
               }
             }
-            
-            alert(`設定已儲存！\n角色: ${data.roles.join(', ')}\n組織: ${data.organizations.length}個\n群組: ${data.purchaseGroups.length}筆`);
+            alert(`設定已儲存！\n角色: ${data.roles.join(', ')}\n組織: ${data.organizations.length}個\n群組: ${data.purchaseGroups.length}筆\n代理廠商: ${(data.proxyVendorCodes || []).length}家`);
           }}
         />
       )}

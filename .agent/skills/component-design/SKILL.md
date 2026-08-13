@@ -427,9 +427,12 @@ import { ActionCellButtons } from './ActionButtons';
 | 高度 | `54px`（min-height） | 同左 |
 | Focus 邊框 | `#1890FF` + `box-shadow: 0 0 0 2px rgba(24,144,255,0.15)` | 同左 |
 
-### 標籤結構（Material Outlined 風格）
+### 標籤結構（Material Outlined 風格）— 正確實作
+
+> ⚠️ **白線問題**：不可用獨立的 `h-[2px] bg-white` div 來遮 border，那個白色塊本身就會造成文字中間出現橫線。
 
 ```tsx
+{/* ✅ 正確：bg-white 直接加在 label 容器上，自然蓋住 border，不產生額外橫線 */}
 {/* border overlay */}
 <div
   aria-hidden="true"
@@ -437,13 +440,23 @@ import { ActionCellButtons } from './ActionButtons';
   style={{ borderColor: error ? '#ff5630' : 'rgba(145,158,171,0.2)' }}
 />
 {/* label 壓在 border 線上 */}
-<div className="absolute flex items-center left-[14px] px-[2px] top-[-5px] z-10">
-  <div className="absolute bg-white h-[2px] left-0 right-0 top-[5px]" />
+<div className="absolute flex items-center left-[14px] px-[2px] top-[-9px] z-10 bg-white">
   <p style={{ fontSize: '12px', fontWeight: 600, color: error ? '#ff5630' : '#637381' }}>
     {label}
   </p>
 </div>
+
+{/* ❌ 錯誤：獨立的 h-[2px] div 會成為一條可見的橫線 */}
+<div className="absolute flex items-center left-[14px] px-[2px] top-[-5px] z-10">
+  <div className="absolute bg-white h-[2px] left-0 right-0 top-[5px]" />  {/* ← 這就是那條線 */}
+  <p style={{ ... }}>{label}</p>
+</div>
 ```
+
+| 屬性 | 正確值 | 錯誤值 |
+|------|--------|--------|
+| label 容器 top | `top-[-9px]` | `top-[-5px]`（搭配 h-[2px] div 用的舊值）|
+| label 容器背景 | `bg-white`（在容器本身） | 獨立 `<div bg-white h-[2px]>`（造成白線）|
 
 ### FloatingInput 特性
 
@@ -493,7 +506,7 @@ import { ActionCellButtons } from './ActionButtons';
 | ✅ **欄位顯示/隱藏** | `ColumnSelector` | 點 Columns 開啟，可勾選顯示欄位，記憶至 localStorage |
 | ✅ **進階篩選** | `FilterDialog` | 點 Filters 開啟，支援包含/等於/開頭是等運算符 |
 | ✅ **匯出** | `onExportCsv` / `onExportExcel` | 依當前顯示欄位匯出 |
-| ✅ **localStorage 記憶** | 欄位順序 + 寬度 + 可見性 | 重整頁面後保留上次設定 |
+| ✅ **localStorage 記憶** | 欄位順序 + 寬度 + 可見性 | 重整頁面後保留上次設定。**⚠️ 見下方「欄位快取版本號規範」，新增欄位必須更新版本號** |
 | ✅ **PaginationControls** | `PaginationControls` | 分頁（含 Rows per page 選擇） |
 
 ### 使用方式（兩種選擇）
@@ -710,7 +723,75 @@ const autoFitWidth = useCallback((key: ColKey) => {
 
 ---
 
-## ⭐ 選取後操作列規範（Selection Toolbar）
+## ⭐ 欄位快取版本號規範（新增欄位時防止舊快取截斷）
+
+> **問題根源**：表格欄位存在 localStorage，每次新增欄位時，舊的快取中沒有新欄位，雖然程式會追加到末尾，但欄位定義的順序、label 可能被舊資料污染，導致**欄位被截斷或顯示錯誤**。
+
+### ⭐ 強制規定：每次修改欄位定義必須更新版本號
+
+| 操作 | 必做 |
+|------|------|
+| 新增欄位到 `defaultColumns` | 版本號 +1（如 `_v1` → `_v2`） |
+| 刪除欄位 | 版本號 +1 |
+| 變更欄位 key | 版本號 +1 |
+| 只改欄位 label 或 width | **不需要** 更新版本號 |
+
+### Storage Key 命名格式
+
+```
+{模組名}_{userEmail}_{辨識詞}_columns_v{版本號}
+```
+
+範例：`salesAccount_${userEmail}_sales_columns_v2`
+
+### loadColumnsFromStorage 正確寫法
+
+```tsx
+// ✅ 正確：defaultColumns 決定順序與結構，localStorage 只還原用戶調整的寬度和可見性
+const loadColumnsFromStorage = useCallback((): Column[] => {
+  const storageKey = getStorageKey(); // 包含版本號
+  try {
+    const saved = localStorage.getItem(storageKey);
+    if (saved) {
+      const savedColumns = JSON.parse(saved) as Column[];
+      return defaultColumns.map(def => {
+        const cached = savedColumns.find(sc => sc.key === def.key);
+        if (cached) {
+          return { ...def, width: cached.width, visible: cached.visible };
+        }
+        return def;
+      });
+    }
+  } catch (error) {
+    console.error('Failed to load columns from storage:', error);
+  }
+  return defaultColumns.map(c => ({ ...c }));
+}, [userEmail]);
+
+// ❌ 錯誤：用 merge 把新欄位追加到末尾 → 欄位順序混亂、舊快取污染 label
+const missingCols = defaultColumns.filter(dc => !savedKeys.includes(dc.key));
+return [...merged, ...missingCols]; // ← 新欄位被追加到最後，順序與設計不符
+```
+
+### 版本號更新步驟（SOP）
+
+1. 修改 `defaultColumns` 陣列（新增 / 刪除 / 改 key）
+2. 找到 `getStorageKey()` 函式，將版本號 +1
+3. 若同一個表格在**多個檔案**中讀寫同一個 storageKey，**兩個檔案都要同步更新**
+
+```tsx
+// 範例：新增 proxyVendors 欄位時
+// AdvancedSalesTable.tsx
+const getStorageKey = () => `salesAccount_${userEmail}_sales_columns_v2`; // _v1 → _v2
+
+// SalesAccountForm.tsx（同一個 key，必須同步）
+const storageKey = `salesAccount_${currentUserEmail}_sales_columns_v2`; // 同步更新
+```
+
+> ⚠️ **版本號升級後，所有使用者的舊設定（欄寬、可見性）會自動清除**，重新使用 defaultColumns 的預設值。這是預期行為——欄位結構變了，就不能繼續沿用舊設定。
+
+---
+
 
 > 表格勾選列後，在 `TableToolbar` 下方浮現選取工具列，供使用者對已選資料執行批次操作。
 

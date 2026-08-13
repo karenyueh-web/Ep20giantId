@@ -303,7 +303,7 @@ export function SalesAccountForm({ selectedAccount, onCloseOverlay, onAccountCli
   
   // 應用欄位變更
   const handleApplyColumns = () => {
-    const storageKey = `salesAccount_${currentUserEmail}_sales_columns`;
+    const storageKey = `salesAccount_${currentUserEmail}_sales_columns_v2`;
     try {
       localStorage.setItem(storageKey, JSON.stringify(tempColumns));
       setAvailableColumns(tempColumns);
@@ -325,7 +325,7 @@ export function SalesAccountForm({ selectedAccount, onCloseOverlay, onAccountCli
     let columnsToUse = availableColumns;
     
     if (columnsToUse.length === 0) {
-      const storageKey = `salesAccount_${currentUserEmail}_sales_columns`;
+      const storageKey = `salesAccount_${currentUserEmail}_sales_columns_v2`;
       try {
         const saved = localStorage.getItem(storageKey);
         if (saved) {

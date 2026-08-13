@@ -6,7 +6,7 @@ import { DraggableColumnHeader } from './table/DraggableColumnHeader';
 import { measureTextWidth } from './table/tableUtils';
 
 // 完全保留原有的 6 個欄位
-type SalesColumnKey = 'email' | 'name' | 'role' | 'purchaseOrg' | 'purchaseGroup' | 'status';
+type SalesColumnKey = 'email' | 'name' | 'role' | 'purchaseOrg' | 'purchaseGroup' | 'proxyVendors' | 'status';
 
 interface Column {
   key: SalesColumnKey;
@@ -31,6 +31,7 @@ interface SalesAccount {
   role: string;
   purchaseOrg: string;
   purchaseGroup: string;
+  proxyVendors?: string;
   status: 'active' | 'inactive';
 }
 
@@ -62,38 +63,37 @@ export function AdvancedSalesTable({
     { key: 'email', label: '業務帳號', width: 200, minWidth: 120 },
     { key: 'name', label: '業務姓名', width: 150, minWidth: 100 },
     { key: 'role', label: '業務角色', width: 120, minWidth: 80 },
-    { key: 'purchaseOrg', label: '採購組織', width: 300, minWidth: 150 },
+    { key: 'purchaseOrg', label: '採購組織', width: 260, minWidth: 150 },
     { key: 'purchaseGroup', label: '採購群組', width: 140, minWidth: 100 },
+    { key: 'proxyVendors', label: '代理多廠出貨', width: 200, minWidth: 120 },
     { key: 'status', label: '帳號狀態', width: 100, minWidth: 80 },
   ];
 
-  // 生成 localStorage key
+  // 生成 localStorage key（版本號異動 = 清除舊快取，強制使用最新欄位定義）
   const getStorageKey = () => {
-    return `salesAccount_${userEmail}_sales_columns`;
+    return `salesAccount_${userEmail}_sales_columns_v2`;
   };
 
   // 從 localStorage 載入欄位設定
   const loadColumnsFromStorage = useCallback((): Column[] => {
     const storageKey = getStorageKey();
-    
     try {
       const saved = localStorage.getItem(storageKey);
       if (saved) {
         const savedColumns = JSON.parse(saved) as Column[];
-        if (savedColumns.length === defaultColumns.length) {
-          // 用 defaultColumns 的最新 label 覆蓋 localStorage 中的舊 label
-          const merged = savedColumns.map(sc => {
-            const def = defaultColumns.find(dc => dc.key === sc.key);
-            return def ? { ...sc, label: def.label } : sc;
-          });
-          return merged;
-        }
+        // 只還原使用者調整過的「欄寬」和「可見性」，欄位順序與 label 永遠以 defaultColumns 為準
+        return defaultColumns.map(def => {
+          const cached = savedColumns.find(sc => sc.key === def.key);
+          if (cached) {
+            return { ...def, width: cached.width, visible: cached.visible };
+          }
+          return def;
+        });
       }
     } catch (error) {
       console.error('Failed to load columns from storage:', error);
     }
-    
-    return defaultColumns;
+    return defaultColumns.map(c => ({ ...c }));
   }, [userEmail]);
 
   // 儲存欄位設定到 localStorage
@@ -214,7 +214,7 @@ export function AdvancedSalesTable({
   }, [filteredAccounts, sortConfig]);
 
   const getCellValue = (account: SalesAccount, key: SalesColumnKey) => {
-    const value = account[key];
+    const value = account[key as keyof SalesAccount];
     
     if (key === 'email') {
       return (
@@ -236,6 +236,33 @@ export function AdvancedSalesTable({
         >
           {value}
         </p>
+      );
+    }
+
+    if (key === 'proxyVendors') {
+      const proxyStr = account.proxyVendors || '';
+      if (!proxyStr) {
+        return (
+          <p className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#919eab]">—</p>
+        );
+      }
+      const vendors = proxyStr.split('、').filter(Boolean);
+      return (
+        <div className="flex flex-wrap gap-[4px] overflow-hidden">
+          {vendors.slice(0, 2).map((v, i) => (
+            <span
+              key={i}
+              className="inline-flex items-center h-[20px] px-[6px] rounded-[4px] bg-[rgba(0,94,184,0.1)] font-['Public_Sans:Medium',sans-serif] font-medium text-[11px] text-[#005eb8] whitespace-nowrap"
+            >
+              {v}
+            </span>
+          ))}
+          {vendors.length > 2 && (
+            <span className="inline-flex items-center h-[20px] px-[6px] rounded-[4px] bg-[rgba(145,158,171,0.12)] font-['Public_Sans:Medium',sans-serif] font-medium text-[11px] text-[#637381] whitespace-nowrap">
+              +{vendors.length - 2}
+            </span>
+          )}
+        </div>
       );
     }
     
@@ -364,7 +391,8 @@ export const getSalesAccountColumns = (): Column[] => [
   { key: 'email', label: '業務帳號', width: 200, minWidth: 120 },
   { key: 'name', label: '業務姓名', width: 150, minWidth: 100 },
   { key: 'role', label: '業務角色', width: 120, minWidth: 80 },
-  { key: 'purchaseOrg', label: '採購組織', width: 300, minWidth: 150 },
+  { key: 'purchaseOrg', label: '採購組織', width: 260, minWidth: 150 },
   { key: 'purchaseGroup', label: '採購群組', width: 140, minWidth: 100 },
+  { key: 'proxyVendors', label: '代理多廠出貨', width: 200, minWidth: 120 },
   { key: 'status', label: '帳號狀態', width: 100, minWidth: 80 },
 ];

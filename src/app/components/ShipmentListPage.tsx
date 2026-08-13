@@ -538,6 +538,26 @@ export function ShipmentListPage() {
   const { scrollContainerRef, handleMouseDown, canDragScroll } = useHorizontalDragScroll();
   const { orders, updateOrderFields } = useOrderStore();
 
+  // ── 讀取登入用戶的代理廠商設定 ─────────────────────────────────────────────
+  const getProxyVendorCodes = (): string[] => {
+    try {
+      // 從 localStorage 讀取當前登入用戶資訊
+      const currentUser = localStorage.getItem('currentUser');
+      if (!currentUser) return [];
+      const user = JSON.parse(currentUser);
+      const accountId = user.id || user.email || '';
+      if (!accountId) return [];
+      // 讀取該用戶的代理廠商編號
+      const proxyKey = `sales_account_${accountId}_proxy_vendors`;
+      const saved = localStorage.getItem(proxyKey);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const proxyVendorCodes = getProxyVendorCodes();
+
   // ── 明細頁導覽 ────────────────────────────────────────────────────────────
   const [detailShipment, setDetailShipment] = useState<ShipmentRow | null>(null);
   const [detailOrders, setDetailOrders] = useState<OrderRow[]>([]);
@@ -635,6 +655,24 @@ export function ShipmentListPage() {
 
   const filteredData = useMemo(() => {
     let data = shipments;
+
+    // 如果有代理廠商設定，預先限制只顯示自家 + 代理廠商的單據
+    // （商業用戶登入時，預設只能看到自家和代理廠商的出貨單）
+    if (proxyVendorCodes.length > 0) {
+      // 找出登入用戶的自家廠商編號
+      const currentUser = (() => {
+        try {
+          const u = localStorage.getItem('currentUser');
+          return u ? JSON.parse(u) : null;
+        } catch { return null; }
+      })();
+      const ownVendorCode: string = currentUser?.vendorCode || '';
+      const allowedCodes = new Set([ownVendorCode, ...proxyVendorCodes].filter(Boolean));
+      if (allowedCodes.size > 0) {
+        data = data.filter(r => allowedCodes.has(r.vendorCode));
+      }
+    }
+
     if (searchVendor) {
       data = data.filter(r => r.vendorCode === searchVendor);
     }
@@ -868,6 +906,23 @@ export function ShipmentListPage() {
         <SearchField label="交貨日期(起)" value={deliveryDateFrom} onChange={setDeliveryDateFrom} type="date" />
         <SearchField label="交貨日期(迄)" value={deliveryDateTo} onChange={setDeliveryDateTo} type="date" />
       </div>
+
+      {/* ── 代理廠商提示 Banner（只在有代理廠商設定時顯示） ── */}
+      {proxyVendorCodes.length > 0 && (
+        <div className="shrink-0 flex items-center gap-[8px] px-[20px] py-[8px] bg-[rgba(0,94,184,0.06)] border-b border-[rgba(0,94,184,0.12)]">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#005eb8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <p className="font-['Public_Sans:Regular',sans-serif] text-[13px] text-[#005eb8]">
+            目前查詢範圍含代理廠商：
+            {proxyVendorCodes.map((code, i) => (
+              <span key={code} className="font-['Public_Sans:SemiBold',sans-serif] font-semibold">
+                {i > 0 ? '、' : ''}{code}
+              </span>
+            ))}
+          </p>
+        </div>
+      )}
 
       {/* ── Toolbar ── */}
       <TableToolbar
