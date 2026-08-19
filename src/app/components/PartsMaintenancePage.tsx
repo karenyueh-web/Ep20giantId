@@ -172,6 +172,66 @@ export default function PartsMaintenancePage({
   // ── 資料（本地 state，detail 修改可同步回來）────────────────────────────────
   const [partsData, setPartsData] = useState<PartRecord[]>(() => [...getParts()]);
 
+  // 從 MDO 載入物料列表（使用 supplier-quotations 作為主要來源）
+  useEffect(() => {
+    let cancelled = false;
+    import('@/app/api/pricing/supplierQuotations').then(({ fetchSupplierQuotations }) => {
+      fetchSupplierQuotations({ limit: 100 })
+        .then(res => {
+          if (cancelled || res.data.length === 0) return;
+          // 以 supplier_no + material_no 分組，每組一筆 PartRecord
+          const grouped = new Map<string, typeof res.data>();
+          res.data.forEach(q => {
+            const key = `${q.supplier_no}__${q.material_no}`;
+            if (!grouped.has(key)) grouped.set(key, []);
+            grouped.get(key)!.push(q);
+          });
+          import('@/app/components/partsMaintenanceData').then(({ setAllParts }) => {
+            const converted = Array.from(grouped.entries()).map(([key, quotations], idx) => {
+              const q0 = quotations[0];
+              return {
+                id: idx + 1,
+                vendorCode: q0.supplier_no,
+                vendorName: q0.supplier_no, // MDO 沒有 vendorName，暫用 code
+                material: q0.material_no,
+                plant: q0.plant_code,
+                purchaseOrg: q0.purchase_org,
+                longDescription: '',
+                qaCompletionDate: '', sampleDate: '', firstDeliveryDate: '',
+                grossWeight: '', netWeight: '', weightUnit: '',
+                vendorPartNo: '', remark: '',
+                brandSettings: quotations.map((q, i) => ({
+                  id: i + 1,
+                  brand: q.brand === 'ALL' ? '' : q.brand,
+                  unitPrice: String(q.unit_price),
+                  currency: q.currency,
+                  quoteQty: String(q.quote_qty),
+                  leadTime: String(q.lead_time_days ?? ''),
+                  moq: String(q.min_order_qty ?? ''),
+                  tradeTerms: q.incoterm ?? '',
+                  tradeTermsPlace: typeof q.incoterm_location === 'string' ? q.incoterm_location : '',
+                  quoteUnit: q.quote_uom ?? '',
+                  productType: q.spec_type === 'STANDARD' ? '標準品' : q.spec_type === 'CUSTOM' ? '客製品' : '',
+                })),
+                materialCompositions: [],
+                quoteStatus: 'quoted' as const,
+                notifyStatus: 'unsent' as const,
+                savedAt: q0.updated_at,
+                updatedAt: q0.updated_at,
+                syncDtcDte: false,
+              };
+            });
+            if (!cancelled && converted.length > 0) {
+              setAllParts(converted);
+              setPartsData(converted);  // 同步更新 React UI
+            }
+          });
+        })
+        .catch(err => console.warn('MDO 物料列表載入失敗，使用 mock data', err));
+    });
+    return () => { cancelled = true; };
+  }, []);
+
   // ── Tabs ────────────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<TabId>('all');
 

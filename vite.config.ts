@@ -53,6 +53,14 @@ export default defineConfig({
   server: {
     // SPA fallback：讓所有路徑都回傳 index.html，解決 F5 重整空白頁問題
     historyApiFallback: true,
+    proxy: {
+      '/mdo-api': {
+        target: 'https://mdo.uat.giantgroup.local',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/mdo-api/, '/api/v1'),
+      },
+    },
   },
 })
 

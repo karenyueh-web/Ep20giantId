@@ -1,5 +1,5 @@
 import svgPaths from "@/imports/svg-c0egreeez0";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { PaginationControls } from './PaginationControls';
 import { ContactDetailOverlay } from './ContactDetailOverlay';
 import { DropdownSelect } from './DropdownSelect';
@@ -46,7 +46,7 @@ const mockContactsData: Contact[] = [
   }
 ];
 
-export function VendorContactsForm() {
+export function VendorContactsForm({ supplierId }: { supplierId?: string }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [selectedContact, setSelectedContact] = useState<string | null>(null);
@@ -74,6 +74,39 @@ export function VendorContactsForm() {
     } catch (e) { /* ignore */ }
     return mockContactsData;
   });
+
+  useEffect(() => {
+    if (!supplierId) return; // 沒有 supplierId，維持原本 localStorage 邏輯
+    import('@/app/api/supplier/supplierContacts').then(({ fetchSupplierContacts }) => {
+      fetchSupplierContacts(supplierId)
+        .then(mdoContacts => {
+          if (mdoContacts.length === 0) return;
+          // 讀取本地補充資料
+          let localMap: Record<string, Partial<Contact>> = {};
+          try {
+            const saved = localStorage.getItem('vendor_contacts_list');
+            if (saved) {
+              const arr = JSON.parse(saved) as Contact[];
+              arr.forEach(c => { localMap[c.email] = c; });
+            }
+          } catch { /* ignore */ }
+          
+          const merged: Contact[] = mdoContacts.map(m => ({
+            name: m.contactName,
+            role: m.roles?.[0] ?? m.department ?? '',
+            priority: m.isPrimary ? '收件人' : 'CC',
+            email: m.contactEmail ?? '',
+            phone: m.contactPhone ?? '',
+            // 以下從 localStorage 補
+            purchaseOrg: localMap[m.contactEmail ?? '']?.purchaseOrg ?? '',
+            emailEnabled: localMap[m.contactEmail ?? '']?.emailEnabled ?? true,
+            remark: localMap[m.contactEmail ?? '']?.remark ?? '',
+          }));
+          setContacts(merged);
+        })
+        .catch(err => console.warn('聯絡人 API 失敗，使用本地資料', err));
+    });
+  }, [supplierId]);
 
   // 獲取當前登入用戶的email
   const currentUserEmail = localStorage.getItem('currentUserEmail') || 'default';

@@ -33,6 +33,8 @@ interface VendorManagementTableProps {
   onColumnsChange?: (columns: Column[]) => void;
   columnsVersion?: number;
   appliedFilters?: FilterCondition[];
+  onFilteredCountChange?: (count: number) => void;
+  onLoadingChange?: (isLoading: boolean) => void;
 }
 
 
@@ -52,7 +54,9 @@ export function VendorManagementTable({
   userEmail = 'default',
   onColumnsChange,
   columnsVersion,
-  appliedFilters
+  appliedFilters,
+  onFilteredCountChange,
+  onLoadingChange
 }: VendorManagementTableProps) {
   // 水平拖拽滾動
   const { scrollContainerRef, handleMouseDown, canDragScroll } = useHorizontalDragScroll();
@@ -66,8 +70,44 @@ export function VendorManagementTable({
     { key: 'mainProducts', label: '主要營業產品', width: 400, minWidth: 200 },
   ];
 
-  // 使用匯出的 MOCK_VENDORS
-  const mockVendors = MOCK_VENDORS;
+  // 初始為空陣列，避免進入頁面時先閃 mock 資料
+  const [mockVendors, setMockVendors] = useState<VendorData[]>([]);
+  const [apiLoading, setApiLoading] = useState(true);
+
+  useEffect(() => {
+    onLoadingChange?.(true);
+    import('@/app/api/supplier/suppliers').then(({ fetchSuppliers }) => {
+      fetchSuppliers({ limit: 100 })
+        .then(res => {
+          if (res.data.length === 0) {
+            // API 回空資料，fallback 到 MOCK_VENDORS
+            setMockVendors(MOCK_VENDORS);
+            return;
+          }
+          const converted: VendorData[] = res.data.map((s, i) => ({
+            id: i + 1,
+            code: s.supplier_no,
+            name: s.name,
+            fullName: s.fullname_chinese ?? s.name,
+            phone: s.phone ?? '',
+            address: s.address ?? '',
+            salesCount: 0,
+            mainProducts: s.main_product ?? '',
+            salesNames: [],
+            _mdoId: s.id, // 存 UUID 供後續使用
+          } as any));
+          setMockVendors(converted);
+        })
+        .catch(err => {
+          console.warn('廠商列表 API 失敗，使用 mock data', err);
+          setMockVendors(MOCK_VENDORS);
+        })
+        .finally(() => {
+          setApiLoading(false);
+          onLoadingChange?.(false);
+        });
+    });
+  }, []);
 
   // 生成 localStorage key
   const getStorageKey = () => {
@@ -201,6 +241,13 @@ export function VendorManagementTable({
     return matchesVendorName && matchesSalesPerson && matchesAdvancedFilters;
   });
 
+  // 通知父元件 filtered 數量（API 載入完成後才通知，避免閃跳 0）
+  useEffect(() => {
+    if (!apiLoading) {
+      onFilteredCountChange?.(filteredVendors.length);
+    }
+  }, [filteredVendors.length, apiLoading]);
+
   // 排序函數
   const sortedVendors = useMemo(() => {
     if (!sortConfig.key || !sortConfig.direction) {
@@ -333,28 +380,48 @@ export function VendorManagementTable({
               <div className="flex-1 bg-[#f4f6f8] min-w-0" />
             </div>
 
-            {/* 表格数据 */}
-            {sortedVendors.map((vendor) => (
-              <div 
-                key={vendor.id} 
-                className="flex border-b border-[rgba(145,158,171,0.08)] h-[56px] hover:bg-[rgba(145,158,171,0.04)]"
-              >
-                {visibleColumns.map((column, colIndex) => {
-                  const isLastCol = colIndex === visibleColumns.length - 1;
-                  return (
-                    <div
-                      key={`${vendor.id}-${column.key}`}
-                      style={isLastCol 
-                        ? { minWidth: column.width, flex: 1 } 
-                        : { width: column.width }}
-                      className={`flex items-center justify-start px-[16px] ${isLastCol ? '' : 'border-r border-[rgba(145,158,171,0.08)]'} overflow-hidden`}
-                    >
-                      {getCellValue(vendor, column.key)}
-                    </div>
-                  );
-                })}
-              </div>
-            ))}
+            {/* 表格數據 */}
+            {apiLoading ? (
+              // Skeleton loading rows
+              Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="flex border-b border-[rgba(145,158,171,0.08)] h-[56px]">
+                  {visibleColumns.map((column, colIndex) => {
+                    const isLastCol = colIndex === visibleColumns.length - 1;
+                    return (
+                      <div
+                        key={column.key}
+                        style={isLastCol ? { minWidth: column.width, flex: 1 } : { width: column.width }}
+                        className={`flex items-center px-[16px] ${isLastCol ? '' : 'border-r border-[rgba(145,158,171,0.08)]'}`}
+                      >
+                        <div className="h-[14px] rounded-[4px] bg-[rgba(145,158,171,0.15)] animate-pulse w-3/4" />
+                      </div>
+                    );
+                  })}
+                </div>
+              ))
+            ) : (
+              sortedVendors.map((vendor) => (
+                <div 
+                  key={vendor.id} 
+                  className="flex border-b border-[rgba(145,158,171,0.08)] h-[56px] hover:bg-[rgba(145,158,171,0.04)]"
+                >
+                  {visibleColumns.map((column, colIndex) => {
+                    const isLastCol = colIndex === visibleColumns.length - 1;
+                    return (
+                      <div
+                        key={`${vendor.id}-${column.key}`}
+                        style={isLastCol 
+                          ? { minWidth: column.width, flex: 1 } 
+                          : { width: column.width }}
+                        className={`flex items-center justify-start px-[16px] ${isLastCol ? '' : 'border-r border-[rgba(145,158,171,0.08)]'} overflow-hidden`}
+                      >
+                        {getCellValue(vendor, column.key)}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))
+            )}
           </div>
         </div>
 

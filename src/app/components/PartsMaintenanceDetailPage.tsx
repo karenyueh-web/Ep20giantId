@@ -69,6 +69,9 @@ export default function PartsMaintenanceDetailPage({
     () => (part.brandSettings ?? []).map(bs => ({ ...bs })),
   );
 
+  // MDO 報價追蹤（存 revision_no 供樂觀鎖使用）
+  const [mdoQuotationMap, setMdoQuotationMap] = useState<Map<number, { mdoId: string; revisionNo: number }>>(new Map());
+
   // ── Material compositions state ──────────────────────────────────────────
   const [materialCompositions, setMaterialCompositions] = useState<MaterialComposition[]>(
     () => part.materialCompositions?.map(mc => ({ ...mc })) ?? [],
@@ -104,8 +107,49 @@ export default function PartsMaintenanceDetailPage({
     );
   };
 
+  // ── MDO 品牌設定載入（supplier-quotations）────────────────────────────────────
+  useEffect(() => {
+    if (!part.vendorCode || !part.material) return;
+    let cancelled = false;
+    import('@/app/api/pricing/supplierQuotations').then(({ fetchSupplierQuotations }) => {
+      fetchSupplierQuotations({
+        supplierNo: part.vendorCode,
+        materialNo: part.material,
+        limit: 100,
+      })
+        .then(res => {
+          if (cancelled || res.data.length === 0) return;
+          // 建立 revision_no 追蹤 Map
+          const newMap = new Map<number, { mdoId: string; revisionNo: number }>();
+          const mapped = res.data.map((q, i) => {
+            const localId = i + 1;
+            newMap.set(localId, { mdoId: q.id, revisionNo: q.revision_no });
+            return {
+              id: localId,
+              brand: q.brand === 'ALL' ? '' : q.brand,
+              unitPrice: String(q.unit_price),
+              currency: q.currency,
+              quoteQty: String(q.quote_qty),
+              leadTime: String(q.lead_time_days ?? ''),
+              moq: String(q.min_order_qty ?? ''),
+              tradeTerms: q.incoterm ?? '',
+              tradeTermsPlace: typeof q.incoterm_location === 'string' ? q.incoterm_location : '',
+              quoteUnit: q.quote_uom ?? '',
+              productType: q.spec_type === 'STANDARD' ? '標準品' : q.spec_type === 'CUSTOM' ? '客製品' : '',
+            } as BrandSetting;
+          });
+          if (!cancelled) {
+            setBrandSettings(mapped);
+            setMdoQuotationMap(newMap);
+          }
+        })
+        .catch(err => console.warn('MDO 品牌設定載入失敗', err));
+    });
+    return () => { cancelled = true; };
+  }, [part.vendorCode, part.material]);
+
   // ── Save handler ─────────────────────────────────────────────────────────
-  const handleSave = () => {
+  const handleSave = async () => {
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, '0');
     const savedAt = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
@@ -199,6 +243,62 @@ export default function PartsMaintenanceDetailPage({
       savedAt,
       history: updatedHistory,
     };
+
+    // ── 儲存品牌設定到 MDO ────────────────────────────────────────────────────────
+    try {
+      const { createSupplierQuotation, updateSupplierQuotation, retireSupplierQuotation } =
+        await import('@/app/api/pricing/supplierQuotations');
+      const toIncoterm = (t: string) => t || 'FOB';
+      const toSpecType = (p: string) => p === '客製品' ? 'CUSTOM' : 'STANDARD';
+
+      // 找出 deleted（在原始 mdoQuotationMap 裡但不在 brandSettings 的）
+      const currentIds = new Set(brandSettings.map(b => b.id));
+      const promises: Promise<unknown>[] = [];
+      for (const [localId, meta] of mdoQuotationMap.entries()) {
+        if (!currentIds.has(localId)) {
+          // 已刪除 → retire
+          promises.push(
+            retireSupplierQuotation({ id: meta.mdoId, revisionNo: meta.revisionNo, reason: '前台刪除' })
+              .catch(e => console.warn('retire 失敗', e))
+          );
+        }
+      }
+      for (const bs of brandSettings) {
+        const meta = mdoQuotationMap.get(bs.id);
+        const body = {
+          supplierNo: part.vendorCode,
+          materialNo: part.material,
+          purchaseOrg: part.purchaseOrg || '1101',
+          plantCode: part.plant || 'GTM1',
+          brand: bs.brand || 'ALL',
+          unitPrice: parseFloat(bs.unitPrice) || 0,
+          currency: bs.currency || 'TWD',
+          quoteQty: parseFloat(bs.quoteQty) || 1,
+          quoteUom: bs.quoteUnit || 'PCE',
+          minOrderQty: parseFloat(bs.moq) || 0,
+          leadTimeDays: parseFloat(bs.leadTime) || 0,
+          incoterm: toIncoterm(bs.tradeTerms),
+          incotermLocation: bs.tradeTermsPlace || '',
+          specType: toSpecType(bs.productType),
+        };
+        if (meta) {
+          // 已存在 → update
+          promises.push(
+            updateSupplierQuotation({ ...body, id: meta.mdoId, revisionNo: meta.revisionNo })
+              .catch(e => console.warn('update 失敗', e))
+          );
+        } else {
+          // 新增 → create
+          promises.push(
+            createSupplierQuotation(body)
+              .catch(e => console.warn('create 失敗', e))
+          );
+        }
+      }
+      await Promise.all(promises);
+    } catch (err) {
+      console.warn('MDO 品牌設定儲存失敗', err);
+    }
 
     onSave(updatedPart);
     toast('儲存成功');
@@ -533,7 +633,6 @@ interface BrandSettingsSectionProps {
 }
 
 const BRAND_TABLE_COLUMNS = [
-  { key: 'brand' as const, label: '品牌', width: '120px', type: 'select' as const, options: BRAND_OPTIONS, storageKey: 'parts_brand_brand' },
   { key: 'unitPrice' as const, label: '採購單價', width: '100px', type: 'text' as const },
   { key: 'currency' as const, label: '幣別', width: '90px', type: 'select' as const, options: CURRENCY_OPTIONS, storageKey: 'parts_brand_currency' },
   { key: 'quoteQty' as const, label: '報價數量', width: '100px', type: 'text' as const },
@@ -544,6 +643,189 @@ const BRAND_TABLE_COLUMNS = [
   { key: 'quoteUnit' as const, label: '報價單位', width: '120px', type: 'select' as const, options: QUOTE_UNIT_OPTIONS, storageKey: 'parts_brand_quoteUnit' },
   { key: 'productType' as const, label: '標準品/客製品', width: '120px', type: 'select' as const, options: PRODUCT_TYPE_OPTIONS, storageKey: 'parts_brand_productType' },
 ];
+
+// ─── BrandSelectorButton：icon-only trigger，點擊開啟 BaseOverlay 多選彈窗 ──
+
+function BrandSelectorButton({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  // 暫存選擇（關閉前不 commit）
+  const [draft, setDraft] = useState<string[]>([]);
+
+  // value 以逗號分隔；空或 'ALL' 代表全選
+  const selected: string[] = !value || value === 'ALL' ? ['ALL'] : value.split(',').filter(Boolean);
+  const isAll = selected.includes('ALL');
+
+  const openModal = () => {
+    setDraft(selected);
+    setSearch('');
+    setOpen(true);
+  };
+
+  const toggle = (optValue: string) => {
+    if (optValue === 'ALL') {
+      setDraft(['ALL']);
+      return;
+    }
+    const cur = draft.includes('ALL') ? [] : [...draft];
+    const idx = cur.indexOf(optValue);
+    const next = idx >= 0 ? cur.filter(v => v !== optValue) : [...cur, optValue];
+    setDraft(next.length === 0 ? ['ALL'] : next);
+  };
+
+  const confirm = () => {
+    const draftIsAll = draft.includes('ALL') || draft.length === 0;
+    onChange(draftIsAll ? 'ALL' : draft.join(','));
+    setOpen(false);
+  };
+
+  const cancel = () => setOpen(false);
+
+  const filtered = BRAND_OPTIONS.filter(o =>
+    o.label.toLowerCase().includes(search.toLowerCase()),
+  );
+
+  const draftIsAll = draft.includes('ALL');
+
+  return (
+    <>
+      {/* icon-only trigger */}
+      <button
+        title={isAll ? '適用所有品牌（點擊指定特定品牌）' : `指定品牌：${selected.join('、')}（點擊變更）`}
+        onClick={openModal}
+        className={[
+          'flex items-center justify-center w-[32px] h-[32px] rounded-full transition-all',
+          isAll
+            ? 'text-[#919eab] hover:bg-[rgba(145,158,171,0.08)] hover:text-[#637381]'
+            : 'text-[#1890FF] hover:bg-[rgba(24,144,255,0.08)]',
+        ].join(' ')}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+          <line x1="7" y1="7" x2="7.01" y2="7" />
+        </svg>
+      </button>
+
+      {/* BaseOverlay 品牌選擇彈窗 */}
+      {open && (
+        <BaseOverlay onClose={cancel} maxWidth="480px" maxHeight="600px">
+          <div className="relative w-full h-full flex flex-col">
+            {/* 關閉按鈕 */}
+            <button
+              className="absolute left-[20px] top-[20px] z-10 cursor-pointer hover:opacity-70 transition-opacity"
+              onClick={cancel}
+            >
+              <svg width="24" height="24" viewBox="0 0 20 20" fill="none">
+                <path clipRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" fill="#637381" fillRule="evenodd" />
+              </svg>
+            </button>
+
+            <div className="flex flex-col h-full px-[32px] pt-[56px] pb-[28px] gap-[16px]">
+              {/* 標題 */}
+              <div>
+                <p className="font-semibold text-[18px] text-[#1c252e] leading-[28px]">指定品牌</p>
+                <p className="text-[13px] text-[#637381] mt-[4px]">選擇此報價適用的品牌，預設為全部（ALL）</p>
+              </div>
+
+              {/* 搜尋欄 */}
+              <div className="relative">
+                <svg className="absolute left-[12px] top-1/2 -translate-y-1/2 text-[#919eab]" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+                </svg>
+                <input
+                  autoFocus
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="搜尋品牌..."
+                  className="w-full pl-[36px] pr-[12px] h-[40px] text-[14px] rounded-[8px] bg-[#f4f6f8] border border-[rgba(145,158,171,0.2)] outline-none text-[#1c252e] placeholder:text-[#c4cdd5] focus:border-[#1890FF] transition-colors"
+                />
+              </div>
+
+              {/* 選項列表 */}
+              <div className="flex-1 overflow-y-auto custom-scrollbar border border-[rgba(145,158,171,0.15)] rounded-[8px] divide-y divide-[rgba(145,158,171,0.08)]">
+                {filtered.map(opt => {
+                  const checked = opt.value === 'ALL' ? draftIsAll : draft.includes(opt.value);
+                  return (
+                    <label
+                      key={opt.value}
+                      className="flex items-center gap-[12px] px-[16px] py-[10px] cursor-pointer hover:bg-[#f8fafc] transition-colors"
+                      onClick={() => toggle(opt.value)}
+                    >
+                      {/* custom checkbox */}
+                      <span className={[
+                        'flex-shrink-0 w-[16px] h-[16px] rounded-[4px] border-[1.5px] flex items-center justify-center transition-all',
+                        checked
+                          ? 'bg-[#1890FF] border-[#1890FF]'
+                          : 'bg-white border-[rgba(145,158,171,0.4)]',
+                      ].join(' ')}>
+                        {checked && (
+                          <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
+                            <path d="M1 3.5L3.5 6L8 1" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        )}
+                      </span>
+                      <span className={[
+                        'text-[14px] select-none',
+                        checked ? 'text-[#1890FF] font-semibold' : 'text-[#1c252e]',
+                        opt.value === 'ALL' ? 'font-semibold' : '',
+                      ].join(' ')}>
+                        {opt.label}
+                      </span>
+                    </label>
+                  );
+                })}
+                {filtered.length === 0 && (
+                  <p className="text-center py-[24px] text-[13px] text-[#919eab]">找不到符合的品牌</p>
+                )}
+              </div>
+
+              {/* 已選 chips */}
+              {!draftIsAll && draft.length > 0 && (
+                <div className="flex flex-wrap gap-[6px]">
+                  {draft.map(b => (
+                    <span key={b} className="flex items-center gap-[4px] px-[8px] h-[24px] rounded-full bg-[#e8f4ff] text-[#0058d4] text-[12px] font-medium border border-[#1890FF]/30">
+                      {b}
+                      <button
+                        onClick={() => toggle(b)}
+                        className="flex items-center justify-center w-[16px] h-[16px] rounded-full hover:bg-[rgba(255,86,48,0.12)] transition-colors shrink-0"
+                        title="移除"
+                      >
+                        <svg width="8" height="8" viewBox="0 0 10 10" fill="none">
+                          <path d="M2 2L8 8M8 2L2 8" stroke="#FF5630" strokeWidth="1.6" strokeLinecap="round" />
+                        </svg>
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* 底部操作 */}
+              <div className="flex items-center justify-between pt-[4px]">
+                <span className="text-[13px] text-[#919eab]">
+                  {draftIsAll ? '全部品牌' : `已選 ${draft.length} 個品牌`}
+                </span>
+                <div className="flex gap-[8px]">
+                  <button
+                    onClick={cancel}
+                    className="h-[36px] px-[20px] rounded-[8px] border border-[rgba(145,158,171,0.32)] text-[14px] font-medium text-[#637381] hover:bg-[rgba(145,158,171,0.08)] transition-colors"
+                  >
+                    取消
+                  </button>
+                  <button
+                    onClick={confirm}
+                    className="h-[36px] px-[20px] rounded-[8px] bg-[#1890FF] text-white text-[14px] font-medium hover:bg-[#1060c0] transition-colors"
+                  >
+                    確認
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </BaseOverlay>
+      )}
+    </>
+  );
+}
 
 function BrandSettingsSection({ brandSettings, onAdd, onDelete, onUpdate }: BrandSettingsSectionProps) {
   return (
@@ -556,7 +838,7 @@ function BrandSettingsSection({ brandSettings, onAdd, onDelete, onUpdate }: Bran
             <div aria-hidden="true" className="absolute border-[#1c252e] border-b-2 border-solid inset-0 pointer-events-none" />
             <div className="flex items-center justify-center h-full px-[4px]">
               <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[28px] text-[#1c252e] text-[18px] whitespace-nowrap">
-                品牌設定
+                價格設定
               </p>
             </div>
           </div>
@@ -574,7 +856,7 @@ function BrandSettingsSection({ brandSettings, onAdd, onDelete, onUpdate }: Bran
 
       {/* Table */}
       <div className="overflow-x-auto custom-scrollbar border border-[rgba(145,158,171,0.2)] rounded-[8px]">
-        <table className="w-full border-collapse" style={{ minWidth: '1340px' }}>
+        <table className="w-full border-collapse" style={{ minWidth: '1100px' }}>
           {/* Header */}
           <thead>
             <tr className="bg-[#f4f6f8]">
@@ -587,7 +869,8 @@ function BrandSettingsSection({ brandSettings, onAdd, onDelete, onUpdate }: Bran
                   {col.label}
                 </th>
               ))}
-              <th className="w-[50px] px-[4px] py-[10px]" />
+              {/* 操作欄（品牌 icon + 刪除）*/}
+              <th className="w-[80px] px-[4px] py-[10px]" />
             </tr>
           </thead>
 
@@ -596,7 +879,7 @@ function BrandSettingsSection({ brandSettings, onAdd, onDelete, onUpdate }: Bran
             {brandSettings.length === 0 ? (
               <tr>
                 <td colSpan={BRAND_TABLE_COLUMNS.length + 1} className="text-center py-[24px] text-[14px] text-[#919eab]">
-                  尚無品牌設定，請點擊 ＋ 新增
+                  尚無價格設定，請點擊 ＋ 新增
                 </td>
               </tr>
             ) : (
@@ -627,8 +910,27 @@ function BrandSettingsSection({ brandSettings, onAdd, onDelete, onUpdate }: Bran
                       )}
                     </td>
                   ))}
+                  {/* 操作欄：品牌選擇 icon + 刪除 */}
                   <td className="px-[4px] py-[6px] align-middle">
-                    <DeleteButton onClick={() => onDelete(bs.id)} />
+                    <div className="flex items-center gap-[4px] justify-end">
+                      <BrandSelectorButton
+                        value={bs.brand || 'ALL'}
+                        onChange={v => onUpdate(bs.id, 'brand', v)}
+                      />
+                      {/* 刪除按鈕：描邊垃圾桶 icon，無外框 */}
+                      <button
+                        onClick={() => onDelete(bs.id)}
+                        title="刪除"
+                        className="flex items-center justify-center w-[32px] h-[32px] rounded-full text-[#FF5630] hover:bg-[rgba(255,86,48,0.08)] transition-all"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FF5630" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="3 6 5 6 21 6" />
+                          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                          <path d="M10 11v6M14 11v6" />
+                          <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                        </svg>
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))

@@ -1,5 +1,33 @@
 # 專案規則（Project Rules）
 
+## ⭐ MDO 中台 API 對接規則
+
+### 唯一真實來源：docs-json
+**每次接 MDO API 前，必須先執行以下指令確認 endpoint 真實存在於已部署環境：**
+
+```powershell
+node -e "const https=require('https');const agent=new https.Agent({rejectUnauthorized:false});https.get('https://mdo.uat.giantgroup.local/api/docs-json',{agent,headers:{'x-api-key':'mdo_5f35a29e5c406b778ffeb165ad0f957c'}},(res)=>{let d='';res.on('data',c=>d+=c);res.on('end',()=>{const doc=JSON.parse(d);Object.keys(doc.paths||{}).forEach(p=>console.log(p));});}).on('error',e=>console.error(e.message));"
+```
+
+### ❌ 禁止行為
+- **禁止**依賴 `mdo/giant-mdo-data-object-design.md` 決定要呼叫哪個 endpoint
+- **禁止**依賴 `mdo/giant-mdo-migration-plan.md` 的 endpoint 清單
+- **禁止**依賴 `mdo/gap-analysis-report-*.md` 的 endpoint 清單
+- **禁止**假設設計文件上的 endpoint 已部署
+
+> 原因：設計文件記錄的是規劃中的 API，不是已部署的 API，兩者可能有落差。
+
+### ✅ 正確流程
+1. 用 `run_command` + node 查詢 `docs-json` 取得真實 path 清單
+2. 用 `run_command` + curl 測試 endpoint 是否回 200
+3. 解析 `docs-json` 中的 `components/schemas` 取得真實欄位定義
+4. 才開始建立 API module 和串接頁面
+
+### 缺漏欄位追蹤
+待補欄位記錄在 `src/app/api/supplier/PENDING_MDO_FIELDS.md`，MDO 補欄位後需同步更新。
+
+---
+
 ## ⭐ 設計系統管理規則
 
 ### 資料夾位置

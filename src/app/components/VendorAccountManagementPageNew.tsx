@@ -94,6 +94,8 @@ export default function VendorAccountManagementPageNew({
   const [appliedFilters, setAppliedFilters] = useState<FilterCondition[]>([]);
   const [selectedVendor, setSelectedVendor] = useState<VendorData | null>(null);
   const [autoOpenUserName, setAutoOpenUserName] = useState<string | undefined>(undefined);
+  const [filteredCount, setFilteredCount] = useState<number>(0);
+  const [isTableLoading, setIsTableLoading] = useState(true);
 
   // 獲取當前登入用戶的email
   const [currentUserEmail] = useState<string>(() => {
@@ -203,11 +205,6 @@ export default function VendorAccountManagementPageNew({
     setShowColumnSelector(!showColumnSelector);
   };
 
-  // 計算篩選後的資料數量
-  const getFilteredCount = () => {
-    // 這裡簡化處理，實際應該從 VendorManagementTable 獲取
-    return 11;
-  };
 
   if (showDetailPage) {
     return (
@@ -254,7 +251,7 @@ export default function VendorAccountManagementPageNew({
 
           {/* 工具欄 */}
           <TableToolbar
-            resultsCount={getFilteredCount()}
+            resultsCount={isTableLoading ? 0 : filteredCount}
             showColumnSelector={showColumnSelector}
             showFilterDialog={showFilterDialog}
             onColumnsClick={handleColumnsClick}
@@ -296,6 +293,8 @@ export default function VendorAccountManagementPageNew({
             onColumnsChange={handleColumnsChange}
             columnsVersion={columnsVersion}
             appliedFilters={appliedFilters}
+            onFilteredCountChange={setFilteredCount}
+            onLoadingChange={setIsTableLoading}
           />
         </div>
     </ResponsivePageLayout>

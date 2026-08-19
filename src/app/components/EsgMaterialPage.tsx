@@ -10,10 +10,12 @@ import { BaseOverlay } from './BaseOverlay';
 import {
   type EsgMaterialRecord,
   MOCK_ESG_MATERIALS,
-  addEsgMaterial,
-  updateEsgMaterial,
-  getEsgMaterials,
 } from './esgMaterialData';
+import {
+  fetchEsgMaterials,
+  upsertEsgMaterial,
+  type MdoEsgMaterial,
+} from '@/app/api/quality/esgMaterials';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 interface EsgMaterialPageProps {
@@ -220,10 +222,51 @@ function UpdateInfoCell({ record }: { record: EsgMaterialRecord }) {
 
 // ── 主元件 ─────────────────────────────────────────────────────────────────────
 export default function EsgMaterialPage({ userRole = 'giant' }: EsgMaterialPageProps) {
-  const [materials, setMaterials] = useState<EsgMaterialRecord[]>(() => [...getEsgMaterials()]);
+  const [materials, setMaterials] = useState<EsgMaterialRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [apiError, setApiError] = useState<string | null>(null);
   const [modalMode, setModalMode] = useState<'add' | 'edit' | null>(null);
   const [editingRecord, setEditingRecord] = useState<EsgMaterialRecord | null>(null);
   const [search, setSearch] = useState('');
+
+  // MDO API 載入
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    fetchEsgMaterials()
+      .then(res => {
+        if (cancelled) return;
+        // 將 MDO 格式轉換為本地格式
+        const fmtDate = (iso: string) => {
+          const d = new Date(iso);
+          const y = d.getFullYear();
+          const mo = String(d.getMonth() + 1).padStart(2, '0');
+          const dy = String(d.getDate()).padStart(2, '0');
+          return `${y}/${mo}/${dy}`;
+        };
+        const converted: EsgMaterialRecord[] = res.data.map((m: MdoEsgMaterial, i: number) => ({
+          id: i + 1,
+          nameTw: m.name_tw,
+          nameCn: m.name_cn ?? '',
+          nameEn: m.name_en ?? '',
+          carbonEmission: m.carbon_emission,
+          createdBy: (m as any).created_by ?? '',
+          createdAt: m.created_at ? fmtDate(m.created_at) : '',
+          updatedBy: (m as any).updated_by ?? undefined,
+          updatedAt: m.updated_at && m.updated_at !== m.created_at ? fmtDate(m.updated_at) : undefined,
+        } as any));
+        setMaterials(converted);
+        setApiError(null);
+      })
+      .catch(err => {
+        if (cancelled) return;
+        console.warn('MDO API 載入失敗，改用 mock data', err);
+        setMaterials([...MOCK_ESG_MATERIALS]);
+        setApiError('無法連線至中台，目前顯示本地資料');
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
 
   // ── 篩選 ─────────────────────────────────────────────────────────────────────
   const filteredData = useMemo(() => {
@@ -259,37 +302,64 @@ export default function EsgMaterialPage({ userRole = 'giant' }: EsgMaterialPageP
     setEditingRecord(null);
   }, []);
 
-  const handleSave = useCallback((form: FormState) => {
+  const handleSave = useCallback(async (form: FormState) => {
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, '0');
     const dateStr = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())}`;
 
-    if (modalMode === 'add') {
-      const newRecord: EsgMaterialRecord = {
-        id: Date.now(),
+    try {
+      await upsertEsgMaterial({
         nameTw: form.nameTw.trim(),
         nameCn: form.nameCn.trim(),
         nameEn: form.nameEn.trim(),
         carbonEmission: Number(form.carbonEmission),
-        createdBy: '目前使用者',
-        createdAt: dateStr,
-      };
-      setMaterials(prev => [...prev, newRecord]);
-      addEsgMaterial(newRecord);          // 同步寫入共用 store
-      toast('新增材料成功');
-    } else if (modalMode === 'edit' && editingRecord) {
-      const updatedRecord: EsgMaterialRecord = {
-        ...editingRecord,
-        nameTw: form.nameTw.trim(),
-        nameCn: form.nameCn.trim(),
-        nameEn: form.nameEn.trim(),
-        carbonEmission: Number(form.carbonEmission),
-        updatedBy: '目前使用者',
-        updatedAt: dateStr,
-      };
-      setMaterials(prev => prev.map(m => m.id === editingRecord.id ? updatedRecord : m));
-      updateEsgMaterial(updatedRecord);   // 同步寫入共用 store
-      toast('編輯材料成功');
+      });
+      // 重新載入列表
+      const res = await fetchEsgMaterials();
+      const converted: EsgMaterialRecord[] = res.data.map((m: MdoEsgMaterial, i: number) => ({
+        id: i + 1,
+        nameTw: m.name_tw,
+        nameCn: m.name_cn ?? '',
+        nameEn: m.name_en ?? '',
+        carbonEmission: m.carbon_emission,
+        createdBy: '',
+        createdAt: m.created_at
+          ? new Date(m.created_at).toLocaleDateString('zh-TW').replace(/-/g, '/')
+          : '',
+        updatedAt: m.updated_at !== m.created_at
+          ? new Date(m.updated_at).toLocaleDateString('zh-TW').replace(/-/g, '/')
+          : undefined,
+      } as any));
+      setMaterials(converted);
+      toast(modalMode === 'add' ? '新增材料成功' : '編輯材料成功');
+    } catch (err) {
+      console.error('儲存失敗', err);
+      // API 失敗時 fallback 到本地操作
+      if (modalMode === 'add') {
+        const newRecord: EsgMaterialRecord = {
+          id: Date.now(),
+          nameTw: form.nameTw.trim(),
+          nameCn: form.nameCn.trim(),
+          nameEn: form.nameEn.trim(),
+          carbonEmission: Number(form.carbonEmission),
+          createdBy: '目前使用者',
+          createdAt: dateStr,
+        };
+        setMaterials(prev => [...prev, newRecord]);
+        toast('新增材料成功（離線模式）');
+      } else if (modalMode === 'edit' && editingRecord) {
+        const updatedRecord: EsgMaterialRecord = {
+          ...editingRecord,
+          nameTw: form.nameTw.trim(),
+          nameCn: form.nameCn.trim(),
+          nameEn: form.nameEn.trim(),
+          carbonEmission: Number(form.carbonEmission),
+          updatedBy: '目前使用者',
+          updatedAt: dateStr,
+        };
+        setMaterials(prev => prev.map(m => m.id === editingRecord.id ? updatedRecord : m));
+        toast('編輯材料成功（離線模式）');
+      }
     }
     handleCloseModal();
   }, [modalMode, editingRecord, handleCloseModal]);
@@ -351,15 +421,27 @@ export default function EsgMaterialPage({ userRole = 'giant' }: EsgMaterialPageP
 
       {/* B. 表格 */}
       <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-        <StandardDataTable<EsgMaterialWithSeq>
-          columns={columns}
-          data={displayData}
-          storageKey="esg-material-v3"
-          showCheckbox={false}
-          actionButton={actionButton}
-          externalFilteredData={displayData}
-          onExportCsv={() => toast('匯出 CSV 功能開發中')}
-        />
+        {loading && (
+          <div className="flex items-center justify-center flex-1 text-[14px] text-[#637381]">
+            載入中...
+          </div>
+        )}
+        {apiError && (
+          <div className="shrink-0 text-center text-[12px] text-[#ff8800] py-[4px] bg-[#fff8ee] px-[20px]">
+            ⚠️ {apiError}
+          </div>
+        )}
+        {!loading && (
+          <StandardDataTable<EsgMaterialWithSeq>
+            columns={columns}
+            data={displayData}
+            storageKey="esg-material-v3"
+            showCheckbox={false}
+            actionButton={actionButton}
+            externalFilteredData={displayData}
+            onExportCsv={() => toast('匯出 CSV 功能開發中')}
+          />
+        )}
       </div>
 
       {/* C. 新增/編輯 Modal */}

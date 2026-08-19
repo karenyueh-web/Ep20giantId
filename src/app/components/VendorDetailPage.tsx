@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { fetchSuppliers, fetchSupplierSourceKey, updateSupplier } from '@/app/api/supplier/suppliers';
 import svgPaths from "@/imports/svg-90pu4m8y4o";
 import type { PageType } from './MainLayout';
 import IconsSolidIcSolarMultipleForwardLeftBroken from '@/imports/IconsSolidIcSolarMultipleForwardLeftBroken';
@@ -197,15 +198,18 @@ function Radio({ checked, onChange, label, disabled = false }: RadioProps) {
 }
 
 // 廠商資訊表單內容
-function VendorInfoForm({ vendor }: { vendor?: VendorData | null }) {
+function VendorInfoForm({ vendor, onMdoIdLoaded }: { vendor?: VendorData | null, onMdoIdLoaded?: (id: string) => void }) {
   const vendorCode     = vendor?.code     ?? '—';
   const vendorName     = vendor?.name     ?? '—';
   const vendorFullName = vendor?.fullName ?? '—';
   const phone          = vendor?.phone    ?? '—';
   const address        = vendor?.address  ?? '—';
-  const axCode         = '';   // VendorData 目前無此欄位，留空
-  const fax            = '';   // VendorData 目前無此欄位，留空
   const defaultMainProducts = vendor?.mainProducts ?? '';
+
+  // MDO API 載入 fax + axCode + 特殊設定
+  const [mdoSupplierId, setMdoSupplierId] = useState<string | null>(null);
+  const [axCode, setAxCode] = useState('');
+  const [fax, setFax] = useState('');
 
   const STORAGE_KEY          = `vendor_${vendorCode}_mainProducts`;
   const SPECIAL_SETTINGS_KEY = `vendor_${vendorCode}_specialSettings`;
@@ -244,6 +248,42 @@ function VendorInfoForm({ vendor }: { vendor?: VendorData | null }) {
   const [insuranceOption, setInsuranceOption] = useState<'none' | 'withMail' | 'noMail'>(initialSettings.insuranceOption);
   const [needMaterialInfo, setNeedMaterialInfo] = useState(initialSettings.needMaterialInfo);
 
+  useEffect(() => {
+    if (!vendor?.code) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        // 不傳 filter（MDO 不支援 supplierNo query param 會 400），fetch 全部再本地比對
+        const res = await fetchSuppliers();
+        if (cancelled) return;
+        const s = res.data.find(item => item.supplier_no === vendor.code);
+        if (!s) return;
+        setMdoSupplierId(s.id);
+        if (onMdoIdLoaded) onMdoIdLoaded(s.id);
+        setFax(s.fax ?? '');
+        // 從 MDO 覆蓋特殊參與設定
+        if (s.requires_inspection_report !== undefined) setNeedInspectionReport(s.requires_inspection_report);
+        if (s.requires_performance_test_report !== undefined) setNeedPerformanceTest(s.requires_performance_test_report);
+        if (s.requires_hazardous_substance !== undefined) setNeedHazardousMaterial(s.requires_hazardous_substance);
+        if (s.insurance_data_requirement) {
+          const map: Record<string, 'none' | 'withMail' | 'noMail'> = {
+            'NONE': 'none',
+            'REQUIRED_WITH_MAIL': 'withMail',
+            'REQUIRED_WITHOUT_MAIL': 'noMail',
+          };
+          setInsuranceOption(map[s.insurance_data_requirement] ?? 'none');
+        }
+        if (s.requires_material_composition !== undefined) setNeedMaterialInfo(s.requires_material_composition);
+        // 取 AX 代碼
+        const axKey = await fetchSupplierSourceKey(s.id, 'AX');
+        if (!cancelled) setAxCode(axKey ?? '');
+      } catch (err) {
+        console.warn('MDO 廠商資料載入失敗', err);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [vendor?.code]);
+
   // 組件載入時從 localStorage 讀取數據
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -263,7 +303,7 @@ function VendorInfoForm({ vendor }: { vendor?: VendorData | null }) {
   }, []);
 
   // 保存處理函數
-  const handleSave = () => {
+  const handleSave = async () => {
     // 保存主要營業產品到 localStorage
     localStorage.setItem(STORAGE_KEY, mainProducts);
     
@@ -277,6 +317,24 @@ function VendorInfoForm({ vendor }: { vendor?: VendorData | null }) {
     };
     localStorage.setItem(SPECIAL_SETTINGS_KEY, JSON.stringify(specialSettings));
     
+    // 額外呼叫 MDO API
+    if (mdoSupplierId) {
+      const insuranceMap: Record<string, 'NONE' | 'REQUIRED_WITH_MAIL' | 'REQUIRED_WITHOUT_MAIL'> = {
+        'none': 'NONE',
+        'withMail': 'REQUIRED_WITH_MAIL',
+        'noMail': 'REQUIRED_WITHOUT_MAIL',
+      };
+      updateSupplier({
+        id: mdoSupplierId,
+        mainProduct: mainProducts,
+        requiresInspectionReport: needInspectionReport,
+        requiresPerformanceTestReport: needPerformanceTest,
+        requiresHazardousSubstance: needHazardousMaterial,
+        insuranceDataRequirement: insuranceMap[insuranceOption],
+        requiresMaterialComposition: needMaterialInfo,
+      }).catch(err => console.warn('MDO 儲存失敗（已儲存至 localStorage）', err));
+    }
+
     setShowSaveSuccess(true);
     console.log('已儲存主要營業產品到 localStorage：', mainProducts);
     console.log('已儲存特殊參與設定到 localStorage：', specialSettings);
@@ -478,7 +536,9 @@ function ContentArea({
   autoOpenUserName,
   onAutoOpenDone,
   pendingVendorApproval,
-  onClearPendingApproval
+  onClearPendingApproval,
+  mdoSupplierId,
+  onMdoIdLoaded
 }: { 
   activeTab: TabType; 
   onTabChange: (tab: TabType) => void; 
@@ -495,6 +555,8 @@ function ContentArea({
     roles: string[];
   } | null;
   onClearPendingApproval?: () => void;
+  mdoSupplierId?: string | null;
+  onMdoIdLoaded?: (id: string) => void;
 }) {
   return (
     <div className="w-full h-full">
@@ -503,7 +565,7 @@ function ContentArea({
         <Tabs activeTab={activeTab} onTabChange={onTabChange} onBack={onBack} />
         
         {/* 內容 */}
-        {activeTab === 'vendor' && <VendorInfoForm vendor={vendor} />}
+        {activeTab === 'vendor' && <VendorInfoForm vendor={vendor} onMdoIdLoaded={onMdoIdLoaded} />}
         {activeTab === 'sales' && (
           <SalesAccountForm 
             onAccountClick={onAccountClick} 
@@ -514,7 +576,7 @@ function ContentArea({
             onClearPendingApproval={onClearPendingApproval}
           />
         )}
-        {activeTab === 'contacts' && <VendorContactsForm />}
+        {activeTab === 'contacts' && <VendorContactsForm supplierId={mdoSupplierId ?? undefined} />}
       </div>
     </div>
   );
@@ -523,6 +585,7 @@ function ContentArea({
 export function VendorDetailPage({ currentPage, onPageChange, onLogout, onBack, defaultTab, userRole, vendor, autoOpenUserName, onAutoOpenDone, pendingVendorApproval, onClearPendingApproval }: VendorDetailPageProps) {
   const [activeTab, setActiveTab] = useState<TabType>(defaultTab || 'vendor');
   const [selectedAccount, setSelectedAccount] = useState<any>(null);
+  const [mdoSupplierId, setMdoSupplierId] = useState<string | null>(null);
   const vendorName = vendor?.name ?? '廠商'; // 使用實際廠商簡稱
   
   // 使用 localStorage 儲存每個帳號的設定
@@ -573,6 +636,8 @@ export function VendorDetailPage({ currentPage, onPageChange, onLogout, onBack, 
         onAutoOpenDone={onAutoOpenDone}
         pendingVendorApproval={pendingVendorApproval}
         onClearPendingApproval={onClearPendingApproval}
+        mdoSupplierId={mdoSupplierId}
+        onMdoIdLoaded={setMdoSupplierId}
       />
 
       {/* Overlay - 浮在整個頁面上方 */}
