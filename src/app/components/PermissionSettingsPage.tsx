@@ -111,9 +111,9 @@ const FEATURE_TREE: FeatureNode[] = [
     children: [
       {
         id: 'mgmt-parts',
-        label: '零件/索樣',
+        label: '報價/索樣',
         children: [
-          { id: 'mgmt-parts-info', label: '零件資訊' },
+          { id: 'mgmt-parts-info', label: '報價單' },
           { id: 'mgmt-parts-print-quote', label: '列印報價單' },
           {
             id: 'mgmt-parts-sample',

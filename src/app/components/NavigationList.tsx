@@ -990,7 +990,7 @@ function MiniNavLayout({ currentPage, onPageChange, onLogout }: MiniNavLayoutPro
       {hasAnyOverview && hasAnyMgmt && <div className="w-full h-px bg-[rgba(145,158,171,0.12)] my-[4px]" />}
 
       {/* MANAGEMENT — 逐一用 hasNav 過濾，與 Sidebar 展開版保持一致 */}
-      {hasNav('mgmt-parts')      && <MiniSubmenuItem menuId="parts"      icon={<PartsIcon />}           label="零件/索樣" isActive={currentPage === 'parts-maintain'} onShow={showFlyout} onHide={startHide} />}
+      {hasNav('mgmt-parts')      && <MiniSubmenuItem menuId="parts"      icon={<PartsIcon />}           label="報價/索樣" isActive={currentPage === 'parts-maintain'} onShow={showFlyout} onHide={startHide} />}
       {hasNav('mgmt-order')      && <MiniSubmenuItem menuId="order"      icon={<OrderIcon />}           label="訂單管理" isActive={['order-list','order-forecast','order-exchange','order-return'].includes(currentPage)} onShow={showFlyout} onHide={startHide} />}
       {hasNav('mgmt-correction') && <MiniSubmenuItem menuId="correction" icon={<CorrectOrderIcon />}   label="修正單"   onShow={showFlyout} onHide={startHide} />}
       {hasNav('mgmt-shipping')   && <MiniSubmenuItem menuId="shipping"   icon={<ShippingIcon />}       label="出貨單"   onShow={showFlyout} onHide={startHide} />}
@@ -1251,7 +1251,7 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
         <div className="w-full">
           <NavItem
             icon={<PartsIcon />}
-            label="零件/索樣"
+            label="報價/索樣"
             hasSubmenu
             isExpanded={expandedMenus.includes('parts')}
             isActive={expandedMenus.includes('parts')}
@@ -1260,7 +1260,7 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
           />
           {expandedMenus.includes('parts') && (
             <div className="w-full">
-              {hasNav('mgmt-parts-info') && <SubMenuItem label="零件資訊" page="parts-maintain" onNavigate={onPageChange} isActive={currentPage === 'parts-maintain'} badge={partsPendingBadge} />}
+              {hasNav('mgmt-parts-info') && <SubMenuItem label="報價單" page="parts-maintain" onNavigate={onPageChange} isActive={currentPage === 'parts-maintain'} badge={partsPendingBadge} />}
               {hasNav('mgmt-parts-print-quote') && <SubMenuItem label="列印報價單" page="parts-quote" onNavigate={onPageChange} isActive={currentPage === 'parts-quote'} />}
               {hasNav('mgmt-parts-sample') && <SubMenuItem label="索樣單" page="parts-sample" onNavigate={onPageChange} isActive={currentPage === 'parts-sample'} badge={sampleOrderBadge} />}
             </div>

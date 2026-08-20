@@ -389,7 +389,7 @@ export default function PartsMaintenancePage({
   const handleMaterialClick = useCallback(
     (part: PartRecord) => {
       setViewingPart(part);
-      onBreadcrumbChange?.('零件資訊', '零件/索樣 • 零件資訊 • 明細');
+      onBreadcrumbChange?.('報價單', '報價/索樣 • 報價單 • 明細');
     },
     [onBreadcrumbChange],
   );
@@ -397,7 +397,7 @@ export default function PartsMaintenancePage({
   // ── Detail 頁返回 ──────────────────────────────────────────────────────────
   const handleBackToList = useCallback(() => {
     setViewingPart(null);
-    onBreadcrumbChange?.('零件資訊', '零件/索樣 • 零件資訊');
+    onBreadcrumbChange?.('報價單', '報價/索樣 • 報價單');
   }, [onBreadcrumbChange]);
 
   // ── Detail 頁儲存 ──────────────────────────────────────────────────────────
@@ -461,7 +461,7 @@ export default function PartsMaintenancePage({
       });
 
       setViewingPart(null);
-      onBreadcrumbChange?.('零件資訊', '零件/索樣 • 零件資訊');
+      onBreadcrumbChange?.('報價單', '報價/索樣 • 報價單');
 
       // 同步成功通知
       if (updated.syncDtcDte && updated.plant === 'GTM1') {

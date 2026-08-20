@@ -143,21 +143,21 @@ export const pageConfig: Record<PageType, PageConfig> = {
     breadcrumb: '發票作業 • 發票設定',
   },
 
-  // ── 零件/索樣 ──────────────────────────────────────────────────────────────
+  // ── 報價/索樣 ──────────────────────────────────────────────────
   'parts-maintain': {
-    navLabel: '零件資訊',
-    title: '零件資訊',
-    breadcrumb: '零件/索樣 • 零件資訊',
+    navLabel: '報價單',
+    title: '報價單',
+    breadcrumb: '報價/索樣 • 報價單',
   },
   'parts-quote': {
     navLabel: '列印報價單',
     title: '列印報價單',
-    breadcrumb: '零件/索樣 • 列印報價單',
+    breadcrumb: '報價/索樣 • 列印報價單',
   },
   'parts-sample': {
     navLabel: '索樣單',
     title: '索樣單',
-    breadcrumb: '零件/索樣 • 索樣單',
+    breadcrumb: '報價/索樣 • 索樣單',
   },
 
   // ── 品保作業 ───────────────────────────────────────────────────────────────

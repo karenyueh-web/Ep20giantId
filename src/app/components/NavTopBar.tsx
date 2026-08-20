@@ -89,11 +89,11 @@ function buildMenuItems(hasNav: (id: string) => boolean, notifications: { announ
   // ── 零件/索樣 ──
   if (hasNav('mgmt-parts')) {
     const children = [
-      hasNav('mgmt-parts-info')        && { label: '零件資訊',   page: 'parts-maintain' as const },
+      hasNav('mgmt-parts-info')        && { label: '報價單',   page: 'parts-maintain' as const },
       hasNav('mgmt-parts-print-quote') && { label: '列印報價單', page: 'parts-quote'    as const },
       hasNav('mgmt-parts-sample')      && { label: '索樣單',     page: 'parts-sample'   as const },
     ].filter(Boolean) as { label: string; page: PageType }[];
-    if (children.length) items.push({ id: 'parts', label: '零件/索樣', icon: <Component {...ICON_PROPS}/>, children });
+    if (children.length) items.push({ id: 'parts', label: '報價/索樣', icon: <Component {...ICON_PROPS}/>, children });
   }
 
   // ── 訂單管理 ──

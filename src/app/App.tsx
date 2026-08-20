@@ -73,8 +73,8 @@ export default function App() {
   // ── 從發票查詢點擊查看的發票記錄 ──
   const [viewingInvoice, setViewingInvoice] = useState<InvoiceRecord | null>(null);
   // ── 零件資訊維護 breadcrumb state ──
-  const [partsTitle, setPartsTitle] = useState('零件資訊');
-  const [partsBreadcrumb, setPartsBreadcrumb] = useState('零件/索樣 • 零件資訊');
+  const [partsTitle, setPartsTitle] = useState('報價單');
+  const [partsBreadcrumb, setPartsBreadcrumb] = useState('報價/索樣 • 報價單');
   // ── 廠商評價 breadcrumb state ──
   const [vendorEvalBreadcrumb, setVendorEvalBreadcrumb] = useState(pageConfig['vendor-evaluation'].breadcrumb);
 
@@ -411,7 +411,7 @@ export default function App() {
         return (
           <ResponsivePageLayout
             currentPage={currentPage}
-            onPageChange={(p) => { setPartsTitle('零件資訊'); setPartsBreadcrumb('零件/索樣 • 零件資訊'); handlePageChange(p); }}
+            onPageChange={(p) => { setPartsTitle('報價單'); setPartsBreadcrumb('報價/索樣 • 報價單'); handlePageChange(p); }}
             onLogout={handleLogout}
             userRole={userRole}
             title={partsTitle}
