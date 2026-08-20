@@ -1116,35 +1116,43 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
   const calcSampleCount = () =>
     getSampleOrders().filter(o => o.status === 'V' || o.status === 'B' || o.status === 'SC').length;
 
-  // 零件資訊未報價數量
-  const calcPendingCount = () =>
-    getParts().filter(p => p.quoteStatus === 'pending').length;
-
+  // 零件資訊未報價數量（從 MDO 動態載入）
   const [sampleOrderBadge, setSampleOrderBadge] = useState<string | undefined>(() => {
     const count = calcSampleCount();
     return count > 0 ? String(count) : undefined;
   });
-
-  // 零件資訊（未報價）badge
-  const [partsPendingBadge, setPartsPendingBadge] = useState<string | undefined>(() => {
-    const count = calcPendingCount();
-    return count > 0 ? String(count) : undefined;
-  });
-
-  // 零件/索樣 主選單 badge（未報價 + 索樣單活躍數量）
+  const [partsPendingBadge, setPartsPendingBadge] = useState<string | undefined>(undefined);
   const [partsAndSampleBadge, setPartsAndSampleBadge] = useState<string | undefined>(() => {
-    const total = calcSampleCount() + calcPendingCount();
-    return total > 0 ? String(total) : undefined;
+    const sCount = calcSampleCount();
+    return sCount > 0 ? String(sCount) : undefined;
   });
+
+  useEffect(() => {
+    // 從 MDO 取得報價資料，計算未報價數量
+    import('@/app/api/pricing/supplierQuotations').then(({ fetchAllSupplierQuotations, toNumber }) => {
+      fetchAllSupplierQuotations().then(allQ => {
+        const grouped = new Map<string, typeof allQ>();
+        allQ.forEach(q => {
+          const key = `${q.supplier_no}__${q.material_no}`;
+          if (!grouped.has(key)) grouped.set(key, []);
+          grouped.get(key)!.push(q);
+        });
+        const pCount = Array.from(grouped.values()).filter(rows =>
+          !rows.some(q => toNumber(q.unit_price) > 0 || (q.quote_uom ?? '').trim() !== '')
+        ).length;
+        const sCount = calcSampleCount();
+        setPartsPendingBadge(pCount > 0 ? String(pCount) : undefined);
+        setPartsAndSampleBadge((pCount + sCount) > 0 ? String(pCount + sCount) : undefined);
+      }).catch(() => {/* 靜默失敗 */});
+    });
+  }, []);
 
   useEffect(() => {
     const handler = () => {
       const sCount = calcSampleCount();
-      const pCount = calcPendingCount();
       setSampleOrderBadge(sCount > 0 ? String(sCount) : undefined);
-      setPartsPendingBadge(pCount > 0 ? String(pCount) : undefined);
-      const total = sCount + pCount;
-      setPartsAndSampleBadge(total > 0 ? String(total) : undefined);
+      // parts pending badge 不在此更新（由 MDO useEffect 負責）
+      setPartsAndSampleBadge(sCount > 0 ? String(sCount) : undefined);
     };
     window.addEventListener('sampleOrdersChanged', handler);
     return () => window.removeEventListener('sampleOrdersChanged', handler);

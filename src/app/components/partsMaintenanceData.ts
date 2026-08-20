@@ -166,8 +166,8 @@ export const QUOTE_UNIT_OPTIONS = [
 
 /** 標準品 / 客製品 */
 export const PRODUCT_TYPE_OPTIONS = [
-  { value: '標準品', label: '標準品' },
-  { value: '客製品', label: '客製品' },
+  { value: 'STANDARD', label: 'Standard（標準品）' },
+  { value: 'CUSTOM', label: 'Customized（客製品）' },
 ];
 
 /** 重量單位 */

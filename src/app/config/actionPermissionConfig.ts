@@ -72,6 +72,13 @@ export const FEATURE_ACTION_CONFIG: FeatureActionConfig[] = [
       { id: 'edit_purchase_group', label: '新增/刪除採購群組' },
     ],
   },
+  {
+    featureId: 'mgmt-parts-info',
+    featureLabel: '零件資訊',
+    actions: [
+      { id: 'create_sample', label: '開立索樣單' },
+    ],
+  },
 ];
 
 /**

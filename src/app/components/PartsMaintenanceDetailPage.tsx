@@ -12,13 +12,18 @@ import type { PartRecord, BrandSetting, PartHistoryEntry, MaterialComposition } 
 import {
   BRAND_OPTIONS, TRADE_TERMS_OPTIONS, QUOTE_UNIT_OPTIONS,
   PRODUCT_TYPE_OPTIONS, WEIGHT_UNIT_OPTIONS, CURRENCY_OPTIONS,
-  updatePart,
+  getParts, updatePart,
 } from '@/app/components/partsMaintenanceData';
+import type { DropdownOption } from '@/app/api/platform/optionLists';
+import { PARTS_LIST_CODES, resolveOptionLists, toDropdownOptions, toIncotermOptions, toChineseLabelOptions } from '@/app/api/platform/optionLists';
 import { OrderHistory } from '@/app/components/OrderHistory';
 import {
-  type EsgMaterialRecord,
-  getEsgMaterials,
-} from '@/app/components/esgMaterialData';
+  fetchAllEsgMaterials,
+  upsertMaterialComposition,
+  fetchMaterialCompositionsByItem,
+  type MdoEsgMaterial,
+} from '@/app/api/quality/esgMaterials';
+import { fetchItemByMaterialNo } from '@/app/api/material/items';
 import { StandardDataTable, type StandardColumn } from '@/app/components/StandardDataTable';
 import QuotationPrintPage from '@/app/components/QuotationPrintPage';
 
@@ -63,6 +68,8 @@ export default function PartsMaintenanceDetailPage({
   const [weightUnit, setWeightUnit] = useState(part.weightUnit);
   const [vendorPartNo, setVendorPartNo] = useState(part.vendorPartNo);
   const [remark, setRemark] = useState(part.remark);
+  const [mdoDescription, setMdoDescription] = useState(part.longDescription);
+  const [mdoItemId, setMdoItemId] = useState<string | null>(null); // MDO items UUID
 
   // ── Brand settings state ─────────────────────────────────────────────────
   const [brandSettings, setBrandSettings] = useState<BrandSetting[]>(
@@ -71,6 +78,85 @@ export default function PartsMaintenanceDetailPage({
 
   // MDO 報價追蹤（存 revision_no 供樂觀鎖使用）
   const [mdoQuotationMap, setMdoQuotationMap] = useState<Map<number, { mdoId: string; revisionNo: number }>>(new Map());
+
+  // ── MDO Option Lists 動態選項（BRAND / INCOTERM / QUOTE_UOM / SPEC_TYPE / CURRENCY / WEIGHT_UOM）
+  type MdoOptionsMap = Record<string, DropdownOption[]>;
+  const [mdoOptions, setMdoOptions] = useState<MdoOptionsMap>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    resolveOptionLists(Object.values(PARTS_LIST_CODES))
+      .then(resolved => {
+        if (cancelled) return;
+        const mapped: MdoOptionsMap = {};
+        // 需要「英文代碼在上、中文說明在下」兩行格式的 listCode（中文 label 無英文前綴）
+        const twoLineListCodes = new Set([
+          PARTS_LIST_CODES.QUOTE_UOM,
+          PARTS_LIST_CODES.WEIGHT_UOM,
+        ]);
+        // label 含英文前綴（如 Ex Works（工廠交貨））→ 萃取括號內中文顯示於下行
+        const chineseLabelListCodes = new Set([
+          PARTS_LIST_CODES.INCOTERM,
+          PARTS_LIST_CODES.SPEC_TYPE,
+          PARTS_LIST_CODES.CURRENCY,
+        ]);
+        Object.entries(resolved).forEach(([code, items]) => {
+          if (chineseLabelListCodes.has(code as never)) {
+            mapped[code] = toChineseLabelOptions(items);
+          } else if (twoLineListCodes.has(code as never)) {
+            mapped[code] = toIncotermOptions(items);
+          } else {
+            mapped[code] = toDropdownOptions(items);
+          }
+        });
+        setMdoOptions(mapped);
+      })
+      .catch(err => console.warn('[PartsDetail] Option Lists 載入失敗，使用靜態選項', err));
+    return () => { cancelled = true; };
+  }, []);
+
+  // ── MDO items 載入：description / 毛重 / 淨重 / 重量單位 ───────────────────────
+  useEffect(() => {
+    if (!part.material) return;
+    let cancelled = false;
+    console.log('[PartsDetail] 載入 item, material:', part.material);
+    fetchItemByMaterialNo(part.material)
+      .then(item => {
+        if (cancelled) return;
+        console.log('[PartsDetail] item 回傳:', item);
+        if (!item) return;
+        setMdoItemId(item.material_id);  // 存入 UUID 供後續用
+        if (item.description) setMdoDescription(item.description);
+        if (item.gross_weight != null) setGrossWeight(String(item.gross_weight));
+        if (item.net_weight != null) setNetWeight(String(item.net_weight));
+        if (item.weight_uom) setWeightUnit(item.weight_uom);
+      })
+      .catch(err => console.error('[PartsDetail] items 載入失敗', err));
+    return () => { cancelled = true; };
+  }, [part.material]);
+
+  // ── MDO material-compositions 載入 ──────────────────────────────────────────
+  useEffect(() => {
+    if (!mdoItemId) return;
+    let cancelled = false;
+    fetchMaterialCompositionsByItem(mdoItemId)
+      .then(comps => {
+        if (cancelled || comps.length === 0) return;
+        const mapped: MaterialComposition[] = comps.map((c, i) => ({
+          id: i + 1,
+          esgMaterialId: c.esg_material_id,
+          nameTw: c.name_tw ?? '',
+          nameCn: c.name_cn ?? '',
+          nameEn: c.name_en ?? '',
+          carbonEmission: parseFloat(String(c.carbon_emission ?? 0)) || 0,
+          createdBy: c.created_by ?? '',
+          createdAt: c.created_at?.slice(0, 10).replace(/-/g, '/') ?? '',
+        }));
+        setMaterialCompositions(mapped);
+      })
+      .catch(err => console.warn('[PartsDetail] compositions 載入失敗', err));
+    return () => { cancelled = true; };
+  }, [mdoItemId]);
 
   // ── Material compositions state ──────────────────────────────────────────
   const [materialCompositions, setMaterialCompositions] = useState<MaterialComposition[]>(
@@ -111,7 +197,7 @@ export default function PartsMaintenanceDetailPage({
   useEffect(() => {
     if (!part.vendorCode || !part.material) return;
     let cancelled = false;
-    import('@/app/api/pricing/supplierQuotations').then(({ fetchSupplierQuotations }) => {
+    import('@/app/api/pricing/supplierQuotations').then(({ fetchSupplierQuotations, toNumber }) => {
       fetchSupplierQuotations({
         supplierNo: part.vendorCode,
         materialNo: part.material,
@@ -119,7 +205,7 @@ export default function PartsMaintenanceDetailPage({
       })
         .then(res => {
           if (cancelled || res.data.length === 0) return;
-          // 建立 revision_no 追蹤 Map
+          // 建立 revision_no 追蹤 Map（供 update / retire 使用樂觀鎖）
           const newMap = new Map<number, { mdoId: string; revisionNo: number }>();
           const mapped = res.data.map((q, i) => {
             const localId = i + 1;
@@ -127,15 +213,15 @@ export default function PartsMaintenanceDetailPage({
             return {
               id: localId,
               brand: q.brand === 'ALL' ? '' : q.brand,
-              unitPrice: String(q.unit_price),
+              unitPrice: String(toNumber(q.unit_price)),
               currency: q.currency,
-              quoteQty: String(q.quote_qty),
-              leadTime: String(q.lead_time_days ?? ''),
-              moq: String(q.min_order_qty ?? ''),
+              quoteQty: String(toNumber(q.quote_qty, 1)),
+              leadTime: q.lead_time_days != null ? String(q.lead_time_days) : '',
+              moq: q.min_order_qty != null ? String(toNumber(q.min_order_qty)) : '',
               tradeTerms: q.incoterm ?? '',
               tradeTermsPlace: typeof q.incoterm_location === 'string' ? q.incoterm_location : '',
               quoteUnit: q.quote_uom ?? '',
-              productType: q.spec_type === 'STANDARD' ? '標準品' : q.spec_type === 'CUSTOM' ? '客製品' : '',
+              productType: q.spec_type ?? '',  // 存 MDO code：STANDARD / CUSTOM
             } as BrandSetting;
           });
           if (!cancelled) {
@@ -246,18 +332,88 @@ export default function PartsMaintenanceDetailPage({
 
     // ── 儲存品牌設定到 MDO ────────────────────────────────────────────────────────
     try {
-      const { createSupplierQuotation, updateSupplierQuotation, retireSupplierQuotation } =
-        await import('@/app/api/pricing/supplierQuotations');
+      const {
+        createSupplierQuotation, updateSupplierQuotation, retireSupplierQuotation,
+        fetchAllSupplierQuotations,
+      } = await import('@/app/api/pricing/supplierQuotations');
       const toIncoterm = (t: string) => t || 'FOB';
-      const toSpecType = (p: string) => p === '客製品' ? 'CUSTOM' : 'STANDARD';
 
-      // 找出 deleted（在原始 mdoQuotationMap 裡但不在 brandSettings 的）
+      /**
+       * 將目前的 brandSettings 同步到指定 plantCode：
+       * - 先 fetch 該 plant 的現有報價，依 brand 建立 Map
+       * - retire 已刪除的 brand
+       * - update 已存在的 brand
+       * - create 新增的 brand
+       */
+      const syncPlantQuotations = async (plantCode: string) => {
+        // 取得該工廠現有報價（以 brand 為 key），失敗時當作空陣列
+        let existingList: Awaited<ReturnType<typeof fetchAllSupplierQuotations>> = [];
+        try {
+          existingList = await fetchAllSupplierQuotations({
+            supplierNo: part.vendorCode,
+            materialNo: part.material,
+            plantCode,
+          });
+        } catch {
+          console.warn(`[sync ${plantCode}] fetch 失敗，跳過`);
+          return;
+        }
+
+        const existingByBrand = new Map(existingList.map(q => [q.brand, q]));
+        const currentBrands = new Set(brandSettings.map(bs => bs.brand || 'ALL'));
+
+        const ps: Promise<unknown>[] = [];
+
+        // retire 已從清單中移除的 brand
+        for (const [brand, q] of existingByBrand.entries()) {
+          if (!currentBrands.has(brand)) {
+            ps.push(
+              retireSupplierQuotation({ id: q.id, revisionNo: q.revision_no, reason: `同步自 ${part.plant} 刪除` })
+                .catch(e => console.warn(`[sync ${plantCode}] retire 失敗`, e))
+            );
+          }
+        }
+
+        for (const bs of brandSettings) {
+          const brand = bs.brand || 'ALL';
+          const body = {
+            supplierNo: part.vendorCode,
+            materialNo: part.material,
+            purchaseOrg: part.purchaseOrg || '1101',
+            plantCode,
+            brand,
+            unitPrice: parseFloat(bs.unitPrice) || 0,
+            currency: bs.currency || 'TWD',
+            quoteQty: parseFloat(bs.quoteQty) || 1,
+            quoteUom: bs.quoteUnit || 'PCE',
+            minOrderQty: parseFloat(bs.moq) || 0,
+            leadTimeDays: parseFloat(bs.leadTime) || 0,
+            incoterm: toIncoterm(bs.tradeTerms),
+            incotermLocation: bs.tradeTermsPlace || '',
+            specType: bs.productType || 'STANDARD',
+          };
+          const existing = existingByBrand.get(brand);
+          if (existing) {
+            ps.push(
+              updateSupplierQuotation({ ...body, id: existing.id, revisionNo: existing.revision_no })
+                .catch(e => console.warn(`[sync ${plantCode}] update 失敗`, e))
+            );
+          } else {
+            ps.push(
+              createSupplierQuotation(body)
+                .catch(e => console.warn(`[sync ${plantCode}] create 失敗`, e))
+            );
+          }
+        }
+        await Promise.all(ps);
+      };
+
+      // ① 儲存當前工廠（GTM1）
       const currentIds = new Set(brandSettings.map(b => b.id));
-      const promises: Promise<unknown>[] = [];
+      const gtmPromises: Promise<unknown>[] = [];
       for (const [localId, meta] of mdoQuotationMap.entries()) {
         if (!currentIds.has(localId)) {
-          // 已刪除 → retire
-          promises.push(
+          gtmPromises.push(
             retireSupplierQuotation({ id: meta.mdoId, revisionNo: meta.revisionNo, reason: '前台刪除' })
               .catch(e => console.warn('retire 失敗', e))
           );
@@ -279,29 +435,61 @@ export default function PartsMaintenanceDetailPage({
           leadTimeDays: parseFloat(bs.leadTime) || 0,
           incoterm: toIncoterm(bs.tradeTerms),
           incotermLocation: bs.tradeTermsPlace || '',
-          specType: toSpecType(bs.productType),
+          specType: bs.productType || 'STANDARD',
         };
         if (meta) {
-          // 已存在 → update
-          promises.push(
+          gtmPromises.push(
             updateSupplierQuotation({ ...body, id: meta.mdoId, revisionNo: meta.revisionNo })
               .catch(e => console.warn('update 失敗', e))
           );
         } else {
-          // 新增 → create
-          promises.push(
+          gtmPromises.push(
             createSupplierQuotation(body)
               .catch(e => console.warn('create 失敗', e))
           );
         }
       }
-      await Promise.all(promises);
+      await Promise.all(gtmPromises);
+
+      // ② 同步 DTC1 / DTE1（若勾選）
+      if (syncDtcDte) {
+        await Promise.all([
+          syncPlantQuotations('DTC1'),
+          syncPlantQuotations('DTE1'),
+        ]);
+      }
     } catch (err) {
       console.warn('MDO 品牌設定儲存失敗', err);
     }
 
+    // ── 同步基本資料到 DTC1 / DTE1（in-memory，待 MDO items API 支援後改為真實 API）──
+    if (syncDtcDte) {
+      const allParts = getParts();
+      const basicFields = {
+        syncDtcDte,
+        qaCompletionDate,
+        sampleDate,
+        firstDeliveryDate,
+        grossWeight,
+        netWeight,
+        weightUnit,
+        vendorPartNo,
+        remark,
+      };
+      for (const targetPlant of ['DTC1', 'DTE1']) {
+        const target = allParts.find(
+          p => p.material === part.material &&
+               p.vendorCode === part.vendorCode &&
+               p.plant === targetPlant
+        );
+        if (target) {
+          updatePart({ ...target, ...basicFields });
+        }
+      }
+    }
+
     onSave(updatedPart);
-    toast('儲存成功');
+    toast(syncDtcDte ? '儲存成功（已同步至 DTC1、DTE1）' : '儲存成功');
   };
 
   // ── Render ───────────────────────────────────────────────────────────────
@@ -381,6 +569,8 @@ export default function PartsMaintenanceDetailPage({
             onSave={handleSave}
             onShowHistory={() => setShowHistory(true)}
             onPrint={() => setShowPrint(true)}
+            mdoDescription={mdoDescription}
+            mdoOptions={mdoOptions}
           />
         ) : (
           <MaterialCompositionTab
@@ -389,15 +579,27 @@ export default function PartsMaintenanceDetailPage({
             onAdd={(mc) => {
               setMaterialCompositions(prev => {
                 const next = [...prev, mc];
-                // 即時寫入 store，使用 next 保證是最新內容
                 updatePart({ ...part, materialCompositions: next });
                 return next;
               });
+              // 立即存回 MDO
+              if (mdoItemId) {
+                upsertMaterialComposition({
+                  itemId: mdoItemId,
+                  esgMaterialId: String(mc.esgMaterialId),
+                  nameTw: mc.nameTw,
+                  nameCn: mc.nameCn,
+                  nameEn: mc.nameEn,
+                  carbonEmission: mc.carbonEmission,
+                  createdBy: mc.createdBy,
+                }).catch(err => console.error('[PartsDetail] 成分新增至 MDO 失敗', err));
+              } else {
+                console.warn('[PartsDetail] mdoItemId 尚未載入，無法存回 MDO');
+              }
             }}
             onDelete={(id) => {
               const next = materialCompositions.filter(mc => mc.id !== id);
               setMaterialCompositions(next);
-              // 即時寫入 store
               updatePart({ ...part, materialCompositions: next });
             }}
           />
@@ -442,6 +644,7 @@ interface InfoContentProps {
   setVendorPartNo: (v: string) => void;
   remark: string;
   setRemark: (v: string) => void;
+  mdoDescription: string;
   brandSettings: BrandSetting[];
   onAddBrand: () => void;
   onDeleteBrand: (id: number) => void;
@@ -449,6 +652,8 @@ interface InfoContentProps {
   onSave: () => void;
   onShowHistory: () => void;
   onPrint: () => void;
+  /** MDO Option Lists 動態選項，fallback 為靜態常數 */
+  mdoOptions?: Record<string, import('@/app/api/platform/optionLists').DropdownOption[]>;
 }
 
 function InfoContent({
@@ -471,6 +676,7 @@ function InfoContent({
   setVendorPartNo,
   remark,
   setRemark,
+  mdoDescription,
   brandSettings,
   onAddBrand,
   onDeleteBrand,
@@ -478,6 +684,7 @@ function InfoContent({
   onSave,
   onShowHistory,
   onPrint,
+  mdoOptions = {},
 }: InfoContentProps) {
   return (
     <div className="space-y-[24px]">
@@ -531,10 +738,10 @@ function InfoContent({
       {/* ── Read-only fields (中台帶入) ────────────────────────────────────── */}
       <div className="flex flex-wrap gap-x-[40px] gap-y-[8px]">
         <ReadOnlyField label="廠商" value={`${part.vendorName}(${part.vendorCode})`} />
-        <ReadOnlyField label="料號" value={part.material} />
+        <ReadOnlyField label="料號" value={part.material} valueColor="#005eb8" />
         <ReadOnlyField label="採購組織" value={part.purchaseOrg} />
         <ReadOnlyField label="工廠" value={part.plant} />
-        <ReadOnlyField label="長規格敘述" value={part.longDescription} />
+        <ReadOnlyField label="長規格敘述" value={mdoDescription} />
       </div>
 
       {/* ── Editable fields (bordered box) ─────────────────────────────────── */}
@@ -550,7 +757,7 @@ function InfoContent({
         <div className="grid grid-cols-4 gap-[16px]">
           <FloatingInput label="毛重" value={grossWeight} onChange={setGrossWeight} />
           <FloatingInput label="淨重" value={netWeight} onChange={setNetWeight} />
-          <DropdownSelect label="重量單位" value={weightUnit} onChange={setWeightUnit} options={WEIGHT_UNIT_OPTIONS} />
+          <DropdownSelect label="重量單位" value={weightUnit} onChange={setWeightUnit} options={mdoOptions[PARTS_LIST_CODES.WEIGHT_UOM]?.length ? mdoOptions[PARTS_LIST_CODES.WEIGHT_UOM] : WEIGHT_UNIT_OPTIONS} />
           <FloatingInput label="備註" value={remark} onChange={setRemark} />
         </div>
       </div>
@@ -561,6 +768,7 @@ function InfoContent({
         onAdd={onAddBrand}
         onDelete={onDeleteBrand}
         onUpdate={onUpdateBrand}
+        mdoOptions={mdoOptions}
       />
     </div>
   );
@@ -630,23 +838,38 @@ interface BrandSettingsSectionProps {
   onAdd: () => void;
   onDelete: (id: number) => void;
   onUpdate: (id: number, field: keyof BrandSetting, value: string) => void;
+  /** MDO 動態選項（fallback 為靜態常數） */
+  mdoOptions?: Record<string, DropdownOption[]>;
 }
 
-const BRAND_TABLE_COLUMNS = [
-  { key: 'unitPrice' as const, label: '採購單價', width: '100px', type: 'text' as const },
-  { key: 'currency' as const, label: '幣別', width: '90px', type: 'select' as const, options: CURRENCY_OPTIONS, storageKey: 'parts_brand_currency' },
-  { key: 'quoteQty' as const, label: '報價數量', width: '100px', type: 'text' as const },
-  { key: 'leadTime' as const, label: 'Lead Time', width: '100px', type: 'text' as const },
-  { key: 'moq' as const, label: 'MOQ', width: '90px', type: 'text' as const },
-  { key: 'tradeTerms' as const, label: '國貿條件', width: '130px', type: 'select' as const, options: TRADE_TERMS_OPTIONS, storageKey: 'parts_brand_tradeTerms' },
-  { key: 'tradeTermsPlace' as const, label: '國貿條件約定地點', width: '140px', type: 'text' as const },
-  { key: 'quoteUnit' as const, label: '報價單位', width: '120px', type: 'select' as const, options: QUOTE_UNIT_OPTIONS, storageKey: 'parts_brand_quoteUnit' },
-  { key: 'productType' as const, label: '標準品/客製品', width: '120px', type: 'select' as const, options: PRODUCT_TYPE_OPTIONS, storageKey: 'parts_brand_productType' },
-];
+/** 根據 MDO 動態選項（或靜態 fallback）建立品牌設定欄定義 */
+function buildBrandTableColumns(mdoOptions: Record<string, DropdownOption[]>) {
+  const opt = (code: string, fallback: DropdownOption[]) =>
+    mdoOptions[code]?.length ? mdoOptions[code] : fallback;
+  return [
+    { key: 'unitPrice' as const, label: '採購單價', width: '100px', type: 'text' as const },
+    { key: 'currency' as const, label: '幣別', width: '90px', type: 'select' as const, options: opt(PARTS_LIST_CODES.CURRENCY, CURRENCY_OPTIONS), storageKey: 'parts_brand_currency' },
+    { key: 'quoteQty' as const, label: '報價數量', width: '100px', type: 'text' as const },
+    { key: 'leadTime' as const, label: 'Lead Time', width: '100px', type: 'text' as const },
+    { key: 'moq' as const, label: 'MOQ', width: '90px', type: 'text' as const },
+    { key: 'tradeTerms' as const, label: '國貿條件', width: '130px', type: 'select' as const, options: opt(PARTS_LIST_CODES.INCOTERM, TRADE_TERMS_OPTIONS), storageKey: 'parts_brand_tradeTerms' },
+    { key: 'tradeTermsPlace' as const, label: '國貿條件約定地點', width: '140px', type: 'text' as const },
+    { key: 'quoteUnit' as const, label: '報價單位', width: '120px', type: 'select' as const, options: opt(PARTS_LIST_CODES.QUOTE_UOM, QUOTE_UNIT_OPTIONS), storageKey: 'parts_brand_quoteUnit' },
+    { key: 'productType' as const, label: '標準品/客製品', width: '120px', type: 'select' as const, options: opt(PARTS_LIST_CODES.SPEC_TYPE, PRODUCT_TYPE_OPTIONS), storageKey: 'parts_brand_productType' },
+  ];
+}
 
 // ─── BrandSelectorButton：icon-only trigger，點擊開啟 BaseOverlay 多選彈窗 ──
 
-function BrandSelectorButton({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function BrandSelectorButton({
+  value,
+  onChange,
+  brandOptions,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  brandOptions: DropdownOption[];
+}) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   // 暫存選擇（關閉前不 commit）
@@ -681,7 +904,9 @@ function BrandSelectorButton({ value, onChange }: { value: string; onChange: (v:
 
   const cancel = () => setOpen(false);
 
-  const filtered = BRAND_OPTIONS.filter(o =>
+  // MDO 選項優先，fallback 靜態 BRAND_OPTIONS
+  const activeBrandOptions = brandOptions.length ? brandOptions : BRAND_OPTIONS;
+  const filtered = activeBrandOptions.filter(o =>
     o.label.toLowerCase().includes(search.toLowerCase()),
   );
 
@@ -827,7 +1052,12 @@ function BrandSelectorButton({ value, onChange }: { value: string; onChange: (v:
   );
 }
 
-function BrandSettingsSection({ brandSettings, onAdd, onDelete, onUpdate }: BrandSettingsSectionProps) {
+function BrandSettingsSection({ brandSettings, onAdd, onDelete, onUpdate, mdoOptions = {} }: BrandSettingsSectionProps) {
+  const BRAND_TABLE_COLUMNS = useMemo(
+    () => buildBrandTableColumns(mdoOptions),
+    [mdoOptions],
+  );
+  const brandOptions = mdoOptions[PARTS_LIST_CODES.BRAND] ?? [];
   return (
     <div className="space-y-[12px]">
       {/* Section header */}
@@ -892,7 +1122,7 @@ function BrandSettingsSection({ brandSettings, onAdd, onDelete, onUpdate }: Bran
                           label=""
                           value={(bs as any)[col.key]}
                           onChange={v => onUpdate(bs.id, col.key as keyof BrandSetting, v)}
-                          options={[{ value: '', label: '請選擇' }, ...col.options!]}
+                          options={col.options!}
                           placeholder="請選擇"
                           searchable
                           storageKey={(col as any).storageKey}
@@ -916,6 +1146,7 @@ function BrandSettingsSection({ brandSettings, onAdd, onDelete, onUpdate }: Bran
                       <BrandSelectorButton
                         value={bs.brand || 'ALL'}
                         onChange={v => onUpdate(bs.id, 'brand', v)}
+                        brandOptions={brandOptions}
                       />
                       {/* 刪除按鈕：描邊垃圾桶 icon，無外框 */}
                       <button
@@ -968,18 +1199,18 @@ function MaterialCompositionTab({ part, compositions, onAdd, onDelete }: Materia
     [compositions],
   );
 
-  const handleConfirmAdd = useCallback((records: EsgMaterialRecord[]) => {
+  const handleConfirmAdd = useCallback((records: MdoEsgMaterial[]) => {
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, '0');
     const dateStr = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())}`;
     records.forEach((record, i) => {
       const newMc: MaterialComposition = {
         id: Date.now() + i,
-        esgMaterialId: record.id,
-        nameTw: record.nameTw,
-        nameCn: record.nameCn,
-        nameEn: record.nameEn,
-        carbonEmission: record.carbonEmission,
+        esgMaterialId: record.id,           // UUID string
+        nameTw: record.name_tw,
+        nameCn: record.name_cn ?? '',
+        nameEn: record.name_en ?? '',
+        carbonEmission: parseFloat(String(record.carbon_emission)) || 0,
         createdBy: '目前使用者',
         createdAt: dateStr,
       };
@@ -1005,40 +1236,36 @@ function MaterialCompositionTab({ part, compositions, onAdd, onDelete }: Materia
       label: '材料名',
       width: 140,
       minWidth: 100,
-      renderCell: (_val, row) => {
-        const esgRecord = getEsgMaterials().find(m => m.id === row.esgMaterialId);
-        return <span className="font-normal text-[14px] text-[#1c252e]">{esgRecord?.nameTw ?? row.nameTw}</span>;
-      },
+      renderCell: (_val, row) => (
+        <span className="font-normal text-[14px] text-[#1c252e]">{row.nameTw}</span>
+      ),
     },
     {
       key: 'nameCn',
       label: '材料名(簡體中文)',
       width: 180,
       minWidth: 130,
-      renderCell: (_val, row) => {
-        const esgRecord = getEsgMaterials().find(m => m.id === row.esgMaterialId);
-        return <span className="font-normal text-[14px] text-[#1c252e]">{esgRecord?.nameCn ?? row.nameCn}</span>;
-      },
+      renderCell: (_val, row) => (
+        <span className="font-normal text-[14px] text-[#1c252e]">{row.nameCn}</span>
+      ),
     },
     {
       key: 'nameEn',
       label: '材料名(英文)',
       width: 220,
       minWidth: 150,
-      renderCell: (_val, row) => {
-        const esgRecord = getEsgMaterials().find(m => m.id === row.esgMaterialId);
-        return <span className="font-normal text-[14px] text-[#1c252e]">{esgRecord?.nameEn ?? row.nameEn}</span>;
-      },
+      renderCell: (_val, row) => (
+        <span className="font-normal text-[14px] text-[#1c252e]">{row.nameEn}</span>
+      ),
     },
     {
       key: 'carbonEmission',
       label: '炭排量(kg CO₂e)',
       width: 140,
       minWidth: 110,
-      renderCell: (_val, row) => {
-        const esgRecord = getEsgMaterials().find(m => m.id === row.esgMaterialId);
-        return <span className="font-normal text-[14px] text-[#1c252e]">{String(esgRecord?.carbonEmission ?? row.carbonEmission)}</span>;
-      },
+      renderCell: (_val, row) => (
+        <span className="font-normal text-[14px] text-[#1c252e]">{String(row.carbonEmission)}</span>
+      ),
     },
     {
       key: 'createdBy',
@@ -1058,7 +1285,18 @@ function MaterialCompositionTab({ part, compositions, onAdd, onDelete }: Materia
       minWidth: 60,
       required: true,
       renderCell: (_val, row) => (
-        <DeleteButton onClick={() => setDeleteTargetId(row.id)} />
+        <button
+          onClick={() => setDeleteTargetId(row.id)}
+          title="刪除"
+          className="flex items-center justify-center text-[#FF5630] hover:text-[#cc3300] transition-colors"
+        >
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="3 6 5 6 21 6" />
+            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+            <path d="M10 11v6M14 11v6" />
+            <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+          </svg>
+        </button>
       ),
     },
   ] as StandardColumn<McWithSeq>[], []);
@@ -1123,14 +1361,31 @@ function MaterialCompositionTab({ part, compositions, onAdd, onDelete }: Materia
 // ═══════════════════════════════════════════════════════════════════════════════
 
 interface MaterialSelectOverlayProps {
-  usedEsgIds: Set<number>;
+  usedEsgIds: Set<string>;          // UUID strings from MDO API
   onClose: () => void;
-  onConfirm: (records: EsgMaterialRecord[]) => void;
+  onConfirm: (records: MdoEsgMaterial[]) => void;
 }
 
 function MaterialSelectOverlay({ usedEsgIds, onClose, onConfirm }: MaterialSelectOverlayProps) {
   const [search, setSearch] = useState('');
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [allMaterials, setAllMaterials] = useState<MdoEsgMaterial[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // 載入全量 ESG 材料（自動翻頁）
+  useEffect(() => {
+    setLoading(true);
+    fetchAllEsgMaterials()
+      .then(data => {
+        console.log('[ESG Overlay] 載入成功, 筆數:', data.length);
+        setAllMaterials(data);
+      })
+      .catch(err => {
+        console.error('[ESG Overlay] 載入失敗:', err);
+        setAllMaterials([]);
+      })
+      .finally(() => setLoading(false));
+  }, []);
 
   // ESC 關閉
   useEffect(() => {
@@ -1141,15 +1396,15 @@ function MaterialSelectOverlay({ usedEsgIds, onClose, onConfirm }: MaterialSelec
 
   const filtered = useMemo(() => {
     const kw = search.trim().toLowerCase();
-    if (!kw) return getEsgMaterials();
-    return getEsgMaterials().filter(m =>
-      m.nameTw.toLowerCase().includes(kw) ||
-      m.nameCn.toLowerCase().includes(kw) ||
-      m.nameEn.toLowerCase().includes(kw),
+    if (!kw) return allMaterials;
+    return allMaterials.filter(m =>
+      m.name_tw.toLowerCase().includes(kw) ||
+      (m.name_cn ?? '').toLowerCase().includes(kw) ||
+      (m.name_en ?? '').toLowerCase().includes(kw),
     );
-  }, [search]);
+  }, [search, allMaterials]);
 
-  const toggleSelect = (id: number) => {
+  const toggleSelect = (id: string) => {
     setSelectedIds(prev => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -1159,8 +1414,8 @@ function MaterialSelectOverlay({ usedEsgIds, onClose, onConfirm }: MaterialSelec
   };
 
   const selectedRecords = useMemo(
-    () => getEsgMaterials().filter(m => selectedIds.has(m.id)),
-    [selectedIds],
+    () => allMaterials.filter(m => selectedIds.has(m.id)),
+    [selectedIds, allMaterials],
   );
 
   const handleConfirm = () => {
@@ -1222,7 +1477,9 @@ function MaterialSelectOverlay({ usedEsgIds, onClose, onConfirm }: MaterialSelec
 
           {/* 選擇列表 */}
           <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar border border-[rgba(145,158,171,0.12)] rounded-[8px]">
-            {filtered.length === 0 ? (
+            {loading ? (
+              <div className="flex items-center justify-center py-[32px] text-[14px] text-[#919eab]">載入中…</div>
+            ) : filtered.length === 0 ? (
               <div className="flex items-center justify-center py-[32px] text-[14px] text-[#919eab]">無搜尋結果</div>
             ) : (
               filtered.map(m => {
@@ -1254,9 +1511,9 @@ function MaterialSelectOverlay({ usedEsgIds, onClose, onConfirm }: MaterialSelec
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className={`text-[14px] font-medium truncate ${isSelected ? 'text-[#00559c]' : 'text-[#1c252e]'}`}>
-                          {m.nameTw}
+                          {m.name_tw}
                         </p>
-                        <p className="text-[12px] text-[#637381] mt-[2px] truncate">{m.nameEn}</p>
+                        <p className="text-[12px] text-[#637381] mt-[2px] truncate">{m.name_en ?? ''}</p>
                       </div>
                       {isUsed && (
                         <span className="text-[11px] text-[#919eab] bg-[#f4f6f8] px-[6px] py-[2px] rounded-[4px] shrink-0">已新增</span>
@@ -1275,7 +1532,7 @@ function MaterialSelectOverlay({ usedEsgIds, onClose, onConfirm }: MaterialSelec
               <div className="flex flex-col gap-[4px] max-h-[88px] overflow-y-auto custom-scrollbar">
                 {selectedRecords.map(r => (
                   <div key={r.id} className="flex items-center justify-between">
-                    <span className="text-[13px] text-[#1c252e] truncate flex-1">{r.nameTw}</span>
+                    <span className="text-[13px] text-[#1c252e] truncate flex-1">{r.name_tw}</span>
                     <button
                       onClick={() => toggleSelect(r.id)}
                       className="ml-[8px] text-[#919eab] hover:text-[#d32f2f] transition-colors shrink-0"

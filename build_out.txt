@@ -1,0 +1,28 @@
+[36mvite v6.3.5 [32mbuilding for production...[36m[39m
+transforming...
+[32m✓[39m 2159 modules transformed.
+rendering chunks...
+[33m[plugin vite:reporter] 
+(!) C:/Users/G00106917/Desktop/Ep2-giantId/src/app/api/supplier/suppliers.ts is dynamically imported by C:/Users/G00106917/Desktop/Ep2-giantId/src/app/components/VendorManagementTable.tsx but also statically imported by C:/Users/G00106917/Desktop/Ep2-giantId/src/app/components/VendorDetailPage.tsx, dynamic import will not move module into another chunk.
+[39m
+[33m[plugin vite:reporter] 
+(!) C:/Users/G00106917/Desktop/Ep2-giantId/src/app/api/platform/optionLists.ts is dynamically imported by C:/Users/G00106917/Desktop/Ep2-giantId/src/app/components/PartsMaintenanceDetailPage.tsx but also statically imported by C:/Users/G00106917/Desktop/Ep2-giantId/src/app/components/PartsMaintenanceDetailPage.tsx, dynamic import will not move module into another chunk.
+[39m
+computing gzip size...
+[2mdist/[22m[32mindex.html                                                    [39m[1m[2m    0.45 kB[22m[1m[22m[2m │ gzip:     0.28 kB[22m
+[2mdist/[22m[32massets/d7c38e4c2ec5583f5bcb8f33bbcadbadf4ceed61-XX6OFx-A.png  [39m[1m[2m    9.28 kB[22m[1m[22m
+[2mdist/[22m[32massets/ba1f925e57c8f297bb26a2475302e1c715c37494-BdOie6VA.png  [39m[1m[2m    9.45 kB[22m[1m[22m
+[2mdist/[22m[32massets/32f05a467d0a075d730fcf6e4e2e9902b921e1ea-DtV2nJET.png  [39m[1m[2m   10.07 kB[22m[1m[22m
+[2mdist/[22m[32massets/giant-logo-white-CMfTWuKN.png                          [39m[1m[2m   46.69 kB[22m[1m[22m
+[2mdist/[22m[32massets/giant-group-logo-CNDxoNus.png                          [39m[1m[2m   51.08 kB[22m[1m[22m
+[2mdist/[22m[32massets/login-bg-CQ9DMeEz.png                                  [39m[1m[2m  167.87 kB[22m[1m[22m
+[2mdist/[22m[35massets/index-CvDqyzhu.css                                     [39m[1m[2m  183.68 kB[22m[1m[22m[2m │ gzip:    31.39 kB[22m
+[2mdist/[22m[36massets/supplierContacts-CBUZoTuy.js                           [39m[1m[2m    0.17 kB[22m[1m[22m[2m │ gzip:     0.15 kB[22m
+[2mdist/[22m[36massets/supplierQuotations-_fG7hljY.js                         [39m[1m[2m    1.05 kB[22m[1m[22m[2m │ gzip:     0.46 kB[22m
+[2mdist/[22m[36massets/index-wWSSmw1Y.js                                      [39m[1m[33m4,814.80 kB[39m[22m[2m │ gzip: 1,295.92 kB[22m
+[33m
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.[39m
+[32m✓ built in 14.90s[39m

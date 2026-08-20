@@ -113,29 +113,7 @@ const FEATURE_TREE: FeatureNode[] = [
         id: 'mgmt-parts',
         label: '零件/索樣',
         children: [
-          {
-            id: 'mgmt-parts-info',
-            label: '零件資訊',
-            children: [
-              {
-                id: 'mgmt-parts-info-list',
-                label: '列表頁 Tab',
-                children: [
-                  { id: 'mgmt-parts-info-list-all', label: 'All' },
-                  { id: 'mgmt-parts-info-list-unquoted', label: '未報價' },
-                  { id: 'mgmt-parts-info-list-quoted', label: '已報價' },
-                ],
-              },
-              {
-                id: 'mgmt-parts-info-detail',
-                label: '明細頁 Tab',
-                children: [
-                  { id: 'mgmt-parts-info-detail-material', label: '物料資訊維護' },
-                  { id: 'mgmt-parts-info-detail-component', label: '物料成分設定' },
-                ],
-              },
-            ],
-          },
+          { id: 'mgmt-parts-info', label: '零件資訊' },
           { id: 'mgmt-parts-print-quote', label: '列印報價單' },
           {
             id: 'mgmt-parts-sample',

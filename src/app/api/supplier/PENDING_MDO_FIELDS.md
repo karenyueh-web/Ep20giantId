@@ -77,3 +77,39 @@
 2. 更新 `src/app/api/material/items.ts` 的 `MdoItem` interface
 3. 更新 `PartsMaintenanceDetailPage.tsx` 的 `handleSave`，改為呼叫 item update command
 4. 移除 in-memory store 的 fallback
+
+---
+
+## Option Lists 多語言設定（`/api/v1/platform-core/option-lists`）
+
+### ⚠️ 待後端修正：EP appPresentation.display_label 不支援語言切換
+
+**問題根因**：resolve endpoint 優先使用 `appPresentation.display_label`（不分語言），
+只要該欄位有值，`lang` 參數就完全無效，未來切英文模式也不會顯示英文。
+
+**各 listCode 現況**：
+
+| listCode | 受影響的 code | 現在 EP display_label | 正確做法 |
+|----------|-------------|----------------------|---------|
+| `INCOTERM` | CIF / EXW / FOB / FOR 全部 | `Ex Works（工廠交貨）` 等 | 清空 display_label + 補 zh-TW translation |
+| `CUSTOMIZATION_TYPE` | STANDARD / CUSTOM | `Standard（標準品）` 等 | 清空 display_label + 補 zh-TW translation |
+| `WEIGHT_UOM` | OZ | `OZ` | 清空 display_label（其餘 G / KG / TON 已正常）|
+| `BRAND` | — | 無設定 | ✅ 已正常 |
+| `QUOTE_UOM` | — | 無設定 | ✅ 已正常 |
+
+**修正方式（每個受影響的 option item）**：
+1. 清空 EP `appPresentation.display_label`
+2. 補 `translations[lang=zh-TW].name` = 中文名稱（如 `工廠交貨`、`標準品`）
+3. 確認 `translations[lang=en].name` 已存在英文名稱（大多已有）
+
+修正後前端只需傳不同 `lang` 即可切換，完全不需改程式碼。
+
+> 前端 workaround 現況：
+> - `INCOTERM` / `QUOTE_UOM` / `WEIGHT_UOM`：`toIncotermOptions()`（因 resolve 直接回傳中文 default_label，顯示正確但 INCOTERM 帶英文全寫）
+> - `CUSTOMIZATION_TYPE`：`toChineseLabelOptions()`（萃取括號內中文）
+> - 待後端修正後可統一改回 `toDropdownOptions()`，並移除兩個 workaround 函式
+
+### ✅ 已建立的 listCode
+
+所有 listCode 均已建立並串接完成：BRAND / INCOTERM / QUOTE_UOM / WEIGHT_UOM / CUSTOMIZATION_TYPE / CURRENCY
+

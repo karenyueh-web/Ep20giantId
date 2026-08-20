@@ -1,30 +1,39 @@
 import { mdoList, mdoCommand } from '../client';
 
 // ── MDO Schema ────────────────────────────────────────────────────────────────
+// 注意：API 實際回傳的 unit_price / quote_qty / min_order_qty 為 string 或 number
+// （MDO 2026-08-18 更新後行為），使用時請透過 toNumber() 轉換
 
 export interface MdoSupplierQuotation {
-  id: string;              // UUID
+  id: string;                           // UUID
   enterprise_id: string;
-  supplier_no: string;     // 廠商代碼
-  material_no: string;     // 料號
-  purchase_org: string;    // 採購組織
-  plant_code: string;      // 交貨工廠
-  brand: string;           // 品牌（'ALL' 表示適用所有品牌）
-  unit_price: number;      // 採購單價
-  currency: string;        // 幣別 ISO 4217
-  quote_qty: number;       // 報價數量
-  quote_uom: string;       // 報價單位
-  min_order_qty: number;   // MOQ
-  lead_time_days: number;  // Lead Time（天）
-  incoterm: string;        // 國貿條件 EXW|FCA|FOB|CFR|CIF|CPT|CIP|DAP|DPU|DDP
-  incoterm_location: string | null; // 國貿條件地點
-  spec_type: string;       // 'STANDARD' | 'CUSTOM'
-  revision_no: number;     // 樂觀鎖版次
+  supplier_no: string;                  // 廠商代碼
+  material_no: string;                  // 料號
+  purchase_org: string;                 // 採購組織
+  plant_code: string;                   // 交貨工廠
+  brand: string;                        // 品牌（'ALL' 表示適用所有品牌）
+  unit_price: number | string;          // 採購單價（API 回傳可能是 string）
+  currency: string;                     // 幣別 ISO 4217
+  quote_qty: number | string;           // 報價數量（API 回傳可能是 string）
+  quote_uom: string;                    // 報價單位
+  min_order_qty: number | string | null; // MOQ（nullable）
+  lead_time_days: number | null;         // Lead Time（天，nullable）
+  incoterm: string | null;              // 國貿條件（nullable）
+  incoterm_location: string | null;     // 國貿條件地點（nullable）
+  spec_type: string | null;             // 'STANDARD' | 'CUSTOM'（nullable）
+  revision_no: number;                  // 樂觀鎖版次
   is_deleted: boolean;
-  created_by: unknown;
-  updated_by: unknown;
+  created_by: string | null;
+  updated_by: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/** 安全數字轉換：MDO 回傳的數字欄位可能是 string */
+export function toNumber(v: number | string | null | undefined, fallback = 0): number {
+  if (v === null || v === undefined || v === '') return fallback;
+  const n = Number(v);
+  return isNaN(n) ? fallback : n;
 }
 
 export interface FetchSupplierQuotationsParams {
@@ -47,6 +56,35 @@ export async function fetchSupplierQuotations(
 ): Promise<{ data: MdoSupplierQuotation[]; total: number }> {
   const res = await mdoList<MdoSupplierQuotation>('/pricing/supplier-quotations', params);
   return { data: res.data, total: res.pagination?.total ?? res.data.length };
+}
+
+/** 取得全量廠商報價（自動翻頁，最多取 1000 筆） */
+export async function fetchAllSupplierQuotations(
+  params?: Omit<FetchSupplierQuotationsParams, 'page' | 'limit'>
+): Promise<MdoSupplierQuotation[]> {
+  const PAGE_SIZE = 100;
+  const first = await mdoList<MdoSupplierQuotation>('/pricing/supplier-quotations', {
+    ...params,
+    page: 1,
+    limit: PAGE_SIZE,
+  });
+  const totalPages = first.pagination?.totalPages ?? 1;
+
+  if (totalPages <= 1) return first.data;
+
+  // 並行取剩餘頁
+  const restPages = Array.from({ length: totalPages - 1 }, (_, i) => i + 2);
+  const restResults = await Promise.all(
+    restPages.map(page =>
+      mdoList<MdoSupplierQuotation>('/pricing/supplier-quotations', {
+        ...params,
+        page,
+        limit: PAGE_SIZE,
+      }).then(r => r.data)
+    )
+  );
+
+  return [...first.data, ...restResults.flat()];
 }
 
 // ── Create ────────────────────────────────────────────────────────────────────

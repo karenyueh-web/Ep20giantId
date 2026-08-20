@@ -23,6 +23,7 @@ import { PartsUploadOverlay } from './PartsUploadOverlay';
 import { CreateSampleOrderOverlay } from './CreateSampleOrderOverlay';
 import { SampleOrderDetailOverlay } from './SampleOrderDetailOverlay';
 import { type SampleOrderRecord } from './sampleOrderData';
+import { useActionPermission } from '@/app/hooks/useActionPermission';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 interface PartsMaintenancePageProps {
@@ -172,60 +173,106 @@ export default function PartsMaintenancePage({
   // ── 資料（本地 state，detail 修改可同步回來）────────────────────────────────
   const [partsData, setPartsData] = useState<PartRecord[]>(() => [...getParts()]);
 
-  // 從 MDO 載入物料列表（使用 supplier-quotations 作為主要來源）
+  // 從 MDO 載入物料列表（使用 supplier-quotations 作為主要來源，自動翻頁取全量）
   useEffect(() => {
     let cancelled = false;
-    import('@/app/api/pricing/supplierQuotations').then(({ fetchSupplierQuotations }) => {
-      fetchSupplierQuotations({ limit: 100 })
-        .then(res => {
-          if (cancelled || res.data.length === 0) return;
-          // 以 supplier_no + material_no 分組，每組一筆 PartRecord
-          const grouped = new Map<string, typeof res.data>();
-          res.data.forEach(q => {
+    import('@/app/api/pricing/supplierQuotations').then(({ fetchAllSupplierQuotations, toNumber }) => {
+      fetchAllSupplierQuotations()
+        .then(allQuotations => {
+          if (cancelled || allQuotations.length === 0) return;
+          // 以 supplier_no + material_no 分組，每組一筆 PartRecord（同廠商同料號的不同品牌設定合為一筆）
+          const grouped = new Map<string, typeof allQuotations>();
+          allQuotations.forEach(q => {
             const key = `${q.supplier_no}__${q.material_no}`;
             if (!grouped.has(key)) grouped.set(key, []);
             grouped.get(key)!.push(q);
           });
-          import('@/app/components/partsMaintenanceData').then(({ setAllParts }) => {
-            const converted = Array.from(grouped.entries()).map(([key, quotations], idx) => {
-              const q0 = quotations[0];
-              return {
-                id: idx + 1,
-                vendorCode: q0.supplier_no,
-                vendorName: q0.supplier_no, // MDO 沒有 vendorName，暫用 code
-                material: q0.material_no,
-                plant: q0.plant_code,
-                purchaseOrg: q0.purchase_org,
-                longDescription: '',
-                qaCompletionDate: '', sampleDate: '', firstDeliveryDate: '',
-                grossWeight: '', netWeight: '', weightUnit: '',
-                vendorPartNo: '', remark: '',
-                brandSettings: quotations.map((q, i) => ({
-                  id: i + 1,
-                  brand: q.brand === 'ALL' ? '' : q.brand,
-                  unitPrice: String(q.unit_price),
-                  currency: q.currency,
-                  quoteQty: String(q.quote_qty),
-                  leadTime: String(q.lead_time_days ?? ''),
-                  moq: String(q.min_order_qty ?? ''),
-                  tradeTerms: q.incoterm ?? '',
-                  tradeTermsPlace: typeof q.incoterm_location === 'string' ? q.incoterm_location : '',
-                  quoteUnit: q.quote_uom ?? '',
-                  productType: q.spec_type === 'STANDARD' ? '標準品' : q.spec_type === 'CUSTOM' ? '客製品' : '',
-                })),
-                materialCompositions: [],
-                quoteStatus: 'quoted' as const,
-                notifyStatus: 'unsent' as const,
-                savedAt: q0.updated_at,
-                updatedAt: q0.updated_at,
-                syncDtcDte: false,
-              };
-            });
-            if (!cancelled && converted.length > 0) {
-              setAllParts(converted);
-              setPartsData(converted);  // 同步更新 React UI
-            }
+          const converted = Array.from(grouped.entries()).map(([_key, quotations], idx) => {
+            const q0 = quotations[0];
+            // 有任何一筆品牌設定即視為已報價
+            const hasQuotedBrand = quotations.some(
+              q => toNumber(q.unit_price) > 0 || (q.quote_uom ?? '').trim() !== ''
+            );
+            return {
+              id: idx + 1,
+              vendorCode: q0.supplier_no,
+              vendorName: q0.supplier_no, // MDO 目前無 vendorName，暫用 supplier_no（PENDING）
+              material: q0.material_no,
+              plant: q0.plant_code,
+              purchaseOrg: q0.purchase_org,
+              longDescription: '',
+              // 以下欄位 MDO items API 尚未補齊，暫用空值（見 PENDING_MDO_FIELDS.md）
+              qaCompletionDate: '',
+              sampleDate: '',
+              firstDeliveryDate: '',
+              grossWeight: '',
+              netWeight: '',
+              weightUnit: '',
+              vendorPartNo: '',
+              remark: '',
+              brandSettings: quotations.map((q, i) => ({
+                id: i + 1,
+                brand: q.brand === 'ALL' ? '' : q.brand,
+                unitPrice: String(toNumber(q.unit_price)),
+                currency: q.currency,
+                quoteQty: String(toNumber(q.quote_qty, 1)),
+                leadTime: q.lead_time_days != null ? String(q.lead_time_days) : '',
+                moq: q.min_order_qty != null ? String(toNumber(q.min_order_qty)) : '',
+                tradeTerms: q.incoterm ?? '',
+                tradeTermsPlace: typeof q.incoterm_location === 'string' ? q.incoterm_location : '',
+                quoteUnit: q.quote_uom ?? '',
+                productType: q.spec_type ?? '',  // 存 MDO code：STANDARD / CUSTOM
+              })),
+              materialCompositions: [],
+              quoteStatus: (hasQuotedBrand ? 'quoted' : 'pending') as 'quoted' | 'pending',
+              notifyStatus: 'unsent' as const,
+              savedAt: q0.updated_at,
+              updatedAt: q0.updated_at,
+              syncDtcDte: false,
+            };
           });
+          if (!cancelled && converted.length > 0) {
+            setAllParts(converted);
+            setPartsData(converted);
+
+            // 補入 items 資料：longDescription / grossWeight / netWeight / weightUnit
+            import('@/app/api/material/items').then(({ fetchItems }) => {
+              // 目前 MDO items 筆數少，一次取 100 筆足夠
+              fetchItems({ limit: 100 })
+                .then(({ data: items }) => {
+                  if (cancelled) return;
+                  const itemMap = new Map(items.map(it => [it.material_no, it]));
+                  const enriched = converted.map(p => {
+                    const it = itemMap.get(p.material);
+                    if (!it) return p;
+                    return {
+                      ...p,
+                      longDescription: it.description || p.longDescription,
+                      grossWeight: it.gross_weight != null ? String(it.gross_weight) : p.grossWeight,
+                      netWeight: it.net_weight != null ? String(it.net_weight) : p.netWeight,
+                      weightUnit: it.weight_uom || p.weightUnit,
+                    };
+                  });
+                  // ── 示範資料：把 ALEX-RIM-XD-LITE-29 設為「已通知 + 稽催 3 次」讓 UI 確認 ──
+                  const demo = enriched.map(p =>
+                    p.material === 'ALEX-RIM-XD-LITE-29'
+                      ? {
+                          ...p,
+                          notifyStatus: 'sent' as const,
+                          notifySentAt: [
+                            '2026-08-01T10:00:00Z',
+                            '2026-08-08T14:30:00Z',
+                            '2026-08-15T09:15:00Z',
+                          ],
+                        }
+                      : p
+                  );
+                  setAllParts(demo);
+                  setPartsData(demo);
+                })
+                .catch(err => console.warn('[PartsList] items 補入失敗', err));
+            });
+          }
         })
         .catch(err => console.warn('MDO 物料列表載入失敗，使用 mock data', err));
     });
@@ -257,6 +304,8 @@ export default function PartsMaintenancePage({
       return new Set([...prev, ...ids]);
     });
   }, []);
+
+  const { can } = useActionPermission(userRole, 'mgmt-parts-info');
 
   // ── 開立索樣單 Overlay ────────────────────────────────────────────────────
   const [showCreateSampleOrder, setShowCreateSampleOrder] = useState(false);
@@ -595,7 +644,7 @@ export default function PartsMaintenancePage({
           onToggleRow={handleToggleRow}
           onToggleAll={handleToggleAll}
           batchActions={
-            selectedIds.size > 0 ? (
+            selectedIds.size > 0 && can('create_sample') ? (
               <span
                 onClick={handleOpenCreateSampleOrder}
                 className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] text-[#004680] leading-[24px] whitespace-nowrap cursor-pointer select-none px-[10px] py-[16px] hover:opacity-70 transition-opacity"
