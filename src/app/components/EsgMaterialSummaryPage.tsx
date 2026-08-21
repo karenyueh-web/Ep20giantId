@@ -1,61 +1,56 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { StandardDataTable, type StandardColumn } from './StandardDataTable';
 import { SearchField } from './SearchField';
 import { DropdownSelect } from './DropdownSelect';
 import {
-  getParts,
-  type PartRecord,
-  type MaterialComposition,
-} from './partsMaintenanceData';
-import { getEsgMaterials } from './esgMaterialData';
+  fetchAllSupplierMaterials,
+  type MdoSupplierMaterial,
+} from '../api/supplier/supplierMaterialIntroduction';
+import {
+  fetchMaterialCompositionsByItem,
+  fetchAllEsgMaterials,
+  type MdoMaterialComposition,
+  type MdoEsgMaterial,
+} from '../api/quality/esgMaterials';
+import {
+  fetchAllSupplierQuotations,
+  type MdoSupplierQuotation,
+} from '../api/pricing/supplierQuotations';
+import { mdoList } from '../api/client';
+import type { MdoSupplier } from '../api/supplier/suppliers';
+
+/** 取得全量廠商（自動翻頁，limit 最大 100） */
+async function fetchAllSuppliers(): Promise<MdoSupplier[]> {
+  const PAGE_SIZE = 100;
+  const first = await mdoList<MdoSupplier>('/product-master/suppliers', { page: 1, limit: PAGE_SIZE });
+  const totalPages = first.pagination?.totalPages ?? 1;
+  if (totalPages <= 1) return first.data;
+  const rest = await Promise.all(
+    Array.from({ length: totalPages - 1 }, (_, i) =>
+      mdoList<MdoSupplier>('/product-master/suppliers', { page: i + 2, limit: PAGE_SIZE }).then(r => r.data)
+    )
+  );
+  return [...first.data, ...rest.flat()];
+}
 
 // ── 展平後的列資料型別 ─────────────────────────────────────────────────────────
 interface SummaryRow {
-  /** 唯一 key：料號 + 成分 ID */
+  /** 唯一 key：quotation.id + comp.id */
   id: string;
   vendorLabel: string;   // 廠商(編號) e.g. 速聯(000100463)
   vendorCode: string;
-  material: string;
-  plant: string;
+  material: string;      // 料號（material_no）
+  plant: string;         // 工廠（plant_code，來自 supplier-quotations）
   purchaseOrg: string;
   nameTw: string;
   nameCn: string;
   nameEn: string;
-  carbonEmission: number;
+  /** 單位重量（待 MDO 補欄位後串接，目前為空字串） */
+  unitWeight: string;
   /** 更新資訊顯示文字 */
   updateInfo: string;
-}
-
-// ── 將 parts store 展平 ───────────────────────────────────────────────────────
-function buildSummaryRows(): SummaryRow[] {
-  const esgMap = new Map(getEsgMaterials().map(m => [m.id, m]));
-  const rows: SummaryRow[] = [];
-
-  for (const part of getParts()) {
-    if (!part.materialCompositions?.length) continue;
-    for (const mc of part.materialCompositions) {
-      // 即時參照 ESG 材料主檔（材料名與炭排量優先從 master data 取）
-      const esg = esgMap.get(mc.esgMaterialId);
-      const displayBy   = mc.updatedBy  ?? mc.createdBy;
-      const displayDate = mc.updatedAt  ?? mc.createdAt;
-      rows.push({
-        id:             `${part.id}_${mc.id}`,
-        vendorLabel:    `${part.vendorName}(${part.vendorCode})`,
-        vendorCode:     part.vendorCode,
-        material:       part.material,
-        plant:          part.plant,
-        purchaseOrg:    part.purchaseOrg,
-        nameTw:         esg?.nameTw  ?? mc.nameTw,
-        nameCn:         esg?.nameCn  ?? mc.nameCn,
-        nameEn:         esg?.nameEn  ?? mc.nameEn,
-        carbonEmission: esg?.carbonEmission ?? mc.carbonEmission,
-        updateInfo:     `${displayBy} — ${displayDate}`,
-      });
-    }
-  }
-  return rows;
 }
 
 // ── 從 rows 動態產生下拉選項 ──────────────────────────────────────────────────
@@ -67,6 +62,18 @@ function buildOptions(rows: SummaryRow[], key: 'vendorLabel' | 'purchaseOrg') {
   ];
 }
 
+// ── 格式化時間戳 ─────────────────────────────────────────────────────────────
+function formatTs(iso: string): string {
+  if (!iso) return '';
+  try {
+    const d = new Date(iso);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  } catch {
+    return iso;
+  }
+}
+
 // ── Props ─────────────────────────────────────────────────────────────────────
 interface EsgMaterialSummaryPageProps {
   userRole?: string;
@@ -76,14 +83,135 @@ interface EsgMaterialSummaryPageProps {
 export default function EsgMaterialSummaryPage({
   userRole: _userRole = 'giant',
 }: EsgMaterialSummaryPageProps) {
-  // 每次渲染時重新讀取（使資料與零件頁同步）
-  const allRows = useMemo(() => buildSummaryRows(), []);
+  // ── 非同步資料 state ─────────────────────────────────────────────────────
+  const [loading, setLoading] = useState(true);
+  const [error,   setError]   = useState<string | null>(null);
+  const [allRows, setAllRows] = useState<SummaryRow[]>([]);
 
   // ── 篩選 state ────────────────────────────────────────────────────────────
   const [vendorFilter,   setVendorFilter]   = useState('');
   const [purchaseFilter, setPurchaseFilter] = useState('');
   const [materialSearch, setMaterialSearch] = useState('');
   const [nameSearch,     setNameSearch]     = useState('');
+
+  // ── 資料載入 ─────────────────────────────────────────────────────────────
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      // 1. 並行取得全量資料
+      // 主軸改為 supplier-quotations（含 plant_code、supplier_no、material_no、purchase_org）
+      const [quotations, supplierMaterials, suppliers, esgMaterials] = await Promise.all([
+        fetchAllSupplierQuotations(),
+        fetchAllSupplierMaterials(),
+        fetchAllSuppliers(),
+        fetchAllEsgMaterials(),
+      ]);
+
+      // 2. 建立查找 map
+      // supplier_no → supplier name
+      const supplierNameMap = new Map<string, string>(
+        suppliers.map(s => [s.supplier_no, s.name ?? s.fullname_chinese ?? s.supplier_no])
+      );
+
+      // (supplier_no + material_no) → MdoSupplierMaterial（取得 material_id = item_id）
+      const smByKey = new Map<string, MdoSupplierMaterial>();
+      for (const sm of supplierMaterials) {
+        smByKey.set(`${sm.supplier_no}::${sm.material_no}`, sm);
+      }
+
+      // esg_material.id → MdoEsgMaterial
+      const esgMap = new Map<string, MdoEsgMaterial>(
+        esgMaterials.map(m => [m.id, m])
+      );
+
+      // 3. 去重收集所有 item_id（透過 supplier_no + material_no 對應）
+      const itemIdSet = new Set<string>();
+      for (const q of quotations) {
+        if (q.is_deleted) continue;
+        const sm = smByKey.get(`${q.supplier_no}::${q.material_no}`);
+        if (sm?.material_id) itemIdSet.add(sm.material_id);
+      }
+
+      // 4. 並行查詢所有 item 的 material-compositions
+      const itemIds = Array.from(itemIdSet);
+      const compositionResults = await Promise.all(
+        itemIds.map(itemId =>
+          fetchMaterialCompositionsByItem(itemId).then(comps => ({ itemId, comps }))
+        )
+      );
+      // item_id → composition[]（過濾軟刪除）
+      const compByItemId = new Map<string, MdoMaterialComposition[]>();
+      for (const { itemId, comps } of compositionResults) {
+        compByItemId.set(itemId, comps.filter(c => !c.is_deleted));
+      }
+
+      // 5. 以 quotation 為主軸展平成 SummaryRow
+      // 同一 supplier_no + material_no 可能有多筆報價（不同品牌），避免重複建立成分列
+      // 策略：以 (supplier_no + material_no) 為單位，只展開成分一次（取第一筆報價的 plant_code）
+      const seenKey = new Set<string>(); // 避免 (supplier_no + material_no) 重複
+      const rows: SummaryRow[] = [];
+
+      // 先依 supplier_no + material_no 整理出代表性報價（去重）
+      const representativeQuote = new Map<string, MdoSupplierQuotation>();
+      for (const q of quotations) {
+        if (q.is_deleted) continue;
+        const key = `${q.supplier_no}::${q.material_no}`;
+        if (!representativeQuote.has(key)) {
+          representativeQuote.set(key, q);
+        }
+      }
+
+      for (const [key, q] of representativeQuote) {
+        if (seenKey.has(key)) continue;
+        seenKey.add(key);
+
+        const sm = smByKey.get(key);
+        if (!sm?.material_id) continue;
+
+        const comps = compByItemId.get(sm.material_id) ?? [];
+        if (comps.length === 0) continue; // 無成分資料就跳過
+
+        const vendorName = supplierNameMap.get(q.supplier_no) ?? '';
+        const vendorLabel = vendorName
+          ? `${vendorName}(${q.supplier_no})`
+          : q.supplier_no;
+
+        for (const comp of comps) {
+          const esg = esgMap.get(comp.esg_material_id);
+          const nameTw = esg?.name_tw ?? comp.name_tw ?? '';
+          const nameCn = esg?.name_cn ?? comp.name_cn ?? '';
+          const nameEn = esg?.name_en ?? comp.name_en ?? '';
+
+          const displayBy   = comp.updated_by ?? comp.created_by ?? '';
+          const displayDate = comp.updated_at  ?? comp.created_at;
+
+          rows.push({
+            id:          `${q.id}_${comp.id}`,
+            vendorLabel,
+            vendorCode:  q.supplier_no,
+            material:    q.material_no,
+            plant:       q.plant_code,          // ✅ 來自 supplier-quotations
+            purchaseOrg: q.purchase_org,
+            nameTw,
+            nameCn,
+            nameEn,
+            unitWeight:  '',                    // ⏸ 待 MDO 補 unit_weight 欄位後串接
+            updateInfo:  `${displayBy}${displayDate ? ' — ' + formatTs(displayDate) : ''}`,
+          });
+        }
+      }
+
+      setAllRows(rows);
+    } catch (e) {
+      console.error('[EsgMaterialSummaryPage] 載入失敗:', e);
+      setError(e instanceof Error ? e.message : '資料載入失敗，請稍後重試');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadData(); }, [loadData]);
 
   // ── 動態下拉選項 ──────────────────────────────────────────────────────────
   const vendorOptions   = useMemo(() => buildOptions(allRows, 'vendorLabel'),   [allRows]);
@@ -208,10 +336,10 @@ export default function EsgMaterialSummaryPage({
         ),
       },
       {
-        key: 'carbonEmission',
-        label: '炭排量(kg CO₂e)',
-        width: 150,
-        minWidth: 110,
+        key: 'unitWeight',
+        label: '單位重量',
+        width: 120,
+        minWidth: 90,
         renderCell: (val) => (
           <span className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] font-normal text-[14px] text-[#1c252e] leading-[22px]">
             {String(val)}
@@ -233,39 +361,30 @@ export default function EsgMaterialSummaryPage({
     [],
   ) as StandardColumn<SummaryRowWithSeq>[];
 
-
-
   // ── 渲染 ─────────────────────────────────────────────────────────────────
   return (
     <div className="bg-white flex flex-col h-full relative rounded-[16px] shadow-[0px_0px_2px_0px_rgba(145,158,171,0.2),0px_12px_24px_-4px_rgba(145,158,171,0.12)] w-full overflow-hidden">
 
       {/* A. 搜尋/篩選列 */}
       <div className="shrink-0 grid grid-cols-4 gap-[16px] items-start px-[20px] py-[20px]">
-        {/* 廠商(編號) 下拉 */}
         <DropdownSelect
           label="廠商(編號)"
           value={vendorFilter}
           onChange={setVendorFilter}
           options={vendorOptions}
         />
-
-        {/* 採購組織 下拉 */}
         <DropdownSelect
           label="採購組織"
           value={purchaseFilter}
           onChange={setPurchaseFilter}
           options={purchaseOptions}
         />
-
-        {/* 料號 搜尋 */}
         <SearchField
           label="料號"
           value={materialSearch}
           onChange={setMaterialSearch}
           type="search"
         />
-
-        {/* 材料名 搜尋（繁中/簡中/英） */}
         <SearchField
           label="材料名"
           value={nameSearch}
@@ -274,35 +393,61 @@ export default function EsgMaterialSummaryPage({
         />
       </div>
 
+      {/* B. 載入中 / 錯誤狀態 */}
+      {loading && (
+        <div className="flex-1 flex items-center justify-center">
+          <span className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] text-[14px] text-[#637381] animate-pulse">
+            資料載入中…
+          </span>
+        </div>
+      )}
 
-      {/* B. 表格（唯讀，無新增按鈕） */}
-      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-        <StandardDataTable<SummaryRowWithSeq>
-          columns={columns}
-          data={displayData}
-          storageKey="esg-material-summary-v1"
-          showCheckbox={false}
-          externalFilteredData={displayData}
-          onExportCsv={() => {
-            const headers = columns.filter(c => c.key !== '_seq').map(c => c.label);
-            const csvRows = displayData.map(r =>
-              [
-                r.vendorLabel, r.material, r.plant, r.purchaseOrg,
-                r.nameTw, r.nameCn, r.nameEn,
-                String(r.carbonEmission), r.updateInfo,
-              ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')
-            );
-            const csv = [headers.join(','), ...csvRows].join('\n');
-            const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = '物料成分總檔.csv';
-            a.click();
-            URL.revokeObjectURL(url);
-          }}
-        />
-      </div>
+      {!loading && error && (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <p className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] text-[14px] text-[#ff5630] mb-[12px]">
+              {error}
+            </p>
+            <button
+              onClick={loadData}
+              className="px-[16px] py-[8px] rounded-[8px] bg-[#005eb8] text-white text-[14px] font-['Public_Sans:Medium',sans-serif] hover:bg-[#003d73] transition-colors"
+            >
+              重新載入
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* C. 表格 */}
+      {!loading && !error && (
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+          <StandardDataTable<SummaryRowWithSeq>
+            columns={columns}
+            data={displayData}
+            storageKey="esg-material-summary-v2"
+            showCheckbox={false}
+            externalFilteredData={displayData}
+            onExportCsv={() => {
+              const headers = columns.filter(c => c.key !== '_seq').map(c => c.label);
+              const csvRows = displayData.map(r =>
+                [
+                  r.vendorLabel, r.material, r.plant, r.purchaseOrg,
+                  r.nameTw, r.nameCn, r.nameEn,
+                  r.unitWeight, r.updateInfo,
+                ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')
+              );
+              const csv = [headers.join(','), ...csvRows].join('\n');
+              const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = '物料成分總檔.csv';
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }

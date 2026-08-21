@@ -148,7 +148,7 @@ export default function PartsMaintenanceDetailPage({
           nameTw: c.name_tw ?? '',
           nameCn: c.name_cn ?? '',
           nameEn: c.name_en ?? '',
-          carbonEmission: parseFloat(String(c.carbon_emission ?? 0)) || 0,
+          unitWeight: parseFloat(String(c.unit_weight ?? c.carbon_emission ?? 0)) || 0,
           createdBy: c.created_by ?? '',
           createdAt: c.created_at?.slice(0, 10).replace(/-/g, '/') ?? '',
         }));
@@ -590,7 +590,7 @@ export default function PartsMaintenanceDetailPage({
                   nameTw: mc.nameTw,
                   nameCn: mc.nameCn,
                   nameEn: mc.nameEn,
-                  carbonEmission: mc.carbonEmission,
+                  carbonEmission: mc.unitWeight,   // MDO API 欄位名，值為單位重量
                   createdBy: mc.createdBy,
                 }).catch(err => console.error('[PartsDetail] 成分新增至 MDO 失敗', err));
               } else {
@@ -1199,7 +1199,7 @@ function MaterialCompositionTab({ part, compositions, onAdd, onDelete }: Materia
     [compositions],
   );
 
-  const handleConfirmAdd = useCallback((records: MdoEsgMaterial[]) => {
+  const handleConfirmAdd = useCallback((records: MdoEsgMaterial[], unitWeights: Record<string, number>) => {
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, '0');
     const dateStr = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())}`;
@@ -1210,7 +1210,7 @@ function MaterialCompositionTab({ part, compositions, onAdd, onDelete }: Materia
         nameTw: record.name_tw,
         nameCn: record.name_cn ?? '',
         nameEn: record.name_en ?? '',
-        carbonEmission: parseFloat(String(record.carbon_emission)) || 0,
+        unitWeight: unitWeights[record.id] ?? 0,
         createdBy: '目前使用者',
         createdAt: dateStr,
       };
@@ -1259,12 +1259,12 @@ function MaterialCompositionTab({ part, compositions, onAdd, onDelete }: Materia
       ),
     },
     {
-      key: 'carbonEmission',
-      label: '炭排量(kg CO₂e)',
-      width: 140,
-      minWidth: 110,
+      key: 'unitWeight',
+      label: '單位重量(kg)',
+      width: 130,
+      minWidth: 100,
       renderCell: (_val, row) => (
-        <span className="font-normal text-[14px] text-[#1c252e]">{String(row.carbonEmission)}</span>
+        <span className="font-normal text-[14px] text-[#1c252e]">{String(row.unitWeight)}</span>
       ),
     },
     {
@@ -1363,7 +1363,7 @@ function MaterialCompositionTab({ part, compositions, onAdd, onDelete }: Materia
 interface MaterialSelectOverlayProps {
   usedEsgIds: Set<string>;          // UUID strings from MDO API
   onClose: () => void;
-  onConfirm: (records: MdoEsgMaterial[]) => void;
+  onConfirm: (records: MdoEsgMaterial[], unitWeights: Record<string, number>) => void;
 }
 
 function MaterialSelectOverlay({ usedEsgIds, onClose, onConfirm }: MaterialSelectOverlayProps) {
@@ -1371,6 +1371,7 @@ function MaterialSelectOverlay({ usedEsgIds, onClose, onConfirm }: MaterialSelec
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [allMaterials, setAllMaterials] = useState<MdoEsgMaterial[]>([]);
   const [loading, setLoading] = useState(true);
+  const [unitWeights, setUnitWeights] = useState<Record<string, string>>({});
 
   // 載入全量 ESG 材料（自動翻頁）
   useEffect(() => {
@@ -1418,13 +1419,22 @@ function MaterialSelectOverlay({ usedEsgIds, onClose, onConfirm }: MaterialSelec
     [selectedIds, allMaterials],
   );
 
+  const allWeightsFilled = selectedRecords.length > 0 && selectedRecords.every(r => {
+    const v = (unitWeights[r.id] ?? '').trim();
+    return v !== '' && !isNaN(Number(v)) && Number(v) > 0;
+  });
+
   const handleConfirm = () => {
-    if (selectedRecords.length === 0) return;
-    onConfirm(selectedRecords);
+    if (!allWeightsFilled) return;
+    const numericWeights: Record<string, number> = {};
+    selectedRecords.forEach(r => {
+      numericWeights[r.id] = parseFloat(unitWeights[r.id] ?? '0') || 0;
+    });
+    onConfirm(selectedRecords, numericWeights);
   };
 
   return (
-    <BaseOverlay onClose={onClose} maxWidth="560px" maxHeight="680px">
+    <BaseOverlay onClose={onClose} maxWidth="820px" maxHeight="680px">
       <div className="relative w-full h-full">
         {/* 關閉按鈕 */}
         <button
@@ -1442,116 +1452,178 @@ function MaterialSelectOverlay({ usedEsgIds, onClose, onConfirm }: MaterialSelec
         </button>
 
         {/* 內容區 */}
-        <div className="flex flex-col h-full px-[40px] pt-[58px] pb-[32px] gap-[20px]">
+        <div className="flex flex-col h-full px-[40px] pt-[58px] pb-[32px] gap-[16px]">
           {/* 標題 */}
           <div className="flex flex-col gap-[4px]">
             <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[28px] text-[#1c252e] text-[18px]">
               選擇材料成分
             </p>
-            <p className="text-[13px] text-[#637381]">來源：ESG &gt; 材料維護，請從下方清單選擇</p>
+            <p className="text-[13px] text-[#637381]">來源：ESG &gt; 材料維護，請勾選後填寫單位重量</p>
           </div>
 
-          {/* 搜尋欄 */}
-          <div className="relative">
-            <div
-              aria-hidden="true"
-              className="absolute inset-0 pointer-events-none rounded-[8px] border border-solid border-[rgba(145,158,171,0.2)]"
-            />
-            <div className="absolute flex items-center left-[14px] px-[2px] top-[-5px] z-10">
-              <div className="absolute bg-white h-[2px] left-0 right-0 top-[5px]" />
-              <p className="relative text-[12px] font-semibold text-[#637381]">搜尋材料名</p>
-            </div>
-            <div className="flex items-center">
-              <svg className="absolute left-[14px] text-[#919eab] mt-[6px]" width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
-              <input
-                type="text"
-                placeholder="輸入材料名搜尋..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                className="w-full rounded-[8px] pl-[38px] pr-[14px] pt-[18px] pb-[8px] text-[14px] text-[#1c252e] outline-none bg-transparent border-0 focus:ring-0"
-              />
-            </div>
-          </div>
+          {/* 左右並排主體 — 各佔 50% */}
+          <div className="flex flex-1 min-h-0 gap-[16px]">
 
-          {/* 選擇列表 */}
-          <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar border border-[rgba(145,158,171,0.12)] rounded-[8px]">
-            {loading ? (
-              <div className="flex items-center justify-center py-[32px] text-[14px] text-[#919eab]">載入中…</div>
-            ) : filtered.length === 0 ? (
-              <div className="flex items-center justify-center py-[32px] text-[14px] text-[#919eab]">無搜尋結果</div>
-            ) : (
-              filtered.map(m => {
-                const isUsed = usedEsgIds.has(m.id);
-                const isSelected = selectedIds.has(m.id);
-                return (
-                  <button
-                    key={m.id}
-                    disabled={isUsed}
-                    onClick={() => !isUsed && toggleSelect(m.id)}
-                    className={[
-                      'w-full text-left px-[16px] py-[10px] border-b border-[rgba(145,158,171,0.08)] transition-colors',
-                      isUsed ? 'opacity-40 cursor-not-allowed bg-transparent' :
-                        isSelected ? 'bg-[#e8f4fe]' : 'hover:bg-[rgba(145,158,171,0.04)] cursor-pointer',
-                    ].join(' ')}
-                  >
-                    <div className="flex items-center gap-[12px]">
-                      {/* Checkbox */}
-                      <div className={[
-                        'w-[18px] h-[18px] rounded-[4px] border-2 flex items-center justify-center shrink-0 transition-colors',
-                        isUsed ? 'border-[#c4cdd5] bg-[#f4f6f8]' :
-                          isSelected ? 'border-[#00559c] bg-[#00559c]' : 'border-[#c4cdd5] bg-white',
-                      ].join(' ')}>
-                        {isSelected && (
-                          <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
-                            <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-[14px] font-medium truncate ${isSelected ? 'text-[#00559c]' : 'text-[#1c252e]'}`}>
-                          {m.name_tw}
-                        </p>
-                        <p className="text-[12px] text-[#637381] mt-[2px] truncate">{m.name_en ?? ''}</p>
-                      </div>
-                      {isUsed && (
-                        <span className="text-[11px] text-[#919eab] bg-[#f4f6f8] px-[6px] py-[2px] rounded-[4px] shrink-0">已新增</span>
-                      )}
-                    </div>
-                  </button>
-                );
-              })
-            )}
-          </div>
+            {/* ── 左側：搜尋 + 材料列表 ── */}
+            <div className="flex flex-col gap-[10px] min-w-0 min-h-0" style={{ flex: '1 1 0' }}>
+              {/* 搜尋欄 — 固定高度與右側標題對齊 */}
+              <div className="relative shrink-0" style={{ height: '54px', overflow: 'visible' }}>
+                <div
+                  aria-hidden="true"
+                  className="absolute inset-0 pointer-events-none rounded-[8px] border border-solid border-[rgba(145,158,171,0.2)]"
+                />
+                <div className="absolute flex items-center left-[14px] px-[2px] top-[-5px] z-10">
+                  <div className="absolute bg-white h-[2px] left-0 right-0 top-[5px]" />
+                  <p className="relative text-[12px] font-semibold text-[#637381]">搜尋材料名</p>
+                </div>
+                <div className="flex items-center">
+                  <svg className="absolute left-[14px] text-[#919eab] mt-[6px]" width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                  <input
+                    type="text"
+                    placeholder="輸入材料名搜尋..."
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    className="w-full rounded-[8px] pl-[38px] pr-[14px] pt-[18px] pb-[8px] text-[14px] text-[#1c252e] outline-none bg-transparent border-0 focus:ring-0"
+                  />
+                </div>
+              </div>
 
-          {/* 已選清單預覽 */}
-          {selectedRecords.length > 0 && (
-            <div className="bg-[#f4f8fd] rounded-[8px] px-[16px] py-[10px] border border-[rgba(0,85,156,0.12)]">
-              <p className="text-[12px] font-semibold text-[#637381] mb-[8px]">已選擇 {selectedRecords.length} 筆材料</p>
-              <div className="flex flex-col gap-[4px] max-h-[88px] overflow-y-auto custom-scrollbar">
-                {selectedRecords.map(r => (
-                  <div key={r.id} className="flex items-center justify-between">
-                    <span className="text-[13px] text-[#1c252e] truncate flex-1">{r.name_tw}</span>
-                    <button
-                      onClick={() => toggleSelect(r.id)}
-                      className="ml-[8px] text-[#919eab] hover:text-[#d32f2f] transition-colors shrink-0"
-                      title="移除"
-                    >
-                      <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
-                        <path clipRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" fill="currentColor" fillRule="evenodd" />
-                      </svg>
-                    </button>
-                  </div>
-                ))}
+              {/* 材料列表 */}
+              <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar border border-[rgba(145,158,171,0.12)] rounded-[8px]">
+                {loading ? (
+                  <div className="flex items-center justify-center py-[32px] text-[14px] text-[#919eab]">載入中…</div>
+                ) : filtered.length === 0 ? (
+                  <div className="flex items-center justify-center py-[32px] text-[14px] text-[#919eab]">無搜尋結果</div>
+                ) : (
+                  filtered.map(m => {
+                    const isUsed = usedEsgIds.has(m.id);
+                    const isSelected = selectedIds.has(m.id);
+                    return (
+                      <button
+                        key={m.id}
+                        disabled={isUsed}
+                        onClick={() => !isUsed && toggleSelect(m.id)}
+                        className={[
+                          'w-full text-left px-[16px] py-[10px] border-b border-[rgba(145,158,171,0.08)] transition-colors',
+                          isUsed ? 'opacity-40 cursor-not-allowed bg-transparent' :
+                            isSelected ? 'bg-[#e8f4fe]' : 'hover:bg-[rgba(145,158,171,0.04)] cursor-pointer',
+                        ].join(' ')}
+                      >
+                        <div className="flex items-center gap-[12px]">
+                          {/* Checkbox */}
+                          <div className={[
+                            'w-[18px] h-[18px] rounded-[4px] border-2 flex items-center justify-center shrink-0 transition-colors',
+                            isUsed ? 'border-[#c4cdd5] bg-[#f4f6f8]' :
+                              isSelected ? 'border-[#00559c] bg-[#00559c]' : 'border-[#c4cdd5] bg-white',
+                          ].join(' ')}>
+                            {isSelected && (
+                              <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+                                <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                              </svg>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-[14px] font-medium truncate ${isSelected ? 'text-[#00559c]' : 'text-[#1c252e]'}`}>
+                              {m.name_tw}
+                            </p>
+                            <p className="text-[12px] text-[#637381] mt-[2px] truncate">{m.name_en ?? ''}</p>
+                          </div>
+                          {isUsed && (
+                            <span className="text-[11px] text-[#919eab] bg-[#f4f6f8] px-[6px] py-[2px] rounded-[4px] shrink-0">已新增</span>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })
+                )}
               </div>
             </div>
-          )}
+
+            {/* ── 右側：已選清單 + 單位重量輸入 ── */}
+            <div className="flex flex-col gap-[8px] min-h-0" style={{ flex: '1 1 0' }}>
+              {/* 已選標題區 — 與左側搜尋欄同高，內容靠底 */}
+              <div className="flex flex-col justify-end shrink-0" style={{ height: '54px' }}>
+                <div className="flex items-baseline gap-[4px] mb-[6px]">
+                  <p className="text-[12px] font-semibold text-[#1c252e]">已選材料</p>
+                  {selectedRecords.length > 0 && (
+                    <span className="text-[11px] font-normal text-[#637381]">({selectedRecords.length} 筆)</span>
+                  )}
+                </div>
+                {selectedRecords.length > 0 && (
+                  <div className="flex items-center gap-[4px] px-[2px]">
+                    <span className="text-[12px] text-[#919eab] flex-1">材料名</span>
+                    <div className="flex items-center gap-[4px] shrink-0" style={{ width: '110px' }}>
+                      <span className="text-[12px] text-[#919eab] flex-1 text-right">重量(kg)</span>
+                      {!allWeightsFilled && (
+                        <span className="text-[10px] font-semibold text-[#ff5630] bg-[#fff1f0] border border-[#ffccc7] rounded-[3px] px-[3px] leading-[16px]">必填</span>
+                      )}
+                    </div>
+                    <span style={{ width: '18px' }} />
+                  </div>
+                )}
+              </div>
+
+              {selectedRecords.length === 0 ? (
+                /* 空狀態提示 */
+                <div className="flex-1 flex flex-col items-center justify-center rounded-[8px] border border-dashed border-[rgba(145,158,171,0.3)] text-[12px] text-[#919eab] text-center px-[12px] gap-[8px]">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" className="opacity-30">
+                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="#637381" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  <span>從左側勾選材料<br/>後在此填寫重量</span>
+                </div>
+              ) : (
+                <>
+                  {/* 已選列表 */}
+                  <div className="flex flex-col gap-[5px] flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+                    {selectedRecords.map(r => {
+                      const val = unitWeights[r.id] ?? '';
+                      const touched = val !== '';
+                      const isValid = touched && !isNaN(Number(val)) && Number(val) > 0;
+                      return (
+                        <div key={r.id} className="flex items-center gap-[4px] bg-white rounded-[6px] px-[8px] py-[6px] border border-[rgba(145,158,171,0.15)]">
+                          <span className="text-[12px] text-[#1c252e] flex-1 min-w-0 truncate">{r.name_tw}</span>
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            placeholder="0.000"
+                            value={val}
+                            onChange={e => {
+                              const v = e.target.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./, '$1');
+                              setUnitWeights(prev => ({ ...prev, [r.id]: v }));
+                            }}
+                            className="shrink-0 rounded-[4px] px-[6px] py-[3px] text-[12px] text-[#1c252e] outline-none bg-[#f8fafc] border text-right"
+                            style={{
+                              width: '110px',
+                              borderColor: !touched ? 'rgba(145,158,171,0.35)' : isValid ? '#22c55e' : '#ff5630',
+                            }}
+                            onFocus={e => { e.currentTarget.style.boxShadow = '0 0 0 2px rgba(24,144,255,0.12)'; e.currentTarget.style.borderColor = '#1890FF'; }}
+                            onBlur={e => { e.currentTarget.style.boxShadow = ''; e.currentTarget.style.borderColor = !touched ? 'rgba(145,158,171,0.35)' : isValid ? '#22c55e' : '#ff5630'; }}
+                          />
+                          <button
+                            onClick={() => toggleSelect(r.id)}
+                            className="shrink-0 w-[18px] h-[18px] flex items-center justify-center text-[#c4cdd5] hover:text-[#d32f2f] transition-colors"
+                            title="移除"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 20 20" fill="none">
+                              <path clipRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" fill="currentColor" fillRule="evenodd" />
+                            </svg>
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                </>
+              )}
+            </div>
+          </div>
 
           {/* 確認按鈕 */}
           <button
             onClick={handleConfirm}
-            disabled={selectedRecords.length === 0}
+            disabled={!allWeightsFilled}
             className="w-full h-[36px] rounded-[8px] flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#004680]"
             style={{ backgroundColor: '#00559c' }}
           >
@@ -1632,7 +1704,7 @@ function EditCompositionOverlay({
   onClose: () => void;
   onSave: (updated: MaterialComposition) => void;
 }) {
-  const [carbonEmission, setCarbonEmission] = useState(String(composition.carbonEmission));
+  const [unitWeight, setUnitWeight] = useState(String(composition.unitWeight));
   const [submitted, setSubmitted] = useState(false);
 
   useEffect(() => {
@@ -1641,17 +1713,17 @@ function EditCompositionOverlay({
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  const hasError = submitted && (!carbonEmission.trim() || isNaN(Number(carbonEmission)));
+  const hasError = submitted && (!unitWeight.trim() || isNaN(Number(unitWeight)) || Number(unitWeight) <= 0);
 
   const handleSave = () => {
     setSubmitted(true);
-    if (!carbonEmission.trim() || isNaN(Number(carbonEmission))) return;
+    if (!unitWeight.trim() || isNaN(Number(unitWeight)) || Number(unitWeight) <= 0) return;
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, '0');
     const dateStr = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())}`;
     onSave({
       ...composition,
-      carbonEmission: Number(carbonEmission),
+      unitWeight: Number(unitWeight),
       updatedBy: '目前使用者',
       updatedAt: dateStr,
     });
@@ -1703,16 +1775,16 @@ function EditCompositionOverlay({
                 className="relative shrink-0 leading-[12px]"
                 style={{ fontSize: '12px', fontWeight: 600, color: hasError ? '#ff5630' : '#637381' }}
               >
-                炭排量(kg CO₂e)
+                單位重量(kg)
               </p>
             </div>
             <input
               type="text"
               className="w-full rounded-[8px] px-[14px] pt-[18px] pb-[10px] text-[14px] text-[#1c252e] outline-none bg-transparent border-0"
-              value={carbonEmission}
+              value={unitWeight}
               onChange={e => {
-                const filtered = e.target.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
-                setCarbonEmission(filtered);
+                const filtered = e.target.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./, '$1');
+                setUnitWeight(filtered);
               }}
               onFocus={e => {
                 const border = e.currentTarget.parentElement?.querySelector('[aria-hidden]') as HTMLElement;
@@ -1723,7 +1795,7 @@ function EditCompositionOverlay({
                 if (border) { border.style.borderColor = hasError ? '#ff5630' : 'rgba(145,158,171,0.2)'; border.style.boxShadow = ''; }
               }}
             />
-            {hasError && <p className="mt-[4px] text-[12px] text-[#ff5630]">請輸入有效數字</p>}
+            {hasError && <p className="mt-[4px] text-[12px] text-[#ff5630]">請輸入大於 0 的數字</p>}
           </div>
 
           {/* 儲存按鈕 */}

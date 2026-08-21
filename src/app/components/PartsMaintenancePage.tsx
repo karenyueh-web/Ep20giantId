@@ -193,6 +193,9 @@ export default function PartsMaintenancePage({
             const hasQuotedBrand = quotations.some(
               q => toNumber(q.unit_price) > 0 || (q.quote_uom ?? '').trim() !== ''
             );
+            // 通知狀態：只要該廠商+料號有任一筆報價已發送通知，整列視為已通知
+            const sentQuotations = quotations.filter(q => q.notification_sent);
+            const isSent = sentQuotations.length > 0;
             return {
               id: idx + 1,
               vendorCode: q0.supplier_no,
@@ -201,6 +204,7 @@ export default function PartsMaintenancePage({
               plant: q0.plant_code,
               purchaseOrg: q0.purchase_org,
               longDescription: '',
+              materialGroup: '',
               // 以下欄位 MDO items API 尚未補齊，暫用空值（見 PENDING_MDO_FIELDS.md）
               qaCompletionDate: '',
               sampleDate: '',
@@ -225,7 +229,13 @@ export default function PartsMaintenancePage({
               })),
               materialCompositions: [],
               quoteStatus: (hasQuotedBrand ? 'quoted' : 'pending') as 'quoted' | 'pending',
-              notifyStatus: 'unsent' as const,
+              notifyStatus: (isSent ? 'sent' : 'unsent') as 'sent' | 'unsent',
+              notifySentAt: isSent
+                ? sentQuotations
+                    .map(q => q.notification_sent_at)
+                    .filter((t): t is string => !!t)
+                : undefined,
+              mdoQuotationIds: quotations.map(q => q.id),
               savedAt: q0.updated_at,
               updatedAt: q0.updated_at,
               syncDtcDte: false,
@@ -248,27 +258,40 @@ export default function PartsMaintenancePage({
                     return {
                       ...p,
                       longDescription: it.description || p.longDescription,
+                      materialGroup: it.material_group || p.materialGroup,
                       grossWeight: it.gross_weight != null ? String(it.gross_weight) : p.grossWeight,
                       netWeight: it.net_weight != null ? String(it.net_weight) : p.netWeight,
                       weightUnit: it.weight_uom || p.weightUnit,
                     };
                   });
-                  // ── 示範資料：把 ALEX-RIM-XD-LITE-29 設為「已通知 + 稽催 3 次」讓 UI 確認 ──
-                  const demo = enriched.map(p =>
-                    p.material === 'ALEX-RIM-XD-LITE-29'
-                      ? {
-                          ...p,
-                          notifyStatus: 'sent' as const,
-                          notifySentAt: [
-                            '2026-08-01T10:00:00Z',
-                            '2026-08-08T14:30:00Z',
-                            '2026-08-15T09:15:00Z',
-                          ],
-                        }
-                      : p
-                  );
-                  setAllParts(demo);
-                  setPartsData(demo);
+                  setAllParts(enriched);
+                  setPartsData(enriched);
+
+                  // 補入 supplier-materials 資料：廠商料號（vendorPartNo）
+                  import('@/app/api/supplier/supplierMaterialIntroduction').then(({ resolveSupplierMaterial }) => {
+                    // 對每筆並行查詢（筆數有限，OK）
+                    Promise.allSettled(
+                      enriched.map(p =>
+                        resolveSupplierMaterial(p.vendorCode, p.material)
+                          .then(sm => ({ id: p.id, vendorPartNo: sm?.supplier_material_no ?? '' }))
+                          .catch(() => ({ id: p.id, vendorPartNo: '' }))
+                      )
+                    ).then(results => {
+                      if (cancelled) return;
+                      const vendorMap = new Map(
+                        results
+                          .filter(r => r.status === 'fulfilled')
+                          .map(r => [(r as PromiseFulfilledResult<{ id: number; vendorPartNo: string }>).value.id,
+                                     (r as PromiseFulfilledResult<{ id: number; vendorPartNo: string }>).value.vendorPartNo])
+                      );
+                      const withVendorPartNo = enriched.map(p => ({
+                        ...p,
+                        vendorPartNo: vendorMap.get(p.id) || p.vendorPartNo,
+                      }));
+                      setAllParts(withVendorPartNo);
+                      setPartsData(withVendorPartNo);
+                    });
+                  });
                 })
                 .catch(err => console.warn('[PartsList] items 補入失敗', err));
             });
@@ -644,15 +667,50 @@ export default function PartsMaintenancePage({
           onToggleRow={handleToggleRow}
           onToggleAll={handleToggleAll}
           batchActions={
-            selectedIds.size > 0 && can('create_sample') ? (
-              <span
-                onClick={handleOpenCreateSampleOrder}
-                className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] text-[#004680] leading-[24px] whitespace-nowrap cursor-pointer select-none px-[10px] py-[16px] hover:opacity-70 transition-opacity"
-              >
-                開立索樣單
-              </span>
+            selectedIds.size > 0 ? (
+              <>
+                <span
+                  onClick={async () => {
+                    const selectedParts = partsData.filter(p => selectedIds.has(p.id));
+                    const quotationIds = selectedParts.flatMap(p => p.mdoQuotationIds ?? []);
+                    if (quotationIds.length === 0) { toast('所選資料無對應報價，無法發送通知'); return; }
+                    try {
+                      const { reportNotificationSent } = await import('@/app/api/pricing/supplierQuotations');
+                      await reportNotificationSent({ quotationIds, reportedBy: 'EP' });
+                      const now = new Date().toISOString();
+                      setPartsData(prev => prev.map(p =>
+                        selectedIds.has(p.id)
+                          ? { ...p, notifyStatus: 'sent' as const, notifySentAt: [...(p.notifySentAt ?? []), now] }
+                          : p
+                      ));
+                      setAllParts(prev => prev.map(p =>
+                        selectedIds.has(p.id)
+                          ? { ...p, notifyStatus: 'sent' as const, notifySentAt: [...(p.notifySentAt ?? []), now] }
+                          : p
+                      ));
+                      setSelectedIds(new Set());
+                      toast(`已成功發送 ${selectedParts.length} 筆通知`);
+                    } catch (err: unknown) {
+                      const msg = err instanceof Error ? err.message : '發送失敗';
+                      toast.error(`⚠️ 發送通知失敗：${msg}`);
+                    }
+                  }}
+                  className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] text-[#004680] leading-[24px] whitespace-nowrap cursor-pointer select-none px-[10px] py-[16px] hover:opacity-70 transition-opacity"
+                >
+                  發送通知
+                </span>
+                {can('create_sample') && (
+                  <span
+                    onClick={handleOpenCreateSampleOrder}
+                    className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold text-[14px] text-[#004680] leading-[24px] whitespace-nowrap cursor-pointer select-none px-[10px] py-[16px] hover:opacity-70 transition-opacity"
+                  >
+                    開立索樣單
+                  </span>
+                )}
+              </>
             ) : null
           }
+
           actionButton={actionButton}
           externalFilteredData={displayData}
           updateTime={LAST_SYNC_TIME}

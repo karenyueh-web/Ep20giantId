@@ -61,22 +61,25 @@
 ### 品牌設定（BrandSetting）→ 已全部串接 ✅
 使用 `pricing/supplier-quotations` 完整支援所有欄位。
 
-### 基本資料（PartRecord）→ 待補 6 個欄位
+### 基本資料（PartRecord）→ 剩餘 2 個欄位待後端
 
-| EP 前台欄位 | 型別 | 說明 | 暫時處理方式 |
-|------------|------|------|------------|
-| `qaCompletionDate` | `string` | 廠商QA計畫完成日期 | in-memory store（MOCK_PARTS）|
-| `sampleDate` | `string` | 可送樣日 | in-memory store |
-| `firstDeliveryDate` | `string` | 預計首批可供貨日(出貨日) | in-memory store |
-| `vendorPartNo` | `string` | 廠商料號（當前料號）| in-memory store |
-| `remark` | `string` | 備註 | in-memory store |
-| `syncDtcDte` | `boolean` | 同步DTC/DTE checkbox | in-memory store |
+| EP 前台欄位 | 型別 | 說明 | 狀態 |
+|------------|------|------|------|
+| `qaCompletionDate` | `string` | 廠商QA計畫完成日期 | ✅ 已串接 `supplier-material-introductions.qa_plan_completed_date` |
+| `sampleDate` | `string` | 可送樣日 | ✅ 已串接 `supplier-material-introductions.sample_available_date` |
+| `firstDeliveryDate` | `string` | 預計首批可供貨日(出貨日) | ✅ 已串接 `supplier-material-introductions.estimated_first_supply_date` |
+| `vendorPartNo` | `string` | 廠商料號 | ✅ 已串接 `supplier-materials.supplier_material_no` |
+| `remark` | `string` | 備註 | ✅ 已串接 `supplier-material-introductions.remark` |
+| `grossWeight` | `string` | 毛重 | ⏸ 讀：`items.gross_weight` / 寫：items 無 update endpoint，待後端補 |
+| `netWeight` | `string` | 淨重 | ⏸ 讀：`items.net_weight` / 寫：items 無 update endpoint，待後端補 |
+| `weightUnit` | `string` | 重量單位 | ⏸ 讀：`items.weight_uom` / 寫：items 無 update endpoint，待後端補 |
+| `longDescription` | `string` | 長規格敘述 | ⏸ 讀：`items.description` / 寫：items 無 update endpoint，待後端補 |
+| `syncDtcDte` | `boolean` | 同步DTC/DTE checkbox | ❌ MDO 無此概念，保留 in-memory |
 
-### MDO 補欄位後要做的事
-1. 在 `ItemResponseDto` 或新的 DTO 加入上述 6 個欄位
-2. 更新 `src/app/api/material/items.ts` 的 `MdoItem` interface
-3. 更新 `PartsMaintenanceDetailPage.tsx` 的 `handleSave`，改為呼叫 item update command
-4. 移除 in-memory store 的 fallback
+### MDO 補 items update endpoint 後要做的事
+1. 確認 `items/commands/update`（或 `patch`）endpoint 部署
+2. 更新 `src/app/api/material/items.ts` 加入 update function
+3. 在 `PartsMaintenanceDetailPage.tsx` 的 `handleSave` 加入 items update 呼叫（毛重/淨重/重量單位/長規格敘述）
 
 ---
 
@@ -112,4 +115,18 @@
 ### ✅ 已建立的 listCode
 
 所有 listCode 均已建立並串接完成：BRAND / INCOTERM / QUOTE_UOM / WEIGHT_UOM / CUSTOMIZATION_TYPE / CURRENCY
+
+---
+
+## 物料成分總檔（EsgMaterialSummaryPage）→ 待補欄位
+
+| EP 前台欄位 | 對應 MDO API | 問題 | 狀態 |
+|------------|-------------|------|------|
+| `plant`（工廠） | `supplier-quotations.plant_code` | ✅ 已改以報價單 API 為主軸，plant_code 可直接取用 | ✅ 已串接 |
+| `unitWeight`（單位重量） | `supplier-quotations.unit_weight`（未存在） | MDO supplier-quotations 目前無此欄位，需後端新增 | ❌ 待 MDO 補欄位 |
+
+### 單位重量串接方式（MDO 補好後執行）
+1. 確認 `SupplierQuotationResponseDto` 已新增 `unit_weight` 欄位
+2. 更新 `src/app/api/pricing/supplierQuotations.ts` 的 `MdoSupplierQuotation` interface 加入 `unit_weight`
+3. 在 `EsgMaterialSummaryPage.tsx` 的 row building 中將 `unitWeight: ''` 改為 `unitWeight: String(q.unit_weight ?? '')`
 

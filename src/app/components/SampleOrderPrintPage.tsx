@@ -9,30 +9,30 @@
  * 中文版明細表格欄位（共 12 欄）：
  *   1. 索樣單號       orderNo
  *   2. 物料群組       ─（待查 SAP）
- *   3. 物料料號       material
- *   4. GMC工廠        plant
+ *   3. 物料料號       materialNo
+ *   4. GMC工廠        plantCode
  *   5. 長規格敘述     longDescription
- *   6. 供應商料號     vendorMaterialNo
+ *   6. 供應商料號     supplierMaterialNo
  *   7. 索樣日期       sampleDate          ← 中文獨有
  *   8. 需求日期       demandDate
  *   9. 需求數量       demandQty
  *  10. 首批可供貨日   availableDate
- *  11. 廠商日產能     vendorDailyCapacity
- *  12. 樣品達交日     vendorShipDate
+ *  11. 廠商日產能     supplierDailyCapacity
+ *  12. 樣品達交日     supplierShipDate
  *
  * 英文版明細表格欄位（共 12 欄）：
  *   1. Sample Order No       orderNo
  *   2. Material Group        ─（待查 SAP）
- *   3. Part No               material
- *   4. Factory               plant
+ *   3. Part No               materialNo
+ *   4. Factory               plantCode
  *   5. Item Description      longDescription
- *   6. Vendor Part NO        vendorMaterialNo
+ *   6. Vendor Part NO        supplierMaterialNo
  *   7. Brand                 ─（待擴充欄位）  ← 英文獨有
  *   8. Sample Required Date  demandDate
  *   9. Required QTY          demandQty
  *  10. First batch available date  availableDate
- *  11. Daily production Capacity   vendorDailyCapacity
- *  12. Sample Delivery date        vendorShipDate
+ *  11. Daily production Capacity   supplierDailyCapacity
+ *  12. Sample Delivery date        supplierShipDate
  * ──────────────────────────────────────────────────
  */
 
@@ -101,7 +101,7 @@ export default function SampleOrderPrintPage({ orders, onBack }: SampleOrderPrin
   const vendorGroups = useMemo(() => {
     const map = new Map<string, SampleOrderRecord[]>();
     for (const order of orders) {
-      const key = order.vendorCode;
+      const key = order.supplierCode || order.supplierCode;  // 使用 supplierCode
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(order);
     }
@@ -220,7 +220,7 @@ export default function SampleOrderPrintPage({ orders, onBack }: SampleOrderPrin
       <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar bg-[#f4f6f8] px-[32px] py-[28px] sample-order-print-area">
         {vendorGroups.map((groupOrders, idx) => (
           <div
-            key={groupOrders[0]?.vendorCode ?? idx}
+            key={groupOrders[0]?.supplierCode ?? idx}
             style={{
               pageBreakAfter: idx < vendorGroups.length - 1 ? 'always' : 'auto',
               marginBottom: idx < vendorGroups.length - 1 ? '0' : '0',
@@ -308,7 +308,7 @@ function ZhSampleOrderDoc({ orders }: { orders: SampleOrderRecord[] }) {
 
       {/* ② To / 窗口 */}
       <div style={{ fontSize: '12px', lineHeight: '1.8', marginBottom: '6px' }}>
-        {firstOrder && <div>To: {firstOrder.vendorName}({firstOrder.vendorCode})</div>}
+        {firstOrder && <div>To: {firstOrder.supplierName}({firstOrder.supplierCode})</div>}
         <div>窗口: {userEmail}</div>
       </div>
 
@@ -357,15 +357,15 @@ function ZhSampleOrderDoc({ orders }: { orders: SampleOrderRecord[] }) {
               <tr key={i} style={{ background: i % 2 === 1 ? '#fafafa' : 'white' }}>
                 <td style={{ ...td, fontWeight: 'bold', textAlign: 'center' }}>{o.orderNo}</td>
                 <td style={td}></td>
-                <td style={{ ...td, wordBreak: 'break-all', fontSize: '9px' }}>{o.material}</td>
-                <td style={tdC}>{o.plant}</td>
+                <td style={{ ...td, wordBreak: 'break-all', fontSize: '9px' }}>{o.materialNo}</td>
+                <td style={tdC}>{o.plantCode}</td>
                 <td style={{ ...td, fontSize: '9px' }}>{o.longDescription}</td>
-                <td style={{ ...td, wordBreak: 'break-all', fontSize: '9px' }}>{o.vendorMaterialNo ?? ''}</td>
+                <td style={{ ...td, wordBreak: 'break-all', fontSize: '9px' }}>{o.supplierMaterialNo ?? ''}</td>
                 <td style={tdC}>{o.demandDate}</td>
                 <td style={tdC}>{o.demandQty ?? ''}</td>
                 <td style={tdC}>{o.availableDate ?? ''}</td>
-                <td style={tdC}>{o.vendorDailyCapacity ?? ''}</td>
-                <td style={tdC}>{o.vendorShipDate ?? ''}</td>
+                <td style={tdC}>{o.supplierDailyCapacity ?? ''}</td>
+                <td style={tdC}>{o.supplierShipDate ?? ''}</td>
               </tr>
             ))
           )}
@@ -425,7 +425,7 @@ function EnSampleOrderDoc({ orders }: { orders: SampleOrderRecord[] }) {
 
       {/* ② To / Contact Window */}
       <div style={{ fontSize: '12px', lineHeight: '1.8', marginBottom: '6px' }}>
-        {firstOrder && <div>To: {firstOrder.vendorName}({firstOrder.vendorCode})</div>}
+        {firstOrder && <div>To: {firstOrder.supplierName}({firstOrder.supplierCode})</div>}
         <div>Contact Window: {userEmail}</div>
       </div>
 
@@ -477,13 +477,13 @@ function EnSampleOrderDoc({ orders }: { orders: SampleOrderRecord[] }) {
                 {/* 2. Material Group（待查 SAP） */}
                 <td style={td}></td>
                 {/* 3. Part No */}
-                <td style={{ ...td, wordBreak: 'break-all', fontSize: '9px' }}>{o.material}</td>
+                <td style={{ ...td, wordBreak: 'break-all', fontSize: '9px' }}>{o.materialNo}</td>
                 {/* 4. Factory */}
-                <td style={tdC}>{o.plant}</td>
+                <td style={tdC}>{o.plantCode}</td>
                 {/* 5. Item Description */}
                 <td style={{ ...td, fontSize: '9px' }}>{o.longDescription}</td>
                 {/* 6. Vendor Part NO */}
-                <td style={{ ...td, wordBreak: 'break-all', fontSize: '9px' }}>{o.vendorMaterialNo ?? ''}</td>
+                <td style={{ ...td, wordBreak: 'break-all', fontSize: '9px' }}>{o.supplierMaterialNo ?? ''}</td>
                 {/* 7. Sample Required Date */}
                 <td style={tdC}>{o.demandDate}</td>
                 {/* 8. Required QTY */}
@@ -491,9 +491,9 @@ function EnSampleOrderDoc({ orders }: { orders: SampleOrderRecord[] }) {
                 {/* 9. First batch available date */}
                 <td style={tdC}>{o.availableDate ?? ''}</td>
                 {/* 10. Daily production Capacity */}
-                <td style={tdC}>{o.vendorDailyCapacity ?? ''}</td>
+                <td style={tdC}>{o.supplierDailyCapacity ?? ''}</td>
                 {/* 11. Sample Delivery date */}
-                <td style={tdC}>{o.vendorShipDate ?? ''}</td>
+                <td style={tdC}>{o.supplierShipDate ?? ''}</td>
               </tr>
             ))
           )}

@@ -86,25 +86,25 @@ export const SAMPLE_TYPE_OPTIONS: { value: SampleType; label: string }[] = [
 // ── 介面定義 ────────────────────────────────────────────────────────────────
 
 export interface SampleOrderRecord {
-  id: number;
+  id: string;
   /** 索樣單號（格式：G25XXXXX） */
   orderNo: string;
   /** 狀態 */
   status: SampleOrderStatus;
-  /** 廠商代碼 */
-  vendorCode: string;
-  /** 廠商名稱 */
-  vendorName: string;
+  /** 供應商代碼（MDO: supplierCode） */
+  supplierCode: string;
+  /** 供應商名稱（MDO: supplierName） */
+  supplierName: string;
   /** 採購組織 */
   purchaseOrg: string;
-  /** 工廠 */
-  plant: string;
-  /** 料號 */
-  material: string;
+  /** 工廠（MDO: plantCode） */
+  plantCode: string;
+  /** 料號（MDO: materialNo） */
+  materialNo: string;
   /** 長規格敘述 */
   longDescription: string;
-  /** 供應商料號 */
-  vendorMaterialNo?: string;
+  /** 供應商料號（MDO: supplierMaterialNo） */
+  supplierMaterialNo?: string;
   /** 索樣日期（YYYY/MM/DD） */
   sampleDate: string;
   /** 需求日期（YYYY/MM/DD） */
@@ -124,19 +124,19 @@ export interface SampleOrderRecord {
   /** 最後更新時間 */
   updatedAt: string;
   // ── 廠商回覆欄位（狀態 V 以後才有值） ─────────────────────────────────
-  /** 樣品達交日 */
-  vendorShipDate?: string;
+  /** 樣品達交日（MDO: supplierShipDate） */
+  supplierShipDate?: string;
   /** 實際送樣日 */
   actualShipDate?: string;
   /** 首批可供貨日 */
   availableDate?: string;
-  /** 廠商日產能 */
-  vendorDailyCapacity?: number;
+  /** 廠商日產能（MDO: supplierDailyCapacity） */
+  supplierDailyCapacity?: number;
   // ── 取消索樣（CC 狀態才有值） ────────────────────────────────────────────
   /** 取消原因 */
   cancelReason?: string;
   // ── 退回廠商補填旗標 ──────────────────────────────────────────────
-  /** 被整山採購退回廠商補填：true 時廠商回覆全部欄位必填 */
+  /** 被整採購退回廠商補填：true 時廠商回覆全部欄位必填 */
   needsFullVendorReply?: boolean;
 }
 
@@ -161,16 +161,16 @@ function genOrderNo(): string {
 let _sampleOrders: SampleOrderRecord[] = [
   // ── V 廠商確認中 ─────────────────────────────────────────────────────────
   {
-    id: 1,
+    id: '1',
     orderNo: 'G2500091',
     status: 'V',
-    vendorCode: '000100463',
-    vendorName: '速聯',
+    supplierCode: '000100463',
+    supplierName: '速聯',
     purchaseOrg: '1101',
-    plant: 'GTM1',
-    material: '1330-BASAD1-003',
+    plantCode: 'GTM1',
+    materialNo: '1330-BASAD1-003',
     longDescription: 'G9 Pique ADV PRO 29 0 (15)(拉伸無膜樣+數位無膜樣) CARBON SMOKE/G-CHO1',
-    vendorMaterialNo: '411U12C14S4002',
+    supplierMaterialNo: '411U12C14S4002',
     sampleDate: '2025/01/01',
     demandDate: '2025/02/01',
     demandQty: 4,
@@ -180,20 +180,20 @@ let _sampleOrders: SampleOrderRecord[] = [
     createdBy: '王大明',
     createdAt: '2025/01/01 12:00',
     updatedAt: '2025/01/01 12:00',
-    vendorShipDate: '2025/02/10',
+    supplierShipDate: '2025/02/10',
     actualShipDate: '2025/02/10',
     availableDate: '2025/02/10',
-    vendorDailyCapacity: 4,
+    supplierDailyCapacity: 4,
   },
   {
-    id: 2,
+    id: '2',
     orderNo: 'G2500092',
     status: 'V',
-    vendorCode: '000100463',
-    vendorName: '速聯',
+    supplierCode: '000100463',
+    supplierName: '速聯',
     purchaseOrg: 'GEM採購組織',
-    plant: 'GTM1',
-    material: '1129-CSL0075-L02',
+    plantCode: 'GTM1',
+    materialNo: '1129-CSL0075-L02',
     longDescription: 'SRAM EAGLE AXS REAR DERAILLEUR 12-SPD',
     sampleDate: '2024/12/25',
     demandDate: '2025/02/01',
@@ -205,14 +205,14 @@ let _sampleOrders: SampleOrderRecord[] = [
     updatedAt: '2024/12/20 09:35',
   },
   {
-    id: 3,
+    id: '3',
     orderNo: 'G2500093',
     status: 'V',
-    vendorCode: '000100463',
-    vendorName: '速聯',
+    supplierCode: '000100463',
+    supplierName: '速聯',
     purchaseOrg: 'GEM採購組織',
-    plant: 'GTM1',
-    material: '1129-CSL0075-L03',
+    plantCode: 'GTM1',
+    materialNo: '1129-CSL0075-L03',
     longDescription: 'SRAM EAGLE AXS FRONT DERAILLEUR 12-SPD',
     sampleDate: '2024/12/25',
     demandDate: '2025/02/01',
@@ -224,14 +224,14 @@ let _sampleOrders: SampleOrderRecord[] = [
     updatedAt: '2024/12/20 09:40',
   },
   {
-    id: 4,
+    id: '4',
     orderNo: 'G2500082',
     status: 'V',
-    vendorCode: '000100321',
-    vendorName: '禧瑪諾',
+    supplierCode: '000100321',
+    supplierName: '禧瑪諾',
     purchaseOrg: 'GEM採購組織',
-    plant: 'GTM1',
-    material: '1129-SHM0012-A01',
+    plantCode: 'GTM1',
+    materialNo: '1129-SHM0012-A01',
     longDescription: 'SHIMANO DURA-ACE R9200 CRANKSET 172.5MM',
     sampleDate: '2024/12/10',
     demandDate: '2025/01/15',
@@ -243,16 +243,16 @@ let _sampleOrders: SampleOrderRecord[] = [
     updatedAt: '2024/12/05 14:20',
   },
   {
-    id: 5,
+    id: '5',
     orderNo: 'G2500083',
     status: 'V',
-    vendorCode: '000100321',
-    vendorName: '禧瑪諾',
+    supplierCode: '000100321',
+    supplierName: '禧瑪諾',
     purchaseOrg: 'GEM採購組織',
-    plant: 'DTC1',
-    material: '1129-SHM0013-B02',
+    plantCode: 'DTC1',
+    materialNo: '1129-SHM0013-B02',
     longDescription: 'SHIMANO DURA-ACE R9200 BRAKE CALIPER FRONT',
-    vendorMaterialNo: 'SHM-BR-R9200-F',
+    supplierMaterialNo: 'SHM-BR-R9200-F',
     sampleDate: '2024/12/10',
     demandDate: '2025/01/20',
     demandQty: 2,
@@ -265,16 +265,16 @@ let _sampleOrders: SampleOrderRecord[] = [
   },
   // ── SC 廠商已回覆 ─────────────────────────────────────────────────────────
   {
-    id: 6,
+    id: '6',
     orderNo: 'G2500071',
     status: 'SC',
-    vendorCode: '000100215',
-    vendorName: '麥克納馬拉',
+    supplierCode: '000100215',
+    supplierName: '麥克納馬拉',
     purchaseOrg: 'GEM採購組織',
-    plant: 'GTM1',
-    material: '1129-MCN0044-C03',
+    plantCode: 'GTM1',
+    materialNo: '1129-MCN0044-C03',
     longDescription: 'MAXXIS MINION DHF 29X2.5 3C EXO TIRE',
-    vendorMaterialNo: 'MX-MINION-DHF-29',
+    supplierMaterialNo: 'MX-MINION-DHF-29',
     sampleDate: '2024/11/20',
     demandDate: '2024/12/30',
     demandQty: 6,
@@ -284,20 +284,20 @@ let _sampleOrders: SampleOrderRecord[] = [
     createdBy: '林怡君',
     createdAt: '2024/11/15 10:00',
     updatedAt: '2024/11/25 16:30',
-    vendorShipDate: '2024/12/15',
+    supplierShipDate: '2024/12/15',
     actualShipDate: '2024/12/16',
     availableDate: '2024/12/20',
-    vendorDailyCapacity: 10,
+    supplierDailyCapacity: 10,
   },
   {
-    id: 7,
+    id: '7',
     orderNo: 'G2500072',
     status: 'SC',
-    vendorCode: '000100215',
-    vendorName: '麥克納馬拉',
+    supplierCode: '000100215',
+    supplierName: '麥克納馬拉',
     purchaseOrg: 'GEM採購組織',
-    plant: 'GTM1',
-    material: '1129-MCN0045-D01',
+    plantCode: 'GTM1',
+    materialNo: '1129-MCN0045-D01',
     longDescription: 'MAXXIS MINION DHR II 29X2.4 3C EXO TIRE',
     sampleDate: '2024/11/20',
     demandDate: '2024/12/30',
@@ -308,20 +308,20 @@ let _sampleOrders: SampleOrderRecord[] = [
     createdBy: '林怡君',
     createdAt: '2024/11/15 10:05',
     updatedAt: '2024/11/25 16:35',
-    vendorShipDate: '2024/12/15',
+    supplierShipDate: '2024/12/15',
     actualShipDate: '2024/12/17',
     availableDate: '2024/12/22',
-    vendorDailyCapacity: 8,
+    supplierDailyCapacity: 8,
   },
   {
-    id: 8,
+    id: '8',
     orderNo: 'G2500073',
     status: 'SC',
-    vendorCode: '000100463',
-    vendorName: '速聯',
+    supplierCode: '000100463',
+    supplierName: '速聯',
     purchaseOrg: 'GEM採購組織',
-    plant: 'DTE1',
-    material: '1129-CSL0066-E01',
+    plantCode: 'DTE1',
+    materialNo: '1129-CSL0066-E01',
     longDescription: 'SRAM GX EAGLE CHAIN 126 LINK 12-SPD',
     sampleDate: '2024/11/25',
     demandDate: '2025/01/05',
@@ -334,14 +334,14 @@ let _sampleOrders: SampleOrderRecord[] = [
   },
   // ── SC 廠商已回覆（原已確認） ──────────────────────────────────────────────
   {
-    id: 9,
+    id: '9',
     orderNo: 'G2500055',
     status: 'SC',
-    vendorCode: '000100321',
-    vendorName: '禧瑪諾',
+    supplierCode: '000100321',
+    supplierName: '禧瑪諾',
     purchaseOrg: 'GEM採購組織',
-    plant: 'GTM1',
-    material: '1129-SHM0005-F01',
+    plantCode: 'GTM1',
+    materialNo: '1129-SHM0005-F01',
     longDescription: 'SHIMANO ULTEGRA R8100 GROUPSET 12-SPD',
     sampleDate: '2024/10/15',
     demandDate: '2024/11/30',
@@ -353,14 +353,14 @@ let _sampleOrders: SampleOrderRecord[] = [
     updatedAt: '2024/10/30 17:00',
   },
   {
-    id: 10,
+    id: '10',
     orderNo: 'G2500056',
     status: 'SC',
-    vendorCode: '000100215',
-    vendorName: '麥克納馬拉',
+    supplierCode: '000100215',
+    supplierName: '麥克納馬拉',
     purchaseOrg: 'GEM採購組織',
-    plant: 'GTM1',
-    material: '1129-MCN0030-G02',
+    plantCode: 'GTM1',
+    materialNo: '1129-MCN0030-G02',
     longDescription: 'MAXXIS ARDENT RACE 29X2.2 3C EXO TIRE',
     sampleDate: '2024/10/20',
     demandDate: '2024/11/30',
@@ -373,14 +373,14 @@ let _sampleOrders: SampleOrderRecord[] = [
   },
   // ── DR 草稿 ──────────────────────────────────────────────────────────────
   {
-    id: 11,
+    id: '11',
     orderNo: 'G2500095',
     status: 'DR',
-    vendorCode: '000100463',
-    vendorName: '速聯',
+    supplierCode: '000100463',
+    supplierName: '速聯',
     purchaseOrg: 'GEM採購組織',
-    plant: 'GTM1',
-    material: '1129-CSL0080-H01',
+    plantCode: 'GTM1',
+    materialNo: '1129-CSL0080-H01',
     longDescription: 'SRAM XX SL EAGLE AXS GROUPSET 12-SPD COMPLETE',
     sampleDate: '2025/01/10',
     demandDate: '2025/03/01',
@@ -393,14 +393,14 @@ let _sampleOrders: SampleOrderRecord[] = [
   },
   // ── CL 已關閉 ────────────────────────────────────────────────────────────
   {
-    id: 12,
+    id: '12',
     orderNo: 'G2500040',
     status: 'CL',
-    vendorCode: '000100321',
-    vendorName: '禧瑪諾',
+    supplierCode: '000100321',
+    supplierName: '禧瑪諾',
     purchaseOrg: 'GEM採購組織',
-    plant: 'GTM1',
-    material: '1129-SHM0001-J01',
+    plantCode: 'GTM1',
+    materialNo: '1129-SHM0001-J01',
     longDescription: 'SHIMANO XTR M9100 CRANKSET 170MM',
     sampleDate: '2024/09/01',
     demandDate: '2024/10/15',
@@ -413,14 +413,14 @@ let _sampleOrders: SampleOrderRecord[] = [
   },
   // ── CC 取消 ──────────────────────────────────────────────────────────────
   {
-    id: 13,
+    id: '13',
     orderNo: 'G2500035',
     status: 'CC',
-    vendorCode: '000100215',
-    vendorName: '麥克納馬拉',
+    supplierCode: '000100215',
+    supplierName: '麥克納馬拉',
     purchaseOrg: 'GEM採購組織',
-    plant: 'DTC1',
-    material: '1129-MCN0020-K01',
+    plantCode: 'DTC1',
+    materialNo: '1129-MCN0020-K01',
     longDescription: 'MAXXIS HIGH ROLLER II 29X2.3 3C GRIP TIRE',
     sampleDate: '2024/08/10',
     demandDate: '2024/09/30',
@@ -452,7 +452,7 @@ export function addSampleOrder(record: Omit<SampleOrderRecord, 'id' | 'orderNo' 
 
   const newRecord: SampleOrderRecord = {
     ...record,
-    id: Date.now(),
+    id: crypto.randomUUID(),
     orderNo: genOrderNo(),
     createdAt: ts,
     updatedAt: ts,
@@ -462,12 +462,12 @@ export function addSampleOrder(record: Omit<SampleOrderRecord, 'id' | 'orderNo' 
   return newRecord;
 }
 
-export function deleteSampleOrders(ids: number[]): void {
+export function deleteSampleOrders(ids: string[]): void {
   _sampleOrders = _sampleOrders.filter((r) => !ids.includes(r.id));
   notifySampleOrderChange();
 }
 
-export function updateSampleOrderStatus(ids: number[], status: SampleOrderStatus): void {
+export function updateSampleOrderStatus(ids: string[], status: SampleOrderStatus): void {
   const now = new Date();
   const pad = (n: number) => String(n).padStart(2, '0');
   const ts = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
@@ -478,7 +478,7 @@ export function updateSampleOrderStatus(ids: number[], status: SampleOrderStatus
 }
 
 /** 取消索樣：SC → CC，同時寫入取消原因 */
-export function cancelSampleOrder(id: number, reason: string): SampleOrderRecord | null {
+export function cancelSampleOrder(id: string, reason: string): SampleOrderRecord | null {
   const now = new Date();
   const pad = (n: number) => String(n).padStart(2, '0');
   const ts = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
@@ -490,7 +490,7 @@ export function cancelSampleOrder(id: number, reason: string): SampleOrderRecord
 }
 
 /** 批次取消索樣：將多筆狀態設為 CC，並寫入相同的取消原因 */
-export function batchCancelSampleOrders(ids: number[], reason: string): void {
+export function batchCancelSampleOrders(ids: string[], reason: string): void {
   const now = new Date();
   const pad = (n: number) => String(n).padStart(2, '0');
   const ts = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
@@ -501,7 +501,7 @@ export function batchCancelSampleOrders(ids: number[], reason: string): void {
 }
 
 /** 退回廠商補填：SC → V，標記需要補齊全部廠商回覆欄位 */
-export function revertSampleOrderToV(id: number): SampleOrderRecord | null {
+export function revertSampleOrderToV(id: string): SampleOrderRecord | null {
   const now = new Date();
   const pad = (n: number) => String(n).padStart(2, '0');
   const ts = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
@@ -514,12 +514,12 @@ export function revertSampleOrderToV(id: number): SampleOrderRecord | null {
 
 /** 廠商回覆：更新回覆欄位並將狀態推進到 SC（廠商已回覆） */
 export function updateSampleOrderVendorReply(
-  id: number,
+  id: string,
   reply: {
-    vendorShipDate?: string;
+    supplierShipDate?: string;
     actualShipDate?: string;
     availableDate?: string;
-    vendorDailyCapacity?: number;
+    supplierDailyCapacity?: number;
   },
 ): SampleOrderRecord | null {
   const now = new Date();
@@ -538,7 +538,7 @@ export function updateSampleOrderVendorReply(
 
 /** SC 補填：在 SC 狀態下更新首批可供貨日 / 實際送樣日，不改變 status */
 export function updateSCSuppFields(
-  id: number,
+  id: string,
   fields: { availableDate?: string; actualShipDate?: string },
 ): SampleOrderRecord | null {
   const now = new Date();
@@ -558,7 +558,7 @@ export function updateSCSuppFields(
 
 /** 草稿更新：更新 DR 的可編輯欄位，可選擇同時轉交廠商（status → V） */
 export function updateSampleOrderDraft(
-  id: number,
+  id: string,
   fields: {
     resample: boolean;
     sampleType: string;
@@ -596,33 +596,33 @@ export interface SampleHistoryEntry {
   remark: string;
 }
 
-let _sampleOrderHistory: Record<number, SampleHistoryEntry[]> = {};
+let _sampleOrderHistory: Record<string, SampleHistoryEntry[]> = {};
 
-export function addSampleOrderHistory(id: number, entry: SampleHistoryEntry): void {
+export function addSampleOrderHistory(id: string, entry: SampleHistoryEntry): void {
   if (!_sampleOrderHistory[id]) {
     _sampleOrderHistory[id] = [];
   }
   _sampleOrderHistory[id] = [entry, ..._sampleOrderHistory[id]];
 }
 
-export function getSampleOrderHistory(id: number): SampleHistoryEntry[] {
+export function getSampleOrderHistory(id: string): SampleHistoryEntry[] {
   return _sampleOrderHistory[id] ?? [];
 }
 
 // ── 重複檢核：取最近一筆非 DR 狀態的索樣單 ──────────────────────────────────
 
-/** 檢查同一零件（material + vendorCode + plant）是否已有非 DR 索樣單，回傳最近一筆 */
+/** 檢查同一零件（materialNo + supplierCode + plantCode）是否已有非 DR 索樣單，回傳最近一筆 */
 export function findLatestExistingSampleOrder(
-  material: string,
-  vendorCode: string,
-  plant: string,
+  materialNo: string,
+  supplierCode: string,
+  plantCode: string,
 ): SampleOrderRecord | undefined {
   return _sampleOrders
     .filter(
       (o) =>
-        o.material === material &&
-        o.vendorCode === vendorCode &&
-        o.plant === plant &&
+        o.materialNo === materialNo &&
+        o.supplierCode === supplierCode &&
+        o.plantCode === plantCode &&
         o.status !== 'DR',
     )
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
@@ -630,16 +630,16 @@ export function findLatestExistingSampleOrder(
 
 /** 查詢同一零件所有索樣單紀錄（含 DR），按建立日期降冪排序 */
 export function findAllExistingSampleOrders(
-  material: string,
-  vendorCode: string,
-  plant: string,
+  materialNo: string,
+  supplierCode: string,
+  plantCode: string,
 ): SampleOrderRecord[] {
   return _sampleOrders
     .filter(
       (o) =>
-        o.material === material &&
-        o.vendorCode === vendorCode &&
-        o.plant === plant,
+        o.materialNo === materialNo &&
+        o.supplierCode === supplierCode &&
+        o.plantCode === plantCode,
     )
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }

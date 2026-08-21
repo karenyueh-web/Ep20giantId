@@ -35,8 +35,8 @@ export interface MaterialComposition {
   nameCn: string;
   /** 材料名（英文） */
   nameEn: string;
-  /** 碳排量（kg CO₂e） */
-  carbonEmission: number;
+  /** 單位重量（kg） */
+  unitWeight: number;
   /** 建檔者 */
   createdBy: string;
   /** 建檔日期 YYYY/MM/DD */
@@ -57,6 +57,7 @@ export interface PartRecord {
   plant: string;
   purchaseOrg: string;
   longDescription: string;
+  materialGroup: string;           // 物料群組（來自 MDO items.material_group）
   // 可編輯欄位
   qaCompletionDate: string;
   sampleDate: string;
@@ -73,6 +74,8 @@ export interface PartRecord {
   // 狀態
   quoteStatus: 'pending' | 'quoted';
   notifyStatus: 'sent' | 'unsent';
+  // MDO quotation UUIDs（供發送通知 API 使用）
+  mdoQuotationIds?: string[];
   notifySentAt?: string[];          // 寄送時間紀錄（可多次，對應催促機制）
   savedAt: string;
   updatedAt: string;
@@ -116,24 +119,19 @@ export const BRAND_OPTIONS = [
 ];
 
 /** 國貿條件（17 個） */
+// ✅ 僅保留 MDO supplier-quotations 支援的 Incoterms 2020 代碼
+// MDO enum: EXW / FCA / FOB / CFR / CIF / CPT / CIP / DAP / DPU / DDP
 export const TRADE_TERMS_OPTIONS = [
   { value: 'CFR', label: 'CFR (成本和運費)' },
   { value: 'CIF', label: 'CIF (成本、保險和運費)' },
   { value: 'CIP', label: 'CIP (運費與保險費已付)' },
   { value: 'CPT', label: 'CPT (已付運費)' },
-  { value: 'DAF', label: 'DAF (邊境交貨)' },
-  { value: 'DDP', label: 'DDP (交貨稅已付)' },
-  { value: 'DDU', label: 'DDU (交貨稅未付)' },
-  { value: 'DEQ', label: 'DEQ (碼頭交貨（已付稅）)' },
-  { value: 'DES', label: 'DES (船上交貨)' },
-  { value: 'EXW', label: 'EXW (工廠交貨條件)' },
-  { value: 'FAS', label: 'FAS (船邊交貨條件)' },
-  { value: 'FCA', label: 'FCA (向運送人交貨條件)' },
-  { value: 'FH', label: 'FH (免臨存費)' },
-  { value: 'FOB', label: 'FOB (免船費)' },
-  { value: 'UN', label: 'UN (非免稅)' },
-  { value: 'FOR', label: 'FOR' },
   { value: 'DAP', label: 'DAP (目的地交貨)' },
+  { value: 'DDP', label: 'DDP (交貨稅已付)' },
+  { value: 'DPU', label: 'DPU (卸貨地交貨)' },
+  { value: 'EXW', label: 'EXW (工廠交貨條件)' },
+  { value: 'FCA', label: 'FCA (向運送人交貨條件)' },
+  { value: 'FOB', label: 'FOB (船上交貨)' },
 ];
 
 /** 報價單位（24 個） */
@@ -294,8 +292,8 @@ export const MOCK_PARTS: PartRecord[] = [
       { id: bId(), brand: 'Scott', unitPrice: '380', currency: 'TWD', quoteQty: '300', leadTime: '45', moq: '150', tradeTerms: 'EXW', tradeTermsPlace: '台中工廠', quoteUnit: 'PCE', productType: '客製品' },
     ],
     materialCompositions: [
-      { id: 5001, esgMaterialId: 65, nameTw: '紙板（芯紙）', nameCn: '纸板（芯纸）', nameEn: 'Cardboard (core paper)', carbonEmission: 1.2, createdBy: 'Allen Zou 郝芳筆', createdAt: '2024/03/20' },
-      { id: 5002, esgMaterialId: 87, nameTw: '合成橡膠', nameCn: '合成橡胶', nameEn: 'Synthetic rubber', carbonEmission: 1.2, createdBy: 'Allen Zou 郝芳筆', createdAt: '2024/03/20' },
+      { id: 5001, esgMaterialId: 65, nameTw: '紙板（芯紙）', nameCn: '纸板（芯纸）', nameEn: 'Cardboard (core paper)', unitWeight: 0.5, createdBy: 'Allen Zou 郝芳筆', createdAt: '2024/03/20' },
+      { id: 5002, esgMaterialId: 87, nameTw: '合成橡膠', nameCn: '合成橡胶', nameEn: 'Synthetic rubber', unitWeight: 0.3, createdBy: 'Allen Zou 郝芳筆', createdAt: '2024/03/20' },
     ],
     quoteStatus: 'quoted', notifyStatus: 'sent',
     notifySentAt: ['2025/05/05 09:30', '2025/05/13 16:45'],

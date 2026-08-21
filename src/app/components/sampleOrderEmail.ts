@@ -36,9 +36,9 @@ function getSampleTypeLabel(type: string): string {
   return SAMPLE_TYPE_OPTIONS.find(o => o.value === type)?.label ?? type;
 }
 
-function isOverdue(vendorShipDate?: string, demandDate?: string): boolean {
-  if (!vendorShipDate || !demandDate) return false;
-  return vendorShipDate > demandDate;
+function isOverdue(supplierShipDate?: string, demandDate?: string): boolean {
+  if (!supplierShipDate || !demandDate) return false;
+  return supplierShipDate > demandDate;
 }
 
 function tableRowHtml(label: string, value: string, redText = false): string {
@@ -58,11 +58,11 @@ function infoBlockHtml(rows: { label: string; value: string }[]): string {
 }
 
 function vendorReplyTableHtml(order: SampleOrderRecord): string {
-  const overdue = isOverdue(order.vendorShipDate, order.demandDate);
-  const shipDateVal = order.vendorShipDate
+  const overdue = isOverdue(order.supplierShipDate, order.demandDate);
+  const shipDateVal = order.supplierShipDate
     ? (overdue
-      ? `<span style="color:#ff5630;font-weight:600">${order.vendorShipDate}</span>`
-      : order.vendorShipDate)
+      ? `<span style="color:#ff5630;font-weight:600">${order.supplierShipDate}</span>`
+      : order.supplierShipDate)
     : '—';
 
   return `
@@ -80,7 +80,7 @@ function vendorReplyTableHtml(order: SampleOrderRecord): string {
       </tr>
       <tr>
         <td style="padding:8px 12px;border:1px solid #e5e7eb;color:#637381;vertical-align:top">廠商日產能<br>Vendor Daily Capacity</td>
-        <td style="padding:8px 12px;border:1px solid #e5e7eb;color:#1c252e">${order.vendorDailyCapacity ?? '—'}</td>
+        <td style="padding:8px 12px;border:1px solid #e5e7eb;color:#1c252e">${order.supplierDailyCapacity ?? '—'}</td>
       </tr>
       <tr>
         <td style="padding:8px 12px;border:1px solid #e5e7eb;color:#637381;vertical-align:top">首批可供貨日<br>First Batch Available</td>
@@ -132,10 +132,10 @@ export function buildEmail1(order: SampleOrderRecord, createdByEmail: string): E
 
   const infoRows = [
     { label: '索樣單號', value: order.orderNo },
-    { label: '料號',     value: order.material },
+    { label: '料號',     value: order.materialNo },
     { label: '規格描述', value: order.longDescription },
     { label: '採購組織', value: order.purchaseOrg },
-    { label: '工廠',     value: order.plant },
+    { label: '工廠',     value: order.plantCode },
     { label: '索樣類型', value: sampleTypeLabel },
     { label: '重新索樣', value: order.resample ? '是' : '否' },
     { label: '樣品需求日', value: order.demandDate },
@@ -151,7 +151,7 @@ export function buildEmail1(order: SampleOrderRecord, createdByEmail: string): E
     <p style="color:rgba(255,255,255,0.8);font-size:13px;margin:4px 0 0">${order.orderNo}</p>
   </div>
   <div style="background:white;border:1px solid #e5e7eb;border-top:none;padding:24px;border-radius:0 0 8px 8px">
-    <p style="font-size:15px;margin:0 0 8px">親愛的 <strong>${order.vendorName}</strong> 夥伴，您好：</p>
+    <p style="font-size:15px;margin:0 0 8px">親愛的 <strong>${order.supplierName}</strong> 夥伴，您好：</p>
     <p style="color:#637381;font-size:14px;margin:0 0 16px">
       我方已正式開立以下索樣單，煩請您登入 EP（<a href="${SYSTEM_URL_VENDOR}" style="color:#00559c">${SYSTEM_URL_VENDOR}</a>）填寫相關樣品資訊，謝謝。
     </p>
@@ -165,7 +165,7 @@ export function buildEmail1(order: SampleOrderRecord, createdByEmail: string): E
     ${FOOTER_VENDOR_ZH}
     ${DIVIDER_HTML}
 
-    <p style="font-size:15px;margin:0 0 8px">Dear <strong>${order.vendorName}</strong>,</p>
+    <p style="font-size:15px;margin:0 0 8px">Dear <strong>${order.supplierName}</strong>,</p>
     <p style="color:#637381;font-size:14px;margin:0 0 16px">
       A sample request has been formally issued. Please log in to EP（<a href="${SYSTEM_URL_VENDOR}" style="color:#00559c">${SYSTEM_URL_VENDOR}</a>）and fill in the required sample information at your earliest convenience.
     </p>
@@ -177,10 +177,10 @@ export function buildEmail1(order: SampleOrderRecord, createdByEmail: string): E
       <tbody>
         ${[
           ['Sample Request No.', order.orderNo],
-          ['Part No.',           order.material],
+          ['Part No.',           order.materialNo],
           ['Description',        order.longDescription],
           ['Purchase Org.',      order.purchaseOrg],
-          ['Plant',              order.plant],
+          ['Plant',              order.plantCode],
           ['Sample Type',        sampleTypeLabel],
           ['Re-sample',          order.resample ? 'Yes' : 'No'],
           ['Required Date',      order.demandDate],
@@ -203,7 +203,7 @@ export function buildEmail1(order: SampleOrderRecord, createdByEmail: string): E
   const bodyText = [
     subjectZh,
     '',
-    `親愛的 ${order.vendorName} 夥伴，您好：`,
+    `親愛的 ${order.supplierName} 夥伴，您好：`,
     `我方已正式開立以下索樣單，煩請您登入 EP（${SYSTEM_URL_VENDOR}）填寫相關樣品資訊，謝謝。`,
     '',
     ...infoRows.map(r => `  ${r.label}：${r.value}`),
@@ -212,7 +212,7 @@ export function buildEmail1(order: SampleOrderRecord, createdByEmail: string): E
     '',
     '════════════════════════════════════════',
     '',
-    `Dear ${order.vendorName},`,
+    `Dear ${order.supplierName},`,
     `A sample request has been formally issued. Please log in to EP (${SYSTEM_URL_VENDOR}).`,
   ].join('\n');
 
@@ -220,7 +220,7 @@ export function buildEmail1(order: SampleOrderRecord, createdByEmail: string): E
     emailNo: 1,
     trigger: 'DR → V（正式開立索樣單）',
     recipientType: '廠商業務',
-    recipientQuery: `廠商業務帳號：vendorCode=${order.vendorCode}，篩選 role='業務' AND status='active'`,
+    recipientQuery: `廠商業務帳號：supplierCode=${order.supplierCode}，篩選 role='業務' AND status='active'`,
     subjectZh,
     subjectEn,
     bodyHtml,
@@ -233,7 +233,7 @@ export function buildEmail1(order: SampleOrderRecord, createdByEmail: string): E
 export function buildEmail2(order: SampleOrderRecord): EmailPayload {
   const subjectZh = `【EP】廠商已回覆索樣單 - ${order.orderNo}`;
   const subjectEn = `[Giant] Sample Request - Vendor Replied - ${order.orderNo} Please Review`;
-  const overdue = isOverdue(order.vendorShipDate, order.demandDate);
+  const overdue = isOverdue(order.supplierShipDate, order.demandDate);
 
   const bodyHtml = `
 <div style="font-family:'Noto Sans TC','Helvetica Neue',Arial,sans-serif;max-width:640px;margin:0 auto;color:#1c252e">
@@ -249,8 +249,8 @@ export function buildEmail2(order: SampleOrderRecord): EmailPayload {
 
     ${infoBlockHtml([
       { label: '索樣單號', value: order.orderNo },
-      { label: '廠商',     value: `${order.vendorName} (${order.vendorCode})` },
-      { label: '料號',     value: order.material },
+      { label: '廠商',     value: `${order.supplierName} (${order.supplierCode})` },
+      { label: '料號',     value: order.materialNo },
       { label: '規格描述', value: order.longDescription },
       { label: '樣品需求日', value: order.demandDate },
       { label: '需求數量', value: order.demandQty != null ? String(order.demandQty) : '—' },
@@ -310,14 +310,14 @@ export function buildEmail3(
     <p style="color:rgba(255,255,255,0.8);font-size:13px;margin:4px 0 0">${order.orderNo}</p>
   </div>
   <div style="background:white;border:1px solid #e5e7eb;border-top:none;padding:24px;border-radius:0 0 8px 8px">
-    <p style="font-size:15px;margin:0 0 8px">親愛的 <strong>${order.vendorName}</strong> 夥伴，您好：</p>
+    <p style="font-size:15px;margin:0 0 8px">親愛的 <strong>${order.supplierName}</strong> 夥伴，您好：</p>
     <p style="color:#637381;font-size:14px;margin:0 0 16px">
       以下索樣單仍有欄位資料不齊全，煩請您盡快登入系統（<a href="${SYSTEM_URL_VENDOR}" style="color:#00559c">${SYSTEM_URL_VENDOR}</a>）補齊，謝謝。
     </p>
 
     ${infoBlockHtml([
       { label: '索樣單號',  value: order.orderNo },
-      { label: '料號',      value: order.material },
+      { label: '料號',      value: order.materialNo },
       { label: '規格描述',  value: order.longDescription },
       { label: '樣品需求日', value: order.demandDate },
       { label: '退回時間',  value: order.updatedAt },
@@ -336,13 +336,13 @@ export function buildEmail3(
     ${FOOTER_VENDOR_ZH}
     ${DIVIDER_HTML}
 
-    <p style="font-size:15px;margin:0 0 8px">Dear <strong>${order.vendorName}</strong>,</p>
+    <p style="font-size:15px;margin:0 0 8px">Dear <strong>${order.supplierName}</strong>,</p>
     <p style="color:#637381;font-size:14px;margin:0 0 16px">
       The following sample request still has incomplete information. Please log in to the system (<a href="${SYSTEM_URL_VENDOR}" style="color:#00559c">${SYSTEM_URL_VENDOR}</a>) and fill in the missing fields as soon as possible.
     </p>
     ${infoBlockHtml([
       { label: 'Sample Request No.', value: order.orderNo },
-      { label: 'Part No.',           value: order.material },
+      { label: 'Part No.',           value: order.materialNo },
       { label: 'Description',        value: order.longDescription },
       { label: 'Required Date',      value: order.demandDate },
       { label: 'Returned At',        value: order.updatedAt },
@@ -373,11 +373,11 @@ export function buildEmail3(
     emailNo: 3,
     trigger: 'SC → V（退回廠商補齊資料）',
     recipientType: '廠商業務',
-    recipientQuery: `廠商業務帳號：vendorCode=${order.vendorCode}，篩選 role='業務' AND status='active'`,
+    recipientQuery: `廠商業務帳號：supplierCode=${order.supplierCode}，篩選 role='業務' AND status='active'`,
     subjectZh,
     subjectEn,
     bodyHtml,
-    bodyText: `${subjectZh}\n\n親愛的 ${order.vendorName} 夥伴，您好：\n以下索樣單仍有欄位資料不齊全。\n索樣單號：${order.orderNo}\n缺少欄位：${missingFields.join('、')}`,
+    bodyText: `${subjectZh}\n\n親愛的 ${order.supplierName} 夥伴，您好：\n以下索樣單仍有欄位資料不齊全。\n索樣單號：${order.orderNo}\n缺少欄位：${missingFields.join('、')}`,
   };
 }
 
@@ -386,7 +386,7 @@ export function buildEmail3(
 export function buildEmail4(order: SampleOrderRecord): EmailPayload {
   const subjectZh = `【EP】廠商已補填索樣單資料 - ${order.orderNo}`;
   const subjectEn = `[Giant] Sample Request - Vendor Re-submitted - ${order.orderNo} Please Review`;
-  const overdue = isOverdue(order.vendorShipDate, order.demandDate);
+  const overdue = isOverdue(order.supplierShipDate, order.demandDate);
 
   const bodyHtml = `
 <div style="font-family:'Noto Sans TC','Helvetica Neue',Arial,sans-serif;max-width:640px;margin:0 auto;color:#1c252e">
@@ -402,8 +402,8 @@ export function buildEmail4(order: SampleOrderRecord): EmailPayload {
 
     ${infoBlockHtml([
       { label: '索樣單號', value: order.orderNo },
-      { label: '廠商',     value: `${order.vendorName} (${order.vendorCode})` },
-      { label: '料號',     value: order.material },
+      { label: '廠商',     value: `${order.supplierName} (${order.supplierCode})` },
+      { label: '料號',     value: order.materialNo },
       { label: '規格描述', value: order.longDescription },
       { label: '樣品需求日', value: order.demandDate },
       { label: '需求數量', value: order.demandQty != null ? String(order.demandQty) : '—' },

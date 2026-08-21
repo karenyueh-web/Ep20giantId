@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Toaster } from '@/app/components/ui/sonner';
 import { StandardDataTable, type StandardColumn } from './StandardDataTable';
@@ -18,6 +18,7 @@ import {
   type SampleOrderRecord,
   type SampleOrderStatus,
 } from './sampleOrderData';
+import { fetchSampleOrders } from '../api/supplier/sampleOrders';
 
 // ── Tab 定義（依示意圖） ────────────────────────────────────────────────────
 type TabId = 'all' | SampleOrderStatus;
@@ -63,8 +64,45 @@ interface SampleOrderListPageProps {
 
 // ── 主元件 ─────────────────────────────────────────────────────────────────────
 export default function SampleOrderListPage({ userRole: _userRole }: SampleOrderListPageProps) {
-  // ── 資料 state ──────────────────────────────────────────────────────────────
-  const [orders, setOrders] = useState<SampleOrderRecord[]>(() => getSampleOrders());
+  // ── 資料 state ───────────────────────────────────────────────────────────────────────────
+  const [orders,     setOrders]     = useState<SampleOrderRecord[]>([]);
+  const [isLoading,  setIsLoading]  = useState(true);
+  const [loadError,  setLoadError]  = useState<string | null>(null);
+
+  // 從 MDO 拉取資料的函式（MDO limit 上限 100，超過會 VALIDATION_FAILED）
+  const loadOrders = useCallback(async () => {
+    setIsLoading(true);
+    setLoadError(null);
+    try {
+      // 第一頁
+      const first = await fetchSampleOrders({ limit: 100, page: 1 });
+      let all = first.data;
+
+      // 若總筆數超過 100，逐頁抓取剩餘資料
+      const totalPages = Math.ceil(first.total / 100);
+      if (totalPages > 1) {
+        const rest = await Promise.all(
+          Array.from({ length: totalPages - 1 }, (_, i) =>
+            fetchSampleOrders({ limit: 100, page: i + 2 })
+          )
+        );
+        rest.forEach((r) => { all = all.concat(r.data); });
+      }
+
+      setOrders(all);
+    } catch (err) {
+      console.error('[MDO] fetchSampleOrders failed:', err);
+      setLoadError('資料載入失敗，請檢查內部網路後重整頁面');
+      setOrders([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // 首次載入
+  useEffect(() => {
+    loadOrders();
+  }, [loadOrders]);
 
   // ── 明細彈窗 state ──────────────────────────────────────────────────────
   const [detailOrder, setDetailOrder] = useState<SampleOrderRecord | null>(null);
@@ -136,7 +174,7 @@ export default function SampleOrderListPage({ userRole: _userRole }: SampleOrder
     }
     if (filterMaterial.trim()) {
       const kw = filterMaterial.trim().toLowerCase();
-      data = data.filter((o) => o.material.toLowerCase().includes(kw));
+      data = data.filter((o) => o.materialNo.toLowerCase().includes(kw));
     }
     if (filterVendor.trim()) {
       // 支援逗號分隔多廠商，各 token OR 聯集
@@ -146,8 +184,8 @@ export default function SampleOrderListPage({ userRole: _userRole }: SampleOrder
         .filter(Boolean);
       data = data.filter(o =>
         tokens.some(t =>
-          o.vendorName.toLowerCase().includes(t) ||
-          o.vendorCode.toLowerCase().includes(t)
+          o.supplierName.toLowerCase().includes(t) ||
+          o.supplierCode.toLowerCase().includes(t)
         )
       );
     }
@@ -168,7 +206,7 @@ export default function SampleOrderListPage({ userRole: _userRole }: SampleOrder
       return;
     }
     deleteSampleOrders(drIds);
-    setOrders([...getSampleOrders()]);
+    loadOrders();                       // MDO 重新拉取
     setSelectedIds(new Set());
 
     if (nonDrCount > 0) {
@@ -176,7 +214,7 @@ export default function SampleOrderListPage({ userRole: _userRole }: SampleOrder
     } else {
       toast.success(`已刪除 ${drIds.length} 筆索樣單`);
     }
-  }, [selectedIds, orders]);
+  }, [selectedIds, orders, loadOrders]);
 
   // 開啟批次取消 Dialog
   const handleCancelSelected = useCallback(() => {
@@ -208,12 +246,12 @@ export default function SampleOrderListPage({ userRole: _userRole }: SampleOrder
       });
     });
 
-    setOrders([...getSampleOrders()]);
+    loadOrders();                       // MDO 重新拉取
     setSelectedIds(new Set());
     setCancelDialogOpen(false);
     setCancelReason('');
     toast.success(`已取消 ${ids.length} 筆索樣單`);
-  }, [selectedIds, cancelReason]);
+  }, [selectedIds, cancelReason, loadOrders]);
 
   const handlePrintSelected = useCallback(() => {
     const ids = Array.from(selectedIds);
@@ -236,7 +274,7 @@ export default function SampleOrderListPage({ userRole: _userRole }: SampleOrder
     () =>
       filteredData.map((o) => ({
         ...o,
-        vendorDisplay: `${o.vendorName}(${o.vendorCode})`,
+        vendorDisplay: `${o.supplierName}(${o.supplierCode})`,
         resampleLabel: o.resample ? '是' : '否',
         sampleTypeLabel: o.sampleType === 'D' ? 'D(開發樣)' : 'G(量產品)',
         updatedInfo: `${o.createdBy}-${o.updatedAt}`,
@@ -267,32 +305,32 @@ export default function SampleOrderListPage({ userRole: _userRole }: SampleOrder
         minWidth: 80,
         renderCell: (_val, row) => <StatusBadge status={row.status} />,
       },
-      { key: 'vendorDisplay', label: '供應商(編號)', width: 170, minWidth: 130 },
-      { key: 'purchaseOrg',   label: '採購組織',   width: 110, minWidth: 90 },
-      { key: 'plant',         label: '工廠',       width: 70,  minWidth: 60 },
-      { key: 'material',      label: '料號',       width: 170, minWidth: 140 },
-      { key: 'longDescription',    label: '長規格敘述',   width: 260, minWidth: 180 },
-      { key: 'vendorMaterialNo',   label: '供應商料號',   width: 140, minWidth: 100, renderCell: (val) => <span className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] text-[14px] leading-[22px]">{val || '—'}</span> },
-      { key: 'resampleLabel',      label: '重新索樣',     width: 80,  minWidth: 70 },
-      { key: 'sampleTypeLabel',    label: '索樣類型',     width: 100, minWidth: 80 },
-      { key: 'demandDate',         label: '樣品需求日',   width: 110, minWidth: 90 },
-      { key: 'demandQty',          label: '需求數量',     width: 90,  minWidth: 70, renderCell: (val) => <span className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] text-[14px] leading-[22px]">{val ?? '—'}</span> },
-      { key: 'vendorShipDate',     label: '樣品達交日',   width: 110, minWidth: 90, renderCell: (_val, row) => {
-        if (!row.vendorShipDate) return <span className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] text-[14px] leading-[22px] text-[#919eab]">—</span>;
-        const isLate = row.vendorShipDate > row.demandDate;
-        const bothSafe = (!row.vendorShipDate || row.vendorShipDate <= row.demandDate) && (!row.actualShipDate || row.actualShipDate <= row.demandDate);
+      { key: 'vendorDisplay',          label: '供應商(編號)', width: 170, minWidth: 130 },
+      { key: 'purchaseOrg',             label: '採購組織',   width: 110, minWidth: 90 },
+      { key: 'plantCode',               label: '工廠',       width: 70,  minWidth: 60 },
+      { key: 'materialNo',              label: '料號',       width: 170, minWidth: 140 },
+      { key: 'longDescription',         label: '長規格敘述',   width: 260, minWidth: 180 },
+      { key: 'supplierMaterialNo',      label: '供應商料號',   width: 140, minWidth: 100, renderCell: (val) => <span className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] text-[14px] leading-[22px]">{val || '—'}</span> },
+      { key: 'resampleLabel',           label: '重新索樣',     width: 80,  minWidth: 70 },
+      { key: 'sampleTypeLabel',         label: '索樣類型',     width: 100, minWidth: 80 },
+      { key: 'demandDate',              label: '樣品需求日',   width: 110, minWidth: 90 },
+      { key: 'demandQty',               label: '需求數量',     width: 90,  minWidth: 70, renderCell: (val) => <span className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] text-[14px] leading-[22px]">{val ?? '—'}</span> },
+      { key: 'supplierShipDate',        label: '樣品達交日',   width: 110, minWidth: 90, renderCell: (_val, row) => {
+        if (!row.supplierShipDate) return <span className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] text-[14px] leading-[22px] text-[#919eab]">—</span>;
+        const isLate = row.supplierShipDate > row.demandDate;
+        const bothSafe = (!row.supplierShipDate || row.supplierShipDate <= row.demandDate) && (!row.actualShipDate || row.actualShipDate <= row.demandDate);
         const color = isLate ? '#ff5630' : bothSafe ? '#118d57' : '#1c252e';
-        return <span className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] text-[14px] leading-[22px]" style={{ color }}>{row.vendorShipDate}</span>;
+        return <span className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] text-[14px] leading-[22px]" style={{ color }}>{row.supplierShipDate}</span>;
       }},
-      { key: 'actualShipDate',     label: '實際送樣日',   width: 110, minWidth: 90, renderCell: (_val, row) => {
+      { key: 'actualShipDate',          label: '實際送樣日',   width: 110, minWidth: 90, renderCell: (_val, row) => {
         if (!row.actualShipDate) return <span className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] text-[14px] leading-[22px] text-[#919eab]">—</span>;
         const isLate = row.actualShipDate > row.demandDate;
-        const bothSafe = (!row.vendorShipDate || row.vendorShipDate <= row.demandDate) && (!row.actualShipDate || row.actualShipDate <= row.demandDate);
+        const bothSafe = (!row.supplierShipDate || row.supplierShipDate <= row.demandDate) && (!row.actualShipDate || row.actualShipDate <= row.demandDate);
         const color = isLate ? '#ff5630' : bothSafe ? '#118d57' : '#1c252e';
         return <span className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] text-[14px] leading-[22px]" style={{ color }}>{row.actualShipDate}</span>;
       }},
-      { key: 'availableDate',      label: '首批可供貨日', width: 120, minWidth: 100, renderCell: (val) => <span className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] text-[14px] leading-[22px]">{val || '—'}</span> },
-      { key: 'vendorDailyCapacity', label: '廠商日產能',  width: 100, minWidth: 80, renderCell: (val) => <span className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] text-[14px] leading-[22px]">{val ?? '—'}</span> },
+      { key: 'availableDate',           label: '首批可供貨日', width: 120, minWidth: 100, renderCell: (val) => <span className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] text-[14px] leading-[22px]">{val || '—'}</span> },
+      { key: 'supplierDailyCapacity',   label: '廠商日產能',  width: 100, minWidth: 80, renderCell: (val) => <span className="font-['Public_Sans:Regular','Noto_Sans_JP:Regular',sans-serif] text-[14px] leading-[22px]">{val ?? '—'}</span> },
       { key: 'createdAt',          label: '建立時間',     width: 140, minWidth: 110 },
       { key: 'updatedInfo',        label: '更新時間',     width: 190, minWidth: 150 },
     ],
@@ -455,7 +493,7 @@ export default function SampleOrderListPage({ userRole: _userRole }: SampleOrder
           order={detailOrder}
           onClose={() => setDetailOrder(null)}
           onUpdated={(updated) => {
-            setOrders([...getSampleOrders()]);
+            loadOrders();               // MDO 重新拉取
             setDetailOrder(null);
             if (updated.status === 'V') {
               setActiveTab('V');

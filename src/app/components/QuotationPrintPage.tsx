@@ -340,7 +340,7 @@ function ZhQuotationDoc({ parts, selectedBrandIds }: { parts: PartRecord[]; sele
                     <tr><td colSpan={12} style={{ ...td, textAlign: 'center', color: '#919eab' }}>尚無品牌設定資料</td></tr>
                   ) : pageLines.map((b, i) => (
                     <tr key={i}>
-                      <td style={td}></td>
+                      <td style={td}>{b._part.materialGroup}</td>
                       <td style={td}>{b._part.material}</td>
                       <td style={{ ...td, textAlign: 'center' }}>{b._part.plant}</td>
                       <td style={td}>{b._part.longDescription}</td>
@@ -348,7 +348,7 @@ function ZhQuotationDoc({ parts, selectedBrandIds }: { parts: PartRecord[]; sele
                       <td style={{ ...td, textAlign: 'center' }}>{b.quoteUnit}</td>
                       <td style={{ ...td, textAlign: 'right' }}>{b.unitPrice ? Number(b.unitPrice).toLocaleString() : ''}</td>
                       <td style={{ ...td, textAlign: 'center' }}>{b.currency}</td>
-                      <td style={td}>{b.brand}</td>
+                      <td style={td}>{b.brand || 'ALL'}</td>
                       <td style={{ ...td, textAlign: 'center' }}>{b.productType}</td>
                       <td style={{ ...td, textAlign: 'center' }}>{b.leadTime}</td>
                       <td style={td}>{b.tradeTerms}{b.tradeTermsPlace ? ` (${b.tradeTermsPlace})` : ''}</td>
@@ -523,7 +523,7 @@ function EnQuotationDoc({ parts, selectedBrandIds }: { parts: PartRecord[]; sele
                     <tr><td colSpan={12} style={{ ...td, textAlign: 'center', color: '#919eab' }}>No brand setting data available</td></tr>
                   ) : pageLines.map((b, i) => (
                     <tr key={i}>
-                      <td style={{ ...td, wordBreak: 'break-all' }}></td>
+                      <td style={{ ...td, wordBreak: 'break-all' }}>{b._part.materialGroup}</td>
                       <td style={{ ...td, wordBreak: 'break-all' }}>{b._part.material}</td>
                       <td style={{ ...td, textAlign: 'center' }}>{b._part.plant}</td>
                       <td style={{ ...td, wordBreak: 'break-word' }}>{b._part.longDescription}</td>
@@ -531,7 +531,7 @@ function EnQuotationDoc({ parts, selectedBrandIds }: { parts: PartRecord[]; sele
                       <td style={{ ...td, textAlign: 'center' }}>{b.quoteUnit}</td>
                       <td style={{ ...td, textAlign: 'right' }}>{b.unitPrice ? Number(b.unitPrice).toLocaleString() : ''}</td>
                       <td style={{ ...td, textAlign: 'center' }}>{b.currency}</td>
-                      <td style={{ ...td, wordBreak: 'break-word' }}>{b.brand}</td>
+                      <td style={{ ...td, wordBreak: 'break-word' }}>{b.brand || 'ALL'}</td>
                       <td style={{ ...td, textAlign: 'center' }}>{b.productType}</td>
                       <td style={{ ...td, textAlign: 'center' }}>{b.leadTime}</td>
                       <td style={{ ...td, wordBreak: 'break-word' }}>{b.tradeTerms}{b.tradeTermsPlace ? ` (${b.tradeTermsPlace})` : ''}</td>

@@ -88,6 +88,7 @@ export interface MdoMaterialComposition {
   name_cn?: string;
   name_en?: string;
   carbon_emission?: number | string;
+  is_deleted?: boolean;     // 軟刪除標記
   created_by?: string;
   updated_by?: string;
   created_at: string;
@@ -123,4 +124,20 @@ export async function fetchMaterialCompositionsByItem(
     `/quality-esg/material-compositions/by-item/${itemId}`
   );
   return res.data;
+}
+
+export interface DeleteMaterialCompositionBody {
+  itemId: string;       // product-master items UUID
+  esgMaterialId: string; // esg_material UUID
+  updatedBy?: string;
+}
+
+/** 刪除物料成分 */
+export async function deleteMaterialComposition(
+  body: DeleteMaterialCompositionBody
+): Promise<void> {
+  await mdoCommand<DeleteMaterialCompositionBody, unknown>(
+    '/quality-esg/material-compositions/commands/delete',
+    body
+  );
 }

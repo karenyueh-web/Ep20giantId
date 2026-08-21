@@ -23,6 +23,11 @@ import {
 } from './sampleOrderData';
 import { buildEmail1, buildEmail2, buildEmail3, buildEmail4 } from './sampleOrderEmail';
 
+// 取得登入使用者（待接 auth context 後可替換）
+function getCurrentUser(): string {
+  return localStorage.getItem('currentUserName') || localStorage.getItem('currentUserEmail') || '未知使用者';
+}
+
 // Mock AD 帳號 Email 對照（實際由後端查詢 AD）
 const MOCK_AD_EMAIL: Record<string, string> = {
   '王大明': 'wang.daming@giant-bicycles.com',
@@ -383,13 +388,13 @@ export function SampleOrderDetailOverlay({
   const canReply  = order.status === 'V';
 
   // 廠商回覆欄位
-  // - vendorShipDate: V 狀態預設帶入樣品需求日
+  // - supplierShipDate: V 狀態預設帶入樣品需求日
   // - actualShipDate: 無預設值（用戶需自行填寫）
-  const [vendorShipDate, setVendorShipDate]           = useState(order.vendorShipDate ?? (order.status === 'V' ? order.demandDate : ''));
-  const [actualShipDate, setActualShipDate]           = useState(order.actualShipDate ?? '');
-  const [availableDate, setAvailableDate]             = useState(order.availableDate ?? '');
-  const [vendorDailyCapacity, setVendorDailyCapacity] = useState(
-    order.vendorDailyCapacity != null ? String(order.vendorDailyCapacity) : '',
+  const [supplierShipDate, setSupplierShipDate]           = useState(order.supplierShipDate ?? (order.status === 'V' ? order.demandDate : ''));
+  const [actualShipDate, setActualShipDate]               = useState(order.actualShipDate ?? '');
+  const [availableDate, setAvailableDate]                 = useState(order.availableDate ?? '');
+  const [supplierDailyCapacity, setSupplierDailyCapacity] = useState(
+    order.supplierDailyCapacity != null ? String(order.supplierDailyCapacity) : '',
   );
 
   // DR 可編輯欄位 state
@@ -403,18 +408,18 @@ export function SampleOrderDetailOverlay({
   // 回覆採購按下後才觸發紅框
   const [replySubmitted, setReplySubmitted] = useState(false);
   // SC 狀態：廠商回覆區全部欄位可調整
-  const [scVendorShipDate,     setScVendorShipDate]     = useState(order.vendorShipDate     ?? '');
-  const [scVendorDailyCapacity, setScVendorDailyCapacity] = useState(
-    order.vendorDailyCapacity != null ? String(order.vendorDailyCapacity) : '',
+  const [scSupplierShipDate,     setScSupplierShipDate]     = useState(order.supplierShipDate     ?? '');
+  const [scSupplierDailyCapacity, setScSupplierDailyCapacity] = useState(
+    order.supplierDailyCapacity != null ? String(order.supplierDailyCapacity) : '',
   );
   const [scAvailableDate,  setScAvailableDate]  = useState(order.availableDate  ?? '');
   const [scActualShipDate, setScActualShipDate] = useState(order.actualShipDate ?? '');
 
   const handleReply = () => {
     setReplySubmitted(true);
-    const shipEmpty  = !vendorShipDate;
-    const capNum     = Number(vendorDailyCapacity);
-    const capInvalid = !vendorDailyCapacity || !Number.isInteger(capNum) || capNum <= 0;
+    const shipEmpty  = !supplierShipDate;
+    const capNum     = Number(supplierDailyCapacity);
+    const capInvalid = !supplierDailyCapacity || !Number.isInteger(capNum) || capNum <= 0;
     if (shipEmpty || capInvalid) return;
 
     const now = new Date();
@@ -422,20 +427,20 @@ export function SampleOrderDetailOverlay({
     const ts = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
 
     const updated = updateSampleOrderVendorReply(order.id, {
-      vendorShipDate,
+      supplierShipDate,
       actualShipDate,
       availableDate,
-      vendorDailyCapacity: vendorDailyCapacity ? Number(vendorDailyCapacity) : undefined,
+      supplierDailyCapacity: supplierDailyCapacity ? Number(supplierDailyCapacity) : undefined,
     });
     addSampleOrderHistory(order.id, {
       date: ts,
       event: '回覆採購',
-      operator: '王大明',
+      operator: getCurrentUser(),
       remark: [
-        vendorShipDate      ? `樣品達交日：${vendorShipDate}`       : null,
-        capNum > 0          ? `日產能：${capNum}`                        : null,
-        availableDate       ? `首批可供貨日：${availableDate}`  : null,
-        actualShipDate      ? `實際送樣日：${actualShipDate}`      : null,
+        supplierShipDate      ? `樣品達交日：${supplierShipDate}`       : null,
+        capNum > 0            ? `日產能：${capNum}`                             : null,
+        availableDate         ? `首批可供貨日：${availableDate}`     : null,
+        actualShipDate        ? `實際送樣日：${actualShipDate}`          : null,
       ].filter(Boolean).join('，'),
     });
     if (updated) onUpdated?.(updated);
@@ -443,10 +448,10 @@ export function SampleOrderDetailOverlay({
     // 觸發寄信：首次回覆 → 信二；補填後回覆 → 信四
     const latestOrder: SampleOrderRecord = {
       ...order,
-      vendorShipDate,
+      supplierShipDate,
       actualShipDate: actualShipDate || undefined,
       availableDate: availableDate || undefined,
-      vendorDailyCapacity: capNum > 0 ? capNum : undefined,
+      supplierDailyCapacity: capNum > 0 ? capNum : undefined,
       status: 'SC',
     };
     const email = order.needsFullVendorReply
@@ -480,7 +485,7 @@ export function SampleOrderDetailOverlay({
     addSampleOrderHistory(order.id, {
       date: ts,
       event: '草稿已儲存',
-      operator: '王大明',
+      operator: getCurrentUser(),
       remark: [
         `索樣類型：${sampleTypeLabel}`,
         drDemandDate  ? `樣品需求日：${drDemandDate}`  : null,
@@ -516,7 +521,7 @@ export function SampleOrderDetailOverlay({
     addSampleOrderHistory(order.id, {
       date: ts,
       event: '轉交廠商',
-      operator: '王大明',
+      operator: getCurrentUser(),
       remark: [
         `索樣類型：${sampleTypeLabel}`,
         drDemandDate  ? `樣品需求日：${drDemandDate}`  : null,
@@ -558,7 +563,7 @@ export function SampleOrderDetailOverlay({
     addSampleOrderHistory(order.id, {
       date: ts,
       event: '取消索樣',
-      operator: '王大明',
+      operator: getCurrentUser(),
       remark: cancelReason || '(無原因)',
     });
     if (updated) onUpdated?.(updated);
@@ -571,29 +576,29 @@ export function SampleOrderDetailOverlay({
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, '0');
     const ts = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
-    const capNum = Number(scVendorDailyCapacity);
-    const capOk  = scVendorDailyCapacity && Number.isInteger(capNum) && capNum > 0;
+    const capNum = Number(scSupplierDailyCapacity);
+    const capOk  = scSupplierDailyCapacity && Number.isInteger(capNum) && capNum > 0;
 
     const updated = updateSampleOrderVendorReply(order.id, {
-      vendorShipDate:      scVendorShipDate || undefined,
-      vendorDailyCapacity: capOk ? capNum   : undefined,
-      availableDate:       scAvailableDate  || undefined,
-      actualShipDate:      scActualShipDate || undefined,
+      supplierShipDate:      scSupplierShipDate || undefined,
+      supplierDailyCapacity: capOk ? capNum     : undefined,
+      availableDate:         scAvailableDate    || undefined,
+      actualShipDate:        scActualShipDate   || undefined,
     });
 
     // 只記錄本次有變動的欄位
-    const origCapStr = order.vendorDailyCapacity != null ? String(order.vendorDailyCapacity) : '';
+    const origCapStr = order.supplierDailyCapacity != null ? String(order.supplierDailyCapacity) : '';
     const changes: string[] = [];
-    if (scVendorShipDate  !== (order.vendorShipDate  ?? '')) changes.push(`樣品達交日：${scVendorShipDate  || '（清空）'}`);
-    if (scVendorDailyCapacity !== origCapStr)                changes.push(`日產能：${scVendorDailyCapacity || '（清空）'}`);
-    if (scAvailableDate   !== (order.availableDate   ?? '')) changes.push(`首批可供貨日：${scAvailableDate  || '（清空）'}`);
-    if (scActualShipDate  !== (order.actualShipDate  ?? '')) changes.push(`實際送樣日：${scActualShipDate  || '（清空）'}`);
+    if (scSupplierShipDate     !== (order.supplierShipDate     ?? '')) changes.push(`樣品達交日：${scSupplierShipDate     || '（清空）'}`);
+    if (scSupplierDailyCapacity !== origCapStr)                        changes.push(`日產能：${scSupplierDailyCapacity || '（清空）'}`);
+    if (scAvailableDate         !== (order.availableDate         ?? '')) changes.push(`首批可供貨日：${scAvailableDate         || '（清空）'}`);
+    if (scActualShipDate        !== (order.actualShipDate        ?? '')) changes.push(`實際送樣日：${scActualShipDate        || '（清空）'}`);
 
     if (changes.length > 0) {
       addSampleOrderHistory(order.id, {
         date: ts,
         event: '廠商回覆資料已更新',
-        operator: '王大明',
+        operator: getCurrentUser(),
         remark: changes.join('，'),
       });
     }
@@ -603,23 +608,23 @@ export function SampleOrderDetailOverlay({
 
   // SC：關閉結案（先存全部 SC 欄位，再檢查完整性）
   const handleCloseToCL = () => {
-    const capNum = Number(scVendorDailyCapacity);
-    const capOk  = scVendorDailyCapacity && Number.isInteger(capNum) && capNum > 0;
+    const capNum = Number(scSupplierDailyCapacity);
+    const capOk  = scSupplierDailyCapacity && Number.isInteger(capNum) && capNum > 0;
 
     // 先存目前所有 SC 欄位
     updateSampleOrderVendorReply(order.id, {
-      vendorShipDate:      scVendorShipDate || undefined,
-      vendorDailyCapacity: capOk ? capNum  : undefined,
-      availableDate:       scAvailableDate  || undefined,
-      actualShipDate:      scActualShipDate || undefined,
+      supplierShipDate:      scSupplierShipDate || undefined,
+      supplierDailyCapacity: capOk ? capNum    : undefined,
+      availableDate:         scAvailableDate   || undefined,
+      actualShipDate:        scActualShipDate  || undefined,
     });
 
     // 檢查必填欄位（以 local state 為主）
     const missing: string[] = [];
-    if (!scVendorShipDate)  missing.push('樣品達交日');
-    if (!capOk)             missing.push('廠商日產能');
-    if (!scActualShipDate)  missing.push('實際送樣日');
-    if (!scAvailableDate)   missing.push('首批可供貨日');
+    if (!scSupplierShipDate)     missing.push('樣品達交日');
+    if (!capOk)                  missing.push('廠商日產能');
+    if (!scActualShipDate)       missing.push('實際送樣日');
+    if (!scAvailableDate)        missing.push('首批可供貨日');
 
     if (missing.length > 0) {
       setMissingFields(missing);
@@ -635,7 +640,7 @@ export function SampleOrderDetailOverlay({
     addSampleOrderHistory(order.id, {
       date: ts,
       event: '關閉結案',
-      operator: '王大明',
+      operator: getCurrentUser(),
       remark: '',
     });
     const updated = getSampleOrders().find(o => o.id === order.id) ?? null;
@@ -652,7 +657,7 @@ export function SampleOrderDetailOverlay({
     addSampleOrderHistory(order.id, {
       date: ts,
       event: '退回廠商補填（資料不齊全）',
-      operator: '王大明',
+      operator: getCurrentUser(),
       remark: `缺少欄位：${missingFields.join('、')}`,
     });
     if (updated) onUpdated?.(updated);
@@ -781,8 +786,8 @@ export function SampleOrderDetailOverlay({
 
             {/* 第二列：工廠 / 供應商料號 */}
             <div className="grid grid-cols-3 gap-[16px]">
-              <InfoField label="工廠"     value={order.plant} />
-              <InfoField label="供應商料號" value={order.vendorMaterialNo ?? ''} />
+              <InfoField label="工廠"     value={order.plantCode} />
+              <InfoField label="供應商料號" value={order.supplierMaterialNo ?? ''} />
             </div>
           </SectionBox>
 
@@ -861,25 +866,25 @@ export function SampleOrderDetailOverlay({
                 {canReply ? (
                   <DateInput
                     label="樣品達交日"
-                    value={vendorShipDate}
-                    onChange={setVendorShipDate}
-                    hasError={replySubmitted && !vendorShipDate}
+                    value={supplierShipDate}
+                    onChange={setSupplierShipDate}
+                    hasError={replySubmitted && !supplierShipDate}
                     required
-                    isLate={!!vendorShipDate && !!order.demandDate && vendorShipDate > order.demandDate}
+                    isLate={!!supplierShipDate && !!order.demandDate && supplierShipDate > order.demandDate}
                   />
                 ) : order.status === 'SC' ? (
                   <DateInput
                     label="樣品達交日"
-                    value={scVendorShipDate}
-                    onChange={setScVendorShipDate}
-                    isLate={!!scVendorShipDate && !!order.demandDate && scVendorShipDate > order.demandDate}
+                    value={scSupplierShipDate}
+                    onChange={setScSupplierShipDate}
+                    isLate={!!scSupplierShipDate && !!order.demandDate && scSupplierShipDate > order.demandDate}
                   />
                 ) : (
                   <FloatingInput
                     label="樣品達交日"
-                    value={order.vendorShipDate ?? ''}
+                    value={order.supplierShipDate ?? ''}
                     readOnly
-                    textColor={order.vendorShipDate && order.demandDate && order.vendorShipDate > order.demandDate ? '#ff5630' : '#637381'}
+                    textColor={order.supplierShipDate && order.demandDate && order.supplierShipDate > order.demandDate ? '#ff5630' : '#637381'}
                   />
                 )}
 
@@ -887,18 +892,18 @@ export function SampleOrderDetailOverlay({
                 <NumberInput
                   label="廠商日產能"
                   value={
-                    canReply ? vendorDailyCapacity
-                    : order.status === 'SC' ? scVendorDailyCapacity
-                    : (order.vendorDailyCapacity != null ? String(order.vendorDailyCapacity) : '')
+                    canReply ? supplierDailyCapacity
+                    : order.status === 'SC' ? scSupplierDailyCapacity
+                    : (order.supplierDailyCapacity != null ? String(order.supplierDailyCapacity) : '')
                   }
                   onChange={
-                    canReply ? setVendorDailyCapacity
-                    : order.status === 'SC' ? setScVendorDailyCapacity
+                    canReply ? setSupplierDailyCapacity
+                    : order.status === 'SC' ? setScSupplierDailyCapacity
                     : undefined
                   }
                   readOnly={!canReply && order.status !== 'SC'}
                   placeholder="請輸入日產能"
-                  hasError={replySubmitted && canReply && (!vendorDailyCapacity || !Number.isInteger(Number(vendorDailyCapacity)) || Number(vendorDailyCapacity) <= 0)}
+                  hasError={replySubmitted && canReply && (!supplierDailyCapacity || !Number.isInteger(Number(supplierDailyCapacity)) || Number(supplierDailyCapacity) <= 0)}
                   required={canReply}
                   min={1}
                   step={1}
@@ -941,9 +946,9 @@ export function SampleOrderDetailOverlay({
 
               {/* inline 錯誤提示 */}
               {replySubmitted && canReply && (() => {
-                const shipEmpty  = !vendorShipDate;
-                const capNum     = Number(vendorDailyCapacity);
-                const capInvalid = !vendorDailyCapacity || !Number.isInteger(capNum) || capNum <= 0;
+                const shipEmpty  = !supplierShipDate;
+                const capNum     = Number(supplierDailyCapacity);
+                const capInvalid = !supplierDailyCapacity || !Number.isInteger(capNum) || capNum <= 0;
                 if (!shipEmpty && !capInvalid) return null;
                 const msg = shipEmpty && capInvalid
                   ? '⚠ 請填寫樣品達交日，且廠商日產能需為大於 0 的整數'

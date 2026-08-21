@@ -39,10 +39,18 @@ async function mdoRequest<T>(path: string, options?: RequestInit): Promise<T> {
   });
 
   if (!res.ok) {
-    throw new Error(`MDO API error ${res.status}: ${res.statusText} (${path})`);
+    // 嘗試解析 MDO 回傳的錯誤 body，取出 error.message / error.code
+    let mdoMsg = `${res.status}: ${res.statusText}`;
+    try {
+      const errBody = await res.json();
+      const e = errBody?.error;
+      if (e) mdoMsg = `[${e.code ?? res.status}] ${e.message ?? res.statusText}`;
+    } catch { /* 解析失敗就用預設 */ }
+    throw Object.assign(new Error(`MDO ${mdoMsg} (${path})`), { status: res.status, mdoPath: path });
   }
 
   return res.json() as Promise<T>;
+
 }
 
 /** GET 列表（含分頁） */

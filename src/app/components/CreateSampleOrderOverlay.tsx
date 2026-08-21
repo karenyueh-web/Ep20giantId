@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { toast } from 'sonner';
 import { BaseOverlay } from './BaseOverlay';
 import { DropdownSelect } from './DropdownSelect';
 import { SimpleDatePicker } from './SimpleDatePicker';
@@ -15,7 +16,20 @@ import {
   type SampleType,
   type SampleOrderRecord,
 } from './sampleOrderData';
+import { createSampleOrderMdo } from '../api/supplier/sampleOrders';
 import type { PartRecord } from './partsMaintenanceData';
+
+// 取得登入使用者（待接 auth context 後可替換）
+function getCurrentUser(): string {
+  return localStorage.getItem('currentUserName') || localStorage.getItem('currentUserEmail') || '未知使用者';
+}
+
+// 取得今日日期（YYYY/MM/DD）
+function getTodayStr(): string {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())}`;
+}
 
 // ── FloatingInput（帶浮動標籤，唯讀 / 可編輯）──────────────────────────────
 function FloatingInput({
@@ -324,6 +338,7 @@ export function CreateSampleOrderOverlay({
   const [sampleType,  setSampleType]  = useState<string>('G');
   const [resample,    setResample]    = useState<string>('否');
   const [demandQty,   setDemandQty]   = useState('');
+  const [remark,      setRemark]      = useState('');
   const [submitted,   setSubmitted]   = useState(false);
 
   // ── 重複索樣檢核 ─────────────────────────────────────────────────────────
@@ -350,34 +365,64 @@ export function CreateSampleOrderOverlay({
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, '0');
     const ts = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    const todayStr = getTodayStr();
+    const currentUser = getCurrentUser();
     const statusLabel = targetStatus === 'DR' ? '草稿' : '轉交廠商';
 
     let lastOrderNo = '';
     selectedParts.forEach((part) => {
+      // 建立本地 mock 記錄（列表頁、詳情頁使用；GET MDO schema 補齊後替換）
       const record = addSampleOrder({
         status:          targetStatus,
-        vendorCode:      part.vendorCode,
-        vendorName:      part.vendorName,
+        supplierCode:    part.vendorCode,      // PartRecord 目前仍用 vendorCode
+        supplierName:    part.vendorName,      // PartRecord 目前仍用 vendorName
         purchaseOrg:     part.purchaseOrg,
-        plant:           part.plant,
-        material:        part.material,
+        plantCode:       part.plant,           // PartRecord 目前仍用 plant
+        materialNo:      part.material,        // PartRecord 目前仍用 material
         longDescription: part.longDescription,
-        sampleDate:      demandDate,
+        sampleDate:      todayStr,             // ✅ 開立當日，不再用 demandDate
         demandDate,
         demandQty:       demandQty ? Number(demandQty) : undefined,
         resample:        resample === '是',
         sampleType:      sampleType as SampleType,
-        createdBy:       '王大明',
+        createdBy:       currentUser,          // ✅ 動態讀取登入者
       });
       lastOrderNo = record.orderNo;
 
-      // ── 寫入歷程 ──
+      // 呼叫 MDO API
+      // ❗ MDO 規則： vendorCode 和 supplierCode 只能擇一；同時傳且值不同會 400
+      // ❗ orderNo 為 MDO required 欄位，使用本地產生的 orderNo
+      createSampleOrderMdo({
+        orderNo:         record.orderNo,   // ✅ MDO required
+        supplierCode:    part.vendorCode,  // 只送 supplierCode，不送 vendorCode
+        supplierName:    part.vendorName,
+        purchaseOrg:     part.purchaseOrg,
+        plantCode:       part.plant,
+        materialNo:      part.material,
+        longDescription: part.longDescription,
+        sampleType,
+        sampleDate:      todayStr,
+        demandDate,
+        demandQty:       Number(demandQty),
+        resample:        resample === '是',
+        remark:          remark || undefined,
+        createdBy:       currentUser,
+      }).catch((err) => {
+        // MDO API 目前發現 whitelist bug，所有欄位都被擋。
+        // 尚未修復就先用 console 記錄，本地流程不阻斷。
+        // TODO: MDO 修復 whitelist 後移除此 workaround
+        console.error('[MDO] createSampleOrder failed:', err);
+        toast.warning('索樣單已建立，MDO 中台同步失敗（API bug，待中台修復）');
+      });
+
+      // 寫入歷程
       const sampleTypeLabel = SAMPLE_TYPE_OPTIONS.find(o => o.value === sampleType)?.label ?? sampleType;
       const orderRemark = [
         `索樣類型：${sampleTypeLabel}`,
         demandDate  ? `樣品需求日：${demandDate}`  : null,
         demandQty   ? `需求數量：${demandQty}`      : null,
         resample === '是' ? '重新索樣：是'           : null,
+        remark      ? `備註：${remark}`              : null,
       ].filter(Boolean).join('，');
 
       if (prevOrder) {
@@ -385,14 +430,14 @@ export function CreateSampleOrderOverlay({
         addSampleOrderHistory(record.id, {
           date: ts,
           event: `重新索樣開立（${statusLabel}）`,
-          operator: '王大明',
+          operator: currentUser,
           remark: `先前索樣單：${prevOrder.orderNo}（狀態：${prevStatusDef.label}(${prevOrder.status})）；${orderRemark}`,
         });
       } else {
         addSampleOrderHistory(record.id, {
           date: ts,
           event: `開立索樣單（${statusLabel}）`,
-          operator: '王大明',
+          operator: currentUser,
           remark: orderRemark,
         });
       }
@@ -594,6 +639,14 @@ export function CreateSampleOrderOverlay({
                 step={1}
               />
             </div>
+
+            {/* 備註（選填，full width） */}
+            <FloatingInput
+              label="備註（選填）"
+              value={remark}
+              onChange={setRemark}
+              placeholder="可填寫特殊要求或補充說明"
+            />
 
             {/* 驗證錯誤提示 */}
             {submitted && (() => {

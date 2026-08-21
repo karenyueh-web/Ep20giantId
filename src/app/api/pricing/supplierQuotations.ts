@@ -21,6 +21,9 @@ export interface MdoSupplierQuotation {
   incoterm: string | null;              // 國貿條件（nullable）
   incoterm_location: string | null;     // 國貿條件地點（nullable）
   spec_type: string | null;             // 'STANDARD' | 'CUSTOM'（nullable）
+  notification_sent: boolean;           // 是否已發送通知
+  notification_sent_at: string | null;  // 最後一次發送通知時間（ISO 8601）
+  notification_sent_by: string | null;  // 最後一次發送通知人員
   revision_no: number;                  // 樂觀鎖版次
   is_deleted: boolean;
   created_by: string | null;
@@ -164,6 +167,30 @@ export async function retireSupplierQuotation(
 ): Promise<MdoSupplierQuotation> {
   return mdoCommand<RetireSupplierQuotationBody, MdoSupplierQuotation>(
     '/pricing/supplier-quotations/commands/retire',
+    body
+  );
+}
+
+// ── Notification ─────────────────────────────────────────────────────────────
+
+export interface ReportNotificationSentBody {
+  quotationIds: string[];   // MDO quotation UUID 陣列
+  reportedBy?: string;      // 操作人員識別
+}
+
+export interface ReportNotificationSentResponse {
+  requested: number;
+  transitioned: number;   // 實際從 unsent→sent 的筆數
+  alreadySent: number;
+  notFound: number;
+}
+
+/** 標記廠商報價通知已發送（可一次批量多筆） */
+export async function reportNotificationSent(
+  body: ReportNotificationSentBody
+): Promise<ReportNotificationSentResponse> {
+  return mdoCommand<ReportNotificationSentBody, ReportNotificationSentResponse>(
+    '/pricing/supplier-quotations/commands/report-notification-sent',
     body
   );
 }
