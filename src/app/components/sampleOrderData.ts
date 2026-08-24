@@ -135,9 +135,14 @@ export interface SampleOrderRecord {
   // ── 取消索樣（CC 狀態才有值） ────────────────────────────────────────────
   /** 取消原因 */
   cancelReason?: string;
-  // ── 退回廠商補填旗標 ──────────────────────────────────────────────
+  // ── 退回廠商補填旗標 ──────────────────────────────────────────────────
   /** 被整採購退回廠商補填：true 時廠商回覆全部欄位必填 */
   needsFullVendorReply?: boolean;
+  /** needsFullVendorReply 的新命名（兩者並存） */
+  needsFullSupplierReply?: boolean;
+  // ── MDO 相關 ──────────────────────────────────────────────────────────────────
+  /** MDO revision_no，supplierReplySampleOrderMdo 的 required 欄位 */
+  mdoRevisionNo?: number;
 }
 
 // 依年度獨立計算流水號：跨年自動歸零

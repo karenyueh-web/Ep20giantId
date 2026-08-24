@@ -22,6 +22,12 @@ import {
   type SampleOrderStatus,
 } from './sampleOrderData';
 import { buildEmail1, buildEmail2, buildEmail3, buildEmail4 } from './sampleOrderEmail';
+import {
+  confirmSampleOrderMdo,
+  cancelSampleOrderMdo,
+  closeSampleOrderMdo,
+  supplierReplySampleOrderMdo,
+} from '../api/supplier/sampleOrders';
 
 // 取得登入使用者（待接 auth context 後可替換）
 function getCurrentUser(): string {
@@ -531,6 +537,14 @@ export function SampleOrderDetailOverlay({
     });
     if (updated) onUpdated?.(updated);
 
+    // 呼叫 MDO confirm API（DR → V）
+    // order.id 為 MDO UUID（MDO GET 列表拉回時已存在）
+    if (typeof order.id === 'string' && order.id.includes('-')) {
+      confirmSampleOrderMdo({ id: order.id }).catch((err) => {
+        console.error('[MDO] confirmSampleOrder failed:', err);
+      });
+    }
+
     // 觸發寄信：信一（DR→V）
     const latestOrder: SampleOrderRecord = {
       ...order,
@@ -566,6 +580,12 @@ export function SampleOrderDetailOverlay({
       operator: getCurrentUser(),
       remark: cancelReason || '(無原因)',
     });
+    // 呼叫 MDO cancel API
+    if (typeof order.id === 'string' && order.id.includes('-')) {
+      cancelSampleOrderMdo({ id: order.id, cancelReason }).catch((err) => {
+        console.error('[MDO] cancelSampleOrder failed:', err);
+      });
+    }
     if (updated) onUpdated?.(updated);
     setShowCancelDialog(false);
     onClose();
@@ -602,6 +622,22 @@ export function SampleOrderDetailOverlay({
         remark: changes.join('，'),
       });
     }
+    // 呼叫 MDO supplier-reply API
+    // revisionNo 為 required，從 order.mdoRevisionNo 取得（由 GET 列表/詳情帶入）
+    if (typeof order.id === 'string' && order.id.includes('-')) {
+      supplierReplySampleOrderMdo({
+        id:                    order.id,
+        revisionNo:            order.mdoRevisionNo ?? 1,
+        supplierShipDate:      scSupplierShipDate     || undefined,
+        actualShipDate:        scActualShipDate       || undefined,
+        availableDate:         scAvailableDate        || undefined,
+        supplierDailyCapacity: capOk ? capNum         : undefined,
+        updatedBy:             getCurrentUser(),
+      }).catch((err) => {
+        console.error('[MDO] supplierReplySampleOrder failed:', err);
+      });
+    }
+
     if (updated) onUpdated?.(updated);
     onClose();
   };
@@ -643,6 +679,12 @@ export function SampleOrderDetailOverlay({
       operator: getCurrentUser(),
       remark: '',
     });
+    // 呼叫 MDO close API
+    if (typeof order.id === 'string' && order.id.includes('-')) {
+      closeSampleOrderMdo({ id: order.id }).catch((err) => {
+        console.error('[MDO] closeSampleOrder failed:', err);
+      });
+    }
     const updated = getSampleOrders().find(o => o.id === order.id) ?? null;
     if (updated) onUpdated?.(updated);
     onClose();

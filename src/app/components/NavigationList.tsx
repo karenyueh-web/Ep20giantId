@@ -804,7 +804,6 @@ const MINI_SUBMENUS: Record<string, { label: string; page?: PageType; permId?: s
   ],
   'shipment-tw': [
     { label: pageConfig['shipment-tw-order'].navLabel,    page: 'shipment-tw-order' },
-    { label: pageConfig['shipment-tw-shipping'].navLabel, page: 'shipment-tw-shipping' },
     { label: pageConfig['shipment-tw-print'].navLabel,    page: 'shipment-tw-print' },
   ],
   account: [
@@ -1078,7 +1077,7 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
     if (['esg-material', 'esg-maintain'].includes(currentPage)) {
       autoExpanded.push('esg');
     }
-    if (['shipment-tw-order', 'shipment-tw-shipping', 'shipment-tw-print'].includes(currentPage)) {
+    if (['shipment-tw-order', 'shipment-tw-print'].includes(currentPage)) {
       autoExpanded.push('shipment-tw');
     }
     if (['permission-settings', 'schedule-settings'].includes(currentPage)) {
@@ -1424,7 +1423,6 @@ export function NavigationList({ currentPage, onPageChange, onLogout, isMini = f
           {expandedMenus.includes('shipment-tw') && (
             <div className="w-full">
               {hasNav('mgmt-ship-tw-order') && <SubMenuItem label="訂單查詢" page="shipment-tw-order" onNavigate={onPageChange} isActive={currentPage === 'shipment-tw-order'} />}
-              {hasNav('mgmt-ship-tw-shipping') && <SubMenuItem label="出貨單查詢" page="shipment-tw-shipping" onNavigate={onPageChange} isActive={currentPage === 'shipment-tw-shipping'} />}
               {hasNav('mgmt-ship-tw-print') && <SubMenuItem label="列印外箱貼紙" page="shipment-tw-print" onNavigate={onPageChange} isActive={currentPage === 'shipment-tw-print'} />}
             </div>
           )}

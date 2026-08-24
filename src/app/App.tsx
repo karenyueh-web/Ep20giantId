@@ -37,6 +37,8 @@ import { QualityOtherSettingsPage } from "@/app/components/QualityOtherSettingsP
 import { QualityReportPage } from "@/app/components/QualityReportPage";
 import { QualityHazardPage } from "@/app/components/QualityHazardPage";
 import { ResponsivePageLayout } from "@/app/components/ResponsivePageLayout";
+import GtsTwOrderListPage from "@/app/components/GtsTwOrderListPage";
+import GtsTwPrintPage from "@/app/components/GtsTwPrintPage";
 import { LoginPage } from "@/app/components/LoginPage";
 import { RegisterPage } from "@/app/components/RegisterPage";
 import { RegisterSuccessPage } from "@/app/components/RegisterSuccessPage";
@@ -565,8 +567,31 @@ export default function App() {
           </ResponsivePageLayout>
         );
       case 'shipment-tw-order':
-      case 'shipment-tw-shipping':
+        return (
+          <ResponsivePageLayout
+            currentPage={currentPage}
+            onPageChange={handlePageChange}
+            onLogout={handleLogout}
+            userRole={userRole}
+            title={pageConfig['shipment-tw-order'].title}
+            breadcrumb={pageConfig['shipment-tw-order'].breadcrumb}
+          >
+            <GtsTwOrderListPage />
+          </ResponsivePageLayout>
+        );
       case 'shipment-tw-print':
+        return (
+          <ResponsivePageLayout
+            currentPage={currentPage}
+            onPageChange={handlePageChange}
+            onLogout={handleLogout}
+            userRole={userRole}
+            title={pageConfig['shipment-tw-print'].title}
+            breadcrumb={pageConfig['shipment-tw-print'].breadcrumb}
+          >
+            <GtsTwPrintPage />
+          </ResponsivePageLayout>
+        );
       case 'personal-settings':
       default:
         return <UnderConstructionPage currentPage={currentPage} onPageChange={handlePageChange} onLogout={handleLogout} userRole={userRole} />;

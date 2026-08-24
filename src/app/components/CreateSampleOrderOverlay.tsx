@@ -408,12 +408,14 @@ export function CreateSampleOrderOverlay({
         remark:          remark || undefined,
         createdBy:       currentUser,
       }).catch((err) => {
-        // MDO API 目前發現 whitelist bug，所有欄位都被擋。
-        // 尚未修復就先用 console 記錄，本地流程不阻斷。
-        // TODO: MDO 修復 whitelist 後移除此 workaround
+        // MDO whitelist bug 已修復（2026-08-24）。
+        // 目前新問題：sampleDate/demandDate 欄位 Prisma $queryRawUnsafe() 沒有做 date type cast
+        // → 傳任何格式的日期字串都會 500 "column sample_date is of type date but expression is of type text"
+        // TODO: MDO 修復 Prisma date cast 後可移除此 fallback
         console.error('[MDO] createSampleOrder failed:', err);
-        toast.warning('索樣單已建立，MDO 中台同步失敗（API bug，待中台修復）');
+        toast.warning('索樣單已建立，MDO 中台同步失敗（日期欄位 type cast bug，待中台修復）');
       });
+
 
       // 寫入歷程
       const sampleTypeLabel = SAMPLE_TYPE_OPTIONS.find(o => o.value === sampleType)?.label ?? sampleType;

@@ -2,6 +2,7 @@
 
 > 建立日期：2026-08-14
 > 目的：記錄 EP 前台已有、MDO 尚未支援的欄位，待 MDO 後端補齊後串接
+> **規則：每次串接 API 後必須同步更新此檔案**
 
 ---
 
@@ -61,7 +62,7 @@
 ### 品牌設定（BrandSetting）→ 已全部串接 ✅
 使用 `pricing/supplier-quotations` 完整支援所有欄位。
 
-### 基本資料（PartRecord）→ 剩餘 2 個欄位待後端
+### 基本資料（PartRecord）→ 剩餘欄位（寫入）待後端補 items update endpoint
 
 | EP 前台欄位 | 型別 | 說明 | 狀態 |
 |------------|------|------|------|
@@ -70,10 +71,10 @@
 | `firstDeliveryDate` | `string` | 預計首批可供貨日(出貨日) | ✅ 已串接 `supplier-material-introductions.estimated_first_supply_date` |
 | `vendorPartNo` | `string` | 廠商料號 | ✅ 已串接 `supplier-materials.supplier_material_no` |
 | `remark` | `string` | 備註 | ✅ 已串接 `supplier-material-introductions.remark` |
-| `grossWeight` | `string` | 毛重 | ⏸ 讀：`items.gross_weight` / 寫：items 無 update endpoint，待後端補 |
-| `netWeight` | `string` | 淨重 | ⏸ 讀：`items.net_weight` / 寫：items 無 update endpoint，待後端補 |
-| `weightUnit` | `string` | 重量單位 | ⏸ 讀：`items.weight_uom` / 寫：items 無 update endpoint，待後端補 |
-| `longDescription` | `string` | 長規格敘述 | ⏸ 讀：`items.description` / 寫：items 無 update endpoint，待後端補 |
+| `grossWeight` | `string` | 毛重 | ⏸ 讀：`items.gross_weight` ✅ / 寫：items 無 update endpoint，待後端補 |
+| `netWeight` | `string` | 淨重 | ⏸ 讀：`items.net_weight` ✅ / 寫：items 無 update endpoint，待後端補 |
+| `weightUnit` | `string` | 重量單位 | ⏸ 讀：`items.weight_uom` ✅ / 寫：items 無 update endpoint，待後端補 |
+| `longDescription` | `string` | 長規格敘述 | ⏸ 讀：`items.description` ✅ / 寫：items 無 update endpoint，待後端補 |
 | `syncDtcDte` | `boolean` | 同步DTC/DTE checkbox | ❌ MDO 無此概念，保留 in-memory |
 
 ### MDO 補 items update endpoint 後要做的事
@@ -130,3 +131,31 @@
 2. 更新 `src/app/api/pricing/supplierQuotations.ts` 的 `MdoSupplierQuotation` interface 加入 `unit_weight`
 3. 在 `EsgMaterialSummaryPage.tsx` 的 row building 中將 `unitWeight: ''` 改為 `unitWeight: String(q.unit_weight ?? '')`
 
+---
+
+## 索樣單（`/api/v1/order-transaction/sample-orders`）
+
+> 串接日期：2026-08-21
+
+### ✅ 已完成串接
+
+| 項目 | 說明 |
+|------|------|
+| GET 列表 | `fetchSampleOrders()` — 自動分頁（limit=100），mapper 轉換完成 |
+| GET 詳情 | `fetchSampleOrder(id)` — 已實作，可供詳情頁使用 |
+| 欄位對應 | `supplier_code/name`、`plant_code`、`material_no`、`long_description`、`supplier_material_no`、`demand_date`、`demand_qty`、`available_date`、`supplier_ship_date`、`supplier_daily_capacity` 全部 mapper 完成 |
+| 列印索樣單 | `To:` 改用 `supplierName(supplierCode)`，分組 key 改 supplierCode |
+
+### ⏸ 待 MDO 修復 / 補充
+
+| 項目 | 問題 | traceId / 說明 |
+|------|------|---------------|
+| **`POST /commands/create` Prisma date cast bug** | whitelist bug 已修復（2026-08-24）。新問題：`sampleDate`/`demandDate` 欄位 Prisma `$queryRawUnsafe()` 沒有做 date type cast → 傳任何格式日期都 500 `column sample_date is of type date but expression is of type text` | `req_7d94a885b1374e70` |
+| **`supplier-reply` 日期欄位** | `revisionNo` 新增為 required（2026-08-24）。日期欄位 Prisma date cast 問題待進一步測試確認（V 狀態訂單有限，待補測） | — |
+| **`/sample-orders/{id}/history`** | 歷程 endpoint 尚未部署，前端歷程目前為本地 mock | — |
+| **物料群組欄位** | MDO `MdoSampleOrderItem` 無 `material_group`，列印索樣單該欄空白 | 需 MDO 或 SAP 補充 |
+
+### create bug 修復後需做的事
+1. 移除 `CreateSampleOrderOverlay.tsx` 的 `toast.warning` fallback
+2. 確認 orderNo / sampleType / materialNo / sampleDate 能正常寫入
+3. 將 MDO 回傳的 `id` 存入本地 record，讓後續 confirm/cancel 等 command 使用真實 UUID

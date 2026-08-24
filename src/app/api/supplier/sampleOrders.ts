@@ -7,11 +7,11 @@
  * 已部署 endpoints：
  *   GET    /api/v1/order-transaction/sample-orders
  *   GET    /api/v1/order-transaction/sample-orders/{id}
- *   POST   .../commands/create
- *   POST   .../commands/confirm
- *   POST   .../commands/vendor-reply
- *   POST   .../commands/cancel
- *   POST   .../commands/close
+ *   POST   .../commands/create      ❗ whitelist bug 待修復
+ *   POST   .../commands/confirm     ✅
+ *   POST   .../commands/supplier-reply  ✅（日期欄位待 MDO 修復 Prisma bug）
+ *   POST   .../commands/cancel      ✅
+ *   POST   .../commands/close       ✅
  */
 import { mdoList, mdoGet, mdoCommand } from '../client';
 import type { SampleOrderRecord, SampleOrderStatus } from '../../components/sampleOrderData';
@@ -22,24 +22,21 @@ import type { SampleOrderRecord, SampleOrderStatus } from '../../components/samp
  * 開立索樣單 DTO
  * MDO Schema: CreateSampleOrderDto
  *
- * 注意：MDO 正在過渡 vendor* → supplier* 命名，
- * 目前兩組欄位都需要傳送（docs-json 中兩者並存）。
+ * ❗ create 目前有 whitelist bug：所有欄位都被擋，待 MDO 修復後再開放
  */
 export interface CreateSampleOrderDto {
   // 系統資料（來自 PartRecord）
-  supplierCode:        string;   // 廠商編號（新命名）
-  supplierName:        string;   // 廠商名稱（新命名）
-  vendorCode:          string;   // 廠商編號（過渡期保留）
-  vendorName:          string;   // 廠商名稱（過渡期保留）
+  orderNo:             string;   // 索樣單號（本地產生）
+  supplierCode:        string;   // 廠商編號
+  supplierName:        string;   // 廠商名稱
   purchaseOrg:         string;   // 採購組織
   plantCode:           string;   // 工廠代碼
   materialNo:          string;   // 料號
-  longDescription:     string;   // 長規格敘述
-  supplierMaterialNo?: string;   // 供應商料號（PartRecord 目前無此欄，選填）
-  vendorMaterialNo?:   string;   // 供應商料號（過渡期保留）
+  longDescription:     string;   // 長規格敍述
+  supplierMaterialNo?: string;   // 供應商料號（選填）
   // 使用者填寫
   sampleType:          string;   // 索樣類型 'D' | 'G'
-  sampleDate:          string;   // 索樣日期（開立當日，格式 YYYY/MM/DD）
+  sampleDate:          string;   // 索樣日期（開立當日）
   demandDate:          string;   // 樣品需求日
   demandQty:           number;   // 需求數量
   resample:            boolean;  // 是否重新索樣
@@ -50,16 +47,20 @@ export interface CreateSampleOrderDto {
 
 /**
  * 廠商回覆 DTO
- * MDO Schema: VendorReplySampleDto
+ * MDO Schema: SupplierReplySampleDto
+ * 實測確認：
+ *   - endpoint: POST /commands/supplier-reply
+ *   - revisionNo 為 required（從 GET 詳情 revision_no 欄位取得）
+ *   - 日期欄位格式待進一步測試（Prisma date cast 待確認）
  */
-export interface VendorReplySampleDto {
-  id:                    string;
-  supplierShipDate?:     string;  // 樣品達交日（新命名）
-  vendorShipDate?:       string;  // 過渡期保留
-  actualShipDate?:       string;  // 實際送樣日
-  availableDate?:        string;  // 首批可供貨日
-  supplierDailyCapacity?: number; // 廠商日產能（新命名）
-  vendorDailyCapacity?:  number;  // 過渡期保留
+export interface SupplierReplySampleDto {
+  id:                     string;
+  revisionNo:             number;  // 必填，從 GET 詳情 revision_no 欄位取得
+  supplierShipDate?:      string;  // 樣品達交日
+  actualShipDate?:        string;  // 實際送樣日
+  availableDate?:         string;  // 首批可供貨日
+  supplierDailyCapacity?: number;  // 廠商日產能
+  updatedBy?:             string;  // 更新者
 }
 
 /**
@@ -107,16 +108,20 @@ export async function createSampleOrderMdo(
 
 /**
  * 廠商回覆索樣單
- * POST /api/v1/order-transaction/sample-orders/commands/vendor-reply
+ * POST /api/v1/order-transaction/sample-orders/commands/supplier-reply
+ * 實測確認：revisionNo 為 required（從 GET 詳情的 revision_no 取得）
  */
-export async function vendorReplySampleOrderMdo(
-  dto: VendorReplySampleDto
+export async function supplierReplySampleOrderMdo(
+  dto: SupplierReplySampleDto
 ): Promise<void> {
-  return mdoCommand<VendorReplySampleDto, void>(
-    '/order-transaction/sample-orders/commands/vendor-reply',
+  return mdoCommand<SupplierReplySampleDto, void>(
+    '/order-transaction/sample-orders/commands/supplier-reply',
     dto
   );
 }
+
+/** @deprecated 請改用 supplierReplySampleOrderMdo */
+export const vendorReplySampleOrderMdo = supplierReplySampleOrderMdo;
 
 /**
  * 取消索樣單
@@ -165,31 +170,29 @@ export interface MdoSampleOrderItem {
   order_no:                string;
   status:                  string;
   sample_type:             string;
-  vendor_code:             string;
-  vendor_name:             string;
   supplier_code:           string;
   supplier_name:           string;
-  purchase_org:            string;
-  plant_code:              string;
+  purchase_org:            string | null;
+  plant_code:              string | null;
   material_no:             string;
-  long_description:        string;
-  vendor_material_no:      string | null;
+  long_description:        string | null;
   supplier_material_no:    string | null;
   sample_date:             string | null;
   demand_date:             string | null;
   demand_qty:              string | number | null;
   resample:                boolean;
   remark:                  string | null;
-  vendor_ship_date:        string | null;
   supplier_ship_date:      string | null;
   actual_ship_date:        string | null;
   available_date:          string | null;
-  vendor_daily_capacity:   number | null;
-  supplier_daily_capacity: number | null;
+  supplier_daily_capacity: string | number | null;
   cancel_reason:           string | null;
   created_by:              string;
   created_at:              string;
   updated_at:              string;
+  revision_no:             number;
+  updated_by:              string | null;
+  is_deleted:              boolean;
 }
 
 /** ISO 8601 → YYYY/MM/DD */
@@ -205,27 +208,29 @@ export function mapMdoToSampleOrderRecord(item: MdoSampleOrderItem): SampleOrder
     orderNo:               item.order_no,
     status:                item.status as SampleOrderStatus,
     sampleType:            item.sample_type as SampleOrderRecord['sampleType'],
-    supplierCode:          item.supplier_code || item.vendor_code,
-    supplierName:          item.supplier_name || item.vendor_name,
-    purchaseOrg:           item.purchase_org,
-    plantCode:             item.plant_code,
+    supplierCode:          item.supplier_code,
+    supplierName:          item.supplier_name,
+    purchaseOrg:           item.purchase_org ?? '',
+    plantCode:             item.plant_code ?? '',
     materialNo:            item.material_no,
-    longDescription:       item.long_description,
-    supplierMaterialNo:    item.supplier_material_no || item.vendor_material_no || '',
+    longDescription:       item.long_description ?? '',
+    supplierMaterialNo:    item.supplier_material_no ?? '',
     sampleDate:            isoToDate(item.sample_date),
     demandDate:            isoToDate(item.demand_date),
     demandQty:             item.demand_qty != null ? Number(item.demand_qty) : undefined,
     resample:              item.resample,
-    remark:                item.remark || '',
-    supplierShipDate:      isoToDate(item.supplier_ship_date || item.vendor_ship_date),
+    remark:                item.remark ?? '',
+    supplierShipDate:      isoToDate(item.supplier_ship_date),
     actualShipDate:        isoToDate(item.actual_ship_date),
     availableDate:         isoToDate(item.available_date),
-    supplierDailyCapacity: item.supplier_daily_capacity ?? item.vendor_daily_capacity ?? undefined,
-    cancelReason:          item.cancel_reason || '',
+    supplierDailyCapacity: item.supplier_daily_capacity != null ? Number(item.supplier_daily_capacity) : undefined,
+    cancelReason:          item.cancel_reason ?? '',
     createdBy:             item.created_by,
     createdAt:             isoToDate(item.created_at),
     updatedAt:             isoToDate(item.updated_at),
     needsFullSupplierReply: false,
+    // revision_no 存在從 API，傳入 supplierReplySampleOrderMdo 時需要此欄位
+    mdoRevisionNo:         item.revision_no,
   };
 }
 

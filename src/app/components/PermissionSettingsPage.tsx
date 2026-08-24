@@ -350,7 +350,6 @@ const FEATURE_TREE: FeatureNode[] = [
         label: '出貨台灣捷安特',
         children: [
           { id: 'mgmt-ship-tw-order', label: '訂單查詢' },
-          { id: 'mgmt-ship-tw-shipping', label: '出貨單查詢' },
           { id: 'mgmt-ship-tw-print', label: '列印外箱貼紙' },
         ],
       },
