@@ -538,9 +538,12 @@ export function SampleOrderDetailOverlay({
     if (updated) onUpdated?.(updated);
 
     // 呼叫 MDO confirm API（DR → V）
-    // order.id 為 MDO UUID（MDO GET 列表拉回時已存在）
     if (typeof order.id === 'string' && order.id.includes('-')) {
-      confirmSampleOrderMdo({ id: order.id }).catch((err) => {
+      confirmSampleOrderMdo({
+        id:         order.id,
+        revisionNo: order.mdoRevisionNo ?? 1,
+        updatedBy:  getCurrentUser(),
+      }).catch((err) => {
         console.error('[MDO] confirmSampleOrder failed:', err);
       });
     }
@@ -582,7 +585,12 @@ export function SampleOrderDetailOverlay({
     });
     // 呼叫 MDO cancel API
     if (typeof order.id === 'string' && order.id.includes('-')) {
-      cancelSampleOrderMdo({ id: order.id, cancelReason }).catch((err) => {
+      cancelSampleOrderMdo({
+        id:           order.id,
+        revisionNo:   order.mdoRevisionNo ?? 1,
+        cancelReason,
+        updatedBy:    getCurrentUser(),
+      }).catch((err) => {
         console.error('[MDO] cancelSampleOrder failed:', err);
       });
     }
@@ -681,7 +689,11 @@ export function SampleOrderDetailOverlay({
     });
     // 呼叫 MDO close API
     if (typeof order.id === 'string' && order.id.includes('-')) {
-      closeSampleOrderMdo({ id: order.id }).catch((err) => {
+      closeSampleOrderMdo({
+        id:         order.id,
+        revisionNo: order.mdoRevisionNo ?? 1,
+        updatedBy:  getCurrentUser(),
+      }).catch((err) => {
         console.error('[MDO] closeSampleOrder failed:', err);
       });
     }

@@ -467,6 +467,22 @@ export function addSampleOrder(record: Omit<SampleOrderRecord, 'id' | 'orderNo' 
   return newRecord;
 }
 
+/**
+ * MDO create 成功後，用 MDO 回傳的 UUID 取代本地暫時 id，並存入 revision_no。
+ * localId: addSampleOrder 產生的 crypto.randomUUID()
+ * mdoId: MDO create response 的 id (UUID)
+ * mdoRevisionNo: MDO create response 的 revision_no（通常為 1）
+ */
+export function updateSampleOrderMdoId(localId: string, mdoId: string, mdoRevisionNo: number): void {
+  _sampleOrders = _sampleOrders.map((r) =>
+    r.id === localId
+      ? { ...r, id: mdoId, mdoRevisionNo }
+      : r
+  );
+  notifySampleOrderChange();
+}
+
+
 export function deleteSampleOrders(ids: string[]): void {
   _sampleOrders = _sampleOrders.filter((r) => !ids.includes(r.id));
   notifySampleOrderChange();

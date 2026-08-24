@@ -21,10 +21,13 @@ interface GtsTwUploadOverlayProps {
   onUploadSuccess: (rows: GtsTwPrintRow[]) => void;
 }
 
-// ── Excel 欄位對應 GtsTwPrintRow ──────────────────────────────────────────
-function parseExcelRow(raw: Record<string, unknown>, index: number): GtsTwPrintRow {
+// ── Excel 欄位對應 GtsTwPrintRow（每列依總箱數展開成多筆）──────────────────
+function parseExcelRows(
+  raw: Record<string, unknown>,
+  idOffset: number,   // 從哪個 id 開始
+): GtsTwPrintRow[] {
   const get = (key: string) => String(raw[key] ?? '').trim();
-  // 欄位名稱已與表格欄位對齊
+
   const orderNo   = get('訂單號碼') || get('order_no')    || get('orderNo');
   const materialNo= get('料號')     || get('material_no')  || get('materialNo');
   const qty       = Number(get('出貨量')  || get('qty'))       || 0;
@@ -33,18 +36,19 @@ function parseExcelRow(raw: Record<string, unknown>, index: number): GtsTwPrintR
   const qtyPerBox = Number(get('本件數量') || get('qty_per_box')|| get('qtyPerBox')) || qty;
   const shipNo    = get('廠商出貨單') || get('ship_no')    || get('shipNo');
   const shipDate  = get('交貨日期') || get('ship_date')  || get('shipDate');
-  const orderSeq  = get('訂單序號') || get('order_seq') || String(index + 1);
+  const orderSeq  = get('訂單序號') || get('order_seq') || '';
 
-  return {
-    id:              index + 1,
-    barcode:         `GT${String(index + 1).padStart(8, '0')}`,
+  // 每箱產生一筆紀錄，labelFreq = "i/boxCount"
+  return Array.from({ length: boxCount }, (_, i) => ({
+    id:              idOffset + i,
+    barcode:         `GT${String(idOffset + i).padStart(8, '0')}`,
     vendorShortName: '',
     vendorShipNo:    shipNo,
     materialNo,
     unitQty:         qtyPerBox,
     shipQty:         qty,
     unit,
-    labelFreq:       `1/${boxCount}`,
+    labelFreq:       String(i + 1),            // ← 純整數序號：1, 2, 3 ...
     totalBoxes:      boxCount,
     orderNo,
     orderSeq,
@@ -59,7 +63,7 @@ function parseExcelRow(raw: Record<string, unknown>, index: number): GtsTwPrintR
     vendorName:         '',
     storageLocation:    '',
     destination:        '',
-  };
+  }));
 }
 
 // ── 主元件 ──────────────────────────────────────────────────────────────────
@@ -112,7 +116,13 @@ export function GtsTwUploadOverlay({ onClose, onUploadSuccess }: GtsTwUploadOver
       // 模擬 AX 驗證（待中台 API 串接）
       await new Promise(resolve => setTimeout(resolve, 800));
 
-      const rows = jsonData.map((raw, i) => parseExcelRow(raw, i));
+      // 每列依「總箱數」展開成多筆貼紙紀錄（1/N, 2/N ... N/N）
+      let idCounter = 1;
+      const rows = jsonData.flatMap((raw) => {
+        const expanded = parseExcelRows(raw, idCounter);
+        idCounter += expanded.length;
+        return expanded;
+      });
       setParsedRows(rows);
       setUploadCount(rows.length);
       setUploadState('confirm');   // 先進確認步驟，使用者確認後才匯入

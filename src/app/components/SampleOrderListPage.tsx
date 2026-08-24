@@ -20,7 +20,7 @@ import {
 } from './sampleOrderData';
 import { fetchSampleOrders } from '../api/supplier/sampleOrders';
 
-// ── Tab 定義（依示意圖） ────────────────────────────────────────────────────
+// ── Tab 定義（依示意圖） ────────────────────────────────────────────────
 type TabId = 'all' | SampleOrderStatus;
 
 interface TabDef {
@@ -193,28 +193,50 @@ export default function SampleOrderListPage({ userRole: _userRole }: SampleOrder
     return data;
   }, [tabFilteredData, filterDateFrom, filterDateTo, filterMaterial, filterVendor]);
 
+
+  // ── 顯示資料（加入 display 欄位，必須在批次操作 handler 前定義）──────────────────────
+  type PartWithVendorDisplay = SampleOrderRecord & {
+    vendorDisplay:   string;
+    resampleLabel:   string;
+    sampleTypeLabel: string;
+    updatedInfo:     string;
+  };
+
+  const displayData: PartWithVendorDisplay[] = useMemo(
+    () =>
+      filteredData.map((o) => ({
+        ...o,
+        vendorDisplay:   `${o.supplierName}(${o.supplierCode})`,
+        resampleLabel:   o.resample ? '是' : '否',
+        sampleTypeLabel: o.sampleType === 'D' ? 'D(開發樣)' : 'G(量產品)',
+        updatedInfo:     `${o.createdBy}-${o.updatedAt}`,
+      })),
+    [filteredData],
+  );
+
   // ── 批次操作 ────────────────────────────────────────────────────────────────
 
   const handleDeleteSelected = useCallback(() => {
-    // 只允許刪除草稿（DR）
-    const ids = Array.from(selectedIds);
-    const drIds = orders.filter((o) => ids.includes(o.id) && o.status === 'DR').map((o) => o.id);
-    const nonDrCount = ids.length - drIds.length;
+    // selectedIds 存的是 displayData 的 row index
+    const indices = Array.from(selectedIds);
+    const selectedOrders = indices.map((i) => displayData[i]).filter(Boolean);
+    const drOrders   = selectedOrders.filter((o) => o.status === 'DR');
+    const nonDrCount = selectedOrders.length - drOrders.length;
 
-    if (drIds.length === 0) {
+    if (drOrders.length === 0) {
       toast.error('只有草稿(DR)狀態的索樣單可以刪除');
       return;
     }
-    deleteSampleOrders(drIds);
-    loadOrders();                       // MDO 重新拉取
+    // 只從本地 store 刪除，不重新 fetch（避免 MDO 把它拉回來）
+    deleteSampleOrders(drOrders.map((o) => o.id));
     setSelectedIds(new Set());
 
     if (nonDrCount > 0) {
-      toast(`已刪除 ${drIds.length} 筆草稿索樣單（${nonDrCount} 筆非草稿狀態無法刪除）`);
+      toast(`已刪除 ${drOrders.length} 筆草稿索樣單（${nonDrCount} 筆非草稿狀態無法刪除）`);
     } else {
-      toast.success(`已刪除 ${drIds.length} 筆索樣單`);
+      toast.success(`已刪除 ${drOrders.length} 筆索樣單`);
     }
-  }, [selectedIds, orders, loadOrders]);
+  }, [selectedIds, displayData]);
 
   // 開啟批次取消 Dialog
   const handleCancelSelected = useCallback(() => {
@@ -227,18 +249,20 @@ export default function SampleOrderListPage({ userRole: _userRole }: SampleOrder
   const handleConfirmBatchCancel = useCallback(() => {
     const reason = cancelReason.trim();
     if (!reason) return;
-    const ids = Array.from(selectedIds);
+    // selectedIds 存的是 displayData 的 row index
+    const indices = Array.from(selectedIds);
+    const selectedOrders = indices.map((i) => displayData[i]).filter(Boolean);
 
     // 執行批次取消（狀態 → CC，寫入 cancelReason）
-    batchCancelSampleOrders(ids, reason);
+    batchCancelSampleOrders(selectedOrders.map((o) => o.id), reason);
 
     // 寫入歷程：每張索樣單各記錄一筆
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, '0');
     const ts = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
     const operator = localStorage.getItem('currentUserName') || localStorage.getItem('currentUserEmail') || '';
-    ids.forEach((id) => {
-      addSampleOrderHistory(id, {
+    selectedOrders.forEach((o) => {
+      addSampleOrderHistory(o.id, {
         date: ts,
         event: '批次取消索樣單',
         operator,
@@ -250,37 +274,19 @@ export default function SampleOrderListPage({ userRole: _userRole }: SampleOrder
     setSelectedIds(new Set());
     setCancelDialogOpen(false);
     setCancelReason('');
-    toast.success(`已取消 ${ids.length} 筆索樣單`);
-  }, [selectedIds, cancelReason, loadOrders]);
+    toast.success(`已取消 ${selectedOrders.length} 筆索樣單`);
+  }, [selectedIds, displayData, cancelReason, loadOrders]);
 
   const handlePrintSelected = useCallback(() => {
-    const ids = Array.from(selectedIds);
-    const selected = orders.filter((o) => ids.includes(o.id));
+    // selectedIds 存的是 displayData 的 row index
+    const indices = Array.from(selectedIds);
+    const selected = indices.map((i) => displayData[i]).filter(Boolean);
     if (selected.length === 0) return;
     setPrintOrders(selected);
     setSelectedIds(new Set());
     setPrintMode(true);
-  }, [selectedIds, orders]);
+  }, [selectedIds, displayData]);
 
-  // ── 欄位定義（依示意圖）───────────────────────────────────────────────────
-  type PartWithVendorDisplay = SampleOrderRecord & {
-    vendorDisplay: string;
-    resampleLabel: string;
-    sampleTypeLabel: string;
-    updatedInfo: string;
-  };
-
-  const displayData: PartWithVendorDisplay[] = useMemo(
-    () =>
-      filteredData.map((o) => ({
-        ...o,
-        vendorDisplay: `${o.supplierName}(${o.supplierCode})`,
-        resampleLabel: o.resample ? '是' : '否',
-        sampleTypeLabel: o.sampleType === 'D' ? 'D(開發樣)' : 'G(量產品)',
-        updatedInfo: `${o.createdBy}-${o.updatedAt}`,
-      })),
-    [filteredData],
-  );
 
   const columns: StandardColumn<PartWithVendorDisplay>[] = useMemo(
     () => [

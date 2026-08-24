@@ -21,8 +21,9 @@ import type { SampleOrderRecord, SampleOrderStatus } from '../../components/samp
 /**
  * 開立索樣單 DTO
  * MDO Schema: CreateSampleOrderDto
- *
- * ❗ create 目前有 whitelist bug：所有欄位都被擋，待 MDO 修復後再開放
+ * 實測確認：
+ *   - 所有欄位已正常（whitelist + Prisma date cast bugs 均已修復 2026-08-24）
+ *   - create 回傳的 revision_no = 1，後續 confirm 需要傳入此值
  */
 export interface CreateSampleOrderDto {
   // 系統資料（來自 PartRecord）
@@ -69,15 +70,20 @@ export interface SupplierReplySampleDto {
  */
 export interface CancelSampleOrderDto {
   id:           string;
+  revisionNo:   number;  // 必填
   cancelReason: string;
+  updatedBy?:   string;
 }
 
 /**
- * 確認 / 關閉 DTO（只需 id）
+ * 確認 / 關閉 DTO（id + revisionNo 必填）
  * MDO Schemas: ConfirmSampleOrderDto / CloseSampleOrderDto
+ * 實測：revisionNo 從 GET 詳情 / create / confirm 回傳的 revision_no 取得
  */
 export interface SampleOrderIdDto {
-  id: string;
+  id:          string;
+  revisionNo:  number;  // 必填
+  updatedBy?:  string;  // 操作者
 }
 
 // ── Response（暫時型別，待 MDO 補充 GET response schema 後更新）─────────────────
@@ -87,8 +93,9 @@ export interface SampleOrderIdDto {
  * ⚠ 若 create 不回傳 orderNo，前端需另行查詢或使用本地產生的 orderNo
  */
 export interface CreateSampleOrderResponse {
-  id:      string;   // MDO UUID
-  orderNo: string;   // 索樣單號
+  id:          string;   // MDO UUID
+  orderNo:     string;   // 索樣單號
+  revision_no: number;   // 通常為 1
 }
 
 // ── API Functions ─────────────────────────────────────────────────────────────

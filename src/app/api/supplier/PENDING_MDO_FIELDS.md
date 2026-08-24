@@ -146,16 +146,18 @@
 | 欄位對應 | `supplier_code/name`、`plant_code`、`material_no`、`long_description`、`supplier_material_no`、`demand_date`、`demand_qty`、`available_date`、`supplier_ship_date`、`supplier_daily_capacity` 全部 mapper 完成 |
 | 列印索樣單 | `To:` 改用 `supplierName(supplierCode)`，分組 key 改 supplierCode |
 
-### ⏸ 待 MDO 修復 / 補充
+### ✅ 已修復 Bug（2026-08-24）
+
+| 項目 | 修復結果 |
+|------|---------|
+| `POST /commands/create` whitelist bug | ✅ 已修復，所有欄位正常通過 |
+| `POST /commands/create` Prisma date cast bug | ✅ 已修復，`sampleDate`/`demandDate` 正常寫入 |
+| `POST /commands/supplier-reply` Prisma date cast | ✅ 已修復，日期欄位正常寫入 |
+| `revisionNo` 新增為所有 command 的 required 欄位 | ✅ 前端已同步更新，從 `mdoRevisionNo` 取得 |
+
+### ⏸ 待 MDO 補充
 
 | 項目 | 問題 | traceId / 說明 |
 |------|------|---------------|
-| **`POST /commands/create` Prisma date cast bug** | whitelist bug 已修復（2026-08-24）。新問題：`sampleDate`/`demandDate` 欄位 Prisma `$queryRawUnsafe()` 沒有做 date type cast → 傳任何格式日期都 500 `column sample_date is of type date but expression is of type text` | `req_7d94a885b1374e70` |
-| **`supplier-reply` 日期欄位** | `revisionNo` 新增為 required（2026-08-24）。日期欄位 Prisma date cast 問題待進一步測試確認（V 狀態訂單有限，待補測） | — |
 | **`/sample-orders/{id}/history`** | 歷程 endpoint 尚未部署，前端歷程目前為本地 mock | — |
 | **物料群組欄位** | MDO `MdoSampleOrderItem` 無 `material_group`，列印索樣單該欄空白 | 需 MDO 或 SAP 補充 |
-
-### create bug 修復後需做的事
-1. 移除 `CreateSampleOrderOverlay.tsx` 的 `toast.warning` fallback
-2. 確認 orderNo / sampleType / materialNo / sampleDate 能正常寫入
-3. 將 MDO 回傳的 `id` 存入本地 record，讓後續 confirm/cancel 等 command 使用真實 UUID

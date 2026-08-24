@@ -9,6 +9,7 @@ import { SimpleDatePicker } from './SimpleDatePicker';
 import {
   addSampleOrder,
   addSampleOrderHistory,
+  updateSampleOrderMdoId,
   findLatestExistingSampleOrder,
   findAllExistingSampleOrders,
   getStatusDef,
@@ -332,6 +333,7 @@ export function CreateSampleOrderOverlay({
   onCreated,
 }: CreateSampleOrderOverlayProps) {
   const firstPart = selectedParts[0];
+  const [isCreating, setIsCreating] = useState(false);
 
   // 巨大需求欄位
   const [demandDate,  setDemandDate]  = useState('');
@@ -361,7 +363,9 @@ export function CreateSampleOrderOverlay({
   };
 
   // ── 實際建立邏輯（通過所有檢核後呼叫）─────────────────────────────────────
-  const doCreate = (targetStatus: 'DR' | 'V', prevOrder?: SampleOrderRecord) => {
+  const doCreate = async (targetStatus: 'DR' | 'V', prevOrder?: SampleOrderRecord) => {
+    if (isCreating) return;
+    setIsCreating(true);
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, '0');
     const ts = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
@@ -370,83 +374,86 @@ export function CreateSampleOrderOverlay({
     const statusLabel = targetStatus === 'DR' ? '草稿' : '轉交廠商';
 
     let lastOrderNo = '';
-    selectedParts.forEach((part) => {
-      // 建立本地 mock 記錄（列表頁、詳情頁使用；GET MDO schema 補齊後替換）
-      const record = addSampleOrder({
-        status:          targetStatus,
-        supplierCode:    part.vendorCode,      // PartRecord 目前仍用 vendorCode
-        supplierName:    part.vendorName,      // PartRecord 目前仍用 vendorName
-        purchaseOrg:     part.purchaseOrg,
-        plantCode:       part.plant,           // PartRecord 目前仍用 plant
-        materialNo:      part.material,        // PartRecord 目前仍用 material
-        longDescription: part.longDescription,
-        sampleDate:      todayStr,             // ✅ 開立當日，不再用 demandDate
-        demandDate,
-        demandQty:       demandQty ? Number(demandQty) : undefined,
-        resample:        resample === '是',
-        sampleType:      sampleType as SampleType,
-        createdBy:       currentUser,          // ✅ 動態讀取登入者
-      });
-      lastOrderNo = record.orderNo;
-
-      // 呼叫 MDO API
-      // ❗ MDO 規則： vendorCode 和 supplierCode 只能擇一；同時傳且值不同會 400
-      // ❗ orderNo 為 MDO required 欄位，使用本地產生的 orderNo
-      createSampleOrderMdo({
-        orderNo:         record.orderNo,   // ✅ MDO required
-        supplierCode:    part.vendorCode,  // 只送 supplierCode，不送 vendorCode
-        supplierName:    part.vendorName,
-        purchaseOrg:     part.purchaseOrg,
-        plantCode:       part.plant,
-        materialNo:      part.material,
-        longDescription: part.longDescription,
-        sampleType,
-        sampleDate:      todayStr,
-        demandDate,
-        demandQty:       Number(demandQty),
-        resample:        resample === '是',
-        remark:          remark || undefined,
-        createdBy:       currentUser,
-      }).catch((err) => {
-        // MDO whitelist bug 已修復（2026-08-24）。
-        // 目前新問題：sampleDate/demandDate 欄位 Prisma $queryRawUnsafe() 沒有做 date type cast
-        // → 傳任何格式的日期字串都會 500 "column sample_date is of type date but expression is of type text"
-        // TODO: MDO 修復 Prisma date cast 後可移除此 fallback
-        console.error('[MDO] createSampleOrder failed:', err);
-        toast.warning('索樣單已建立，MDO 中台同步失敗（日期欄位 type cast bug，待中台修復）');
-      });
-
-
-      // 寫入歷程
-      const sampleTypeLabel = SAMPLE_TYPE_OPTIONS.find(o => o.value === sampleType)?.label ?? sampleType;
-      const orderRemark = [
-        `索樣類型：${sampleTypeLabel}`,
-        demandDate  ? `樣品需求日：${demandDate}`  : null,
-        demandQty   ? `需求數量：${demandQty}`      : null,
-        resample === '是' ? '重新索樣：是'           : null,
-        remark      ? `備註：${remark}`              : null,
-      ].filter(Boolean).join('，');
-
-      if (prevOrder) {
-        const prevStatusDef = getStatusDef(prevOrder.status);
-        addSampleOrderHistory(record.id, {
-          date: ts,
-          event: `重新索樣開立（${statusLabel}）`,
-          operator: currentUser,
-          remark: `先前索樣單：${prevOrder.orderNo}（狀態：${prevStatusDef.label}(${prevOrder.status})）；${orderRemark}`,
+    try {
+      for (const part of selectedParts) {
+        // 先建立本地暫時記錄（暫用 crypto UUID，MDO 回傳後替換）
+        const record = addSampleOrder({
+          status:          targetStatus,
+          supplierCode:    part.vendorCode,
+          supplierName:    part.vendorName,
+          purchaseOrg:     part.purchaseOrg,
+          plantCode:       part.plant,
+          materialNo:      part.material,
+          longDescription: part.longDescription,
+          sampleDate:      todayStr,
+          demandDate,
+          demandQty:       demandQty ? Number(demandQty) : undefined,
+          resample:        resample === '是',
+          sampleType:      sampleType as SampleType,
+          createdBy:       currentUser,
         });
-      } else {
-        addSampleOrderHistory(record.id, {
-          date: ts,
-          event: `開立索樣單（${statusLabel}）`,
-          operator: currentUser,
-          remark: orderRemark,
-        });
+        lastOrderNo = record.orderNo;
+
+        // await MDO create → 確保寫入完成後再跳轉
+        try {
+          const mdoResult = await createSampleOrderMdo({
+            orderNo:         record.orderNo,
+            supplierCode:    part.vendorCode,
+            supplierName:    part.vendorName,
+            purchaseOrg:     part.purchaseOrg,
+            plantCode:       part.plant,
+            materialNo:      part.material,
+            longDescription: part.longDescription,
+            sampleType,
+            sampleDate:      todayStr,
+            demandDate,
+            demandQty:       Number(demandQty),
+            resample:        resample === '是',
+            remark:          remark || undefined,
+            createdBy:       currentUser,
+          });
+          // 用 MDO 真實 UUID 取代本地暫時 id
+          if (mdoResult?.id) {
+            updateSampleOrderMdoId(record.id, mdoResult.id, mdoResult.revision_no ?? 1);
+          }
+        } catch (err) {
+          console.error('[MDO] createSampleOrder failed:', err);
+        }
+
+        // 寫入歷程
+        const sampleTypeLabel = SAMPLE_TYPE_OPTIONS.find(o => o.value === sampleType)?.label ?? sampleType;
+        const orderRemark = [
+          `索樣類型：${sampleTypeLabel}`,
+          demandDate  ? `樣品需求日：${demandDate}`  : null,
+          demandQty   ? `需求數量：${demandQty}`      : null,
+          resample === '是' ? '重新索樣：是'           : null,
+          remark      ? `備註：${remark}`              : null,
+        ].filter(Boolean).join('，');
+
+        if (prevOrder) {
+          const prevStatusDef = getStatusDef(prevOrder.status);
+          addSampleOrderHistory(record.id, {
+            date: ts,
+            event: `重新索樣開立（${statusLabel}）`,
+            operator: currentUser,
+            remark: `先前索樣單：${prevOrder.orderNo}（狀態：${prevStatusDef.label}(${prevOrder.status})）；${orderRemark}`,
+          });
+        } else {
+          addSampleOrderHistory(record.id, {
+            date: ts,
+            event: `開立索樣單（${statusLabel}）`,
+            operator: currentUser,
+            remark: orderRemark,
+          });
+        }
       }
-    });
+    } finally {
+      setIsCreating(false);
+    }
 
     onCreated(lastOrderNo);
   };
+
 
   // ── 提交入口（含重複檢核）────────────────────────────────────────────────
   const handleSubmit = (targetStatus: 'DR' | 'V') => {
@@ -692,17 +699,19 @@ export function CreateSampleOrderOverlay({
         >
           <button
             onClick={() => handleSubmit('DR')}
-            className="flex-1 h-[36px] rounded-[8px] border text-[14px] font-medium hover:bg-[rgba(145,158,171,0.08)] transition-colors"
+            disabled={isCreating}
+            className="flex-1 h-[36px] rounded-[8px] border text-[14px] font-medium hover:bg-[rgba(145,158,171,0.08)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ borderColor: 'rgba(145,158,171,0.32)', color: '#637381' }}
           >
-            暫存草稿
+            {isCreating ? '開立中…' : '暫存草稿'}
           </button>
           <button
             onClick={() => handleSubmit('V')}
-            className="flex-1 h-[36px] rounded-[8px] flex items-center justify-center hover:bg-[#004680] transition-colors"
-            style={{ backgroundColor: '#00559c' }}
+            disabled={isCreating}
+            className="flex-1 h-[36px] rounded-[8px] flex items-center justify-center hover:bg-[#004680] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            style={{ backgroundColor: isCreating ? '#638db0' : '#00559c' }}
           >
-            <p className="font-bold text-[14px] text-white">轉交廠商</p>
+            <p className="font-bold text-[14px] text-white">{isCreating ? '開立中…' : '轉交廠商'}</p>
           </button>
         </div>
 

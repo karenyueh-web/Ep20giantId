@@ -50,7 +50,7 @@ const INITIAL_ROWS: GtsTwPrintRow[] = [
   {
     id: 1, barcode: 'GT00160300', vendorShortName: '台灣欣欣(124003)',
     vendorShipNo: '101023G261265', materialNo: '4300544',
-    unitQty: 4, shipQty: 4, unit: 'PCE', labelFreq: '1/1', totalBoxes: 1,
+    unitQty: 4, shipQty: 4, unit: 'PCE', labelFreq: '1', totalBoxes: 1,
     orderNo: 'G261265-1', orderSeq: 'G261265-1',
     deliveryDate: '2026/06/15', productName: 'TRIPEAK G8高端鎖牛叉 / 針孔式 BB86 型 Sram dub(28.99mm) / Rotor 385/30',
     vendorMaterialNo: 'EMA-TF412930S-ACCB',
@@ -60,7 +60,7 @@ const INITIAL_ROWS: GtsTwPrintRow[] = [
   {
     id: 2, barcode: 'GT00160301', vendorShortName: '台灣欣欣(124003)',
     vendorShipNo: '101023G261265', materialNo: '5290019',
-    unitQty: 10, shipQty: 10, unit: 'PCE', labelFreq: '1/1', totalBoxes: 1,
+    unitQty: 10, shipQty: 10, unit: 'PCE', labelFreq: '1', totalBoxes: 1,
     orderNo: 'G261265-2', orderSeq: 'G261265-2',
     deliveryDate: '2026/06/15', productName: 'Shimano / SRAM (Road) (11 S) 11/11T 變速器',
     vendorMaterialNo: 'EMA-JW11-SHSBXX11S',
@@ -70,7 +70,7 @@ const INITIAL_ROWS: GtsTwPrintRow[] = [
   {
     id: 3, barcode: 'GT00160302', vendorShortName: '捷昇工業(124010)',
     vendorShipNo: '202023G261300', materialNo: '3180022',
-    unitQty: 50, shipQty: 50, unit: 'SET', labelFreq: '1/1', totalBoxes: 1,
+    unitQty: 50, shipQty: 50, unit: 'SET', labelFreq: '1', totalBoxes: 1,
     orderNo: 'G261300-1', orderSeq: 'G261300-1',
     deliveryDate: '2026/06/20', productName: '培林培林培林 XX型號',
     vendorMaterialNo: 'JW11-SHSBXX12S',
@@ -211,7 +211,7 @@ function GtsSingleZhSticker({ row }: { row: GtsTwPrintRow }) {
         </tr>
         <tr>
           <td style={{ ...val, textAlign: 'center', fontSize: '13px', fontWeight: 'bold' }}>{row.shipQty}</td>
-          <td style={{ ...val, textAlign: 'center', fontSize: '13px', fontWeight: 'bold' }}>{row.labelFreq}</td>
+          <td style={{ ...val, textAlign: 'center', fontSize: '13px', fontWeight: 'bold' }}>{row.labelFreq}/{row.totalBoxes}</td>
           <td style={{ ...val, textAlign: 'center', fontSize: '13px', fontWeight: 'bold' }}>{row.unitQty}</td>
         </tr>
       </tbody>
@@ -309,7 +309,7 @@ function GtsSingleEnSticker({ row }: { row: GtsTwPrintRow }) {
         </tr>
         <tr>
           <td style={{ ...val, textAlign: 'center', fontSize: '13px', fontWeight: 'bold' }}>{row.shipQty}</td>
-          <td style={{ ...val, textAlign: 'center', fontSize: '13px', fontWeight: 'bold' }}>{row.labelFreq}</td>
+          <td style={{ ...val, textAlign: 'center', fontSize: '13px', fontWeight: 'bold' }}>{row.labelFreq}/{row.totalBoxes}</td>
           <td style={{ ...val, textAlign: 'center', fontSize: '13px', fontWeight: 'bold' }}>{row.unitQty}</td>
         </tr>
       </tbody>
