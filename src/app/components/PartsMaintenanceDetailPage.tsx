@@ -532,6 +532,9 @@ export default function PartsMaintenanceDetailPage({
                   activeTab === tab.id ? 'text-[#1c252e]' : 'text-[#637381]'
                 }`}>
                   {tab.label}
+                  {tab.id === 'composition' && materialCompositions.length > 0 && (
+                    <span className="ml-[4px]">({materialCompositions.length})</span>
+                  )}
                 </p>
               </div>
             ))}
@@ -587,10 +590,11 @@ export default function PartsMaintenanceDetailPage({
                 upsertMaterialComposition({
                   itemId: mdoItemId,
                   esgMaterialId: String(mc.esgMaterialId),
+                  plantCode: part.plant || 'GTM1',        // MDO required
+                  unitWeight: mc.unitWeight ?? 0,          // MDO required
                   nameTw: mc.nameTw,
                   nameCn: mc.nameCn,
                   nameEn: mc.nameEn,
-                  carbonEmission: mc.unitWeight,   // MDO API 欄位名，值為單位重量
                   createdBy: mc.createdBy,
                 }).catch(err => console.error('[PartsDetail] 成分新增至 MDO 失敗', err));
               } else {

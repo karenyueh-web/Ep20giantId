@@ -356,7 +356,7 @@ function ZhSampleOrderDoc({ orders }: { orders: SampleOrderRecord[] }) {
             orders.map((o, i) => (
               <tr key={i} style={{ background: i % 2 === 1 ? '#fafafa' : 'white' }}>
                 <td style={{ ...td, fontWeight: 'bold', textAlign: 'center' }}>{o.orderNo}</td>
-                <td style={td}></td>
+                <td style={td}>{o.materialGroup ?? ''}</td>
                 <td style={{ ...td, wordBreak: 'break-all', fontSize: '9px' }}>{o.materialNo}</td>
                 <td style={tdC}>{o.plantCode}</td>
                 <td style={{ ...td, fontSize: '9px' }}>{o.longDescription}</td>
@@ -474,8 +474,8 @@ function EnSampleOrderDoc({ orders }: { orders: SampleOrderRecord[] }) {
               <tr key={i} style={{ background: i % 2 === 1 ? '#fafafa' : 'white' }}>
                 {/* 1. Sample Order No */}
                 <td style={{ ...td, fontWeight: 'bold', textAlign: 'center' }}>{o.orderNo}</td>
-                {/* 2. Material Group（待查 SAP） */}
-                <td style={td}></td>
+                {/* 2. Material Group */}
+                <td style={td}>{o.materialGroup ?? ''}</td>
                 {/* 3. Part No */}
                 <td style={{ ...td, wordBreak: 'break-all', fontSize: '9px' }}>{o.materialNo}</td>
                 {/* 4. Factory */}

@@ -17,7 +17,7 @@ import {
   type SampleType,
   type SampleOrderRecord,
 } from './sampleOrderData';
-import { createSampleOrderMdo } from '../api/supplier/sampleOrders';
+import { createSampleOrderMdo, confirmSampleOrderMdo } from '../api/supplier/sampleOrders';
 import type { PartRecord } from './partsMaintenanceData';
 
 // 取得登入使用者（待接 auth context 後可替換）
@@ -25,11 +25,16 @@ function getCurrentUser(): string {
   return localStorage.getItem('currentUserName') || localStorage.getItem('currentUserEmail') || '未知使用者';
 }
 
-// 取得今日日期（YYYY/MM/DD）
+// 取得今日日期（YYYY/MM/DD，UI 顯示用）
 function getTodayStr(): string {
   const now = new Date();
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())}`;
+}
+
+// YYYY/MM/DD → YYYY-MM-DD（MDO 要求 ISO 8601）
+function toIsoDate(dateStr: string): string {
+  return dateStr.replace(/\//g, '-');
 }
 
 // ── FloatingInput（帶浮動標籤，唯讀 / 可編輯）──────────────────────────────
@@ -405,8 +410,8 @@ export function CreateSampleOrderOverlay({
             materialNo:      part.material,
             longDescription: part.longDescription,
             sampleType,
-            sampleDate:      todayStr,
-            demandDate,
+            sampleDate:      toIsoDate(todayStr),
+            demandDate:      toIsoDate(demandDate),
             demandQty:       Number(demandQty),
             resample:        resample === '是',
             remark:          remark || undefined,
@@ -415,6 +420,18 @@ export function CreateSampleOrderOverlay({
           // 用 MDO 真實 UUID 取代本地暫時 id
           if (mdoResult?.id) {
             updateSampleOrderMdoId(record.id, mdoResult.id, mdoResult.revision_no ?? 1);
+          }
+          // MDO create 只能建立 DR；若目標狀態為 V，需再呼叫 confirm
+          if (targetStatus === 'V' && mdoResult?.id) {
+            try {
+              await confirmSampleOrderMdo({
+                id:        mdoResult.id,
+                revisionNo: mdoResult.revision_no ?? 1,
+                updatedBy: currentUser,
+              });
+            } catch (confirmErr) {
+              console.error('[MDO] confirm after create failed:', confirmErr);
+            }
           }
         } catch (err) {
           console.error('[MDO] createSampleOrder failed:', err);

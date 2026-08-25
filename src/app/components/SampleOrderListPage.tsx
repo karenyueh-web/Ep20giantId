@@ -13,12 +13,13 @@ import {
   updateSampleOrderStatus,
   batchCancelSampleOrders,
   addSampleOrderHistory,
+  replaceAllSampleOrders,
   getStatusDef,
   SAMPLE_ORDER_STATUSES,
   type SampleOrderRecord,
   type SampleOrderStatus,
 } from './sampleOrderData';
-import { fetchSampleOrders } from '../api/supplier/sampleOrders';
+import { fetchSampleOrders, deleteSampleOrderDraftMdo, cancelSampleOrderMdo, fetchSampleOrder } from '../api/supplier/sampleOrders';
 
 // ── Tab 定義（依示意圖） ────────────────────────────────────────────────
 type TabId = 'all' | SampleOrderStatus;
@@ -64,12 +65,12 @@ interface SampleOrderListPageProps {
 
 // ── 主元件 ─────────────────────────────────────────────────────────────────────
 export default function SampleOrderListPage({ userRole: _userRole }: SampleOrderListPageProps) {
-  // ── 資料 state ───────────────────────────────────────────────────────────────────────────
-  const [orders,     setOrders]     = useState<SampleOrderRecord[]>([]);
-  const [isLoading,  setIsLoading]  = useState(true);
-  const [loadError,  setLoadError]  = useState<string | null>(null);
+  // ── 資料 state ────────────────────────────────────────────────────────────────
+  const [orders,    setOrders]    = useState<SampleOrderRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  // 從 MDO 拉取資料的函式（MDO limit 上限 100，超過會 VALIDATION_FAILED）
+  // 從 MDO 拉取資料（MDO limit 上限 100，超過會 VALIDATION_FAILED）
   const loadOrders = useCallback(async () => {
     setIsLoading(true);
     setLoadError(null);
@@ -90,6 +91,24 @@ export default function SampleOrderListPage({ userRole: _userRole }: SampleOrder
       }
 
       setOrders(all);
+      // 同步更新 sampleOrderData store，確保 findLatestExistingSampleOrder 使用 MDO 真實資料
+      replaceAllSampleOrders(all);
+
+      // 補入 materialGroup（來自 items API，用於列印索樣單「物料群組」欄）
+      import('@/app/api/material/items').then(({ fetchItems }) => {
+        fetchItems({ limit: 200 })
+          .then(({ data: items }) => {
+            const itemMap = new Map(items.map(it => [it.material_no, it]));
+            const enriched = all.map(o => {
+              const it = itemMap.get(o.materialNo);
+              if (!it || !it.material_group) return o;
+              return { ...o, materialGroup: it.material_group };
+            });
+            setOrders(enriched);
+            replaceAllSampleOrders(enriched);
+          })
+          .catch(() => { /* items 補入失敗不影響主流程 */ });
+      });
     } catch (err) {
       console.error('[MDO] fetchSampleOrders failed:', err);
       setLoadError('資料載入失敗，請檢查內部網路後重整頁面');
@@ -108,12 +127,12 @@ export default function SampleOrderListPage({ userRole: _userRole }: SampleOrder
   const [detailOrder, setDetailOrder] = useState<SampleOrderRecord | null>(null);
 
   // ── 列印模式 state ──────────────────────────────────────────────────────────
-  const [printMode, setPrintMode] = useState(false);
+  const [printMode, setPrintMode]     = useState(false);
   const [printOrders, setPrintOrders] = useState<SampleOrderRecord[]>([]);
 
   // ── 批次取消 Dialog state ───────────────────────────────────────────────────
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
-  const [cancelReason, setCancelReason] = useState('');
+  const [cancelReason, setCancelReason]         = useState('');
 
   // ── Tab ─────────────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<TabId>('all');
@@ -123,6 +142,7 @@ export default function SampleOrderListPage({ userRole: _userRole }: SampleOrder
   const [filterDateTo, setFilterDateTo]     = useState('');
   const [filterMaterial, setFilterMaterial] = useState('');
   const [filterVendor, setFilterVendor]     = useState('');
+  const [filterOrderNo, setFilterOrderNo]   = useState('');
 
   // ── Checkbox 選取（受控） ───────────────────────────────────────────────────
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
@@ -190,9 +210,13 @@ export default function SampleOrderListPage({ userRole: _userRole }: SampleOrder
       );
     }
 
-    return data;
-  }, [tabFilteredData, filterDateFrom, filterDateTo, filterMaterial, filterVendor]);
+    if (filterOrderNo.trim()) {
+      const kw = filterOrderNo.trim().toLowerCase();
+      data = data.filter((o) => (o.orderNo ?? '').toLowerCase().includes(kw));
+    }
 
+    return data;
+  }, [tabFilteredData, filterDateFrom, filterDateTo, filterMaterial, filterVendor, filterOrderNo]);
 
   // ── 顯示資料（加入 display 欄位，必須在批次操作 handler 前定義）──────────────────────
   type PartWithVendorDisplay = SampleOrderRecord & {
@@ -216,10 +240,9 @@ export default function SampleOrderListPage({ userRole: _userRole }: SampleOrder
 
   // ── 批次操作 ────────────────────────────────────────────────────────────────
 
-  const handleDeleteSelected = useCallback(() => {
-    // selectedIds 存的是 displayData 的 row index
-    const indices = Array.from(selectedIds);
-    const selectedOrders = indices.map((i) => displayData[i]).filter(Boolean);
+  const handleDeleteSelected = useCallback(async () => {
+    // StandardDataTable 將 row.id 存入 selectedIds（字串 UUID，不是陣列 index）
+    const selectedOrders = displayData.filter((o) => selectedIds.has(o.id as unknown as number));
     const drOrders   = selectedOrders.filter((o) => o.status === 'DR');
     const nonDrCount = selectedOrders.length - drOrders.length;
 
@@ -227,16 +250,42 @@ export default function SampleOrderListPage({ userRole: _userRole }: SampleOrder
       toast.error('只有草稿(DR)狀態的索樣單可以刪除');
       return;
     }
-    // 只從本地 store 刪除，不重新 fetch（避免 MDO 把它拉回來）
-    deleteSampleOrders(drOrders.map((o) => o.id));
-    setSelectedIds(new Set());
 
-    if (nonDrCount > 0) {
-      toast(`已刪除 ${drOrders.length} 筆草稿索樣單（${nonDrCount} 筆非草稿狀態無法刪除）`);
-    } else {
-      toast.success(`已刪除 ${drOrders.length} 筆索樣單`);
+    const operator = localStorage.getItem('currentUserName') || localStorage.getItem('currentUserEmail') || '';
+
+    // 呼叫 MDO delete-draft，失敗的單不影響其他
+    const results = await Promise.allSettled(
+      drOrders.map((o) =>
+        deleteSampleOrderDraftMdo({
+          id:         o.id,
+          revisionNo: o.mdoRevisionNo ?? 1,
+          updatedBy:  operator,
+        })
+      )
+    );
+
+    const succeeded = drOrders.filter((_, i) => results[i].status === 'fulfilled');
+    const failedCount = drOrders.length - succeeded.length;
+
+    if (succeeded.length === 0) {
+      toast.error('刪除失敗，請稍後再試');
+      return;
     }
-  }, [selectedIds, displayData]);
+
+    // 本地 store 同步移除
+    deleteSampleOrders(succeeded.map((o) => o.id));
+    setSelectedIds(new Set());
+    // 重新從 MDO 拉取（已刪除的單不會再出現）
+    loadOrders();
+
+    if (failedCount > 0) {
+      toast(`已刪除 ${succeeded.length} 筆，${failedCount} 筆失敗`);
+    } else if (nonDrCount > 0) {
+      toast(`已刪除 ${succeeded.length} 筆草稿索樣單（${nonDrCount} 筆非草稿狀態無法刪除）`);
+    } else {
+      toast.success(`已刪除 ${succeeded.length} 筆索樣單`);
+    }
+  }, [selectedIds, displayData, loadOrders]);
 
   // 開啟批次取消 Dialog
   const handleCancelSelected = useCallback(() => {
@@ -246,22 +295,48 @@ export default function SampleOrderListPage({ userRole: _userRole }: SampleOrder
   }, [selectedIds]);
 
   // 確認批次取消
-  const handleConfirmBatchCancel = useCallback(() => {
+  const handleConfirmBatchCancel = useCallback(async () => {
     const reason = cancelReason.trim();
     if (!reason) return;
-    // selectedIds 存的是 displayData 的 row index
-    const indices = Array.from(selectedIds);
-    const selectedOrders = indices.map((i) => displayData[i]).filter(Boolean);
+    // StandardDataTable 將 row.id 存入 selectedIds
+    const selectedOrders = displayData.filter((o) => selectedIds.has(o.id as unknown as number));
+    if (selectedOrders.length === 0) return;
 
-    // 執行批次取消（狀態 → CC，寫入 cancelReason）
-    batchCancelSampleOrders(selectedOrders.map((o) => o.id), reason);
+    const operator = localStorage.getItem('currentUserName') || localStorage.getItem('currentUserEmail') || '';
 
-    // 寫入歷程：每張索樣單各記錄一筆
+    // 先呼叫 MDO cancel API（取最新 revisionNo 避免 409）
+
+    const results = await Promise.allSettled(
+      selectedOrders.map(async (o) => {
+        // 取最新 revisionNo
+        const latest = await fetchSampleOrder(o.id);
+        const revisionNo = latest?.mdoRevisionNo ?? o.mdoRevisionNo ?? 1;
+        return cancelSampleOrderMdo({
+          id: o.id,
+          revisionNo,
+          cancelReason: reason,
+          updatedBy: operator,
+        });
+      })
+    );
+
+    const succeeded = selectedOrders.filter((_, i) => results[i].status === 'fulfilled');
+    const failedCount = selectedOrders.length - succeeded.length;
+
+    if (succeeded.length === 0) {
+      toast.error('取消失敗，請稍後再試');
+      setCancelDialogOpen(false);
+      setCancelReason('');
+      return;
+    }
+
+    // MDO 成功後才更新本地 store 和歷程
+    batchCancelSampleOrders(succeeded.map((o) => o.id), reason);
+
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, '0');
     const ts = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
-    const operator = localStorage.getItem('currentUserName') || localStorage.getItem('currentUserEmail') || '';
-    selectedOrders.forEach((o) => {
+    succeeded.forEach((o) => {
       addSampleOrderHistory(o.id, {
         date: ts,
         event: '批次取消索樣單',
@@ -274,19 +349,22 @@ export default function SampleOrderListPage({ userRole: _userRole }: SampleOrder
     setSelectedIds(new Set());
     setCancelDialogOpen(false);
     setCancelReason('');
-    toast.success(`已取消 ${selectedOrders.length} 筆索樣單`);
+    if (failedCount > 0) {
+      toast(`已取消 ${succeeded.length} 筆，${failedCount} 筆失敗`);
+    } else {
+      toast.success(`已取消 ${succeeded.length} 筆索樣單`);
+    }
   }, [selectedIds, displayData, cancelReason, loadOrders]);
 
+
   const handlePrintSelected = useCallback(() => {
-    // selectedIds 存的是 displayData 的 row index
-    const indices = Array.from(selectedIds);
-    const selected = indices.map((i) => displayData[i]).filter(Boolean);
+    // StandardDataTable 將 row.id 存入 selectedIds
+    const selected = displayData.filter((o) => selectedIds.has(o.id as unknown as number));
     if (selected.length === 0) return;
     setPrintOrders(selected);
     setSelectedIds(new Set());
     setPrintMode(true);
   }, [selectedIds, displayData]);
-
 
   const columns: StandardColumn<PartWithVendorDisplay>[] = useMemo(
     () => [
@@ -373,10 +451,11 @@ export default function SampleOrderListPage({ userRole: _userRole }: SampleOrder
       // DR：刪除 | 列印（不提供取消）
       return <>{CTA_DELETE}{SEP}{CTA_PRINT}</>;
     }
-    // 其餘 Tab（V/B/SC）：取消 | 列印；CC/CL 只有列印
+    // CC / CL：只有列印（已終態，不可操作）
     if (activeTab === 'CC' || activeTab === 'CL') {
       return <>{CTA_PRINT}</>;
     }
+    // V / SC：取消 | 列印（MDO 2026-08-25 開放 SC→CC cancel）
     return <>{CTA_CANCEL}{SEP}{CTA_PRINT}</>;
   })() : null;
 
@@ -459,6 +538,13 @@ export default function SampleOrderListPage({ userRole: _userRole }: SampleOrder
           onChange={setFilterDateTo}
           type="date"
           placeholder="End date"
+        />
+        <SearchField
+          label="索樣單號"
+          value={filterOrderNo}
+          onChange={setFilterOrderNo}
+          type="search"
+          placeholder="輸入索樣單號"
         />
         <SearchField
           label="料號"

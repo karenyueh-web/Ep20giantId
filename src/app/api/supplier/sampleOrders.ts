@@ -7,11 +7,13 @@
  * 已部署 endpoints：
  *   GET    /api/v1/order-transaction/sample-orders
  *   GET    /api/v1/order-transaction/sample-orders/{id}
- *   POST   .../commands/create      ❗ whitelist bug 待修復
+ *   GET    /api/v1/order-transaction/sample-orders/{id}/history  ✅ 2026-08-25 確認已部署
+ *   POST   .../commands/create      ✅（whitelist + Prisma date cast bugs 均已修復 2026-08-24）
  *   POST   .../commands/confirm     ✅
- *   POST   .../commands/supplier-reply  ✅（日期欄位待 MDO 修復 Prisma bug）
+ *   POST   .../commands/supplier-reply  ✅
  *   POST   .../commands/cancel      ✅
  *   POST   .../commands/close       ✅
+ *   POST   .../commands/delete-draft  ✅
  */
 import { mdoList, mdoGet, mdoCommand } from '../client';
 import type { SampleOrderRecord, SampleOrderStatus } from '../../components/sampleOrderData';
@@ -73,6 +75,17 @@ export interface CancelSampleOrderDto {
   revisionNo:   number;  // 必填
   cancelReason: string;
   updatedBy?:   string;
+}
+
+/**
+ * 刪除草稿索樣單 DTO
+ * MDO Schema: DeleteSampleOrderDraftDto
+ * 只允許 status = DR 的索樣單操作
+ */
+export interface DeleteSampleOrderDraftDto {
+  id:         string;   // MDO UUID
+  revisionNo: number;   // 樂觀鎖，必填
+  updatedBy?: string;   // 操作者
 }
 
 /**
@@ -169,6 +182,20 @@ export async function confirmSampleOrderMdo(
   );
 }
 
+/**
+ * 刪除索樣單草稿（DR 狀態才能操作）
+ * POST /api/v1/order-transaction/sample-orders/commands/delete-draft
+ * 2026-08-25 MDO 補上此 endpoint
+ */
+export async function deleteSampleOrderDraftMdo(
+  dto: DeleteSampleOrderDraftDto
+): Promise<void> {
+  return mdoCommand<DeleteSampleOrderDraftDto, void>(
+    '/order-transaction/sample-orders/commands/delete-draft',
+    dto
+  );
+}
+
 // ── MDO GET Response（snake_case，實測 2026-08-21）────────────────────────────
 
 export interface MdoSampleOrderItem {
@@ -200,6 +227,19 @@ export interface MdoSampleOrderItem {
   revision_no:             number;
   updated_by:              string | null;
   is_deleted:              boolean;
+}
+
+/** 索樣單歷程 — 單筆記錄（來自 GET /sample-orders/{id}/history） */
+export interface MdoSampleOrderHistoryItem {
+  id:            string;
+  sample_order_id: string;
+  revision_no:   number;
+  change_type:   string;   // e.g. 'CREATE' | 'CONFIRM' | 'SUPPLIER_REPLY' | 'CANCEL' | 'CLOSE'
+  changed_by:    string;
+  changed_at:    string;   // ISO 8601
+  change_reason: string | null;
+  // 快照欄位（其餘略）
+  status:        string | null;
 }
 
 /** ISO 8601 → YYYY/MM/DD */
@@ -238,6 +278,7 @@ export function mapMdoToSampleOrderRecord(item: MdoSampleOrderItem): SampleOrder
     needsFullSupplierReply: false,
     // revision_no 存在從 API，傳入 supplierReplySampleOrderMdo 時需要此欄位
     mdoRevisionNo:         item.revision_no,
+    materialGroup:         '',  // 由 SampleOrderListPage loadOrders 補入（來自 items API）
   };
 }
 
@@ -258,9 +299,12 @@ export async function fetchSampleOrders(params?: {
     '/order-transaction/sample-orders',
     params
   );
+  // MDO 使用軟刪除（is_deleted flag），GET 列表仍會回傳已刪除的記錄
+  // 前端自行過濾，MDO GET 目前不支援 isDeleted 查詢參數
+  const active = res.data.filter((item) => !item.is_deleted);
   return {
-    data:  res.data.map(mapMdoToSampleOrderRecord),
-    total: res.pagination?.total ?? res.data.length,
+    data:  active.map(mapMdoToSampleOrderRecord),
+    total: res.pagination?.total ?? active.length,
   };
 }
 
@@ -273,4 +317,21 @@ export async function fetchSampleOrder(id: string): Promise<SampleOrderRecord> {
     `/order-transaction/sample-orders/${id}`
   );
   return mapMdoToSampleOrderRecord(item);
+}
+
+/**
+ * 取得索樣單歷程
+ * GET /api/v1/order-transaction/sample-orders/{id}/history
+ * 2026-08-25 實測確認已部署，回傳格式：{ data: [...], pagination: {...}, meta: {...} }
+ * 歷程為 append-only（只增不減），依 revision_no 降冪排序
+ */
+export async function fetchSampleOrderHistory(
+  id: string
+): Promise<MdoSampleOrderHistoryItem[]> {
+  // 一次取 100 筆（MDO 上限），索樣單歷程通常遠少於此數
+  const res = await mdoList<MdoSampleOrderHistoryItem>(
+    `/order-transaction/sample-orders/${id}/history`,
+    { limit: 100, sortOrder: 'desc' }
+  );
+  return res.data;
 }

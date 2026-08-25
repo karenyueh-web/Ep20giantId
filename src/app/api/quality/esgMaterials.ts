@@ -84,6 +84,8 @@ export interface MdoMaterialComposition {
   id: string;
   item_id: string;          // 對應 product-master items.material_id
   esg_material_id: string;
+  plant_code?: string;      // 工廠代碼（唯一鍵第 3 維，D-MC13）
+  unit_weight?: number | string; // 成分單位重量（D-MC14，API 回傳可能是 string）
   name_tw?: string;
   name_cn?: string;
   name_en?: string;
@@ -98,6 +100,8 @@ export interface MdoMaterialComposition {
 export interface UpsertMaterialCompositionBody {
   itemId: string;           // product-master items UUID
   esgMaterialId: string;   // esg_material UUID
+  plantCode: string;       // 工廠代碼（MDO required）
+  unitWeight: number;      // 單位重量（MDO required）
   nameTw?: string;
   nameCn?: string;
   nameEn?: string;

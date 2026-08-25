@@ -191,12 +191,12 @@ export default function EsgMaterialSummaryPage({
             vendorLabel,
             vendorCode:  q.supplier_no,
             material:    q.material_no,
-            plant:       q.plant_code,          // ✅ 來自 supplier-quotations
+            plant:       comp.plant_code ?? q.plant_code, // 優先用 composition 的 plant_code
             purchaseOrg: q.purchase_org,
             nameTw,
             nameCn,
             nameEn,
-            unitWeight:  '',                    // ⏸ 待 MDO 補 unit_weight 欄位後串接
+            unitWeight:  comp.unit_weight != null ? String(parseFloat(String(comp.unit_weight))) : '',
             updateInfo:  `${displayBy}${displayDate ? ' — ' + formatTs(displayDate) : ''}`,
           });
         }

@@ -136,6 +136,7 @@
 ## 索樣單（`/api/v1/order-transaction/sample-orders`）
 
 > 串接日期：2026-08-21
+> 歷程 endpoint 串接：2026-08-25
 
 ### ✅ 已完成串接
 
@@ -143,7 +144,9 @@
 |------|------|
 | GET 列表 | `fetchSampleOrders()` — 自動分頁（limit=100），mapper 轉換完成 |
 | GET 詳情 | `fetchSampleOrder(id)` — 已實作，可供詳情頁使用 |
+| GET 歷程 | `fetchSampleOrderHistory(id)` — 已實作，`SampleOrderDetailOverlay` 開啟歷程時從 MDO 非同步拉取 ✅ 2026-08-25 |
 | 欄位對應 | `supplier_code/name`、`plant_code`、`material_no`、`long_description`、`supplier_material_no`、`demand_date`、`demand_qty`、`available_date`、`supplier_ship_date`、`supplier_daily_capacity` 全部 mapper 完成 |
+| 物料群組 | `materialGroup`：在 `SampleOrderListPage.loadOrders` 補入（來自 `items.material_group`），列印索樣單已顯示 ✅ 2026-08-25 |
 | 列印索樣單 | `To:` 改用 `supplierName(supplierCode)`，分組 key 改 supplierCode |
 
 ### ✅ 已修復 Bug（2026-08-24）
@@ -159,5 +162,5 @@
 
 | 項目 | 問題 | traceId / 說明 |
 |------|------|---------------|
-| **`/sample-orders/{id}/history`** | 歷程 endpoint 尚未部署，前端歷程目前為本地 mock | — |
-| **物料群組欄位** | MDO `MdoSampleOrderItem` 無 `material_group`，列印索樣單該欄空白 | 需 MDO 或 SAP 補充 |
+| **物料群組**（SAP 完整資料） | `items.material_group` 已串接，但 items API 中的值是否為 SAP 最新值待確認 | — |
+

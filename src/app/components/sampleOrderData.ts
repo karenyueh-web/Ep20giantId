@@ -143,11 +143,13 @@ export interface SampleOrderRecord {
   // ── MDO 相關 ──────────────────────────────────────────────────────────────────
   /** MDO revision_no，supplierReplySampleOrderMdo 的 required 欄位 */
   mdoRevisionNo?: number;
+  /** 物料群組（來自 items API，用於列印索樣單的「物料群組」欄） */
+  materialGroup?: string;
 }
 
 // 依年度獨立計算流水號：跨年自動歸零
 let _orderSeqYear = new Date().getFullYear();
-let _orderSeq = 0; // 2026 年尚無 mock 資料，從 0 開始（第一張產生 G2600001）
+let _orderSeq = 0; // 頁面載入後由 syncOrderSeqFromRecords() 同步至 MDO 最大值
 
 function genOrderNo(): string {
   const currentYear = new Date().getFullYear();
@@ -161,282 +163,31 @@ function genOrderNo(): string {
   return `G${yearSuffix}${String(_orderSeq).padStart(5, '0')}`;
 }
 
-// ── Mock 資料 Store（模組記憶體，頁面切換不遺失）───────────────────────────
+/**
+ * 從已載入的 MDO 記錄中同步流水號上限，避免重整頁面後從 0 重算造成重複單號。
+ * 格式：G<YY><NNNNN>，例如 G2600042 → seq=42
+ */
+function syncOrderSeqFromRecords(records: SampleOrderRecord[]): void {
+  const currentYear = new Date().getFullYear();
+  const yearSuffix = String(currentYear).slice(-2); // "26"
+  const prefix = `G${yearSuffix}`; // "G26"
 
-let _sampleOrders: SampleOrderRecord[] = [
-  // ── V 廠商確認中 ─────────────────────────────────────────────────────────
-  {
-    id: '1',
-    orderNo: 'G2500091',
-    status: 'V',
-    supplierCode: '000100463',
-    supplierName: '速聯',
-    purchaseOrg: '1101',
-    plantCode: 'GTM1',
-    materialNo: '1330-BASAD1-003',
-    longDescription: 'G9 Pique ADV PRO 29 0 (15)(拉伸無膜樣+數位無膜樣) CARBON SMOKE/G-CHO1',
-    supplierMaterialNo: '411U12C14S4002',
-    sampleDate: '2025/01/01',
-    demandDate: '2025/02/01',
-    demandQty: 4,
-    resample: true,
-    sampleType: 'D',
-    remark: '開發樣品需於年前確認',
-    createdBy: '王大明',
-    createdAt: '2025/01/01 12:00',
-    updatedAt: '2025/01/01 12:00',
-    supplierShipDate: '2025/02/10',
-    actualShipDate: '2025/02/10',
-    availableDate: '2025/02/10',
-    supplierDailyCapacity: 4,
-  },
-  {
-    id: '2',
-    orderNo: 'G2500092',
-    status: 'V',
-    supplierCode: '000100463',
-    supplierName: '速聯',
-    purchaseOrg: 'GEM採購組織',
-    plantCode: 'GTM1',
-    materialNo: '1129-CSL0075-L02',
-    longDescription: 'SRAM EAGLE AXS REAR DERAILLEUR 12-SPD',
-    sampleDate: '2024/12/25',
-    demandDate: '2025/02/01',
-    resample: false,
-    sampleType: 'G',
-    remark: '',
-    createdBy: '王大明',
-    createdAt: '2024/12/20 09:35',
-    updatedAt: '2024/12/20 09:35',
-  },
-  {
-    id: '3',
-    orderNo: 'G2500093',
-    status: 'V',
-    supplierCode: '000100463',
-    supplierName: '速聯',
-    purchaseOrg: 'GEM採購組織',
-    plantCode: 'GTM1',
-    materialNo: '1129-CSL0075-L03',
-    longDescription: 'SRAM EAGLE AXS FRONT DERAILLEUR 12-SPD',
-    sampleDate: '2024/12/25',
-    demandDate: '2025/02/01',
-    resample: false,
-    sampleType: 'G',
-    remark: '',
-    createdBy: '王大明',
-    createdAt: '2024/12/20 09:40',
-    updatedAt: '2024/12/20 09:40',
-  },
-  {
-    id: '4',
-    orderNo: 'G2500082',
-    status: 'V',
-    supplierCode: '000100321',
-    supplierName: '禧瑪諾',
-    purchaseOrg: 'GEM採購組織',
-    plantCode: 'GTM1',
-    materialNo: '1129-SHM0012-A01',
-    longDescription: 'SHIMANO DURA-ACE R9200 CRANKSET 172.5MM',
-    sampleDate: '2024/12/10',
-    demandDate: '2025/01/15',
-    resample: false,
-    sampleType: 'D',
-    remark: '請確認包裝方式',
-    createdBy: '陳小華',
-    createdAt: '2024/12/05 14:20',
-    updatedAt: '2024/12/05 14:20',
-  },
-  {
-    id: '5',
-    orderNo: 'G2500083',
-    status: 'V',
-    supplierCode: '000100321',
-    supplierName: '禧瑪諾',
-    purchaseOrg: 'GEM採購組織',
-    plantCode: 'DTC1',
-    materialNo: '1129-SHM0013-B02',
-    longDescription: 'SHIMANO DURA-ACE R9200 BRAKE CALIPER FRONT',
-    supplierMaterialNo: 'SHM-BR-R9200-F',
-    sampleDate: '2024/12/10',
-    demandDate: '2025/01/20',
-    demandQty: 2,
-    resample: true,
-    sampleType: 'G',
-    remark: '',
-    createdBy: '陳小華',
-    createdAt: '2024/12/05 14:25',
-    updatedAt: '2024/12/05 14:25',
-  },
-  // ── SC 廠商已回覆 ─────────────────────────────────────────────────────────
-  {
-    id: '6',
-    orderNo: 'G2500071',
-    status: 'SC',
-    supplierCode: '000100215',
-    supplierName: '麥克納馬拉',
-    purchaseOrg: 'GEM採購組織',
-    plantCode: 'GTM1',
-    materialNo: '1129-MCN0044-C03',
-    longDescription: 'MAXXIS MINION DHF 29X2.5 3C EXO TIRE',
-    supplierMaterialNo: 'MX-MINION-DHF-29',
-    sampleDate: '2024/11/20',
-    demandDate: '2024/12/30',
-    demandQty: 6,
-    resample: false,
-    sampleType: 'G',
-    remark: '廠商已回覆，待採購確認',
-    createdBy: '林怡君',
-    createdAt: '2024/11/15 10:00',
-    updatedAt: '2024/11/25 16:30',
-    supplierShipDate: '2024/12/15',
-    actualShipDate: '2024/12/16',
-    availableDate: '2024/12/20',
-    supplierDailyCapacity: 10,
-  },
-  {
-    id: '7',
-    orderNo: 'G2500072',
-    status: 'SC',
-    supplierCode: '000100215',
-    supplierName: '麥克納馬拉',
-    purchaseOrg: 'GEM採購組織',
-    plantCode: 'GTM1',
-    materialNo: '1129-MCN0045-D01',
-    longDescription: 'MAXXIS MINION DHR II 29X2.4 3C EXO TIRE',
-    sampleDate: '2024/11/20',
-    demandDate: '2024/12/30',
-    demandQty: 4,
-    resample: false,
-    sampleType: 'G',
-    remark: '',
-    createdBy: '林怡君',
-    createdAt: '2024/11/15 10:05',
-    updatedAt: '2024/11/25 16:35',
-    supplierShipDate: '2024/12/15',
-    actualShipDate: '2024/12/17',
-    availableDate: '2024/12/22',
-    supplierDailyCapacity: 8,
-  },
-  {
-    id: '8',
-    orderNo: 'G2500073',
-    status: 'SC',
-    supplierCode: '000100463',
-    supplierName: '速聯',
-    purchaseOrg: 'GEM採購組織',
-    plantCode: 'DTE1',
-    materialNo: '1129-CSL0066-E01',
-    longDescription: 'SRAM GX EAGLE CHAIN 126 LINK 12-SPD',
-    sampleDate: '2024/11/25',
-    demandDate: '2025/01/05',
-    resample: true,
-    sampleType: 'D',
-    remark: '第二次索樣，規格已調整',
-    createdBy: '王大明',
-    createdAt: '2024/11/20 11:00',
-    updatedAt: '2024/11/28 09:15',
-  },
-  // ── SC 廠商已回覆（原已確認） ──────────────────────────────────────────────
-  {
-    id: '9',
-    orderNo: 'G2500055',
-    status: 'SC',
-    supplierCode: '000100321',
-    supplierName: '禧瑪諾',
-    purchaseOrg: 'GEM採購組織',
-    plantCode: 'GTM1',
-    materialNo: '1129-SHM0005-F01',
-    longDescription: 'SHIMANO ULTEGRA R8100 GROUPSET 12-SPD',
-    sampleDate: '2024/10/15',
-    demandDate: '2024/11/30',
-    resample: false,
-    sampleType: 'D',
-    remark: '確認完成，進入量產評估',
-    createdBy: '陳小華',
-    createdAt: '2024/10/10 13:00',
-    updatedAt: '2024/10/30 17:00',
-  },
-  {
-    id: '10',
-    orderNo: 'G2500056',
-    status: 'SC',
-    supplierCode: '000100215',
-    supplierName: '麥克納馬拉',
-    purchaseOrg: 'GEM採購組織',
-    plantCode: 'GTM1',
-    materialNo: '1129-MCN0030-G02',
-    longDescription: 'MAXXIS ARDENT RACE 29X2.2 3C EXO TIRE',
-    sampleDate: '2024/10/20',
-    demandDate: '2024/11/30',
-    resample: false,
-    sampleType: 'G',
-    remark: '',
-    createdBy: '林怡君',
-    createdAt: '2024/10/15 09:00',
-    updatedAt: '2024/11/05 14:20',
-  },
-  // ── DR 草稿 ──────────────────────────────────────────────────────────────
-  {
-    id: '11',
-    orderNo: 'G2500095',
-    status: 'DR',
-    supplierCode: '000100463',
-    supplierName: '速聯',
-    purchaseOrg: 'GEM採購組織',
-    plantCode: 'GTM1',
-    materialNo: '1129-CSL0080-H01',
-    longDescription: 'SRAM XX SL EAGLE AXS GROUPSET 12-SPD COMPLETE',
-    sampleDate: '2025/01/10',
-    demandDate: '2025/03/01',
-    resample: false,
-    sampleType: 'D',
-    remark: '草稿中，尚未送出',
-    createdBy: '王大明',
-    createdAt: '2024/12/24 16:00',
-    updatedAt: '2024/12/24 16:00',
-  },
-  // ── CL 已關閉 ────────────────────────────────────────────────────────────
-  {
-    id: '12',
-    orderNo: 'G2500040',
-    status: 'CL',
-    supplierCode: '000100321',
-    supplierName: '禧瑪諾',
-    purchaseOrg: 'GEM採購組織',
-    plantCode: 'GTM1',
-    materialNo: '1129-SHM0001-J01',
-    longDescription: 'SHIMANO XTR M9100 CRANKSET 170MM',
-    sampleDate: '2024/09/01',
-    demandDate: '2024/10/15',
-    resample: false,
-    sampleType: 'G',
-    remark: '結案，已轉量產',
-    createdBy: '陳小華',
-    createdAt: '2024/08/25 10:00',
-    updatedAt: '2024/10/20 15:00',
-  },
-  // ── CC 取消 ──────────────────────────────────────────────────────────────
-  {
-    id: '13',
-    orderNo: 'G2500035',
-    status: 'CC',
-    supplierCode: '000100215',
-    supplierName: '麥克納馬拉',
-    purchaseOrg: 'GEM採購組織',
-    plantCode: 'DTC1',
-    materialNo: '1129-MCN0020-K01',
-    longDescription: 'MAXXIS HIGH ROLLER II 29X2.3 3C GRIP TIRE',
-    sampleDate: '2024/08/10',
-    demandDate: '2024/09/30',
-    resample: false,
-    sampleType: 'E',
-    remark: '因供應商問題取消',
-    createdBy: '林怡君',
-    createdAt: '2024/08/05 14:00',
-    updatedAt: '2024/09/01 11:30',
-  },
-];
+  let maxSeq = _orderSeq; // 保留目前值（可能已在本次 session 遞增過）
+  for (const r of records) {
+    if (r.orderNo?.startsWith(prefix)) {
+      const seqStr = r.orderNo.slice(prefix.length); // "00042"
+      const seq = parseInt(seqStr, 10);
+      if (!isNaN(seq) && seq > maxSeq) maxSeq = seq;
+    }
+  }
+  if (maxSeq > _orderSeq) {
+    _orderSeq = maxSeq;
+  }
+}
+
+// ── Store（從 MDO 載入，不使用 Mock 資料）─────────────────────────────────
+// Mock 資料已清除，由 loadOrders() 從 MDO 載入後透過 replaceAllSampleOrders() 同步
+let _sampleOrders: SampleOrderRecord[] = [];
 
 // ── Store 操作函式 ──────────────────────────────────────────────────────────────────
 
@@ -448,6 +199,14 @@ function notifySampleOrderChange() {
 
 export function getSampleOrders(): SampleOrderRecord[] {
   return _sampleOrders;
+}
+
+/** MDO 資料載入後同步覆蓋整個 store（取代 Mock 資料） */
+export function replaceAllSampleOrders(records: SampleOrderRecord[]): void {
+  _sampleOrders = [...records];
+  // 同步流水號上限，避免重整頁面後產生重複單號
+  syncOrderSeqFromRecords(records);
+  notifySampleOrderChange();
 }
 
 export function addSampleOrder(record: Omit<SampleOrderRecord, 'id' | 'orderNo' | 'createdAt' | 'updatedAt'>): SampleOrderRecord {

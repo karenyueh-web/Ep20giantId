@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { toast } from 'sonner';
 import { createPortal } from 'react-dom';
 import { BaseOverlay } from './BaseOverlay';
 import { DropdownSelect } from './DropdownSelect';
@@ -9,7 +10,6 @@ import { OrderHistory } from './OrderHistory';
 import {
   getStatusDef,
   getSampleOrders,
-  getSampleOrderHistory,
   SAMPLE_TYPE_OPTIONS,
   cancelSampleOrder,
   revertSampleOrderToV,
@@ -27,11 +27,21 @@ import {
   cancelSampleOrderMdo,
   closeSampleOrderMdo,
   supplierReplySampleOrderMdo,
+  fetchSampleOrderHistory,
+  fetchSampleOrder,
+  type MdoSampleOrderHistoryItem,
 } from '../api/supplier/sampleOrders';
+
 
 // 取得登入使用者（待接 auth context 後可替換）
 function getCurrentUser(): string {
   return localStorage.getItem('currentUserName') || localStorage.getItem('currentUserEmail') || '未知使用者';
+}
+
+// YYYY/MM/DD → YYYY-MM-DD（MDO 要求 ISO 8601）
+function toIsoDate(d: string | undefined): string | undefined {
+  if (!d) return undefined;
+  return d.replace(/\//g, '-');
 }
 
 // Mock AD 帳號 Email 對照（實際由後端查詢 AD）
@@ -403,7 +413,18 @@ export function SampleOrderDetailOverlay({
     order.supplierDailyCapacity != null ? String(order.supplierDailyCapacity) : '',
   );
 
-  // DR 可編輯欄位 state
+// MDO 歷程事件代碼 → 中文標籤
+const MDO_EVENT_LABEL: Record<string, string> = {
+  CREATE:         '建立索樣單',
+  CONFIRM:        '轉交廠商',
+  SUPPLIER_REPLY: '廠商回覆',
+  CLOSE:          '關閉結案',
+  CANCEL:         '取消索樣',
+  DELETE:         '刪除草稿',
+  REVERT:         '退回廠商補填',
+  UPDATE:         '資料更新',
+};
+
   const [drResample,   setDrResample]   = useState(order.resample ? '是' : '否');
   const [drSampleType, setDrSampleType] = useState(order.sampleType);
   const [drDemandDate, setDrDemandDate] = useState(order.demandDate ?? '');
@@ -411,6 +432,20 @@ export function SampleOrderDetailOverlay({
 
   // ── 歷程彈窗 ──
   const [showHistory, setShowHistory] = useState(false);
+  // MDO 歷程資料（開啟歷程時非同步拉取）
+  const [mdoHistory, setMdoHistory] = useState<MdoSampleOrderHistoryItem[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  // 歷程彈窗開啟時，從 MDO 拉取歷程資料
+  useEffect(() => {
+    if (!showHistory) return;
+    setHistoryLoading(true);
+    fetchSampleOrderHistory(order.id)
+      .then(setMdoHistory)
+      .catch(() => setMdoHistory([]))
+      .finally(() => setHistoryLoading(false));
+  }, [showHistory, order.id]);
+
   // 回覆採購按下後才觸發紅框
   const [replySubmitted, setReplySubmitted] = useState(false);
   // SC 狀態：廠商回覆區全部欄位可調整
@@ -421,7 +456,7 @@ export function SampleOrderDetailOverlay({
   const [scAvailableDate,  setScAvailableDate]  = useState(order.availableDate  ?? '');
   const [scActualShipDate, setScActualShipDate] = useState(order.actualShipDate ?? '');
 
-  const handleReply = () => {
+  const handleReply = async () => {
     setReplySubmitted(true);
     const shipEmpty  = !supplierShipDate;
     const capNum     = Number(supplierDailyCapacity);
@@ -432,6 +467,30 @@ export function SampleOrderDetailOverlay({
     const pad = (n: number) => String(n).padStart(2, '0');
     const ts = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
 
+    // 先呼叫 MDO supplier-reply API（V → SC），成功後才更新 local store
+    if (typeof order.id === 'string' && order.id.includes('-')) {
+      try {
+        const latest = await fetchSampleOrder(order.id);
+        const revisionNo = latest?.mdoRevisionNo ?? order.mdoRevisionNo ?? 1;
+        await supplierReplySampleOrderMdo({
+          id:                    order.id,
+          revisionNo,
+          supplierShipDate:      toIsoDate(supplierShipDate)   || undefined,
+          actualShipDate:        toIsoDate(actualShipDate)     || undefined,
+          availableDate:         toIsoDate(availableDate)      || undefined,
+          supplierDailyCapacity: capNum > 0 ? capNum           : undefined,
+          updatedBy:             getCurrentUser(),
+        });
+      } catch (err: unknown) {
+        const e = err as { body?: { error?: { message?: string } } };
+        const msg = e?.body?.error?.message ?? '回覆採購失敗，請稍後再試';
+        console.error('[MDO] supplierReplySampleOrder (V→SC) failed:', err);
+        toast.error(msg);
+        return;
+      }
+    }
+
+    // MDO 成功後才更新 local store
     const updated = updateSampleOrderVendorReply(order.id, {
       supplierShipDate,
       actualShipDate,
@@ -466,6 +525,7 @@ export function SampleOrderDetailOverlay({
     sendEmailMock(email);
     onClose();
   };
+
 
   // DR：暫存草稿
   const handleSaveDraft = () => {
@@ -504,7 +564,7 @@ export function SampleOrderDetailOverlay({
   };
 
   // DR：轉交廠商（DR → V）
-  const handleSendToVendor = () => {
+  const handleSendToVendor = async () => {
     const qtyNum = Number(drDemandQty);
     if (!drDemandQty || !Number.isInteger(qtyNum) || qtyNum <= 0) {
       window.alert('「需求數量」需為大於 0 的整數');
@@ -514,6 +574,29 @@ export function SampleOrderDetailOverlay({
     const pad = (n: number) => String(n).padStart(2, '0');
     const ts = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
     const sampleTypeLabel = SAMPLE_TYPE_OPTIONS.find(o => o.value === drSampleType)?.label ?? drSampleType;
+
+    // 呼叫 MDO confirm API（DR → V）
+    // 先打 MDO，成功後才更新本地 store 並關閉 overlay
+    if (typeof order.id === 'string' && order.id.includes('-')) {
+      try {
+        // 取最新 revisionNo 避免 409
+        const latest = await fetchSampleOrder(order.id);
+        const revisionNo = latest?.mdoRevisionNo ?? order.mdoRevisionNo ?? 1;
+        await confirmSampleOrderMdo({
+          id:         order.id,
+          revisionNo,
+          updatedBy:  getCurrentUser(),
+        });
+      } catch (err: unknown) {
+        const e = err as { body?: { error?: { message?: string } } };
+        const msg = e?.body?.error?.message ?? '轉交廠商失敗，請稍後再試';
+        console.error('[MDO] confirmSampleOrder failed:', err);
+        toast.error(msg);
+        return;
+      }
+    }
+
+    // MDO 成功後才更新本地 store
     const updated = updateSampleOrderDraft(
       order.id,
       {
@@ -537,17 +620,6 @@ export function SampleOrderDetailOverlay({
     });
     if (updated) onUpdated?.(updated);
 
-    // 呼叫 MDO confirm API（DR → V）
-    if (typeof order.id === 'string' && order.id.includes('-')) {
-      confirmSampleOrderMdo({
-        id:         order.id,
-        revisionNo: order.mdoRevisionNo ?? 1,
-        updatedBy:  getCurrentUser(),
-      }).catch((err) => {
-        console.error('[MDO] confirmSampleOrder failed:', err);
-      });
-    }
-
     // 觸發寄信：信一（DR→V）
     const latestOrder: SampleOrderRecord = {
       ...order,
@@ -570,12 +642,35 @@ export function SampleOrderDetailOverlay({
   const [showIncompleteDialog, setShowIncompleteDialog] = useState(false);
   const [missingFields, setMissingFields]               = useState<string[]>([]);
 
-  // SC：確認取消（SC → CC）
-  const handleCancelToCC = () => {
+  // SC / V：確認取消（→ CC）
+  const handleCancelToCC = async () => {
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, '0');
     const ts = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
-    // cancelSampleOrder 同時寫入 cancelReason 到 record
+
+    // 呼叫 MDO cancel API（先打 MDO，成功後才更新本地 store）
+    if (typeof order.id === 'string' && order.id.includes('-')) {
+      try {
+        // 取最新 revisionNo 避免 409 SAMPLE_ORDER_VERSION_CONFLICT
+        const latest = await fetchSampleOrder(order.id);
+        const revisionNo = latest?.mdoRevisionNo ?? order.mdoRevisionNo ?? 1;
+
+        await cancelSampleOrderMdo({
+          id:           order.id,
+          revisionNo,
+          cancelReason,
+          updatedBy:    getCurrentUser(),
+        });
+      } catch (err: unknown) {
+        const e = err as { body?: { error?: { code?: string; message?: string } } };
+        const msg = e?.body?.error?.message ?? '取消失敗，請稍後再試';
+        console.error('[MDO] cancelSampleOrder failed:', err);
+        toast.error(msg);
+        return; // 中止，不更新本地 store
+      }
+    }
+
+    // MDO 成功後才更新本地 store 和歷程
     const updated = cancelSampleOrder(order.id, cancelReason);
     addSampleOrderHistory(order.id, {
       date: ts,
@@ -583,24 +678,14 @@ export function SampleOrderDetailOverlay({
       operator: getCurrentUser(),
       remark: cancelReason || '(無原因)',
     });
-    // 呼叫 MDO cancel API
-    if (typeof order.id === 'string' && order.id.includes('-')) {
-      cancelSampleOrderMdo({
-        id:           order.id,
-        revisionNo:   order.mdoRevisionNo ?? 1,
-        cancelReason,
-        updatedBy:    getCurrentUser(),
-      }).catch((err) => {
-        console.error('[MDO] cancelSampleOrder failed:', err);
-      });
-    }
     if (updated) onUpdated?.(updated);
     setShowCancelDialog(false);
     onClose();
   };
 
+
   // SC：儲存（保持 SC 狀態，存全部廠商回覆欄位）
-  const handleSaveSC = () => {
+  const handleSaveSC = async () => {
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, '0');
     const ts = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
@@ -630,20 +715,27 @@ export function SampleOrderDetailOverlay({
         remark: changes.join('，'),
       });
     }
-    // 呼叫 MDO supplier-reply API
-    // revisionNo 為 required，從 order.mdoRevisionNo 取得（由 GET 列表/詳情帶入）
+    // 呼叫 MDO supplier-reply API（先打 MDO，成功後才 onUpdated）
     if (typeof order.id === 'string' && order.id.includes('-')) {
-      supplierReplySampleOrderMdo({
-        id:                    order.id,
-        revisionNo:            order.mdoRevisionNo ?? 1,
-        supplierShipDate:      scSupplierShipDate     || undefined,
-        actualShipDate:        scActualShipDate       || undefined,
-        availableDate:         scAvailableDate        || undefined,
-        supplierDailyCapacity: capOk ? capNum         : undefined,
-        updatedBy:             getCurrentUser(),
-      }).catch((err) => {
+      try {
+        const latestRev = await fetchSampleOrder(order.id);
+        const revisionNo = latestRev?.mdoRevisionNo ?? order.mdoRevisionNo ?? 1;
+        await supplierReplySampleOrderMdo({
+          id:                    order.id,
+          revisionNo,
+          supplierShipDate:      toIsoDate(scSupplierShipDate)   || undefined,
+          actualShipDate:        toIsoDate(scActualShipDate)     || undefined,
+          availableDate:         toIsoDate(scAvailableDate)      || undefined,
+          supplierDailyCapacity: capOk ? capNum                   : undefined,
+          updatedBy:             getCurrentUser(),
+        });
+      } catch (err: unknown) {
+        const e = err as { body?: { error?: { message?: string } } };
+        const msg = e?.body?.error?.message ?? '回覆失敗，請稍後再試';
         console.error('[MDO] supplierReplySampleOrder failed:', err);
-      });
+        toast.error(msg);
+        return;
+      }
     }
 
     if (updated) onUpdated?.(updated);
@@ -651,7 +743,7 @@ export function SampleOrderDetailOverlay({
   };
 
   // SC：關閉結案（先存全部 SC 欄位，再檢查完整性）
-  const handleCloseToCL = () => {
+  const handleCloseToCL = async () => {
     const capNum = Number(scSupplierDailyCapacity);
     const capOk  = scSupplierDailyCapacity && Number.isInteger(capNum) && capNum > 0;
 
@@ -687,15 +779,23 @@ export function SampleOrderDetailOverlay({
       operator: getCurrentUser(),
       remark: '',
     });
-    // 呼叫 MDO close API
+    // 呼叫 MDO close API（先打 MDO，成功後才 onUpdated）
     if (typeof order.id === 'string' && order.id.includes('-')) {
-      closeSampleOrderMdo({
-        id:         order.id,
-        revisionNo: order.mdoRevisionNo ?? 1,
-        updatedBy:  getCurrentUser(),
-      }).catch((err) => {
+      try {
+        const latestRev = await fetchSampleOrder(order.id);
+        const revisionNo = latestRev?.mdoRevisionNo ?? order.mdoRevisionNo ?? 1;
+        await closeSampleOrderMdo({
+          id:         order.id,
+          revisionNo,
+          updatedBy:  getCurrentUser(),
+        });
+      } catch (err: unknown) {
+        const e = err as { body?: { error?: { message?: string } } };
+        const msg = e?.body?.error?.message ?? '關閉結案失敗，請稍後再試';
         console.error('[MDO] closeSampleOrder failed:', err);
-      });
+        toast.error(msg);
+        return;
+      }
     }
     const updated = getSampleOrders().find(o => o.id === order.id) ?? null;
     if (updated) onUpdated?.(updated);
@@ -1191,11 +1291,19 @@ export function SampleOrderDetailOverlay({
 
       </div>
 
-      {/* ── 索樣單歷程彈窗 ── */}
+      {/* ── 索樣單歷程彈窗（MDO API 串接）── */}
       {showHistory && (
         <OrderHistory
           onClose={() => setShowHistory(false)}
-          entries={getSampleOrderHistory(order.id)}
+          entries={mdoHistory.map(h => ({
+            date: h.changed_at
+              ? h.changed_at.substring(0, 10).replace(/-/g, '/') +
+                ' ' + h.changed_at.substring(11, 16)
+              : '',
+            event: MDO_EVENT_LABEL[h.change_type] ?? h.change_type,
+            operator: h.changed_by ?? '',
+            remark: h.change_reason ?? '',
+          }))}
           titleLabel="索樣單歷程"
           correctionDocNo={order.orderNo}
           correctionDocNoLabel="索樣單號"
