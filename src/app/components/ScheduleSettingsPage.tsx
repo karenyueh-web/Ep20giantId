@@ -14,6 +14,7 @@
  *  ✅ BaseOverlay 新增/編輯 Modal
  */
 
+import { localDateToDisplay } from '../utils/dateTime';
 import { useState, useMemo, useCallback, useEffect, useRef, ReactNode } from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -926,8 +927,7 @@ export function ScheduleSettingsPage() {
 
   const handleSave = (form: ScheduleForm) => {
     const days = buildDays(form);
-    const now  = new Date().toLocaleDateString('zh-TW', { year:'numeric', month:'2-digit', day:'2-digit' })
-              + ' ' + new Date().toLocaleTimeString('zh-TW', { hour:'2-digit', minute:'2-digit' });
+    const now = localDateToDisplay();
 
     if (modal?.mode === 'add') {
       const newRow: ScheduleRow = {

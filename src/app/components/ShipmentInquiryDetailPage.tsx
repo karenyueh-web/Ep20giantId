@@ -3,6 +3,7 @@
  * 出貨單查詢 — 明細頁（查詢唯讀版 + 編輯模式：刪除出貨序號）
  */
 
+import { localDateToDisplay } from '../utils/dateTime';
 import { useState, useMemo } from 'react';
 import type { ShipmentRow, ShipmentDetailItem } from './ShipmentListPage';
 import IconsSolidIcSolarMultipleForwardLeftBroken from '@/imports/IconsSolidIcSolarMultipleForwardLeftBroken';
@@ -167,8 +168,7 @@ export function ShipmentInquiryDetailPage({ shipment, onClose, onDelete, onEdit,
       return;
     }
     // 組歷程記錄
-    const now = new Date();
-    const dateStr = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const dateStr = localDateToDisplay();
     const deletedItems = shipment.details.filter(d => markedForDeletion.has(d.itemNo)).sort((a, b) => a.itemNo - b.itemNo);
     const remarkLines = deletedItems.map(d => `項次${d.itemNo} ${d.orderNo}${d.orderSeq} ${d.materialNo} 出貨量${d.shipQty}`).join('；');
     const newEntry: HistoryEntry = {

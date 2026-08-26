@@ -1,5 +1,6 @@
 'use client';
 
+import { utcToLocalDate } from '../utils/dateTime';
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Toaster } from '@/app/components/ui/sonner';
@@ -237,13 +238,6 @@ export default function EsgMaterialPage({ userRole = 'giant' }: EsgMaterialPageP
       .then(res => {
         if (cancelled) return;
         // 將 MDO 格式轉換為本地格式
-        const fmtDate = (iso: string) => {
-          const d = new Date(iso);
-          const y = d.getFullYear();
-          const mo = String(d.getMonth() + 1).padStart(2, '0');
-          const dy = String(d.getDate()).padStart(2, '0');
-          return `${y}/${mo}/${dy}`;
-        };
         const converted: EsgMaterialRecord[] = res.data.map((m: MdoEsgMaterial, i: number) => ({
           id: i + 1,
           nameTw: m.name_tw,
@@ -251,9 +245,9 @@ export default function EsgMaterialPage({ userRole = 'giant' }: EsgMaterialPageP
           nameEn: m.name_en ?? '',
           carbonEmission: m.carbon_emission,
           createdBy: (m as any).created_by ?? '',
-          createdAt: m.created_at ? fmtDate(m.created_at) : '',
+          createdAt: m.created_at ? utcToLocalDate(m.created_at) : '',
           updatedBy: (m as any).updated_by ?? undefined,
-          updatedAt: m.updated_at && m.updated_at !== m.created_at ? fmtDate(m.updated_at) : undefined,
+          updatedAt: m.updated_at && m.updated_at !== m.created_at ? utcToLocalDate(m.updated_at) : undefined,
         } as any));
         setMaterials(converted);
         setApiError(null);
@@ -324,10 +318,10 @@ export default function EsgMaterialPage({ userRole = 'giant' }: EsgMaterialPageP
         carbonEmission: m.carbon_emission,
         createdBy: '',
         createdAt: m.created_at
-          ? new Date(m.created_at).toLocaleDateString('zh-TW').replace(/-/g, '/')
+          ? utcToLocalDate(m.created_at)
           : '',
         updatedAt: m.updated_at !== m.created_at
-          ? new Date(m.updated_at).toLocaleDateString('zh-TW').replace(/-/g, '/')
+          ? utcToLocalDate(m.updated_at)
           : undefined,
       } as any));
       setMaterials(converted);

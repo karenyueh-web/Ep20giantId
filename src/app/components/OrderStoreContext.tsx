@@ -193,36 +193,61 @@ export function OrderStoreProvider({ children }: { children: ReactNode }) {
     buildInitialHistoryMap(orderMockData)
   );
 
-  // ── MDO API 初始載入（取代 mock data）──────────────────────────────────────
-  // 非同步載入，失敗時靜默保留 mock data（維持離線開發可用性）
+  // ── MDO API 初始載入（merge 策略：MDO 欄位覆蓋 mock，缺漏欄位保留 mock 值）──
+  // - MDO 有資料：用 orderNo 做 key，覆蓋 mock 中對應筆的已知欄位
+  // - MDO 無對應 mock 筆：新增（純 MDO 資料）
+  // - MDO 未提供的欄位（productName 等）：保留 mock 值（方便前端 demo）
+  // - 失敗/空資料：靜默保留 mock（維持離線開發可用性）
   useEffect(() => {
     let cancelled = false;
     import('../api/order/purchase-orders').then(({ fetchPurchaseOrders, fetchExchangeOrders, fetchReturnOrders, mapPurchaseOrderToRow }) => {
       // 一般訂單
       fetchPurchaseOrders({ limit: 100 }).then(res => {
         if (!cancelled && res.data.length > 0) {
-          setOrders(res.data.map(mapPurchaseOrderToRow));
+          setOrders(prev => {
+            const mockMap = new Map<string, OrderRow>(prev.map(r => [r.orderNo, r]));
+            const merged = res.data.map(mdoRow => {
+              const mapped = mapPurchaseOrderToRow(mdoRow);
+              const mockRow = mockMap.get(mdoRow.orderNo);
+              if (mockRow) {
+                // mock 已有此筆：只覆蓋 MDO 實際提供的欄位，其餘保留 mock 值
+                return {
+                  ...mockRow,
+                  status: mapped.status,
+                  vendorCode: mapped.vendorCode,
+                  orderType: mdoRow.purchaseOrderType ?? mockRow.orderType,
+                  deletionCode: mapped.deletionCode,
+                } as OrderRow;
+              }
+              return mapped;
+            });
+            // 保留 mock 中 MDO 沒有的筆（MDO 未完整同步時仍可展示 mock）
+            const mdoOrderNos = new Set(res.data.map(r => r.orderNo));
+            const mockOnlyRows = prev.filter(r => !mdoOrderNos.has(r.orderNo));
+            return [...merged, ...mockOnlyRows];
+          });
         }
       }).catch(() => { /* 失敗保留 mock */ });
 
-      // 換貨(J)單
+      // 換貨(J)單 — exchange_order 資料表尚未建立，靜默跳過
       fetchExchangeOrders({ limit: 100 }).then(res => {
         if (!cancelled && res.data.length > 0) {
           setExchangeOrders(res.data.map(mapPurchaseOrderToRow));
         }
-      }).catch(() => { /* 失敗保留 mock */ });
+      }).catch(() => { /* 資料表未建立，保留 mock */ });
 
-      // 退貨單
+      // 退貨單 — return_order 資料表尚未建立，靜默跳過
       fetchReturnOrders({ limit: 100 }).then(res => {
         if (!cancelled && res.data.length > 0) {
           setReturnOrders(res.data.map(mapPurchaseOrderToRow));
         }
-      }).catch(() => { /* 失敗保留 mock */ });
+      }).catch(() => { /* 資料表未建立，保留 mock */ });
     }).catch(() => { /* import 失敗保留 mock */ });
 
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
 
   const updateOrderStatus = (
     id: number,

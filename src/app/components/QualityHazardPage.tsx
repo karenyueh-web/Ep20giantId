@@ -1,3 +1,4 @@
+import { localDateToDisplay } from '../utils/dateTime';
 import { useState, useCallback, useRef } from 'react';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -897,11 +898,7 @@ export function QualityHazardPage() {
           onClose={() => setUploadOverlay(null)}
           onSubmit={({ files: newFiles = [], action, returnReason }) => {
             if (!uploadOverlay) return;
-            const nowStr = (() => {
-              const now = new Date();
-              const p = (n: number) => String(n).padStart(2, '0');
-              return `${now.getFullYear()}/${p(now.getMonth()+1)}/${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}`;
-            })();
+            const nowStr = localDateToDisplay();
 
             setData(prev => prev.map(r => {
               const isTarget = r.year === uploadOverlay.year

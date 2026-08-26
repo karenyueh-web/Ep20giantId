@@ -1,5 +1,6 @@
 'use client';
 
+import { utcToLocalDisplay } from '../utils/dateTime';
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 import { createPortal } from 'react-dom';
@@ -427,37 +428,7 @@ const MDO_EVENT_LABEL: Record<string, string> = {
   UPDATE:         '資料更新',
 };
 
-/**
- * UTC ISO 字串 → 使用者所在時區的可讀時間（含時區標示）
- * 用瀏覽器原生 Intl.DateTimeFormat，自動識別使用者作業系統設定的時區
- * 例： UTC 07:43 → 台灣使用者看到 2026/08/26 15:43 (UTC+8)
- *               → 荷蘭使用者看到 2026/08/26 09:43 (UTC+2)
- */
-function utcToLocalDisplay(isoString: string | null | undefined): string {
-  if (!isoString) return '';
-  try {
-    const d = new Date(isoString);
-    const formatted = new Intl.DateTimeFormat(undefined, {
-      year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit', hour12: false,
-    }).format(d).replace(/\//g, '/');
 
-    // 計算 UTC 偏移（getTimezoneOffset 回傳分鐘，正負相反）
-    const offsetMin = -d.getTimezoneOffset(); // e.g. UTC+8 → 480
-    const offsetHour = offsetMin / 60;
-    const sign = offsetHour >= 0 ? '+' : '-';
-    const absHour = Math.abs(offsetHour);
-    // 支援半小時時區：UTC+5:30 → "UTC+5:30"，整點：UTC+8 → "UTC+8"
-    const utcLabel = Number.isInteger(absHour)
-      ? `UTC${sign}${absHour}`
-      : `UTC${sign}${Math.floor(absHour)}:${String((absHour % 1) * 60).padStart(2, '0')}`;
-
-    return `${formatted} (${utcLabel})`;
-  } catch {
-    // fallback: 直接截字串（UTC）
-    return isoString.substring(0, 10).replace(/-/g, '/') + ' ' + isoString.substring(11, 16);
-  }
-}
 
   const [drResample,   setDrResample]   = useState(order.resample ? '是' : '否');
   const [drSampleType, setDrSampleType] = useState(order.sampleType);

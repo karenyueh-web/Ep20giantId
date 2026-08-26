@@ -9,6 +9,7 @@
  * 使用標準表格系統（StandardDataTable）
  */
 
+import { localDateToDisplay } from '../utils/dateTime';
 import React, { useState, useMemo, useRef } from 'react';
 import { QUALITY_OTHER_TABS, type QualityOtherTabKey } from '@/app/config/qualityOtherConfig';
 import { StandardDataTable, type StandardColumn } from './StandardDataTable';
@@ -1076,9 +1077,7 @@ function HazardRegOverlay({ mode, initial, history = [], onClose, onSave }: Haza
   const handleSubmit = () => {
     setSubmitted(true);
     if (!regCode || !descZh) return;
-    const now = new Date();
-    const pad = (n: number) => String(n).padStart(2, '0');
-    const dateStr = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    const dateStr = localDateToDisplay();
     const entry: HistoryEntry = {
       date: dateStr,
       event: isAdd ? '新增法規' : '編輯法規',

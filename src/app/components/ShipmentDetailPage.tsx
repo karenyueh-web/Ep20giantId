@@ -6,6 +6,7 @@
  *   2. 出貨明細表格（可編輯出貨量、每箱數量、總箱數自動計算、淨重/毛重、原產國家）
  */
 
+import { localDateToDisplay } from '../utils/dateTime';
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { DeleteButton } from './ActionButtons';
 import { SAP_CURRENCIES } from '@/app/data/currencyData';
@@ -665,8 +666,7 @@ export function ShipmentDetailPage({ selectedOrders, onClose, userRole, csvData,
     setShowConfirmModal(false);
 
     // 組裝出貨單資料並存入 localStorage（供出貨單查詢頁讀取）
-    const now = new Date();
-    const createdAt = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const createdAt = localDateToDisplay();
     const newShipment = {
       id: Date.now(),
       vendorShipmentNo,

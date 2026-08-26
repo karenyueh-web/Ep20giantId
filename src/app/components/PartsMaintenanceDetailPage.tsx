@@ -1,5 +1,6 @@
 'use client';
 
+import { utcToLocalDate } from '../utils/dateTime';
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Toaster } from '@/app/components/ui/sonner';
@@ -150,7 +151,7 @@ export default function PartsMaintenanceDetailPage({
           nameEn: c.name_en ?? '',
           unitWeight: parseFloat(String(c.unit_weight ?? c.carbon_emission ?? 0)) || 0,
           createdBy: c.created_by ?? '',
-          createdAt: c.created_at?.slice(0, 10).replace(/-/g, '/') ?? '',
+          createdAt: utcToLocalDate(c.created_at) ?? '',
         }));
         setMaterialCompositions(mapped);
       })

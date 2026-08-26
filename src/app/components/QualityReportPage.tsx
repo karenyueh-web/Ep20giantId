@@ -1,3 +1,4 @@
+import { localDateToDisplay } from '../utils/dateTime';
 import { useState, useCallback, useRef } from 'react';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -71,9 +72,7 @@ function measureTextWidth(text: string, font = '14px "Public Sans","Noto Sans JP
 }
 
 function nowStr(): string {
-  const d = new Date();
-  const p = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}/${p(d.getMonth() + 1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  return localDateToDisplay();
 }
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
