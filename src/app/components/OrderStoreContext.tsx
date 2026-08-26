@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useRef, type ReactNode } from 'react';
+import { createContext, useContext, useState, useRef, useEffect, type ReactNode } from 'react';
 import { orderMockData } from './AdvancedOrderTable';
 import { returnOrderMockData } from './returnOrderData';
 import { exchangeOrderMockData } from './exchangeOrderData';
@@ -192,6 +192,37 @@ export function OrderStoreProvider({ children }: { children: ReactNode }) {
   const [historyMap, setHistoryMap] = useState<Record<number, HistoryEntry[]>>(() =>
     buildInitialHistoryMap(orderMockData)
   );
+
+  // ── MDO API 初始載入（取代 mock data）──────────────────────────────────────
+  // 非同步載入，失敗時靜默保留 mock data（維持離線開發可用性）
+  useEffect(() => {
+    let cancelled = false;
+    import('../api/order/purchase-orders').then(({ fetchPurchaseOrders, fetchExchangeOrders, fetchReturnOrders, mapPurchaseOrderToRow }) => {
+      // 一般訂單
+      fetchPurchaseOrders({ limit: 100 }).then(res => {
+        if (!cancelled && res.data.length > 0) {
+          setOrders(res.data.map(mapPurchaseOrderToRow));
+        }
+      }).catch(() => { /* 失敗保留 mock */ });
+
+      // 換貨(J)單
+      fetchExchangeOrders({ limit: 100 }).then(res => {
+        if (!cancelled && res.data.length > 0) {
+          setExchangeOrders(res.data.map(mapPurchaseOrderToRow));
+        }
+      }).catch(() => { /* 失敗保留 mock */ });
+
+      // 退貨單
+      fetchReturnOrders({ limit: 100 }).then(res => {
+        if (!cancelled && res.data.length > 0) {
+          setReturnOrders(res.data.map(mapPurchaseOrderToRow));
+        }
+      }).catch(() => { /* 失敗保留 mock */ });
+    }).catch(() => { /* import 失敗保留 mock */ });
+
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const updateOrderStatus = (
     id: number,

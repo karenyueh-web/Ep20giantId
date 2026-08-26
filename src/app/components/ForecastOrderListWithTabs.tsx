@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { AdvancedForecastTable, defaultForecastColumns, forecastOrderMockData, type ForecastColumn, type ForecastOrderRow } from './AdvancedForecastTable';
 import { SearchField } from './SearchField';
 import { DropdownSelect } from './DropdownSelect';
@@ -38,10 +38,50 @@ export function ForecastOrderListWithTabs({ userRole }: ForecastOrderListProps) 
   );
   const STORAGE_KEY = `forecastOrder_${currentUserEmail}_columns`;
 
-  // ── 資料來源（可刪除） ──
+  // ── 資料來源（初始為 mock，初始化後嘗試從 MDO 載入）──
   const [tableData, setTableData] = useState<ForecastOrderRow[]>(() =>
     forecastOrderMockData.map(r => ({ ...r }))
   );
+
+  // ── MDO API 初始載入（如果有 supplierCode，就視結果取代 mock）──
+  useEffect(() => {
+    // 讀取 localStorage 得知目前登入的廠商代碼
+    // 廠商登入時會偵入 'currentSupplierCode'（需搭配 LoginPage 寫入）
+    const supplierCode = localStorage.getItem('currentSupplierCode') || '';
+    if (!supplierCode) return; // 沒有 supplierCode，保留 mock
+
+    let cancelled = false;
+    import('../api/order/forecast-orders').then(({ fetchForecastOrders }) => {
+      fetchForecastOrders({ supplierCode, limit: 100 }).then(res => {
+        if (!cancelled && res.data.length > 0) {
+          const mapped: ForecastOrderRow[] = res.data.map((item, i) => ({
+            id: i + 1,
+            purchaseGroup: item.purchaseGroup ?? '',
+            purchaseOrg: item.purchaseOrg ?? '',
+            companyCode: item.companyCode ?? '',
+            vendor: item.supplierCode,
+            uploadWeek: item.uploadWeek ?? '',
+            deliveryWeek: item.deliveryWeek ?? '',
+            materialNo: item.materialNo,
+            vendorMaterialNo: item.supplierMaterialNo ?? '',
+            productName: item.productName ?? '',
+            leadTime: item.leadTime ?? 0,
+            deliveryDate: item.deliveryDate ?? '',
+            purchaseQty: item.purchaseQty ?? 0,
+            diffQty: item.diffQty ?? 0,
+            unit: item.unit ?? '',
+            updatedBy: '',    // ⚠️ MDO 未提供
+            updatedDate: '',  // ⚠️ MDO 未提供
+          }));
+          setTableData(mapped);
+        }
+      }).catch(() => { /* 失敗保留 mock */ });
+    }).catch(() => { /* import 失敗保留 mock */ });
+
+    return () => { cancelled = true; };
+  }, []);
+
+
 
   // ── ColumnSelector 狀態 ──
   const [showColumnSelector, setShowColumnSelector] = useState(false);

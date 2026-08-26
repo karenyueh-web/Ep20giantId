@@ -99,7 +99,7 @@ export function OrderHistory({ onClose, entries = [], correctionDocNo, docSeqNo,
             {/* 表頭 */}
             <div className="flex-shrink-0 border-b border-[rgba(145,158,171,0.08)]">
               <div className="flex items-center gap-[20px] px-[16px] py-[16px]">
-                <div className="w-[160px]">
+                <div className="w-[210px] shrink-0">
                   <p className="font-['Public_Sans:SemiBold','Noto_Sans_JP:Bold',sans-serif] font-semibold leading-[22px] text-[#1c252e] text-[14px]">日期</p>
                 </div>
                 <div className="w-[260px]">
@@ -127,9 +127,9 @@ export function OrderHistory({ onClose, entries = [], correctionDocNo, docSeqNo,
                   return (
                     <div key={idx} className="w-full border-b border-[rgba(145,158,171,0.08)]">
                       <div className="flex items-center gap-[20px] px-[16px] py-[16px]">
-                        <div className="w-[160px]">
+                        <div className="w-[210px] shrink-0">
                           <p
-                            className="font-['Public_Sans:Regular',sans-serif] font-normal leading-[22px] text-[14px]"
+                            className="font-['Public_Sans:Regular',sans-serif] font-normal leading-[22px] text-[14px] whitespace-nowrap"
                             style={{ color }}
                           >
                             {entry.date}

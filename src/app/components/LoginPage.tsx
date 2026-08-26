@@ -181,6 +181,7 @@ function Auth({ onLoginSuccess, onRegisterClick, onForgotPassword }: AuthProps) 
       localStorage.setItem('currentUserEmail', 'sales@vendor.com');
       localStorage.setItem('currentUserType', 'vendor');
       localStorage.setItem('currentUserName', '張淡玲'); // 廠商業務姓名
+      localStorage.setItem('currentSupplierCode', 'V1000'); // 廠商代碼（正式應從帳號資料查詢）
       storeCurrentUserRoleId('sales@vendor.com'); // 查 userRoleStore → vendor-sales
       onLoginSuccess('vendor');
     } else if (email === 'g00106917@giant.com' && password === '12345') {
@@ -304,6 +305,7 @@ function Auth({ onLoginSuccess, onRegisterClick, onForgotPassword }: AuthProps) 
             localStorage.setItem('currentUserEmail', 'sales@vendor.com');
             localStorage.setItem('currentUserType', 'vendor');
             localStorage.setItem('currentUserName', '張淑玲');
+            localStorage.setItem('currentSupplierCode', 'V1000'); // 廠商代碼（正式應從帳號資料查詢）
             // 廠商業務角色（nine@jogon-pak.com / 張淑玲 的模擬帳號）
             localStorage.setItem('currentUserRoleId', 'vendor-sales');
             onLoginSuccess('vendor');

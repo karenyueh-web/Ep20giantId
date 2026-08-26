@@ -196,6 +196,53 @@ export async function deleteSampleOrderDraftMdo(
   );
 }
 
+/**
+ * 退回廠商補填（SC → V）
+ * POST /api/v1/order-transaction/sample-orders/commands/revert
+ * MDO 2026-08-26 新增
+ */
+export interface RevertSampleOrderDto {
+  id:            string;
+  revisionNo:    number;   // 樂觀鎖，必填
+  revertReason?: string;   // 退回原因（缺少哪些欄位）
+  updatedBy?:    string;
+}
+
+export async function revertSampleOrderMdo(
+  dto: RevertSampleOrderDto
+): Promise<void> {
+  return mdoCommand<RevertSampleOrderDto, void>(
+    '/order-transaction/sample-orders/commands/revert',
+    dto
+  );
+}
+
+/**
+ * 更新草稿（DR 狀態欄位更新）
+ * POST /api/v1/order-transaction/sample-orders/commands/update-draft
+ * MDO 2026-08-26 新增
+ */
+export interface UpdateDraftSampleOrderDto {
+  id:          string;
+  revisionNo:  number;   // 樂觀鎖，必填
+  sampleType?: string;
+  demandDate?: string;   // ISO date string
+  demandQty?:  number;
+  resample?:   boolean;
+  remark?:     string;
+  updatedBy?:  string;
+}
+
+export async function updateDraftSampleOrderMdo(
+  dto: UpdateDraftSampleOrderDto
+): Promise<void> {
+  return mdoCommand<UpdateDraftSampleOrderDto, void>(
+    '/order-transaction/sample-orders/commands/update-draft',
+    dto
+  );
+}
+
+
 // ── MDO GET Response（snake_case，實測 2026-08-21）────────────────────────────
 
 export interface MdoSampleOrderItem {
@@ -234,10 +281,12 @@ export interface MdoSampleOrderHistoryItem {
   id:            string;
   sample_order_id: string;
   revision_no:   number;
-  change_type:   string;   // e.g. 'CREATE' | 'CONFIRM' | 'SUPPLIER_REPLY' | 'CANCEL' | 'CLOSE'
+  change_type:   string;   // e.g. 'CREATE' | 'CONFIRM' | 'SUPPLIER_REPLY' | 'CANCEL' | 'CLOSE' | 'REVERT'
   changed_by:    string;
   changed_at:    string;   // ISO 8601
-  change_reason: string | null;
+  change_reason: string | null;  // 設計上給「補償交易」標註用，目前全部為 null
+  cancel_reason: string | null;  // CANCEL 時的取消原因（專屬欄）
+  revert_reason: string | null;  // REVERT 時的退回原因（專屬欄）
   // 快照欄位（其餘略）
   status:        string | null;
 }
